@@ -204,18 +204,45 @@ whether you will leverage a GPU or just run on a CPU.  Docker provides more
 isolation and consistency, and also makes it easy to distribute your
 environment to a compute cluster.
 
-Once you have [installed Docker](https://docs.docker.com/engine/installation/)
-just run the following command to get an environment that will run on either the cpu or gpu.
+AllenNLP provides [official Docker images](https://hub.docker.com/r/allennlp/allennlp) with the library and all of its dependencies installed.
+
+Once you have [installed Docker](https://docs.docker.com/engine/installation/),
+you should also install the [NVIDIA Container Toolkit](https://github.com/NVIDIA/nvidia-docker)
+if you have GPUs available.
+
+Then run the following command to get an environment that will run on GPU:
 
 ```bash
 mkdir -p $HOME/.allennlp/
-docker run --rm -v $HOME/.allennlp:/root/.allennlp allennlp/allennlp:latest
+docker run --rm --gpus all -v $HOME/.allennlp:/root/.allennlp allennlp/allennlp:latest
 ```
 
 You can test the Docker environment with
 
 ```bash
-docker run --rm -v $HOME/.allennlp:/root/.allennlp allennlp/allennlp:latest test-install 
+docker run --rm --gpus all -v $HOME/.allennlp:/root/.allennlp allennlp/allennlp:latest test-install 
+```
+
+If you don't have GPUs available, just omit the `--gpus all` flag.
+
+#### Building your own Docker image
+
+For various reasons you may need to create your own AllenNLP Docker image, such as if you need a different version
+of PyTorch. To do so, just run `make docker-image` from the root of your local clone of AllenNLP.
+
+By default this builds an image with the tag `allennlp/allennlp`, but you can change this to anything you want
+by setting the `DOCKER_TAG` flag when you call `make`. For example,
+`make docker-image DOCKER_TAG=my-allennlp`.
+
+If you want to use a different version of PyTorch, set the flag `DOCKER_TORCH_VERSION` to something like
+`torch==1.7.0` or `torch==1.7.0+cu110 -f https://download.pytorch.org/whl/torch_stable.html`.
+The value of this flag will passed directly to `pip install`.
+
+After building the image you should be able to see it listed by running `docker images allennlp`.
+
+```
+REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
+allennlp/allennlp   latest              b66aee6cb593        5 minutes ago       2.38GB
 ```
 
 ### Installing from source
@@ -226,7 +253,7 @@ You can also install AllenNLP by cloning our git repository:
 git clone https://github.com/allenai/allennlp.git
 ```
 
-Create a Python 3.7 virtual environment, and install AllenNLP in `editable` mode by running:
+Create a Python 3.7 or 3.8 virtual environment, and install AllenNLP in `editable` mode by running:
 
 ```bash
 pip install --editable .
@@ -246,45 +273,6 @@ Once you've installed AllenNLP, you can run the command-line interface
 with the `allennlp` command (whether you installed from `pip` or from source).
 `allennlp` has various subcommands such as `train`, `evaluate`, and `predict`.
 To see the full usage information, run `allennlp --help`.
-
-## Docker images
-
-AllenNLP releases Docker images to [Docker Hub](https://hub.docker.com/r/allennlp/) for each release.  For information on how to run these releases, see [Installing using Docker](#installing-using-docker).
-
-### Building a Docker image
-
-For various reasons you may need to create your own AllenNLP Docker image.
-The same image can be used either with a CPU or a GPU.
-
-First, you need to [install Docker](https://www.docker.com/get-started).
-Then you will need a wheel of allennlp in the `dist/` directory.
-You can either obtain a pre-built wheel from a PyPI release or build a new wheel from
-source.
-
-PyPI release wheels can be downloaded by going to https://pypi.org/project/allennlp/#history,
-clicking on the desired release, and then clicking "Download files" in the left sidebar.
-After downloading, make you sure you put the wheel in the `dist/` directory
-(which may not exist if you haven't built a wheel from source yet).
-
-To build a wheel from source, just run `python setup.py wheel`.
-
-*Before building the image, make sure you only have one wheel in the `dist/` directory.*
-
-Once you have your wheel, run `make docker-image`. By default this builds an image
-with the tag `allennlp/allennlp`. You can change this to anything you want
-by setting the `DOCKER_TAG` flag when you call `make`. For example,
-`make docker-image DOCKER_TAG=my-allennlp`.
-
-You should now be able to see this image listed by running `docker images allennlp`.
-
-```
-REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
-allennlp/allennlp   latest              b66aee6cb593        5 minutes ago       2.38GB
-```
-
-### Running the Docker image
-
-You can run the image with `docker run --rm -it allennlp/allennlp:latest`.  The `--rm` flag cleans up the image on exit and the `-it` flags make the session interactive so you can use the bash shell the Docker image starts.
 
 You can test your installation by running  `allennlp test-install`.
 
