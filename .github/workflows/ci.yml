@@ -258,32 +258,51 @@ jobs:
 
   # Builds Docker image from the core distribution files and uploads to Docker Hub.
   docker:
-    name: Docker
+    name: Docker (CUDA ${{ matrix.cuda }})
     if: github.repository == 'allenai/allennlp'
     runs-on: [self-hosted, GPU]
+    strategy:
+      matrix:
+        cuda: ['10.2', '11.0']
 
     steps:
     - uses: actions/checkout@v2
 
-    - name: Set Docker image name
+    - name: Set torch version
+      env:
+        CUDA: matrix.cuda
       run: |
-        if [[ $GITHUB_EVENT_NAME == 'release' ]]; then
-            echo "DOCKER_IMAGE_NAME=allennlp/allennlp:${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV;
+        if [[ $CUDA == '10.2' ]]; then
+            echo "DOCKER_TORCH_VERSION='==1.7.0'" >> $GITHUB_ENV;
+        elif [[ $CUDA == '11.0' ]]; then
+            echo "DOCKER_TORCH_VERSION='==1.7.0+cu110'" >> $GITHUB_ENV;
         else
-            echo "DOCKER_IMAGE_NAME=allennlp/commit:$GITHUB_SHA" >> $GITHUB_ENV;
+            echo "Unhandled CUDA version $CUDA";
+            exit 1;
+        fi
+
+    - name: Set Docker image name
+      env:
+        CUDA: matrix.cuda
+      run: |
+        echo "DOCKER_CUDA_TAG=-cuda$CUDA" >> $GITHUB_ENV;
+        if [[ $GITHUB_EVENT_NAME == 'release' ]]; then
+            echo "DOCKER_IMAGE_NAME=allennlp/allennlp:${GITHUB_REF#refs/tags/}-${DOCKER_CUDA_TAG}" >> $GITHUB_ENV;
+        else
+            echo "DOCKER_IMAGE_NAME=allennlp/commit:${GITHUB_SHA}-${DOCKER_CUDA_TAG}" >> $GITHUB_ENV;
         fi
 
     - name: Build image
       run: |
-        make docker-image DOCKER_IMAGE_NAME=$DOCKER_IMAGE_NAME
+        make docker-image DOCKER_IMAGE_NAME=$DOCKER_IMAGE_NAME DOCKER_TORCH_VERSION=$DOCKER_TORCH_VERSION
 
     - name: Test image
       run: |
         make docker-run DOCKER_IMAGE_NAME=$DOCKER_IMAGE_NAME ARGS='test-install'
 
     - name: Upload commit image
-      # Only run this for pushes to master branch.
-      if: github.event_name == 'push'
+      # Only upload the 10.2 image.
+      if: github.event_name == 'push' && matrix.cuda == '10.2'
       run: |
         docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
         docker push $DOCKER_IMAGE_NAME
@@ -293,12 +312,13 @@ jobs:
       if: github.event_name == 'release'
       run: |
         docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
-
-        # Tag with latest.
-        docker tag $DOCKER_IMAGE_NAME allennlp/allennlp:latest
-
-        # Push both tags.
         docker push $DOCKER_IMAGE_NAME
+
+    - name: Upload latest image
+      # CUDA 10.2 is currently our default.
+      if: github.event_name == 'release' && matrix.cuda == '10.2'
+      run: |
+        docker tag $DOCKER_IMAGE_NAME allennlp/allennlp:latest
         docker push allennlp/allennlp:latest
 
   # Builds the API documentation and pushes it to the appropriate folder in the
