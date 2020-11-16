@@ -18,22 +18,28 @@ LABEL com.nvidia.volumes.needed="nvidia_driver"
 
 WORKDIR /stage/allennlp
 
-# Install torch first. This build arg should be in the from of a version requirement,
+# Install torch first. This build arg should be in the form of a version requirement,
 # like '==1.7' or '==1.7+cu102'.
 ARG TORCH
 RUN pip install --no-cache-dir torch${TORCH} -f https://download.pytorch.org/whl/torch_stable.html
 
-# Install the wheel of AllenNLP.
-COPY dist dist/
-RUN pip install --no-cache-dir $(ls dist/*.whl)
-# TODO(epwalsh): In PyTorch 1.7, dataclasses is an unconditional dependency, when it should
-# only be a conditional dependency for Python < 3.7.
-# This has been fixed on PyTorch master branch, so we should be able to
-# remove this check with the next PyTorch release.
-RUN pip uninstall -y dataclasses
+# Installing AllenNLP's dependencies is the most time-consuming part of building
+# this Docker image, so we make use of layer caching here by adding the minimal files
+# necessary to install the dependencies.
+COPY allennlp/version.py allennlp/version.py
+COPY setup.py .
+RUN touch allennlp/__init__.py \
+    && touch README.md \
+    && pip install --no-cache-dir -e .
+
+# Now add the full package source and re-install just the package.
+COPY allennlp allennlp
+RUN pip install --no-cache-dir --no-deps -e .
+
+WORKDIR /app/
 
 # Copy wrapper script to allow beaker to run resumable training workloads.
-COPY scripts/ai2_internal/resumable_train.sh /stage/allennlp
+COPY scripts/ai2_internal/resumable_train.sh .
 
 LABEL maintainer="allennlp-contact@allenai.org"
 
