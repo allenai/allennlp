@@ -19,9 +19,9 @@ LABEL com.nvidia.volumes.needed="nvidia_driver"
 WORKDIR /stage/allennlp
 
 # Install torch first. This build arg should be in the form of a version requirement,
-# like '==1.7' or '==1.7+cu102'.
+# like 'torch==1.7' or 'torch==1.7+cu102 -f https://download.pytorch.org/whl/torch_stable.html'.
 ARG TORCH
-RUN pip install --no-cache-dir torch${TORCH} -f https://download.pytorch.org/whl/torch_stable.html
+RUN pip install --no-cache-dir ${TORCH}
 
 # Installing AllenNLP's dependencies is the most time-consuming part of building
 # this Docker image, so we make use of layer caching here by adding the minimal files

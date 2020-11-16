@@ -14,7 +14,7 @@ DOCKER_TAG = latest
 DOCKER_IMAGE_NAME = allennlp/allennlp:$(DOCKER_TAG)
 DOCKER_TEST_IMAGE_NAME = allennlp/test:$(DOCKER_TAG)
 # Our self-hosted runner currently has CUDA 11.0.
-DOCKER_TEST_TORCH_VERSION = '==1.7.0+cu110'
+DOCKER_TEST_TORCH_VERSION = 'torch==1.7.0+cu110 -f https://download.pytorch.org/whl/torch_stable.html'
 DOCKER_RUN_CMD = docker run --rm \
 		-v $$HOME/.allennlp:/root/.allennlp \
 		-v $$HOME/.cache/torch:/root/.cache/torch \
@@ -148,7 +148,7 @@ docker-image :
 
 .PHONY : docker-run
 docker-run :
-	$(DOCKER_RUN_CMD) $(DOCKER_IMAGE_NAME) $(ARGS)
+	$(DOCKER_RUN_CMD) --gpus all $(DOCKER_IMAGE_NAME) $(ARGS)
 
 .PHONY : docker-test-image
 docker-test-image :
@@ -160,4 +160,4 @@ docker-test-image :
 
 .PHONY : docker-test-run
 docker-test-run :
-	$(DOCKER_RUN_CMD) --gpus 2 $(DOCKER_TEST_IMAGE_NAME) $(ARGS)
+	$(DOCKER_RUN_CMD) --gpus all $(DOCKER_TEST_IMAGE_NAME) $(ARGS)
