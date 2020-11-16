@@ -270,7 +270,7 @@ jobs:
 
     - name: Set torch version
       env:
-        CUDA: matrix.cuda
+        CUDA: ${{ matrix.cuda }}
       run: |
         if [[ $CUDA == '10.2' ]]; then
             echo "DOCKER_TORCH_VERSION='==1.7.0'" >> $GITHUB_ENV;
