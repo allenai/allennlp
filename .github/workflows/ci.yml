@@ -293,9 +293,11 @@ jobs:
       run: |
         # Check the install instructions on https://pytorch.org/ to keep these up-to-date.
         if [[ $CUDA == '10.2' ]]; then
-            echo "DOCKER_TORCH_VERSION='torch==1.7.0'" >> $GITHUB_ENV;
+            echo "DOCKER_TORCH_VERSION='torch==1.7.0 torchvision==0.8.1'" >> $GITHUB_ENV;
+            echo "DOCKER_DETECTRON_VERSION='detectron2 -f https://dl.fbaipublicfiles.com/detectron2/wheels/cu102/torch1.7/index.html'" >> $GITHUB_ENV;
         elif [[ $CUDA == '11.0' ]]; then
-            echo "DOCKER_TORCH_VERSION='torch==1.7.0+cu110 -f https://download.pytorch.org/whl/torch_stable.html'" >> $GITHUB_ENV;
+            echo "DOCKER_TORCH_VERSION='torch==1.7.0+cu110 torchvision==0.8.1+cu110 -f https://download.pytorch.org/whl/torch_stable.html'" >> $GITHUB_ENV;
+            echo "DOCKER_DETECTRON_VERSION='detectron2 -f https://dl.fbaipublicfiles.com/detectron2/wheels/cu110/torch1.7/index.html'" >> $GITHUB_ENV;
         else
             echo "Unhandled CUDA version $CUDA";
             exit 1;
@@ -313,7 +315,7 @@ jobs:
 
     - name: Build image
       run: |
-        make docker-image DOCKER_IMAGE_NAME="$DOCKER_IMAGE_NAME" DOCKER_TORCH_VERSION="$DOCKER_TORCH_VERSION"
+        make docker-image DOCKER_IMAGE_NAME="$DOCKER_IMAGE_NAME" DOCKER_TORCH_VERSION="$DOCKER_TORCH_VERSION" DOCKER_DETECTRON_VERSION="$DOCKER_DETECTRON_VERSION"
 
     - name: Test image
       run: |
