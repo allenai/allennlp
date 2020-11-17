@@ -8,7 +8,7 @@
 </div>
 <p align="center">
     <a href="https://github.com/allenai/allennlp/actions">
-        <img alt="Build" src="https://github.com/allenai/allennlp/workflows/Master/badge.svg?event=push&branch=master">
+        <img alt="CI" src="https://github.com/allenai/allennlp/workflows/CI/badge.svg?event=push&branch=master">
     </a>
     <a href="https://pypi.org/project/allennlp/">
         <img alt="PyPI" src="https://img.shields.io/pypi/v/allennlp">
