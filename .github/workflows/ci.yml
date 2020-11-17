@@ -319,7 +319,7 @@ jobs:
         docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
 
     - name: Upload image
-      if: github.event_name == 'push'
+      if: github.event_name == 'release' || github.event_name == 'push'
       run: |
         docker push $DOCKER_IMAGE_NAME
 
