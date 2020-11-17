@@ -45,6 +45,11 @@ dataset at every epoch) and a `MultiTaskScheduler` (for ordering the instances w
 
 ## Unreleased (1.x branch)
 
+### Added
+
+- Added Docker builds for other torch-supported versions of CUDA.
+- Adds [`allennlp-semparse`](https://github.com/allenai/allennlp-semparse) as an official, default plugin.
+
 ### Fixed
 
 - `GumbelSampler` now sorts the beams by their true log prob.
