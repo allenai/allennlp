@@ -1,6 +1,10 @@
-name: Master
+name: CI
 
 on:
+  pull_request:
+    branches:
+    - master
+    - vision
   push:
     branches:
     - master
@@ -11,6 +15,20 @@ on:
   - cron: '37 11 * * 1,2,3,4,5'  # early morning (11:37 UTC / 4:37 AM PDT) Monday - Friday
 
 jobs:
+  changelog:
+    name: CHANGELOG
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+    - uses: actions/checkout@v1
+
+    - name: Check that CHANGELOG has been updated
+      run: |
+        # If this step fails, this means you haven't updated the CHANGELOG.md
+        # file with notes on your contribution.
+        git diff --name-only $(git merge-base origin/master HEAD) | grep '^CHANGELOG.md$' && echo "Thanks for helping keep our CHANGELOG up-to-date!"
+
   gpu_checks:
     name: GPU Checks
     if: github.repository == 'allenai/allennlp'  # self-hosted runner only available on main repo
@@ -38,8 +56,6 @@ jobs:
 
   check_core:
     name: Check Core
-    # Don't run nightly builds for forks.
-    if: github.repository == 'allenai/allennlp' || github.event_name != 'schedule'
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -87,7 +103,7 @@ jobs:
         make test-with-cov
 
     - name: Upload coverage to Codecov
-      if: matrix.python == '3.7' && github.repository == 'allenai/allennlp' && github.event_name == 'push'
+      if: matrix.python == '3.7' && github.repository == 'allenai/allennlp' && (github.event_name == 'push' || github.event_name == 'pull_request')
       uses: codecov/codecov-action@v1
       with:
         file: ./coverage.xml
@@ -106,8 +122,6 @@ jobs:
 
   check_models:
     name: Check Models
-    # Don't run nightly builds for forks.
-    if: github.repository == 'allenai/allennlp' || github.event_name != 'schedule'
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -156,8 +170,6 @@ jobs:
   # Builds package distribution files for PyPI.
   build_package:
     name: Build Package
-    # Don't run nightly builds for forks.
-    if: github.repository == 'allenai/allennlp' || github.event_name != 'schedule'
     runs-on: ubuntu-latest
 
     steps:
@@ -224,8 +236,6 @@ jobs:
   # Tests installing from the distribution files.
   test_package:
     name: Test Package
-    # Don't run nightly builds for forks.
-    if: github.repository == 'allenai/allennlp' || github.event_name != 'schedule'
     needs: [build_package]  # needs the package artifact created from 'build_package' job.
     runs-on: ubuntu-latest
     strategy:
@@ -267,71 +277,82 @@ jobs:
 
   # Builds Docker image from the core distribution files and uploads to Docker Hub.
   docker:
-    name: Docker
-    # Don't run nightly builds for forks.
-    if: github.repository == 'allenai/allennlp' || github.event_name != 'schedule'
-    needs: [build_package]  # needs the package artifact created from 'build_package' job.
-    runs-on: ubuntu-latest
+    name: Docker (CUDA ${{ matrix.cuda }})
+    if: github.repository == 'allenai/allennlp'
+    runs-on: [self-hosted, GPU]
+    strategy:
+      matrix:
+        cuda: ['10.2', '11.0']
 
     steps:
     - uses: actions/checkout@v2
 
-    - name: Set Docker image name
+    - name: Set torch version
+      env:
+        CUDA: ${{ matrix.cuda }}
       run: |
-        if [[ $GITHUB_EVENT_NAME == 'release' ]]; then
-            echo "DOCKER_IMAGE_NAME=allennlp/allennlp:${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV;
+        # Check the install instructions on https://pytorch.org/ to keep these up-to-date.
+        if [[ $CUDA == '10.2' ]]; then
+            echo "DOCKER_TORCH_VERSION='torch==1.7.0'" >> $GITHUB_ENV;
+        elif [[ $CUDA == '11.0' ]]; then
+            echo "DOCKER_TORCH_VERSION='torch==1.7.0+cu110 -f https://download.pytorch.org/whl/torch_stable.html'" >> $GITHUB_ENV;
         else
-            echo "DOCKER_IMAGE_NAME=allennlp/commit:$GITHUB_SHA" >> $GITHUB_ENV;
+            echo "Unhandled CUDA version $CUDA";
+            exit 1;
         fi
 
-    - name: Download core package
-      uses: actions/download-artifact@v1
-      with:
-        name: core-package
-        path: dist
+    - name: Set image name
+      env:
+        CUDA: ${{ matrix.cuda }}
+      run: |
+        if [[ $GITHUB_EVENT_NAME == 'release' ]]; then
+            echo "DOCKER_IMAGE_NAME=allennlp/allennlp:${GITHUB_REF#refs/tags/}-cuda${CUDA}" >> $GITHUB_ENV;
+        else
+            echo "DOCKER_IMAGE_NAME=allennlp/commit:${GITHUB_SHA}-cuda${CUDA}" >> $GITHUB_ENV;
+        fi
 
     - name: Build image
       run: |
-        make docker-image DOCKER_IMAGE_NAME=$DOCKER_IMAGE_NAME
+        make docker-image DOCKER_IMAGE_NAME="$DOCKER_IMAGE_NAME" DOCKER_TORCH_VERSION="$DOCKER_TORCH_VERSION"
 
     - name: Test image
       run: |
         make docker-run DOCKER_IMAGE_NAME=$DOCKER_IMAGE_NAME ARGS='test-install'
 
-    - name: Upload master image
-      # Only run this for pushes to master on the main repo, not forks.
-      if: github.repository == 'allenai/allennlp' && github.event_name == 'push' && github.ref == 'refs/heads/master'
+    - name: Upload commit image
+      # Only upload the 10.2 image.
+      if: github.event_name == 'push' && matrix.cuda == '10.2' && github.ref == 'refs/heads/master'
       run: |
         docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
         docker push $DOCKER_IMAGE_NAME
 
     - name: Upload release image
-      # Only run this for releases on the main repo, not forks.
-      if: github.repository == 'allenai/allennlp' && github.event_name == 'release'
+      # Only run this for releases.
+      if: github.event_name == 'release'
       run: |
         docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
-
-        # Tag with latest.
-        docker tag $DOCKER_IMAGE_NAME allennlp/allennlp:latest
-
-        # Push both tags.
         docker push $DOCKER_IMAGE_NAME
+
+    - name: Upload latest image
+      # CUDA 10.2 is currently our default.
+      if: github.event_name == 'release' && matrix.cuda == '10.2'
+      run: |
+        docker tag $DOCKER_IMAGE_NAME allennlp/allennlp:latest
         docker push allennlp/allennlp:latest
 
   # Builds the API documentation and pushes it to the appropriate folder in the
   # allennlp-docs repo.
   docs:
     name: Docs
-    # Don't run nightly builds for forks.
-    if: github.repository == 'allenai/allennlp' || github.event_name != 'schedule'
+    # Don't run for forks.
+    if: github.repository == 'allenai/allennlp'
     runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v1
 
     - name: Setup SSH Client 🔑
-      # Only run this on main repo (not forks).
-      if: github.repository == 'allenai/allennlp'
+      if: (github.event_name == 'release' || github.event_name == 'push') && github.ref == 'refs/heads/master'
       uses: webfactory/ssh-agent@v0.2.0
       with:
         ssh-private-key: ${{ secrets.DOCS_DEPLOY_KEY }}
@@ -359,14 +380,14 @@ jobs:
         ./scripts/build_docs.sh
 
     - name: Configure Git
-      # Only run this on main repo (not forks).
-      if: github.repository == 'allenai/allennlp'
+      if: (github.event_name == 'release' || github.event_name == 'push') && github.ref == 'refs/heads/master'
       run: |
         git config --global user.email "ai2service@allenai.org"
         git config --global user.name "ai2service"
         git config --global push.default simple
 
     - name: Set target folders
+      if: (github.event_name == 'release' || github.event_name == 'push') && github.ref == 'refs/heads/master'
       run: |
         if [[ $GITHUB_EVENT_NAME == 'release' ]]; then
             echo "DOCS_FOLDER=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV;
@@ -375,9 +396,7 @@ jobs:
         fi
 
     - name: Stage docs
-      # Only run this on main repo (not forks) for commits and releases but not for
-      # nightly builds.
-      if: github.repository == 'allenai/allennlp' && github.event_name != 'schedule'
+      if: (github.event_name == 'release' || github.event_name == 'push') && github.ref == 'refs/heads/master'
       run: |
         echo "Staging docs to $DOCS_FOLDER"
 
@@ -390,9 +409,7 @@ jobs:
         cp -r site/* ~/allennlp-docs/$DOCS_FOLDER
 
     - name: Update shortcuts
-      # Only run this on main repo (not forks) for commits and releases but not for
-      # nightly builds.
-      if: github.repository == 'allenai/allennlp' && github.event_name == 'release'
+      if: github.event_name == 'release'
       run: |
         # Fail immediately if any step fails.
         set -e
@@ -431,9 +448,7 @@ jobs:
         EOL
 
     - name: Deploy docs
-      # Only run this on main repo (not forks) master branch for commits and releases,
-      # but not for nightly builds.
-      if: github.repository == 'allenai/allennlp' && github.event_name != 'schedule' && github.ref == 'refs/heads/master'
+      if: (github.event_name == 'release' || github.event_name == 'push') && github.ref == 'refs/heads/master'
       run: |
         # And push them up to GitHub
         cd ~/allennlp-docs/
@@ -451,7 +466,7 @@ jobs:
     name: PyPI
     needs: [check_core, check_models, gpu_checks, build_package, test_package, docker, docs]
     # Only publish to PyPI on releases and nightly builds to "allenai/allennlp" (not forks).
-    if: github.repository == 'allenai/allennlp' && github.event_name != 'push'
+    if: github.repository == 'allenai/allennlp' && (github.event_name == 'release' || github.event == 'schedule')
     runs-on: ubuntu-latest
 
     steps:
