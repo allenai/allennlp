@@ -12,7 +12,6 @@ from typing import (
     Iterator,
     Iterable,
 )
-import jsonlines
 import os
 
 from overrides import overrides
@@ -24,7 +23,7 @@ import torch.distributed as dist
 from allennlp.common import util
 from allennlp.common.checks import check_for_gpu
 from allennlp.common.util import int_to_device
-from allennlp.common.file_utils import TensorCache
+from allennlp.common.file_utils import TensorCache, json_lines_from_file
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import ArrayField, LabelField, TextField
 from allennlp.data.image_loader import ImageLoader
@@ -157,10 +156,8 @@ class VisualEntailmentReader(DatasetReader):
 
     @overrides
     def _read(self, file_path: str):
-        info_dicts: List[Dict] = []
-        with jsonlines.open(file_path) as f:
-            for line in self.shard_iterable(f.iter()):
-                info_dicts.append(line)
+        lines = json_lines_from_file(file_path)
+        info_dicts: List[Dict] = list(self.shard_iterable(lines))  # type: ignore
 
         if not self.skip_image_feature_extraction:
             # It would be much easier to just process one image at a time, but it's faster to process
