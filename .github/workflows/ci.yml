@@ -347,8 +347,7 @@ jobs:
     - uses: actions/checkout@v1
 
     - name: Setup SSH Client 🔑
-      if: github.event_name == 'release' || github.event_name == 'push'
-      uses: webfactory/ssh-agent@v0.2.0
+      uses: webfactory/ssh-agent@v0.4.1
       with:
         ssh-private-key: ${{ secrets.DOCS_DEPLOY_KEY }}
 
