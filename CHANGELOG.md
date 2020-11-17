@@ -13,9 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A new high-performance default `DataLoader`: `MultiProcessDataLoading`.
 - A `MultiTaskModel` and abstractions to use with it, including `Backbone` and `Head`.  The
   `MultiTaskModel` first runs its inputs through the `Backbone`, then passes the result (and
-whatever other relevant inputs it got) to each `Head` that's in use.  This is intended for
-multi-task learning, but so far it is incomplete, as there are no corresponding dataset readers or
-data loaders.  Those are coming soon.
+whatever other relevant inputs it got) to each `Head` that's in use.
+- A `MultiTaskDataLoader`, with a corresponding `MultiTaskDatasetReader`, and a couple of new
+  configuration objects: `MultiTaskEpochSampler` (for deciding what proportion to sample from each
+dataset at every epoch) and a `MultiTaskScheduler` (for ordering the instances within an epoch).
 - Added `TensorCache` class for caching tensors on disk
 - Added reader for the NLVR2 dataset
 - Added cache for Detectron models that we might re-use several times in the code base
@@ -34,22 +35,39 @@ data loaders.  Those are coming soon.
   the `MultiProcessDataLoading` this is controlled by the `max_instances_in_memory` setting.
 - `TensorField` is now implemented in terms of torch tensors, not numpy.
 
-### Fixed
-
-- Ignore `*args` when constructing classes with `FromParams`.
-- Ensured some consistency in the types of the values that metrics return.
-- `PretrainedTransformerTokenizer` will now never return a sequence that's longer than `max_length`, even with special tokens
-
 
 ## Unreleased (1.x branch)
 
 ### Added
 
-- Added an optional `seed` parameter to `ModelTestCase.set_up_model` which sets the random
-  seed for `random`, `numpy`, and `torch`.
+- Added Docker builds for other torch-supported versions of CUDA.
+- Adds [`allennlp-semparse`](https://github.com/allenai/allennlp-semparse) as an official, default plugin.
 
 ### Fixed
 
+- `GumbelSampler` now sorts the beams by their true log prob.
+
+
+## [v1.2.1](https://github.com/allenai/allennlp/releases/tag/v1.2.1) - 2020-11-10
+
+### Added
+
+- Added an optional `seed` parameter to `ModelTestCase.set_up_model` which sets the random
+  seed for `random`, `numpy`, and `torch`.
+- Added support for a global plugins file at `~/.allennlp/plugins`.
+- Added more documentation about plugins.
+- Added sampler class and parameter in beam search for non-deterministic search, with several
+  implementations, including `MultinomialSampler`, `TopKSampler`, `TopPSampler`, and
+  `GumbelSampler`. Utilizing `GumbelSampler` will give [Stochastic Beam Search](https://api.semanticscholar.org/CorpusID:76662039).
+
+### Changed
+
+- Pass batch metrics to `BatchCallback`.
+
+### Fixed
+
+- Fixed a bug where forward hooks were not cleaned up with saliency interpreters if there
+  was an exception.
 - Fixed the computation of saliency maps in the Interpret code when using mismatched indexing.
   Previously, we would compute gradients from the top of the transformer, after aggregation from
   wordpieces to tokens, which gives results that are not very informative.  Now, we compute gradients
@@ -58,6 +76,8 @@ data loaders.  Those are coming soon.
   `transformers` library broke our old heuristic.
 - Fixed typo with registered name of ROUGE metric. Previously was `rogue`, fixed to `rouge`.
 - Fixed default masks that were erroneously created on the CPU even when a GPU is available.
+- Fixed pretrained embeddings for transformers that don't use end tokens.
+- Fixed the transformer tokenizer cache when the tokenizers are initialized with custom kwargs.
 
 
 ## [v1.2.0](https://github.com/allenai/allennlp/releases/tag/v1.2.0) - 2020-10-29
