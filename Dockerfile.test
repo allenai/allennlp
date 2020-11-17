@@ -17,26 +17,23 @@ LABEL com.nvidia.volumes.needed="nvidia_driver"
 
 WORKDIR /stage/allennlp
 
+# Install torch and detectron2 first. This build arg should be in the form of a version requirement,
+# like 'torch==1.7' or 'torch==1.7+cu102 -f https://download.pytorch.org/whl/torch_stable.html'.
+ARG TORCH
+RUN pip install --no-cache-dir ${TORCH}
+ARG DETECTRON
+RUN pip install --no-cache-dir ${DETECTRON}
+
 # Installing AllenNLP's dependencies is the most time-consuming part of building
 # this Docker image, so we make use of layer caching here by adding the minimal files
-# necessary to install the dependencies. Since most of the dependencies are defined
-# in the setup.py file, we create a "shell" package of allennlp using the same setup file
-# and then pip install it, after which we uninstall it so that we'll only have the dependencies
-# installed.
+# necessary to install the dependencies.
 COPY allennlp/version.py allennlp/version.py
-RUN touch allennlp/__init__.py && touch README.md
-COPY setup.py setup.py
-COPY dev-requirements.txt dev-requirements.txt
-
-# Now install deps by installing the shell package, and then uninstall it so we can
-# re-install the full package below.
-RUN pip install --no-cache-dir -e .[vision] && \
-    pip install --no-cache-dir -r dev-requirements.txt && \
-    pip uninstall -y allennlp && \
-    rm -rf allennlp/
-
-# reinstall Detectron, because the version referenced in dev-requirements.txt is not reliable.
-RUN pip install detectron2 -f https://dl.fbaipublicfiles.com/detectron2/wheels/cu102/torch1.7/index.html
+COPY setup.py .
+COPY dev-requirements.txt .
+RUN touch allennlp/__init__.py \
+    && touch README.md \
+    && grep -Ev 'detectron' dev-requirements.txt \
+    | pip install --no-cache-dir -e .[vision] -r /dev/stdin
 
 # Now add the full package source and re-install just the package.
 COPY . .

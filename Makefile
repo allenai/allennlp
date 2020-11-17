@@ -13,6 +13,11 @@ MD_DOCS_EXTRAS = $(addprefix $(MD_DOCS_ROOT),README.md CHANGELOG.md CONTRIBUTING
 DOCKER_TAG = latest
 DOCKER_IMAGE_NAME = allennlp/allennlp:$(DOCKER_TAG)
 DOCKER_TEST_IMAGE_NAME = allennlp/test:$(DOCKER_TAG)
+DOCKER_TORCH_VERSION = 'torch==1.7.0'
+DOCKER_DETECTRON_VERSION = 'detectron2 -f https://dl.fbaipublicfiles.com/detectron2/wheels/cu102/torch1.7/index.html'
+# Our self-hosted runner currently has CUDA 11.0.
+DOCKER_TEST_TORCH_VERSION = 'torch==1.7.0+cu110 -f https://download.pytorch.org/whl/torch_stable.html'
+DOCKER_TEST_DETECTRON_VERSION = 'detectron2 -f https://dl.fbaipublicfiles.com/detectron2/wheels/cu110/torch1.7/index.html'
 DOCKER_RUN_CMD = docker run --rm \
 		-v $$HOME/.allennlp:/root/.allennlp \
 		-v $$HOME/.cache/torch:/root/.cache/torch \
@@ -111,7 +116,7 @@ $(MD_DOCS_ROOT)README.md : README.md
 	# Alter the relative path of the README image for the docs.
 	$(SED) -i '1s/docs/./' $@
 	# Alter external doc links to relative links.
-	$(SED) -i 's|https://docs.allennlp.org/master/api/|/api/|' $@
+	$(SED) -i 's|https://docs.allennlp.org/master/api/|api/|' $@
 
 $(MD_DOCS_ROOT)%.md : %.md
 	cp $< $@
@@ -141,18 +146,25 @@ clean :
 .PHONY : docker-image
 docker-image :
 	docker build \
-			--pull \
-			-f Dockerfile \
-			-t $(DOCKER_IMAGE_NAME) .
+		--pull \
+		-f Dockerfile \
+		--build-arg TORCH=$(DOCKER_TORCH_VERSION) \
+		--build-arg DETECTRON=$(DOCKER_DETECTRON_VERSION) \
+		-t $(DOCKER_IMAGE_NAME) .
 
 .PHONY : docker-run
 docker-run :
-	$(DOCKER_RUN_CMD) $(DOCKER_IMAGE_NAME) $(ARGS)
+	$(DOCKER_RUN_CMD) --gpus all $(DOCKER_IMAGE_NAME) $(ARGS)
 
 .PHONY : docker-test-image
 docker-test-image :
-	docker build --pull -f Dockerfile.test -t $(DOCKER_TEST_IMAGE_NAME) .
+	docker build \
+		--pull \
+		-f Dockerfile.test \
+		--build-arg TORCH=$(DOCKER_TEST_TORCH_VERSION) \
+		--build-arg DETECTRON=$(DOCKER_TEST_DETECTRON_VERSION) \
+		-t $(DOCKER_TEST_IMAGE_NAME) .
 
 .PHONY : docker-test-run
 docker-test-run :
-	$(DOCKER_RUN_CMD) --gpus 2 $(DOCKER_TEST_IMAGE_NAME) $(ARGS)
+	$(DOCKER_RUN_CMD) --gpus all $(DOCKER_TEST_IMAGE_NAME) $(ARGS)
