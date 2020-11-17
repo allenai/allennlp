@@ -18,6 +18,7 @@ from allennlp.data.dataset_readers.multitask import MultiTaskDatasetReader
 from allennlp.data.dataset_readers.sequence_tagging import SequenceTaggingDatasetReader
 from allennlp.data.dataset_readers.sharded_dataset_reader import ShardedDatasetReader
 from allennlp.data.dataset_readers.text_classification_json import TextClassificationJsonReader
+
 try:
     from allennlp.data.dataset_readers.nlvr2 import Nlvr2Reader
     from allennlp.data.dataset_readers.visual_entailment import VisualEntailmentReader
