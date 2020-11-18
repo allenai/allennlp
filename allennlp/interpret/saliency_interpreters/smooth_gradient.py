@@ -72,8 +72,10 @@ class SmoothGradient(SaliencyInterpreter):
         total_gradients: Dict[str, Any] = {}
         for _ in range(self.num_samples):
             handle = self._register_forward_hook(self.stdev)
-            grads = self.predictor.get_gradients([instance])[0]
-            handle.remove()
+            try:
+                grads = self.predictor.get_gradients([instance])[0]
+            finally:
+                handle.remove()
 
             # Sum gradients
             if total_gradients == {}:
