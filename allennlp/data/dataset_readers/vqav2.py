@@ -430,6 +430,10 @@ class VQAv2Reader(DatasetReader):
                 None,
                 scene_base + "Questions_Test_abstract_v002.zip!OpenEnded_abstract_v002_test2015_questions.json",  # noqa: E501
             ),
+            "unittest": Split(
+                "test_fixtures/data/vqav2/annotations.json",
+                "test_fixtures/data/vqav2/questions.json"
+            )
         }
         # fmt: on
 

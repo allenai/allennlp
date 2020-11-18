@@ -8,7 +8,6 @@ local vocabulary = {
   "directory": "https://storage.googleapis.com/allennlp-public-data/vqav2/vqav2_vocab.tar.gz"
 };
 
-
 {
   "dataset_reader": {
     "type": "vqav2",

@@ -1,12 +1,12 @@
-local model_name = "bert-base-uncased";
+local model_name = "epwalsh/bert-xsmall-dummy";
+
 {
   "dataset_reader": {
     "type": "vqav2",
-    "image_dir": "/net/nfs2.corp/prior/datasets/coco",
-    "feature_cache_dir": "test_fixtures/data/vqav2/images/experiment_cache",
+    "image_dir": "test_fixtures/data/vqav2/images",
     "image_loader": "detectron",
     "image_featurizer": "null",
-    "region_detector": "null",
+    "region_detector": "random",
     "tokenizer": {
       "type": "pretrained_transformer",
       "model_name": model_name
@@ -18,47 +18,54 @@ local model_name = "bert-base-uncased";
       }
     }
   },
-  "train_data_path": "balanced_real_train",
-  "validation_data_path": "balanced_real_val",
-  "vocabulary": {"type": "empty"},
+  "train_data_path": "unittest",
+  "validation_data_path": "unittest",
+  "vocabulary": {"min_count": {"answers": 2}},
+  "datasets_for_vocab_creation": ["train"],
   "model": {
     "type": "vqa_vilbert",
     "text_embeddings": {
-      "vocab_size": 30522,
-      "hidden_size": 22,
+      "vocab_size": 250,
+      "hidden_size": 20,
       "pad_token_id": 0,
-      "max_position_embeddings": 50,
-      "type_vocab_size": 4,
+      "max_position_embeddings": 512,
+      "type_vocab_size": 2,
       "dropout": 0.0
     },
     "image_embeddings": {
-      "feature_dim": 2048,
-      "hidden_dim": 28
+      "feature_dim": 10,
+      "hidden_dim": 200
     },
     "encoder": {
-      "text_num_hidden_layers": 12,
-      "image_num_hidden_layers": 6,
-      "text_hidden_size": 768,
-      "image_hidden_size": 1024,
-      "combined_hidden_size": 1024,
-      "text_intermediate_size": 3072,
-      "image_intermediate_size": 1024,
-      "text_num_attention_heads": 12,
-      "text_attention_dropout": 0.1,
-      "image_attention_dropout": 0.1,
-      "text_hidden_dropout": 0.1,
-      "image_hidden_dropout": 0.1,
+      # text
+      "hidden_size1": 20,
+      "num_hidden_layers1": 1,
+      "intermediate_size1": 40,
+      "num_attention_heads1": 1,
+      "attention_dropout1": 0.1,
+      "hidden_dropout1": 0.1,
+      "biattention_id1": [0, 1],
+      "fixed_layer1": 0,
+
+      # vision
+      "hidden_size2": 200,
+      "num_hidden_layers2": 1,
+      "intermediate_size2": 50,
+      "num_attention_heads2": 1,
+      "attention_dropout2": 0.0,
+      "hidden_dropout2": 0.0,
+      "biattention_id2": [0, 1],
+      "fixed_layer2": 0,
+
+      "combined_num_attention_heads": 2,
+      "combined_hidden_size": 200,
       "activation": "gelu",
-      "v_biattention_id": [0, 1, 2, 3, 4, 5],
-      "t_biattention_id": [6,7,8,9,10,11],
-      "fixed_t_layer": 0,
-      "fixed_v_layer": 0
     },
-    "pooled_output_dim": 1024,
-    "fusion_method": "sum"
+    "pooled_output_dim": 100,
+    "fusion_method": "sum",
   },
   "data_loader": {
-    "batch_size": 32
+    "batch_size": 4
   },
   "trainer": {
     "optimizer": {
@@ -67,7 +74,4 @@ local model_name = "bert-base-uncased";
     },
     "num_epochs": 1,
   },
-  "distributed": {
-    "cuda_devices": [0, 1]
-  }
 }

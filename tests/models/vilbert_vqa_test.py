@@ -7,7 +7,7 @@ from allennlp.models.vilbert_vqa import VqaVilbert
 
 class TestVqaVilbert(ModelTestCase):
     def test_model_can_train_save_and_load_small_model(self):
-        param_file = self.FIXTURES_ROOT / "vilbert_vqa" / "experiment_small.jsonnet"
+        param_file = self.FIXTURES_ROOT / "vilbert_vqa" / "experiment.jsonnet"
         self.ensure_model_can_train_save_and_load(param_file)
 
     def test_model_can_train_save_and_load_with_cache(self):
