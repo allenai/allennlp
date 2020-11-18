@@ -321,6 +321,7 @@ jobs:
         make docker-run DOCKER_IMAGE_NAME=$DOCKER_IMAGE_NAME ARGS='test-install'
 
     - name: Authenticate to Docker Hub
+      if: github.event_name == 'release' || github.event_name == 'push'
       run: |
         docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
 
