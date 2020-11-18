@@ -8,7 +8,6 @@ on:
   push:
     branches:
     - master
-    - vision
   release:
     types: [published]
   schedule:
@@ -321,19 +320,21 @@ jobs:
       run: |
         make docker-run DOCKER_IMAGE_NAME=$DOCKER_IMAGE_NAME ARGS='test-install'
 
-    - name: Upload commit image
-      # Only upload the 10.2 image.
-      if: github.event_name == 'push' && matrix.cuda == '10.2' && github.ref == 'refs/heads/master'
+    - name: Authenticate to Docker Hub
       run: |
         docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
+
+    - name: Upload image
+      if: github.event_name == 'release' || github.event_name == 'push'
+      run: |
         docker push $DOCKER_IMAGE_NAME
 
-    - name: Upload release image
-      # Only run this for releases.
-      if: github.event_name == 'release'
+    - name: Upload default commit image
+      # CUDA 10.2 is currently our default.
+      if: github.event_name == 'push' && matrix.cuda == '10.2'
       run: |
-        docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
-        docker push $DOCKER_IMAGE_NAME
+        docker tag $DOCKER_IMAGE_NAME allennlp/commit:${GITHUB_SHA}
+        docker push allennlp/commit:${GITHUB_SHA}
 
     - name: Upload latest image
       # CUDA 10.2 is currently our default.
@@ -354,6 +355,7 @@ jobs:
     - uses: actions/checkout@v1
 
     - name: Setup SSH Client 🔑
+      if: github.event_name == 'release' || github.event_name == 'push'
       uses: webfactory/ssh-agent@v0.4.1
       with:
         ssh-private-key: ${{ secrets.DOCS_DEPLOY_KEY }}

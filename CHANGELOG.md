@@ -45,6 +45,9 @@ dataset at every epoch) and a `MultiTaskScheduler` (for ordering the instances w
 
 ## Unreleased (1.x branch)
 
+
+## [v1.2.2](https://github.com/allenai/allennlp/releases/tag/v1.2.2) - 2020-11-17
+
 ### Added
 
 - Added Docker builds for other torch-supported versions of CUDA.
