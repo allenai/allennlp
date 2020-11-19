@@ -35,21 +35,24 @@ class TestVqaVilbert(ModelTestCase):
             model_name=model_name,
             image_feature_dim=2048,
             image_num_hidden_layers=1,
-            image_hidden_size=3,
-            combined_hidden_size=5,
+            image_hidden_size=6,
+            combined_hidden_size=10,
             pooled_output_dim=7,
             image_intermediate_size=11,
             image_attention_dropout=0.0,
             image_hidden_dropout=0.0,
-            v_biattention_id=[0, 1],
-            t_biattention_id=[0, 1],
-            fixed_t_layer=0,
-            fixed_v_layer=0,
+            image_biattention_id=[0, 1],
+            text_biattention_id=[0, 1],
+            text_fixed_layer=0,
+            image_fixed_layer=0,
+            image_num_attention_heads=3,
+            combined_num_attention_heads=2
         )
 
         def convert_transformer_param_name(name: str):
             # We wrap the encoder in a `TimeDistributed`, which gives us this extra _module.
             name = name.replace("LayerNorm", "layer_norm")
+            name = name.replace(".layer.", ".layers1.")
             return name
 
         transformer = AutoModel.from_pretrained(model_name)
