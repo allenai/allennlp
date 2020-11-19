@@ -46,7 +46,7 @@ class TestVqaVilbert(ModelTestCase):
             text_fixed_layer=0,
             image_fixed_layer=0,
             image_num_attention_heads=3,
-            combined_num_attention_heads=2
+            combined_num_attention_heads=2,
         )
 
         def convert_transformer_param_name(name: str):
