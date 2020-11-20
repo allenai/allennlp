@@ -31,8 +31,9 @@ class TestVQAv2Reader(AllenNlpTestCase):
         assert len(instance["labels"]) == 5
         labels = [field.label for field in instance["labels"].field_list]
         assert labels == ["net", "netting", "mesh", "pitcher", "orange"]
-        assert torch.all(
-            instance["label_weights"].tensor == torch.tensor([1.0, 0.3, 0.3, 0.3, 0.3])
+        assert torch.allclose(
+            instance["label_weights"].tensor,
+            torch.tensor([1.0, 1.0 / 3, 1.0 / 3, 1.0 / 3, 1.0 / 3]),
         )
 
         batch = Batch(instances)
@@ -40,7 +41,7 @@ class TestVQAv2Reader(AllenNlpTestCase):
         tensors = batch.as_tensor_dict()
 
         # (batch size, num boxes (fake), num features (fake))
-        assert tensors["box_features"].size() == (3, 1, 10)
+        assert tensors["box_features"].size() == (3, 2, 10)
 
         # (batch size, num boxes (fake), 4 coords)
-        assert tensors["box_coordinates"].size() == (3, 1, 4)
+        assert tensors["box_coordinates"].size() == (3, 2, 4)
