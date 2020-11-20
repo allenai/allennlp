@@ -5,14 +5,12 @@ from detectron2.structures import ImageList
 import torch
 from torch import FloatTensor, IntTensor
 
-from allennlp.common import detectron
 from allennlp.common.detectron import DetectronConfig, DetectronFlatParameters
 from allennlp.common.file_utils import cached_path
 from allennlp.common.registrable import Registrable
 
 OnePath = Union[str, PathLike]
 ManyPaths = Sequence[OnePath]
-
 ImagesWithSize = Tuple[FloatTensor, IntTensor]
 
 
@@ -27,7 +25,7 @@ class ImageLoader(Registrable):
     default_implementation = "detectron"
 
     def __call__(self, filename_or_filenames: Union[OnePath, ManyPaths]) -> ImagesWithSize:
-        if not isinstance(filename_or_filenames, list):
+        if not isinstance(filename_or_filenames, (list, tuple)):
             pixels, sizes = self([filename_or_filenames])  # type: ignore
             return pixels[0], sizes[0]
 
@@ -47,20 +45,16 @@ class DetectronImageLoader(ImageLoader):
         self,
         config: Optional[DetectronInput] = None,
     ):
+        cfg: DetectronConfig
         if config is None:
-            pipeline = detectron.get_pipeline_from_flat_parameters(
-                make_copy=False, fp=DetectronFlatParameters()
-            )
-        elif isinstance(config, DetectronConfig):
-            pipeline = detectron.get_pipeline(make_copy=False, **config._asdict())
+            cfg = DetectronFlatParameters().as_config()
         elif isinstance(config, DetectronFlatParameters):
-            pipeline = detectron.get_pipeline_from_flat_parameters(
-                make_copy=False, **config._asdict()
-            )
+            cfg = config.as_config()
+        elif isinstance(config, DetectronConfig):
+            cfg = config
         else:
-            raise ValueError("Unknown type of `config`")
-
-        self.mapper = pipeline.mapper
+            raise ValueError(f"unknown type of `config`: {type(config)}")
+        self.mapper = cfg.build_dataset_mapper()
 
     def load(self, filenames: ManyPaths) -> ImagesWithSize:
         images = [{"file_name": str(f)} for f in filenames]

@@ -8,6 +8,7 @@ from detectron2.data import DatasetMapper
 from detectron2.layers import ShapeSpec
 from detectron2.model_zoo import get_config_file
 from detectron2.modeling import build_model
+from detectron2.modeling.backbone import Backbone, build_backbone
 from detectron2.modeling.box_regression import Box2BoxTransform
 from detectron2.modeling.poolers import ROIPooler
 from detectron2.modeling.roi_heads.fast_rcnn import FastRCNNOutputLayers
@@ -20,69 +21,18 @@ from detectron2.modeling.roi_heads import (
     Res5ROIHeads,
     StandardROIHeads,
 )
+from detectron2.structures.image_list import ImageList
 from torch import nn
 import torch
 
 from allennlp.common.file_utils import cached_path
 
 
-class DetectronConfig(NamedTuple):
-    builtin_config_file: Optional[str] = None
-    yaml_config_file: Optional[str] = None
-    overrides: Optional[Dict[str, Any]] = None
-
-
+# TODO: remove
 class DetectronPipeline(NamedTuple):
     cfg: config.CfgNode
     mapper: DatasetMapper
     model: nn.Module
-
-
-def update(d, u):
-    for k, v in u.items():
-
-        if isinstance(v, Mapping):
-            d[k] = update(d.get(k, {}), v)
-        else:
-            d[k] = v
-    return d
-
-
-def convert_to_dict(cfg_node, key_list: Optional[List[str]] = None):
-    if key_list is None:
-        key_list = []
-    if not isinstance(cfg_node, config.CfgNode):
-        return cfg_node
-    else:
-        cfg_dict = dict(cfg_node)
-        for k, v in cfg_dict.items():
-            cfg_dict[k] = convert_to_dict(v, key_list + [k])
-        return cfg_dict
-
-
-def get_cfg(
-    builtin_config_file: Optional[str] = None,
-    yaml_config_file: Optional[str] = None,
-    overrides: Optional[Dict[str, Any]] = None,
-    freeze: bool = True,
-) -> config.CfgNode:
-
-    cfg = config.get_cfg()
-
-    if builtin_config_file is not None:
-        cfg.merge_from_file(get_config_file(builtin_config_file))
-    if yaml_config_file is not None:
-        cfg.merge_from_file(yaml_config_file)
-    if overrides is not None:
-        old_dict = convert_to_dict(cfg, [])
-        new_dict = update(old_dict, overrides)
-        cfg = config.CfgNode(new_dict)
-
-    if not torch.cuda.is_available():
-        cfg.MODEL.DEVICE = "cpu"
-    if freeze:
-        cfg.freeze()
-    return cfg
 
 
 def load_checkpoint(checkpoint_name: str):
@@ -98,18 +48,17 @@ def load_checkpoint(checkpoint_name: str):
     return cached_path(detectron_checkpoint_url, extract_archive=True)
 
 
-_pipeline_cache: Dict[DetectronConfig, DetectronPipeline] = {}
+# TODO: remove
+_pipeline_cache: Dict[str, DetectronPipeline] = {}
 
 
+# TODO: remove
 def get_pipeline(
-    builtin_config_file: Optional[str] = None,
-    yaml_config_file: Optional[str] = None,
-    overrides: Optional[Dict[str, Any]] = None,
+    cfg: config.CfgNode,
     make_copy: bool = True,
 ) -> DetectronPipeline:
     global _pipeline_cache
 
-    cfg = get_cfg(builtin_config_file, yaml_config_file, overrides)
     spec = cfg.dump()  # Easiest way to get a hashable snapshot of config.CfgNode.
     pipeline = _pipeline_cache.get(spec, None)
     if pipeline is None:
@@ -128,10 +77,62 @@ def get_pipeline(
         return pipeline
 
 
+class DetectronConfig(NamedTuple):
+    builtin_config_file: Optional[str] = None
+    yaml_config_file: Optional[str] = None
+    overrides: Optional[Dict[str, Any]] = None
+
+    def as_cfg_node(self, freeze: bool = True) -> config.CfgNode:
+        def _update(d, u):
+            for k, v in u.items():
+                if isinstance(v, Mapping):
+                    d[k] = _update(d.get(k, {}), v)
+                else:
+                    d[k] = v
+            return d
+
+        def _convert_to_dict(cfg_node, key_list: Optional[List[str]] = None):
+            if key_list is None:
+                key_list = []
+            if not isinstance(cfg_node, config.CfgNode):
+                return cfg_node
+            else:
+                cfg_dict = dict(cfg_node)
+                for k, v in cfg_dict.items():
+                    cfg_dict[k] = _convert_to_dict(v, key_list + [k])
+                return cfg_dict
+
+        cfg = config.get_cfg()
+
+        if self.builtin_config_file is not None:
+            cfg.merge_from_file(get_config_file(self.builtin_config_file))
+
+        if self.yaml_config_file is not None:
+            cfg.merge_from_file(self.yaml_config_file)
+
+        if self.overrides is not None:
+            old_dict = _convert_to_dict(cfg, [])
+            new_dict = _update(old_dict, self.overrides)
+            cfg = config.CfgNode(new_dict)
+
+        if not torch.cuda.is_available():
+            cfg.MODEL.DEVICE = "cpu"
+
+        if freeze:
+            cfg.freeze()
+        return cfg
+
+    def build_dataset_mapper(self) -> DatasetMapper:
+        return DatasetMapper(self.as_cfg_node())
+
+    def build_backbone(self) -> Backbone:
+        return build_backbone(self.as_cfg_node())
+
+
 class DetectronFlatParameters(NamedTuple):
     meta_architecture: str = "GeneralizedRCNN"
     device: Union[str, int, torch.device] = "cpu"
-    weights: str = "RCNN-X152-C4-2020-07-18"
+    weights: Optional[str] = None
 
     attribute_on: bool = True  # not in detectron2 default config
     max_attr_per_ins: int = 16  # not in detectron2 default config
@@ -204,93 +205,99 @@ class DetectronFlatParameters(NamedTuple):
     # Test
     test_detections_per_image: int = 36  # different from default (100)
 
+    def as_config(self) -> DetectronConfig:
+        if self.weights is None:
+            weights = None
+        else:
+            weights = load_checkpoint(self.weights)
+        return DetectronConfig(
+            None,
+            None,
+            {
+                "VERSION": 2,
+                "INPUT": {"MAX_ATTR_PER_INS": self.max_attr_per_ins},
+                "MODEL": {
+                    "DEVICE": self.device,
+                    "WEIGHTS": weights,
+                    "META_ARCHITECTURE": self.meta_architecture,
+                    "ATTRIBUTE_ON": self.attribute_on,
+                    "PIXEL_MEAN": self.pixel_mean,
+                    "PIXEL_STD": self.pixel_std,
+                    "PROPOSAL_GENERATOR": {"NAME": "RPN"},
+                    "RESNETS": {
+                        "STRIDE_IN_1X1": self.stride_in_1x1,
+                        "NUM_GROUPS": self.num_groups,
+                        "WIDTH_PER_GROUP": self.width_per_group,
+                        "DEPTH": self.depth,
+                    },
+                    "RPN": {
+                        "HEAD_NAME": self.rpn_head_name,
+                        "IN_FEATURES": self.rpn_in_features,
+                        "BOUNDARY_THRESH": self.rpn_boundary_thresh,
+                        "IOU_THRESHOLDS": self.rpn_iou_thresholds,
+                        "IOU_LABELS": self.rpn_iou_labels,
+                        "BATCH_SIZE_PER_IMAGE": self.rpn_batch_size_per_image,
+                        "POSITIVE_FRACTION": self.rpn_positive_fraction,
+                        "BBOX_REG_LOSS_TYPE": self.rpn_bbox_reg_loss_type,
+                        "BBOX_REG_LOSS_WEIGHT": self.rpn_bbox_reg_loss_weight,
+                        "BBOX_REG_WEIGHTS": self.rpn_bbox_reg_weights,
+                        "SMOOTH_L1_BETA": self.rpn_smooth_l1_beta,
+                        "LOSS_WEIGHT": self.rpn_loss_weight,
+                        "PRE_NMS_TOPK_TRAIN": self.rpn_pre_nms_topk_train,
+                        "PRE_NMS_TOPK_TEST": self.rpn_pre_nms_topk_test,
+                        "POST_NMS_TOPK_TRAIN": self.rpn_post_nms_topk_train,
+                        "POST_NMS_TOPK_TEST": self.rpn_post_nms_topk_test,
+                        "NMS_THRESH": self.rpn_nms_thresh,
+                        "BBOX_LOSS_WEIGHT": self.rpn_bbox_loss_weight,
+                    },
+                    "ROI_HEADS": {
+                        "NAME": self.roi_head_name,
+                        "NUM_CLASSES": self.roi_head_num_classes,
+                        "IN_FEATURES": self.roi_head_in_features,
+                        "IOU_THRESHOLDS": self.roi_head_iou_thresholds,
+                        "IOU_LABELS": self.roi_head_iou_labels,
+                        "BATCH_SIZE_PER_IMAGE": self.roi_head_batch_size_per_image,
+                        "POSITIVE_FRACTION": self.roi_head_positive_fraction,
+                        "SCORE_THRESH_TEST": self.roi_head_score_thresh_test,
+                        "NMS_THRESH_TEST": self.roi_head_nms_thresh_test,
+                        "PROPOSAL_APPEND_GT": self.roi_head_proposal_append_gt,
+                    },
+                    "ROI_BOX_HEAD": {
+                        "NAME": self.box_head_name,
+                        "BBOX_REG_LOSS_TYPE": self.box_head_bbox_reg_loss_type,
+                        "BBOX_REG_LOSS_WEIGHT": self.box_head_bbox_reg_loss_weight,
+                        "BBOX_REG_WEIGHTS": self.box_head_bbox_reg_weights,
+                        "SMOOTH_L1_BETA": self.box_head_smooth_l1_beta,
+                        "POOLER_RESOLUTION": self.box_head_pooler_resolution,
+                        "POOLER_SAMPLING_RATIO": self.box_head_pooler_sampling_ratio,
+                        "POOLER_TYPE": self.box_head_pooler_type,
+                        "NUM_FC": self.box_head_num_fc,
+                        "FC_DIM": self.box_head_fc_dim,
+                        "NUM_CONV": self.box_head_num_conv,
+                        "CONV_DIM": self.box_head_conv_dim,
+                        "NORM": self.box_head_norm,
+                        "CLS_AGNOSTIC_BBOX_REG": self.box_head_cls_agnostic_bbox_reg,
+                        "TRAIN_ON_PRED_BOXES": self.box_head_train_on_pred_boxes,
+                        "BBOX_LOSS_WEIGHT": self.box_head_bbox_loss_weight,
+                    },
+                    "ROI_ATTRIBUTE_HEAD": {  # not in detectron2 default config
+                        "OBJ_EMBED_DIM": self.attribute_head_obj_embed_dim,
+                        "FC_DIM": self.attribute_head_fc_dim,
+                        "LOSS_WEIGHT": self.attribute_head_loss_weight,
+                        "NUM_CLASSES": self.attribute_head_num_classes,
+                    },
+                },
+                "TEST": {"DETECTIONS_PER_IMAGE": self.test_detections_per_image},
+            },
+        )
 
+
+# TODO: remove
 def get_pipeline_from_flat_parameters(
     fp: DetectronFlatParameters, make_copy: bool = True
 ) -> DetectronPipeline:
-    if fp.weights is None:
-        weights = None
-    else:
-        weights = load_checkpoint(fp.weights)
-
-    overrides = {
-        "VERSION": 2,
-        "INPUT": {"MAX_ATTR_PER_INS": fp.max_attr_per_ins},
-        "MODEL": {
-            "DEVICE": fp.device,
-            "WEIGHTS": weights,
-            "META_ARCHITECTURE": fp.meta_architecture,
-            "ATTRIBUTE_ON": fp.attribute_on,
-            "PIXEL_MEAN": fp.pixel_mean,
-            "PIXEL_STD": fp.pixel_std,
-            "PROPOSAL_GENERATOR": {"NAME": "RPN"},
-            "RESNETS": {
-                "STRIDE_IN_1X1": fp.stride_in_1x1,
-                "NUM_GROUPS": fp.num_groups,
-                "WIDTH_PER_GROUP": fp.width_per_group,
-                "DEPTH": fp.depth,
-            },
-            "RPN": {
-                "HEAD_NAME": fp.rpn_head_name,
-                "IN_FEATURES": fp.rpn_in_features,
-                "BOUNDARY_THRESH": fp.rpn_boundary_thresh,
-                "IOU_THRESHOLDS": fp.rpn_iou_thresholds,
-                "IOU_LABELS": fp.rpn_iou_labels,
-                "BATCH_SIZE_PER_IMAGE": fp.rpn_batch_size_per_image,
-                "POSITIVE_FRACTION": fp.rpn_positive_fraction,
-                "BBOX_REG_LOSS_TYPE": fp.rpn_bbox_reg_loss_type,
-                "BBOX_REG_LOSS_WEIGHT": fp.rpn_bbox_reg_loss_weight,
-                "BBOX_REG_WEIGHTS": fp.rpn_bbox_reg_weights,
-                "SMOOTH_L1_BETA": fp.rpn_smooth_l1_beta,
-                "LOSS_WEIGHT": fp.rpn_loss_weight,
-                "PRE_NMS_TOPK_TRAIN": fp.rpn_pre_nms_topk_train,
-                "PRE_NMS_TOPK_TEST": fp.rpn_pre_nms_topk_test,
-                "POST_NMS_TOPK_TRAIN": fp.rpn_post_nms_topk_train,
-                "POST_NMS_TOPK_TEST": fp.rpn_post_nms_topk_test,
-                "NMS_THRESH": fp.rpn_nms_thresh,
-                "BBOX_LOSS_WEIGHT": fp.rpn_bbox_loss_weight,
-            },
-            "ROI_HEADS": {
-                "NAME": fp.roi_head_name,
-                "NUM_CLASSES": fp.roi_head_num_classes,
-                "IN_FEATURES": fp.roi_head_in_features,
-                "IOU_THRESHOLDS": fp.roi_head_iou_thresholds,
-                "IOU_LABELS": fp.roi_head_iou_labels,
-                "BATCH_SIZE_PER_IMAGE": fp.roi_head_batch_size_per_image,
-                "POSITIVE_FRACTION": fp.roi_head_positive_fraction,
-                "SCORE_THRESH_TEST": fp.roi_head_score_thresh_test,
-                "NMS_THRESH_TEST": fp.roi_head_nms_thresh_test,
-                "PROPOSAL_APPEND_GT": fp.roi_head_proposal_append_gt,
-            },
-            "ROI_BOX_HEAD": {
-                "NAME": fp.box_head_name,
-                "BBOX_REG_LOSS_TYPE": fp.box_head_bbox_reg_loss_type,
-                "BBOX_REG_LOSS_WEIGHT": fp.box_head_bbox_reg_loss_weight,
-                "BBOX_REG_WEIGHTS": fp.box_head_bbox_reg_weights,
-                "SMOOTH_L1_BETA": fp.box_head_smooth_l1_beta,
-                "POOLER_RESOLUTION": fp.box_head_pooler_resolution,
-                "POOLER_SAMPLING_RATIO": fp.box_head_pooler_sampling_ratio,
-                "POOLER_TYPE": fp.box_head_pooler_type,
-                "NUM_FC": fp.box_head_num_fc,
-                "FC_DIM": fp.box_head_fc_dim,
-                "NUM_CONV": fp.box_head_num_conv,
-                "CONV_DIM": fp.box_head_conv_dim,
-                "NORM": fp.box_head_norm,
-                "CLS_AGNOSTIC_BBOX_REG": fp.box_head_cls_agnostic_bbox_reg,
-                "TRAIN_ON_PRED_BOXES": fp.box_head_train_on_pred_boxes,
-                "BBOX_LOSS_WEIGHT": fp.box_head_bbox_loss_weight,
-            },
-            "ROI_ATTRIBUTE_HEAD": {  # not in detectron2 default config
-                "OBJ_EMBED_DIM": fp.attribute_head_obj_embed_dim,
-                "FC_DIM": fp.attribute_head_fc_dim,
-                "LOSS_WEIGHT": fp.attribute_head_loss_weight,
-                "NUM_CLASSES": fp.attribute_head_num_classes,
-            },
-        },
-        "TEST": {"DETECTIONS_PER_IMAGE": fp.test_detections_per_image},
-    }
-
-    return get_pipeline(None, None, overrides, make_copy)
+    cfg = fp.as_config().as_cfg_node()
+    return get_pipeline(cfg, make_copy)
 
 
 class AttributePredictor(nn.Module):
@@ -526,3 +533,16 @@ class AttributeStandardROIHeads(AttributeROIHeads, StandardROIHeads):
 
         features = [features[f] for f in self.in_features]
         return features[0]
+
+
+def pack_images(
+    images: List[torch.Tensor], size_divisibility: int = 0, pad_value: float = 0.0
+) -> torch.Tensor:
+    """
+    Pack a list of images into a single padded tensor.
+
+    This is just a wrapper around `detectron2.structures.ImageList`.
+    """
+    return ImageList.from_tensors(
+        images, size_divisibility=size_divisibility, pad_value=pad_value
+    ).tensor
