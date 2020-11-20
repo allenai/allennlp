@@ -373,6 +373,16 @@ jobs:
       run: |
         pip freeze
 
+    - name: Prepare environment
+      run: |
+        if [[ $GITHUB_EVENT_NAME == 'release' ]]; then
+            echo "DOCS_FOLDER=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV;
+            echo "BASE_SOURCE_LINK=https://github.com/allenai/allennlp/blob/${GITHUB_REF#refs/tags/}/allennlp/" >> $GITHUB_ENV;
+        else
+            echo "DOCS_FOLDER=master" >> $GITHUB_ENV;
+            echo "BASE_SOURCE_LINK=https://github.com/allenai/allennlp/blob/master/allennlp/" >> $GITHUB_ENV;
+        fi
+
     - name: Build docs
       run: |
         ./scripts/build_docs.sh
@@ -383,15 +393,6 @@ jobs:
         git config --global user.email "ai2service@allenai.org"
         git config --global user.name "ai2service"
         git config --global push.default simple
-
-    - name: Set target folders
-      if: github.event_name == 'release' || github.event_name == 'push'
-      run: |
-        if [[ $GITHUB_EVENT_NAME == 'release' ]]; then
-            echo "DOCS_FOLDER=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV;
-        else
-            echo "DOCS_FOLDER=master" >> $GITHUB_ENV;
-        fi
 
     - name: Stage docs
       if: github.event_name == 'release' || github.event_name == 'push'
