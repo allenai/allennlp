@@ -1,14 +1,14 @@
 import collections
 import logging
 from copy import deepcopy
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from overrides import overrides
 import torch
 
 from allennlp.data import TextFieldTensors, Vocabulary
 from allennlp.models.model import Model
-from allennlp.modules.transformer import TextEmbeddings, ImageFeatureEmbeddings, BiModalEncoder
+from allennlp.modules.transformer import TextEmbeddings, ImageFeatureEmbeddings, BiModalEncoder, TransformerPooler
 from allennlp.nn import util
 
 from transformers.modeling_auto import AutoModel
@@ -38,8 +38,6 @@ class VqaVilbert(Model):
         dropout: float = 0.1,
         label_namespace: str = "answers",
     ) -> None:
-        from allennlp.modules.transformer import ActivationLayer
-
         super().__init__(vocab)
         self.loss = torch.nn.BCELoss()
         self.consistency_wrong_map: Dict[str, int] = collections.Counter()
@@ -55,12 +53,8 @@ class VqaVilbert(Model):
         self.image_embeddings = image_embeddings
         self.encoder = encoder
 
-        self.t_pooler = ActivationLayer(
-            encoder.hidden_size1, pooled_output_dim, torch.nn.ReLU(), pool=True
-        )
-        self.v_pooler = ActivationLayer(
-            encoder.hidden_size2, pooled_output_dim, torch.nn.ReLU(), pool=True
-        )
+        self.t_pooler = TransformerPooler(encoder.hidden_size1, pooled_output_dim)
+        self.v_pooler = TransformerPooler(encoder.hidden_size2, pooled_output_dim)
 
         num_labels = vocab.get_vocab_size(label_namespace)
         self.label_namespace = label_namespace
@@ -168,8 +162,8 @@ class VqaVilbert(Model):
         box_features: torch.Tensor,
         box_coordinates: torch.Tensor,
         question: TextFieldTensors,
-        labels: torch.Tensor = None,
-        label_weights: torch.Tensor = None,
+        labels: Optional[torch.Tensor] = None,
+        label_weights: Optional[torch.Tensor] = None,
     ) -> Dict[str, torch.Tensor]:
 
         batch_size, _, feature_size = box_features.size()
@@ -233,7 +227,7 @@ class VqaVilbert(Model):
         probs = torch.sigmoid(logits)
 
         outputs = {"logits": logits, "probs": probs}
-        if labels is not None:
+        if labels is not None and label_weights is not None:
             label_mask = labels > 1  # 0 is padding, 1 is OOV, which we want to ignore
 
             weighted_labels = util.masked_index_replace(
