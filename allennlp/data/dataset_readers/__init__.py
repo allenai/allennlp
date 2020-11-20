@@ -20,7 +20,6 @@ from allennlp.data.dataset_readers.sharded_dataset_reader import ShardedDatasetR
 from allennlp.data.dataset_readers.text_classification_json import TextClassificationJsonReader
 
 try:
-    from allennlp.data.dataset_readers.nlvr2 import Nlvr2Reader
     from allennlp.data.dataset_readers.vqav2 import VQAv2Reader
 except ModuleNotFoundError as err:
     if err.name not in ("detectron2", "torchvision"):

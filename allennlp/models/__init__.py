@@ -8,5 +8,4 @@ from allennlp.models.archival import archive_model, load_archive, Archive
 from allennlp.models.basic_classifier import BasicClassifier
 from allennlp.models.multitask import MultiTaskModel
 from allennlp.models.simple_tagger import SimpleTagger
-from allennlp.models.vilbert_nlvr import Nlvr2Vilbert
 from allennlp.models.vilbert_vqa import VqaVilbert
