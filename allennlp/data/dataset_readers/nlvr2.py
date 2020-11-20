@@ -7,7 +7,7 @@ from overrides import overrides
 import torch
 from torch import Tensor
 
-from allennlp.common.file_utils import cached_path, json_lines_from_file, TensorCache
+from allennlp.common.file_utils import cached_path, json_lines_from_file, TensorCache, logger
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import TensorField, LabelField, ListField, MetadataField, TextField
 from allennlp.data.image_loader import ImageLoader
@@ -114,6 +114,7 @@ class Nlvr2Reader(DatasetReader):
         }
         from tqdm import tqdm
 
+        logger.info("Discovering images ...")
         self.images = {
             os.path.basename(filename): filename
             for filename in tqdm(
@@ -121,6 +122,7 @@ class Nlvr2Reader(DatasetReader):
                 desc="Discovering images",
             )
         }
+        logger.info("Done discovering images")
 
         # tokenizers and indexers
         if not tokenizer:
