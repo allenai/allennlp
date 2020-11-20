@@ -9,4 +9,9 @@ a `Predictor` that wraps it.
 from allennlp.predictors.predictor import Predictor
 from allennlp.predictors.sentence_tagger import SentenceTaggerPredictor
 from allennlp.predictors.text_classifier import TextClassifierPredictor
-from allennlp.predictors.vilbert_vqa import VilbertVqaPredictor
+
+try:
+    from allennlp.predictors.vilbert_vqa import VilbertVqaPredictor
+except ImportError:
+    # VilbertVqaPredictor is not available if we don't have detectron.
+    pass
