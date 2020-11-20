@@ -1,7 +1,4 @@
-from typing import Dict
-
 import torch
-from torch import Tensor
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Batch, Vocabulary

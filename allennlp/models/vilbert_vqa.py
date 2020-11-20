@@ -8,7 +8,12 @@ import torch
 
 from allennlp.data import TextFieldTensors, Vocabulary
 from allennlp.models.model import Model
-from allennlp.modules.transformer import TextEmbeddings, ImageFeatureEmbeddings, BiModalEncoder, TransformerPooler
+from allennlp.modules.transformer import (
+    TextEmbeddings,
+    ImageFeatureEmbeddings,
+    BiModalEncoder,
+    TransformerPooler,
+)
 from allennlp.nn import util
 
 from transformers.modeling_auto import AutoModel
