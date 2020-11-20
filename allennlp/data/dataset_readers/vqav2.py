@@ -362,9 +362,9 @@ class VQAv2Reader(DatasetReader):
             if self.coordinates_cache_dir is None:
                 self._coordinates_cache_instance = {}
             else:
-                os.makedirs(self.feature_cache_dir, exist_ok=True)
+                os.makedirs(self.coordinates_cache_dir, exist_ok=True)
                 self._coordinates_cache_instance = TensorCache(
-                    os.path.join(self.feature_cache_dir, "coordinates")
+                    os.path.join(self.coordinates_cache_dir, "coordinates")
                 )
 
         return self._coordinates_cache_instance
