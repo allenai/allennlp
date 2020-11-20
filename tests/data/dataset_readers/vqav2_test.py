@@ -23,14 +23,7 @@ class TestVQAv2Reader(AllenNlpTestCase):
             tokenizer=WhitespaceTokenizer(),
             token_indexers={"tokens": SingleIdTokenIndexer()},
         )
-        instances = list(
-            reader.read(
-                [
-                    "test_fixtures/data/vqav2/annotations.json",
-                    "test_fixtures/data/vqav2/questions.json",
-                ]
-            )
-        )
+        instances = list(reader.read("unittest"))
         assert len(instances) == 3
 
         instance = instances[0]
