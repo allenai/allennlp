@@ -5,7 +5,7 @@ local model_name = "epwalsh/bert-xsmall-dummy";
     "image_dir": "test_fixtures/data/nlvr2",
     "image_loader": "detectron",
     "image_featurizer": "null",
-    "region_detector": "null",
+    "region_detector": "random",
     "tokenizer": {
       "type": "pretrained_transformer",
       "model_name": model_name
@@ -32,10 +32,10 @@ local model_name = "epwalsh/bert-xsmall-dummy";
     "combined_num_attention_heads": 8,
     "image_attention_dropout": 0.0,
     "image_hidden_dropout": 0.0,
-    "v_biattention_id": [0, 1],
-    "t_biattention_id": [0, 1],
-    "fixed_t_layer": 0,
-    "fixed_v_layer": 0,
+    "image_biattention_id": [0, 1],
+    "text_biattention_id": [0, 1],
+    "text_fixed_layer": 0,
+    "image_fixed_layer": 0,
     "fusion_method": "sum",
     "pooled_dropout": 0.0,
   },

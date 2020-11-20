@@ -1,7 +1,3 @@
-from typing import Dict
-
-import torch
-
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Batch, Vocabulary
 from allennlp.data.dataset_readers import Nlvr2Reader

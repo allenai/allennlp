@@ -1,11 +1,11 @@
 from allennlp.common import cached_transformers
 from allennlp.common.testing import ModelTestCase
-from allennlp.models.vilbert import Nlvr2Vilbert
+from allennlp.models.vilbert_nlvr import Nlvr2Vilbert
 
 
 class TestVilbert(ModelTestCase):
     def test_model_can_train_save_and_load(self):
-        param_file = self.FIXTURES_ROOT / "vilbert" / "experiment.jsonnet"
+        param_file = self.FIXTURES_ROOT / "vilbert_nlvr" / "experiment.jsonnet"
         self.ensure_model_can_train_save_and_load(param_file)
 
     def test_model_can_train_save_and_load_with_cache(self):
@@ -16,7 +16,7 @@ class TestVilbert(ModelTestCase):
             import json
 
             overrides = json.dumps(overrides)
-            param_file = self.FIXTURES_ROOT / "vilbert" / "experiment.jsonnet"
+            param_file = self.FIXTURES_ROOT / "vilbert_nlvr" / "experiment.jsonnet"
             self.ensure_model_can_train_save_and_load(param_file, overrides=overrides)
 
     def test_model_loads_weights_correctly(self):
@@ -34,10 +34,10 @@ class TestVilbert(ModelTestCase):
             combined_num_attention_heads=1,
             image_attention_dropout=0.0,
             image_hidden_dropout=0.0,
-            v_biattention_id=[0, 1],
-            t_biattention_id=[0, 1],
-            fixed_t_layer=0,
-            fixed_v_layer=0,
+            image_biattention_id=[0, 1],
+            text_biattention_id=[0, 1],
+            text_fixed_layer=0,
+            image_fixed_layer=0,
         )
 
         def convert_transformer_param_name(name: str):

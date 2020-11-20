@@ -8,7 +8,6 @@ import torch
 
 from allennlp.data import TextFieldTensors, Vocabulary
 from allennlp.models.model import Model
-from allennlp.modules import TimeDistributed
 from allennlp.training.metrics import CategoricalAccuracy
 
 
@@ -58,10 +57,10 @@ class Nlvr2Vilbert(Model, TransformerModule):
 
         self.embeddings = text_embeddings
         self.image_embeddings = image_embeddings
-        self.encoder = TimeDistributed(encoder)
+        self.encoder = encoder
 
-        self.t_pooler = TimeDistributed(TransformerPooler(encoder.hidden_size1, pooled_output_dim))
-        self.v_pooler = TimeDistributed(TransformerPooler(encoder.hidden_size2, pooled_output_dim))
+        self.t_pooler = TransformerPooler(encoder.hidden_size1, pooled_output_dim)
+        self.v_pooler = TransformerPooler(encoder.hidden_size2, pooled_output_dim)
         self.classifier = torch.nn.Linear(pooled_output_dim * 2, 2)
         self.dropout = torch.nn.Dropout(dropout)
 
@@ -80,10 +79,10 @@ class Nlvr2Vilbert(Model, TransformerModule):
         combined_num_attention_heads: int,
         image_attention_dropout: float,
         image_hidden_dropout: float,
-        v_biattention_id: List[int],
-        t_biattention_id: List[int],
-        fixed_t_layer: int,
-        fixed_v_layer: int,
+        image_biattention_id: List[int],
+        text_biattention_id: List[int],
+        text_fixed_layer: int,
+        image_fixed_layer: int,
         pooled_dropout: float = 0.1,
         fusion_method: str = "sum",
         fast_mode: bool = False,
@@ -133,10 +132,10 @@ class Nlvr2Vilbert(Model, TransformerModule):
             combined_num_attention_heads=combined_num_attention_heads,
             attention_dropout2=image_attention_dropout,
             hidden_dropout2=image_hidden_dropout,
-            biattention_id2=v_biattention_id,
-            biattention_id1=t_biattention_id,
-            fixed_layer1=fixed_t_layer,
-            fixed_layer2=fixed_v_layer,
+            biattention_id2=image_biattention_id,
+            biattention_id1=text_biattention_id,
+            fixed_layer1=text_fixed_layer,
+            fixed_layer2=image_fixed_layer,
             fast_mode=fast_mode,
             with_coattention=with_coattention,
             in_batch_pairs=in_batch_pairs,
@@ -184,25 +183,19 @@ class Nlvr2Vilbert(Model, TransformerModule):
         embedding_output = self.embeddings(input_ids, token_type_ids)
         num_tokens = embedding_output.size(1)
 
-        # Repeat the embedding dimension, so that the TimeDistributed works out ok
-        embedding_output = embedding_output.unsqueeze(1).expand(-1, 2, -1, -1)
-        attention_mask = attention_mask.unsqueeze(1).expand(-1, 2, -1)
-
         # We create a 3D attention mask from a 2D tensor mask.
         # Sizes are [batch_size, 1, 1, to_seq_length]
         # So we can broadcast to [batch_size, num_heads, from_seq_length, to_seq_length]
         # this attention mask is more simple than the triangular masking of
         # causal attention used in OpenAI GPT, we just need to prepare the
         # broadcast dimension here.
-        extended_attention_mask = attention_mask.unsqueeze(2).unsqueeze(3).float().log()
-        extended_image_attention_mask = image_attention_mask.unsqueeze(2).unsqueeze(3).float().log()
+        extended_attention_mask = attention_mask.unsqueeze(1).unsqueeze(2).float().log()
+        extended_image_attention_mask = image_attention_mask.unsqueeze(1).unsqueeze(2).float().log()
 
         # TODO(matt): it looks like the co-attention logic is all currently commented out; not sure
         # that this is necessary.
         extended_co_attention_mask = torch.zeros(
             batch_size,
-            num_images,
-            1,
             feature_size,
             num_tokens,
             dtype=extended_image_attention_mask.dtype,
@@ -210,6 +203,7 @@ class Nlvr2Vilbert(Model, TransformerModule):
 
         # (batch_size, num_images, num_boxes, image_embedding_dim)
         v_embedding_output = self.image_embeddings(box_features, box_coordinates.float())
+
         encoded_layers_t, encoded_layers_v = self.encoder(
             embedding_output,
             v_embedding_output,
@@ -221,8 +215,8 @@ class Nlvr2Vilbert(Model, TransformerModule):
         sequence_output_t = encoded_layers_t[:, :, :, :, -1]
         sequence_output_v = encoded_layers_v[:, :, :, :, -1]
 
-        pooled_output_t = self.t_pooler(sequence_output_t, pool=True)
-        pooled_output_v = self.v_pooler(sequence_output_v, pool=True)
+        pooled_output_t = self.t_pooler(sequence_output_t)
+        pooled_output_v = self.v_pooler(sequence_output_v)
 
         if self.fusion_method == "sum":
             pooled_output = self.dropout(pooled_output_t + pooled_output_v)
