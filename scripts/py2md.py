@@ -29,6 +29,10 @@ from pydoc_markdown.reflection import Argument, Module, Function, Class, Data
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("py2md")
+BASE_MODULE = os.environ.get("BASE_MODULE", "allennlp")
+BASE_SOURCE_LINK = os.environ.get(
+    "BASE_SOURCE_LINK", "https://github.com/allenai/allennlp/blob/master/allennlp/"
+)
 
 
 class DocstringError(Exception):
@@ -247,7 +251,7 @@ class AllenNlpDocstringProcessor(Struct):
         Replace sphinx style crossreferences with markdown links.
         """
         for match, ty, name in self.CROSS_REF_RE.findall(line):
-            if name.startswith("allennlp."):
+            if name.startswith(f"{BASE_MODULE}."):
                 path = name.split(".")
                 if ty == "mod":
                     href = "/api/" + "/".join(path[1:])
@@ -396,20 +400,24 @@ class AllenNlpRenderer(MarkdownRenderer):
 
     def _render_module_breadcrumbs(self, fp, mod: Module):
         submods = mod.name.split(".")
-        if submods[0] != "allennlp":
-            return
         breadcrumbs = []
         for i, submod_name in enumerate(submods):
             if i == 0:
-                title = f"*{submod_name}*"
+                title = f"<i>{submod_name}</i>"
             elif i == len(submods) - 1:
-                title = f"**.{submod_name}**"
+                title = f"<strong>.{submod_name}</strong>"
             else:
-                title = f"*.{submod_name}*"
-            #  href = "/api/" + "/".join(submods[1 : i + 1])
-            #  breadcrumbs.append(f"[{title}]({href})")
+                title = f"<i>.{submod_name}</i>"
             breadcrumbs.append(title)
-        fp.write("[ " + "".join(breadcrumbs) + " ]\n\n---\n\n")
+        "/".join(submods[1:])
+        source_link = BASE_SOURCE_LINK + "/".join(submods[1:]) + ".py"
+        fp.write(
+            "<div>\n"
+            ' <p class="alignleft">' + "".join(breadcrumbs) + "</p>\n"
+            f' <p class="alignright"><a class="sourcelink" href="{source_link}">[SOURCE]</a></p>\n'
+            "</div>\n"
+            '<div style="clear: both;"></div>\n\n---\n\n'
+        )
 
     def _render_object(self, fp, level, obj):
         if not isinstance(obj, Module) or self.render_module_header:
