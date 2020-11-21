@@ -23,7 +23,7 @@ class TestVqaVilbert(ModelTestCase):
 
     def test_model_can_train_save_and_load_from_huggingface(self):
         param_file = self.FIXTURES_ROOT / "vilbert_vqa" / "experiment_from_huggingface.jsonnet"
-        self.ensure_model_can_train_save_and_load(param_file)
+        self.ensure_model_can_train_save_and_load(param_file, seed=190583)
 
     def test_model_loads_weights_correctly(self):
         vocab = Vocabulary()
