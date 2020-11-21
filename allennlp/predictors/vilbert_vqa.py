@@ -6,7 +6,7 @@ import numpy
 from allennlp.common.file_utils import cached_path
 from allennlp.common.util import JsonDict
 from allennlp.data import Instance
-from allennlp.data.dataset_readers import VQAv2Reader
+from allennlp.data.dataset_readers.vqav2 import VQAv2Reader
 from allennlp.predictors.predictor import Predictor
 
 
