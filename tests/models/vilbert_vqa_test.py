@@ -1,3 +1,4 @@
+import pytest
 from transformers.modeling_auto import AutoModel
 
 from allennlp.common.testing import ModelTestCase
@@ -21,9 +22,10 @@ class TestVqaVilbert(ModelTestCase):
             param_file = self.FIXTURES_ROOT / "vilbert_vqa" / "experiment.jsonnet"
             self.ensure_model_can_train_save_and_load(param_file, overrides=overrides)
 
-    def test_model_can_train_save_and_load_from_huggingface(self):
+    @pytest.mark.parametrize("seed", list(range(10)))
+    def test_model_can_train_save_and_load_from_huggingface(self, seed):
         param_file = self.FIXTURES_ROOT / "vilbert_vqa" / "experiment_from_huggingface.jsonnet"
-        self.ensure_model_can_train_save_and_load(param_file, seed=190583)
+        self.ensure_model_can_train_save_and_load(param_file, seed=seed)
 
     def test_model_loads_weights_correctly(self):
         vocab = Vocabulary()
