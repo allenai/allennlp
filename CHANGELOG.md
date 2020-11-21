@@ -45,6 +45,10 @@ dataset at every epoch) and a `MultiTaskScheduler` (for ordering the instances w
 
 ## Unreleased (1.x branch)
 
+### Added
+
+- Added links to source code in docs.
+
 
 ## [v1.2.2](https://github.com/allenai/allennlp/releases/tag/v1.2.2) - 2020-11-17
 
