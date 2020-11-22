@@ -984,7 +984,7 @@ class GradientDescentTrainer(Trainer):
         logger.info("Beginning training.")
 
         val_metrics: Dict[str, float] = {}
-        this_epoch_val_metric: float = 0.
+        this_epoch_val_metric: float = 0.0
         metrics: Dict[str, Any] = {}
         epochs_trained = 0
         training_start_time = time.time()
