@@ -286,6 +286,7 @@ class Model(torch.nn.Module, Registrable):
         print("-----------------------------------------------")
         print("LOADING ADAPTERS!")
         logger.info("LOADING ADAPTERS")
+        print(vars(self))
         self.model.load_adapter("roberta-tapt-sciie-adapter")  # load saved adapter
         for name in list(self.model.config.adapters.adapters.keys()):
             self.model.set_active_adapters(name)  # set the active adapter
