@@ -19,14 +19,6 @@ _DeepspeedTrainer = "allennlp.training.deepspeed.trainer.DeepspeedTrainer"
 
 
 class DeepspeedCheckpointer(Checkpointer):
-    # def maybe_save_checkpoint(
-    #     self, 
-    #     trainer: _DeepspeedTrainer, 
-    #     epoch: int, 
-    #     batches_this_epoch: int
-    # ) -> None:
-    #     0/0
-
     def save_checkpoint(
         self,
         epoch: Union[int, str],
@@ -126,6 +118,3 @@ class DeepspeedCheckpointer(Checkpointer):
         model_state = torch.load(model_path, map_location=nn_util.device_mapping(-1))
         training_state = torch.load(training_state_path, map_location=nn_util.device_mapping(-1))
         return checkpoint_id, model_state, training_state
-
-    def best_model_state(self) -> Dict[str, Any]:
-        pass

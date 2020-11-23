@@ -204,9 +204,7 @@ class DeepspeedTrainer(Trainer):
             self._batch_num_total += 1
             batch_num_total = self._batch_num_total
 
-            # with LineProfiler(self.batch_outputs, target_gpu=self.model_engine.device) as prof:
             batch_outputs = self.batch_outputs(batch, for_training=True)
-            # prof.print_stats() # display()
 
             loss = batch_outputs.get("loss")
             reg_loss = batch_outputs.get("reg_loss")
@@ -591,8 +589,6 @@ class DeepspeedTrainer(Trainer):
 
         self.model.load_state_dict(model_state)
         self.model_engine.load_checkpoint(self._serialization_dir, checkpoint_id)
-        # self.optimizer.load_state_dict(training_state["optimizer"])
-        # training_util.move_optimizer_to_cuda(self.optimizer)
 
         # Currently the `training_state` contains a serialized `MetricTracker`.
         if "metric_tracker" in training_state:
