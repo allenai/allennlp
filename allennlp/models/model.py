@@ -142,16 +142,14 @@ class Model(torch.nn.Module, Registrable):
         A list of the models output for each instance.
         """
         batch_size = len(instances)
-        #with torch.no_grad():        
+        # with torch.no_grad():
         cuda_device = self._get_prediction_device()
         dataset = Batch(instances)
         dataset.index_instances(self.vocab)
         model_input = util.move_to_device(dataset.as_tensor_dict(), cuda_device)
         outputs = self.decode(self(**model_input))
 
-        instance_separated_output: List[Dict[str, numpy.ndarray]] = [
-            {} for _ in dataset.instances
-        ]
+        instance_separated_output: List[Dict[str, numpy.ndarray]] = [{} for _ in dataset.instances]
         for name, output in list(outputs.items()):
             if isinstance(output, torch.Tensor):
                 # NOTE(markn): This is a hack because 0-dim pytorch tensors are not iterable.
@@ -262,6 +260,11 @@ class Model(torch.nn.Module, Registrable):
         # want the code to look for it, so we remove it from the parameters here.
         remove_pretrained_embedding_params(model_params)
         model = Model.from_params(vocab=vocab, params=model_params)
+
+        ## ADAPTERS
+        model.load_adapter("roberta-tapt-sciie-adapter")  # load saved adapter
+        for name in list(model.config.adapters.adapters.keys()):
+            model.set_active_adapters(name)  # set the active adapter
 
         # If vocab+embedding extension was done, the model initialized from from_params
         # and one defined by state dict in weights_file might not have same embedding shapes.
