@@ -49,10 +49,10 @@ class Model(torch.nn.Module, Registrable):
 
     _warn_for_unseparable_batches: Set[str] = set()
 
-    def __init__(self, vocab: Vocabulary, regularizer: RegularizerApplicator = None) -> None:
-        super().__init__()
-        self.vocab = vocab
-        self._regularizer = regularizer
+    # def __init__(self, vocab: Vocabulary, regularizer: RegularizerApplicator = None) -> None:
+    #     super().__init__()
+    #     self.vocab = vocab
+    #     self._regularizer = regularizer
 
     def get_regularization_penalty(self) -> Union[float, torch.Tensor]:
         """
