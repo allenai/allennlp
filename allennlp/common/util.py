@@ -27,6 +27,7 @@ from typing import (
     Tuple,
     TypeVar,
     Union,
+    Sequence,
 )
 
 import numpy
@@ -143,7 +144,7 @@ def lazy_groups_of(iterable: Iterable[A], group_size: int) -> Iterator[List[A]]:
 
 
 def pad_sequence_to_length(
-    sequence: List,
+    sequence: Sequence,
     desired_length: int,
     default_value: Callable[[], Any] = lambda: 0,
     padding_on_right: bool = True,
@@ -174,6 +175,7 @@ def pad_sequence_to_length(
 
     padded_sequence : `List`
     """
+    sequence = list(sequence)
     # Truncates the sequence to the desired length.
     if padding_on_right:
         padded_sequence = sequence[:desired_length]
@@ -342,8 +344,8 @@ def import_module_and_submodules(package_name: str) -> None:
         # Import at top level
         try:
             module = importlib.import_module(package_name)
-        except ModuleNotFoundError as err:
-            if err.name in ("detectron2", "torchvision"):
+        except ImportError as err:
+            if err.name in {"detectron2", "torchvision"}:
                 logger.warning(
                     "vision module '%s' is unavailable since '%s' is not installed",
                     package_name,
@@ -649,6 +651,21 @@ def format_size(size: int) -> str:
     if KBs >= 1:
         return f"{round(KBs, 1):.1f}K"
     return f"{size}B"
+
+
+def nan_safe_tensor_divide(numerator, denominator):
+    """Performs division and handles divide-by-zero.
+
+    On zero-division, sets the corresponding result elements to zero.
+    """
+    result = numerator / denominator
+    mask = denominator == 0.0
+    if not mask.any():
+        return result
+
+    # remove nan
+    result[mask] = 0.0
+    return result
 
 
 def shuffle_iterable(i: Iterable[T], pool_size: int = 1024) -> Iterable[T]:
