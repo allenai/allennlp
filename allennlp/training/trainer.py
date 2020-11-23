@@ -60,7 +60,7 @@ class Trainer(TrainerBase):
         should_log_learning_rate: bool = False,
         log_batch_size_period: Optional[int] = None,
         moving_average: Optional[MovingAverage] = None,
-        gradient_accumulation_batch_size: int = 1
+        gradient_accumulation_batch_size: int = 1,
     ) -> None:
         """
         A trainer for doing supervised learning. It just takes a labeled dataset
@@ -178,6 +178,14 @@ class Trainer(TrainerBase):
         # I am not calling move_to_gpu here, because if the model is
         # not already on the GPU then the optimizer is going to be wrong.
         self.model = model
+
+        print("-----------------------------------------------")
+        print("LOADING ADAPTERS!")
+        logger.info("LOADING ADAPTERS")
+
+        self.model.load_adapter("roberta-tapt-sciie-adapter")
+        for name in list(self.model.config.adapters.adapters.keys()):
+            self.set_active_adapters(name)  # set the active adapter
 
         self.iterator = iterator
         self._validation_iterator = validation_iterator
@@ -344,12 +352,10 @@ class Trainer(TrainerBase):
             batches_this_epoch += 1
             self._batch_num_total += 1
             batch_num_total = self._batch_num_total
-            
+
             self.optimizer.zero_grad()
-            
-            for this_batch, this_batch_size in zip(
-                    accumulated_batches, accumulated_batch_sizes
-            ):
+
+            for this_batch, this_batch_size in zip(accumulated_batches, accumulated_batch_sizes):
                 loss = self.batch_loss(this_batch, for_training=True)
                 loss = loss * (this_batch_size / float(effective_batch_size))
 
@@ -358,7 +364,7 @@ class Trainer(TrainerBase):
                 loss.backward()
 
                 train_loss += loss.item()
-        
+
             accumulated_batches = []
             accumulated_batch_sizes = []
 
@@ -808,5 +814,4 @@ class Trainer(TrainerBase):
             log_batch_size_period=log_batch_size_period,
             moving_average=moving_average,
             gradient_accumulation_batch_size=gradient_accumulation_batch_size,
-
         )
