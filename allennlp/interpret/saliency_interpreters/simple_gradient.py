@@ -30,9 +30,11 @@ class SimpleGradient(SaliencyInterpreter):
 
             # Hook used for saving embeddings
             handles = self._register_hooks(embeddings_list, token_offsets)
-            grads = self.predictor.get_gradients([instance])[0]
-            for handle in handles:
-                handle.remove()
+            try:
+                grads = self.predictor.get_gradients([instance])[0]
+            finally:
+                for handle in handles:
+                    handle.remove()
 
             # Gradients come back in the reverse order that they were sent into the network
             embeddings_list.reverse()

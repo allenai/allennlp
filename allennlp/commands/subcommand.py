@@ -26,8 +26,9 @@ class Subcommand(Registrable):
 
     requires_plugins: bool = True
     """
-    If `True`, the sub-command will trigger a call to `import_plugins` and will also
-    have an additional `--include-package` flag.
+    If `True`, the sub-command will trigger a call to `import_plugins()` (except for custom
+    subcommands which come from plugins, since plugins will already have been imported by the
+    time the subcommand is discovered), and will also have an additional `--include-package` flag.
     """
 
     _reverse_registry: Dict[Type, str] = {}

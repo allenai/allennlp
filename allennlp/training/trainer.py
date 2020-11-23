@@ -116,6 +116,7 @@ class BatchCallback(Registrable):
         trainer: "GradientDescentTrainer",
         batch_inputs: List[List[TensorDict]],
         batch_outputs: List[Dict[str, Any]],
+        batch_metrics: Dict[str, Any],
         epoch: int,
         batch_number: int,
         is_training: bool,
@@ -137,6 +138,7 @@ class TensoboardBatchMemoryUsage(BatchCallback):
         trainer: "GradientDescentTrainer",
         batch_inputs: List[List[TensorDict]],
         batch_outputs: List[Dict[str, Any]],
+        batch_metrics: Dict[str, Any],
         epoch: int,
         batch_number: int,
         is_training: bool,
@@ -245,6 +247,7 @@ class TrainerCallback(Registrable, metaclass=_TrainerCallbackMeta):
         trainer: "GradientDescentTrainer",
         batch_inputs: List[List[TensorDict]],
         batch_outputs: List[Dict[str, Any]],
+        batch_metrics: Dict[str, Any],
         epoch: int,
         batch_number: int,
         is_training: bool,
@@ -802,6 +805,7 @@ class GradientDescentTrainer(Trainer):
                     self,
                     batch_group,
                     batch_group_outputs,
+                    metrics,
                     epoch,
                     batches_this_epoch,
                     is_training=True,
@@ -932,6 +936,7 @@ class GradientDescentTrainer(Trainer):
                     self,
                     [batch],
                     [batch_outputs],
+                    val_metrics,
                     epoch,
                     batches_this_epoch,
                     is_training=False,
@@ -979,7 +984,7 @@ class GradientDescentTrainer(Trainer):
         logger.info("Beginning training.")
 
         val_metrics: Dict[str, float] = {}
-        this_epoch_val_metric: float
+        this_epoch_val_metric: float = 0.0
         metrics: Dict[str, Any] = {}
         epochs_trained = 0
         training_start_time = time.time()

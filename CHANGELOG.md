@@ -10,17 +10,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Added an optional `seed` parameter to `ModelTestCase.set_up_model` which sets the random
-  seed for `random`, `numpy`, and `torch`.
+- Added links to source code in docs.
+- Fixed issue with GradientDescentTrainer when constructed with validation_data_loader==None and learning_rate_scheduler!=None.
+
+
+## [v1.2.2](https://github.com/allenai/allennlp/releases/tag/v1.2.2) - 2020-11-17
+
+### Added
+
+- Added Docker builds for other torch-supported versions of CUDA.
+- Adds [`allennlp-semparse`](https://github.com/allenai/allennlp-semparse) as an official, default plugin.
 
 ### Fixed
 
+- `GumbelSampler` now sorts the beams by their true log prob.
+
+
+## [v1.2.1](https://github.com/allenai/allennlp/releases/tag/v1.2.1) - 2020-11-10
+
+### Added
+
+- Added an optional `seed` parameter to `ModelTestCase.set_up_model` which sets the random
+  seed for `random`, `numpy`, and `torch`.
+- Added support for a global plugins file at `~/.allennlp/plugins`.
+- Added more documentation about plugins.
+- Added sampler class and parameter in beam search for non-deterministic search, with several
+  implementations, including `MultinomialSampler`, `TopKSampler`, `TopPSampler`, and
+  `GumbelSampler`. Utilizing `GumbelSampler` will give [Stochastic Beam Search](https://api.semanticscholar.org/CorpusID:76662039).
+
+### Changed
+
+- Pass batch metrics to `BatchCallback`.
+
+### Fixed
+
+- Fixed a bug where forward hooks were not cleaned up with saliency interpreters if there
+  was an exception.
 - Fixed the computation of saliency maps in the Interpret code when using mismatched indexing.
   Previously, we would compute gradients from the top of the transformer, after aggregation from
   wordpieces to tokens, which gives results that are not very informative.  Now, we compute gradients
   with respect to the embedding layer, and aggregate wordpieces to tokens separately.
 - Fixed the heuristics for finding embedding layers in the case of RoBERTa. An update in the
   `transformers` library broke our old heuristic.
+- Fixed typo with registered name of ROUGE metric. Previously was `rogue`, fixed to `rouge`.
+- Fixed default masks that were erroneously created on the CPU even when a GPU is available.
+- Fixed pretrained embeddings for transformers that don't use end tokens.
+- Fixed the transformer tokenizer cache when the tokenizers are initialized with custom kwargs.
 
 
 ## [v1.2.0](https://github.com/allenai/allennlp/releases/tag/v1.2.0) - 2020-10-29
