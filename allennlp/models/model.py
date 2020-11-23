@@ -49,10 +49,10 @@ class Model(torch.nn.Module, Registrable):
 
     _warn_for_unseparable_batches: Set[str] = set()
 
-    # def __init__(self, vocab: Vocabulary, regularizer: RegularizerApplicator = None) -> None:
-    #     super().__init__()
-    #     self.vocab = vocab
-    #     self._regularizer = regularizer
+    def __init__(self, vocab: Vocabulary, regularizer: RegularizerApplicator = None) -> None:
+        super().__init__()
+        self.vocab = vocab
+        self._regularizer = regularizer
 
     def get_regularization_penalty(self) -> Union[float, torch.Tensor]:
         """
@@ -272,14 +272,6 @@ class Model(torch.nn.Module, Registrable):
         model_state = torch.load(weights_file, map_location=util.device_mapping(cuda_device))
         model.load_state_dict(model_state)
 
-        ## ADAPTERS
-        print("-----------------------------------------------")
-        print("LOADING ADAPTERS!")
-        logger.info("LOADING ADAPTERS")
-        model.load_adapter("roberta-tapt-sciie-adapter")  # load saved adapter
-        for name in list(model.config.adapters.adapters.keys()):
-            model.set_active_adapters(name)  # set the active adapter
-
         # Force model to cpu or gpu, as appropriate, to make sure that the embeddings are
         # in sync with the weights
         if cuda_device >= 0:
@@ -288,6 +280,15 @@ class Model(torch.nn.Module, Registrable):
             model.cpu()
 
         return model
+
+    def load_adapters(self):
+        ## ADAPTERS
+        print("-----------------------------------------------")
+        print("LOADING ADAPTERS!")
+        logger.info("LOADING ADAPTERS")
+        self.model.load_adapter("roberta-tapt-sciie-adapter")  # load saved adapter
+        for name in list(self.model.config.adapters.adapters.keys()):
+            self.model.set_active_adapters(name)  # set the active adapter
 
     @classmethod
     def load(
@@ -344,9 +345,9 @@ class Model(torch.nn.Module, Registrable):
         embedding_sources_mapping : Dict[str, str], (optional, default=None)
             Mapping from model_path to pretrained-file path of the embedding
             modules. If pretrained-file used at time of embedding initialization
-            isn't available now, user should pass this mapping. Model path is
+            isnt available now, user should pass this mapping. Model path is
             path traversing the model attributes upto this embedding module.
-            Eg. "_text_field_embedder.token_embedder_tokens".
+            Eg. '_text_field_embedder.token_embedder_tokens'.
         """
         # self.named_modules() gives all sub-modules (including nested children)
         # The path nesting is already separated by ".": eg. parent_module_name.child_module_name
