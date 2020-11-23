@@ -261,12 +261,6 @@ class Model(torch.nn.Module, Registrable):
         remove_pretrained_embedding_params(model_params)
         model = Model.from_params(vocab=vocab, params=model_params)
 
-        ## ADAPTERS
-        print("LOADING ADAPTERS!")
-        model.load_adapter("roberta-tapt-sciie-adapter")  # load saved adapter
-        for name in list(model.config.adapters.adapters.keys()):
-            model.set_active_adapters(name)  # set the active adapter
-
         # If vocab+embedding extension was done, the model initialized from from_params
         # and one defined by state dict in weights_file might not have same embedding shapes.
         # Eg. when model embedder module was transferred along with vocab extension, the
@@ -277,6 +271,14 @@ class Model(torch.nn.Module, Registrable):
 
         model_state = torch.load(weights_file, map_location=util.device_mapping(cuda_device))
         model.load_state_dict(model_state)
+
+        ## ADAPTERS
+        print("-----------------------------------------------")
+        print("LOADING ADAPTERS!")
+        logger.info("LOADING ADAPTERS")
+        model.load_adapter("roberta-tapt-sciie-adapter")  # load saved adapter
+        for name in list(model.config.adapters.adapters.keys()):
+            model.set_active_adapters(name)  # set the active adapter
 
         # Force model to cpu or gpu, as appropriate, to make sure that the embeddings are
         # in sync with the weights
