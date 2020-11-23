@@ -262,6 +262,7 @@ class Model(torch.nn.Module, Registrable):
         model = Model.from_params(vocab=vocab, params=model_params)
 
         ## ADAPTERS
+        print("LOADING ADAPTERS!")
         model.load_adapter("roberta-tapt-sciie-adapter")  # load saved adapter
         for name in list(model.config.adapters.adapters.keys()):
             model.set_active_adapters(name)  # set the active adapter
