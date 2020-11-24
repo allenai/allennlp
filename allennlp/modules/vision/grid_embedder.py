@@ -48,9 +48,9 @@ class NullGridEmbedder(GridEmbedder):
         return 1
 
 
-@GridEmbedder.register("resnet_backbone")
-class ResnetBackbone(GridEmbedder):
-    """Runs an image through resnet, as implemented by Detectron."""
+@GridEmbedder.register("detectron_backbone")
+class DetectronBackbone(GridEmbedder):
+    """Runs an image through a Detectron2 backbone, such as resnet."""
 
     def __init__(
         self,

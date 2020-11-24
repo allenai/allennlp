@@ -3,14 +3,14 @@ import math
 from allennlp.common.detectron import DetectronConfig
 from allennlp.common.testing import AllenNlpTestCase, requires_gpu
 from allennlp.data.image_loader import DetectronImageLoader
-from allennlp.modules.vision.grid_embedder import ResnetBackbone
+from allennlp.modules.vision.grid_embedder import DetectronBackbone
 
 
-class TestResnetBackbone(AllenNlpTestCase):
+class TestDetectronBackbone(AllenNlpTestCase):
     @requires_gpu
     def test_forward_runs(self):
         loader = DetectronImageLoader()
-        backbone = ResnetBackbone(config=DetectronConfig.from_flat_parameters(device=0))
+        backbone = DetectronBackbone(config=DetectronConfig.from_flat_parameters(device=0))
         image_pixels, image_size = loader(self.FIXTURES_ROOT / "detectron" / "000000001268.jpg")
         image_height = image_size[0]  # 800 for the image above
         image_width = image_size[1]  # 1199 for the image above
@@ -22,6 +22,6 @@ class TestResnetBackbone(AllenNlpTestCase):
         assert result.size() == (1, backbone.get_output_dim(), expected_height, expected_width)
 
     def test_output_shape_is_correct(self):
-        backbone = ResnetBackbone()
+        backbone = DetectronBackbone()
         assert backbone.get_output_dim() == 1024
         assert backbone.get_stride() == 16
