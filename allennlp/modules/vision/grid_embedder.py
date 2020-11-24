@@ -67,6 +67,11 @@ class DetectronBackbone(GridEmbedder):
             torch.Tensor(self.config.MODEL.PIXEL_STD).view(-1, 1, 1).to(self.config.MODEL.DEVICE),
         )
         self.backbone = self.config.build_backbone()
+        if len(self.backbone.output_shape()) != 1:
+            raise ValueError(
+                "DetectronBackbone currently only supports backbones that produce a single feature"
+            )
+        self._feature_name = list(self.backbone.output_shape())[0]
 
     def preprocess(self, images: FloatTensor, sizes: IntTensor) -> FloatTensor:
         # Adapted from https://github.com/facebookresearch/detectron2/blob/
@@ -82,10 +87,10 @@ class DetectronBackbone(GridEmbedder):
         images = self.preprocess(images, sizes)
         result = self.backbone(images)
         assert len(result) == 1
-        return next(iter(result.values()))
+        return result[self._feature_name]
 
     def get_output_dim(self) -> int:
-        return self.backbone.output_shape()["res4"].channels
+        return self.backbone.output_shape()[self._feature_name].channels
 
     def get_stride(self) -> int:
-        return self.backbone.output_shape()["res4"].stride
+        return self.backbone.output_shape()[self._feature_name].stride
