@@ -1,18 +1,17 @@
 from os import PathLike
-from typing import Union, Sequence, Optional, Tuple
+from typing import Union, Sequence, Tuple
 
 from detectron2.structures import ImageList
 import torch
 from torch import FloatTensor, IntTensor
 
-from allennlp.common import detectron
-from allennlp.common.detectron import DetectronConfig, DetectronFlatParameters
+from allennlp.common.detectron import DetectronConfig
 from allennlp.common.file_utils import cached_path
+from allennlp.common.lazy import Lazy
 from allennlp.common.registrable import Registrable
 
 OnePath = Union[str, PathLike]
 ManyPaths = Sequence[OnePath]
-
 ImagesWithSize = Tuple[FloatTensor, IntTensor]
 
 
@@ -38,29 +37,13 @@ class ImageLoader(Registrable):
         raise NotImplementedError()
 
 
-DetectronInput = Union[DetectronConfig, DetectronFlatParameters]
-
-
 @ImageLoader.register("detectron")
 class DetectronImageLoader(ImageLoader):
     def __init__(
         self,
-        config: Optional[DetectronInput] = None,
+        config: Lazy[DetectronConfig] = Lazy(DetectronConfig.from_flat_parameters),
     ):
-        if config is None:
-            pipeline = detectron.get_pipeline_from_flat_parameters(
-                make_copy=False, fp=DetectronFlatParameters()
-            )
-        elif isinstance(config, DetectronConfig):
-            pipeline = detectron.get_pipeline(make_copy=False, **config._asdict())
-        elif isinstance(config, DetectronFlatParameters):
-            pipeline = detectron.get_pipeline_from_flat_parameters(
-                make_copy=False, **config._asdict()
-            )
-        else:
-            raise ValueError("Unknown type of `config`")
-
-        self.mapper = pipeline.mapper
+        self.mapper = config.construct().build_dataset_mapper()
 
     def load(self, filenames: ManyPaths) -> ImagesWithSize:
         images = [{"file_name": str(f)} for f in filenames]

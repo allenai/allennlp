@@ -10,7 +10,8 @@ T = TypeVar("T")
 class Lazy(Generic[T]):
     """
     This class is for use when constructing objects using `FromParams`, when an argument to a
-    constructor has a _sequential dependency_ with another argument to the same constructor.
+    constructor has a _sequential dependency_ with another argument to the same constructor,
+    or when you have a default that should be constructed lazily only when it's not overriden.
 
     For example, in a `Trainer` class you might want to take a `Model` and an `Optimizer` as arguments,
     but the `Optimizer` needs to be constructed using the parameters from the `Model`. You can give

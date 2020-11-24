@@ -1,10 +1,12 @@
-from typing import Dict, List, Tuple, Union
+from typing import Dict
 
 import torch
 import torch.nn.functional as F
 from torch import nn, FloatTensor, IntTensor
 
-from allennlp.common import Registrable
+from allennlp.common.detectron import DetectronConfig, ImageList
+from allennlp.common.lazy import Lazy
+from allennlp.common.registrable import Registrable
 
 
 class RegionDetector(nn.Module, Registrable):
@@ -61,70 +63,34 @@ class FasterRcnnRegionDetector(RegionDetector):
 
     def __init__(
         self,
-        meta_architecture: str = "GeneralizedRCNN",
-        device: Union[str, int, torch.device] = "cpu",
-        weights: str = "RCNN-X152-C4-2020-07-18",
-        # RPN
-        rpn_head_name: str = "StandardRPNHead",
-        rpn_in_features: List[str] = ["res4"],
-        rpn_boundary_thresh: int = 0,
-        rpn_iou_thresholds: List[float] = [0.3, 0.7],
-        rpn_iou_labels: List[int] = [0, -1, 1],
-        rpn_batch_size_per_image: int = 256,
-        rpn_positive_fraction: float = 0.5,
-        rpn_bbox_reg_loss_type: str = "smooth_l1",
-        rpn_bbox_reg_loss_weight: float = 1.0,  # different from default (-1)
-        rpn_bbox_reg_weights: Tuple[float, ...] = (1.0, 1.0, 1.0, 1.0),
-        rpn_smooth_l1_beta: float = 0.1111,  # different from default (0.0)
-        rpn_loss_weight: float = 1.0,
-        rpn_pre_nms_topk_train: int = 12000,
-        rpn_pre_nms_topk_test: int = 6000,
-        rpn_post_nms_topk_train: int = 2000,
-        rpn_post_nms_topk_test: int = 1000,
-        rpn_nms_thresh: float = 0.7,
-        rpn_bbox_loss_weight: float = 1.0,  # not in detectron2 default config
-        detections_per_image: int = 36,  # different from default (100)
+        config: Lazy[DetectronConfig] = Lazy(DetectronConfig.from_flat_parameters),
+        detections_per_image: int = 36,
     ):
         super().__init__()
-
-        from allennlp.common import detectron
-
-        self.flat_parameters = detectron.DetectronFlatParameters(
-            meta_architecture=meta_architecture,
-            weights=weights,
-            device=device,
-            rpn_head_name=rpn_head_name,
-            rpn_in_features=rpn_in_features,
-            rpn_boundary_thresh=rpn_boundary_thresh,
-            rpn_iou_thresholds=rpn_iou_thresholds,
-            rpn_iou_labels=rpn_iou_labels,
-            rpn_batch_size_per_image=rpn_batch_size_per_image,
-            rpn_positive_fraction=rpn_positive_fraction,
-            rpn_bbox_reg_loss_type=rpn_bbox_reg_loss_type,
-            rpn_bbox_reg_loss_weight=rpn_bbox_reg_loss_weight,
-            rpn_bbox_reg_weights=rpn_bbox_reg_weights,
-            rpn_smooth_l1_beta=rpn_smooth_l1_beta,
-            rpn_loss_weight=rpn_loss_weight,
-            rpn_pre_nms_topk_train=rpn_pre_nms_topk_train,
-            rpn_pre_nms_topk_test=rpn_pre_nms_topk_test,
-            rpn_post_nms_topk_train=rpn_post_nms_topk_train,
-            rpn_post_nms_topk_test=rpn_post_nms_topk_test,
-            rpn_nms_thresh=rpn_nms_thresh,
-            rpn_bbox_loss_weight=rpn_bbox_loss_weight,
-            test_detections_per_image=detections_per_image,
+        self.config: DetectronConfig = config.construct()
+        self.detections_per_image = detections_per_image
+        self.register_buffer(
+            "pixel_mean", torch.Tensor(self.config.cfg.MODEL.PIXEL_MEAN).view(-1, 1, 1)
+        )
+        self.register_buffer(
+            "pixel_std", torch.Tensor(self.config.cfg.MODEL.PIXEL_STD).view(-1, 1, 1)
         )
         self._model_object = None
-        self.detections_per_image = detections_per_image
+
+    def preprocess(self, images: FloatTensor, sizes: IntTensor) -> ImageList:
+        # Adapted from https://github.com/facebookresearch/detectron2/blob/
+        # 268c90107fba2fea18b1132e5f60532595d771c0/detectron2/modeling/meta_arch/rcnn.py#L224.
+        raw_images = [
+            (image[:, :height, :width] * 256).byte().to(self.flat_parameters.device)
+            for image, (height, width) in zip(images, sizes)
+        ]
+        standardized = [(x - self.pixel_mean) / self.pixel_std for x in raw_images]
+        return ImageList.from_tensors(standardized, self._model.backbone.size_divisibility)
 
     @property
     def _model(self):
         if self._model_object is None:
-            from allennlp.common import detectron
-
-            pipeline = detectron.get_pipeline_from_flat_parameters(
-                self.flat_parameters, make_copy=False
-            )
-            self._model_object = pipeline.model
+            self._model_object = self.config.build_model()
         return self._model_object
 
     def forward(
@@ -132,11 +98,7 @@ class FasterRcnnRegionDetector(RegionDetector):
     ) -> Dict[str, torch.Tensor]:
         batch_size = len(image_sizes)
 
-        raw_images = [
-            {"image": (image[:, :height, :width] * 256).byte(), "height": height, "width": width}
-            for image, (height, width) in zip(raw_images, image_sizes)
-        ]
-        image_list = self._model.preprocess_image(raw_images)
+        image_list = self.preprocess(raw_images, image_sizes)
 
         # RPN
         assert len(self._model.proposal_generator.in_features) == 1
