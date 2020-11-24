@@ -53,6 +53,14 @@ class RandomRegionDetector(RegionDetector):
         return {"features": features, "coordinates": coordinates}
 
 
+@RegionDetector.register("detectron_rcnn")
+class DetectronRcnnRegionDetector(RegionDetector):
+    def __init__(
+        self,
+        config: DetectronConfig = DetectronConfig.from_flat_parameters(),
+        detections_per_image: int = 36,
+    ):
+
 @RegionDetector.register("faster_rcnn")
 class FasterRcnnRegionDetector(RegionDetector):
     """
@@ -81,6 +89,11 @@ class FasterRcnnRegionDetector(RegionDetector):
             .to(self.config.MODEL.DEVICE),
         )
         self.model = self.config.build_model()
+        if len(self.model.proposal_generator.in_features) != 1:
+            raise ValueError(
+                "FasterRcnnRegionDetector currently only supports detectron proposal generators "
+                "that take a single input feature"
+            )
 
     def preprocess(self, images: FloatTensor, sizes: IntTensor) -> ImageList:
         # Adapted from https://github.com/facebookresearch/detectron2/blob/
@@ -99,8 +112,7 @@ class FasterRcnnRegionDetector(RegionDetector):
 
         image_list = self.preprocess(raw_images, image_sizes)
 
-        # RPN
-        assert len(self.model.proposal_generator.in_features) == 1
+        # Need to put in dictionary form to pass to the proposal generator.
         featurized_images_in_dict = {
             self.model.proposal_generator.in_features[0]: featurized_images
         }
