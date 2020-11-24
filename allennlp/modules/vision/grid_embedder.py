@@ -68,7 +68,7 @@ class ResnetBackbone(GridEmbedder):
         super().__init__()
         from allennlp.common import detectron
 
-        flat_parameters = detectron.DetectronFlatParameters(
+        self.flat_parameters = detectron.DetectronFlatParameters(
             max_attr_per_ins=max_attr_per_ins,
             device=device,
             weights=weights,
@@ -79,10 +79,25 @@ class ResnetBackbone(GridEmbedder):
             width_per_group=width_per_group,
             depth=depth,
         )
+        self._pipeline_object = None
 
-        pipeline = detectron.get_pipeline_from_flat_parameters(flat_parameters, make_copy=False)
-        self.preprocessor = pipeline.model.preprocess_image
-        self.backbone = pipeline.model.backbone
+    @property
+    def _pipeline(self):
+        if self._pipeline_object is None:
+            from allennlp.common import detectron
+
+            self._pipeline_object = detectron.get_pipeline_from_flat_parameters(
+                self.flat_parameters, make_copy=False
+            )
+        return self._pipeline_object
+
+    @property
+    def preprocessor(self):
+        return self._pipeline.model.preprocess_image
+
+    @property
+    def backbone(self):
+        return self._pipeline.model.backbone
 
     def forward(self, images: FloatTensor, sizes: IntTensor) -> FloatTensor:
         images = [

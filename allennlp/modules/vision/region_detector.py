@@ -29,8 +29,8 @@ class RegionDetector(nn.Module, Registrable):
         raise NotImplementedError()
 
 
-@RegionDetector.register("null")
-class NullRegionDetector(RegionDetector):
+@RegionDetector.register("random")
+class RandomRegionDetector(RegionDetector):
     """
     A `RegionDetector` that returns two proposals per image, for testing purposes.  The features for
     the proposal are a random 10-dimensional vector, and the coordinates are the size of the image.
@@ -38,12 +38,12 @@ class NullRegionDetector(RegionDetector):
 
     def forward(
         self, raw_images: FloatTensor, image_sizes: IntTensor, featurized_images: FloatTensor
-    ) -> FloatTensor:
+    ) -> Dict[str, torch.Tensor]:
         batch_size, num_features, height, width = raw_images.size()
         features = torch.rand(batch_size, 2, 10, dtype=featurized_images.dtype).to(
             raw_images.device
         )
-        coordinates = torch.zeros(batch_size, 2, 4, dtype=torch.int).to(raw_images.device)
+        coordinates = torch.zeros(batch_size, 2, 4, dtype=torch.float32).to(raw_images.device)
         for image_num in range(batch_size):
             coordinates[image_num, 0, 2] = image_sizes[image_num, 0]
             coordinates[image_num, 0, 3] = image_sizes[image_num, 1]
@@ -89,7 +89,7 @@ class FasterRcnnRegionDetector(RegionDetector):
 
         from allennlp.common import detectron
 
-        flat_parameters = detectron.DetectronFlatParameters(
+        self.flat_parameters = detectron.DetectronFlatParameters(
             meta_architecture=meta_architecture,
             weights=weights,
             device=device,
@@ -113,9 +113,19 @@ class FasterRcnnRegionDetector(RegionDetector):
             rpn_bbox_loss_weight=rpn_bbox_loss_weight,
             test_detections_per_image=detections_per_image,
         )
-        pipeline = detectron.get_pipeline_from_flat_parameters(flat_parameters, make_copy=False)
-        self.model = pipeline.model
+        self._model_object = None
         self.detections_per_image = detections_per_image
+
+    @property
+    def _model(self):
+        if self._model_object is None:
+            from allennlp.common import detectron
+
+            pipeline = detectron.get_pipeline_from_flat_parameters(
+                self.flat_parameters, make_copy=False
+            )
+            self._model_object = pipeline.model
+        return self._model_object
 
     def forward(
         self, raw_images: FloatTensor, image_sizes: IntTensor, featurized_images: FloatTensor
@@ -126,28 +136,28 @@ class FasterRcnnRegionDetector(RegionDetector):
             {"image": (image[:, :height, :width] * 256).byte(), "height": height, "width": width}
             for image, (height, width) in zip(raw_images, image_sizes)
         ]
-        image_list = self.model.preprocess_image(raw_images)
+        image_list = self._model.preprocess_image(raw_images)
 
         # RPN
-        assert len(self.model.proposal_generator.in_features) == 1
+        assert len(self._model.proposal_generator.in_features) == 1
         featurized_images_in_dict = {
-            self.model.proposal_generator.in_features[0]: featurized_images
+            self._model.proposal_generator.in_features[0]: featurized_images
         }
 
-        proposals, _ = self.model.proposal_generator(image_list, featurized_images_in_dict, None)
+        proposals, _ = self._model.proposal_generator(image_list, featurized_images_in_dict, None)
 
         # this will concatenate the pooled_features from different images.
-        _, pooled_features = self.model.roi_heads.get_roi_features(
+        _, pooled_features = self._model.roi_heads.get_roi_features(
             featurized_images_in_dict, proposals
         )
 
-        predictions = self.model.roi_heads.box_predictor(pooled_features)
+        predictions = self._model.roi_heads.box_predictor(pooled_features)
 
         # class probability
         cls_probs = F.softmax(predictions[0], dim=-1)
         cls_probs = cls_probs[:, :-1]  # background is last
 
-        predictions, r_indices = self.model.roi_heads.box_predictor.inference(
+        predictions, r_indices = self._model.roi_heads.box_predictor.inference(
             predictions, proposals
         )
 
