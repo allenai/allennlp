@@ -73,6 +73,14 @@ class TrainerPieces(NamedTuple):
 
         model = Model.from_params(vocab=vocab, params=params.pop("model"))
 
+        print("-----------------------------------------------")
+        print("LOADING ADAPTERS!")
+        logger.info("LOADING ADAPTERS")
+
+        model.load_adapter("roberta-tapt-sciie-adapter")
+        for name in list(model.config.adapters.adapters.keys()):
+            model.set_active_adapters(name)  # set the active adapter
+
         # If vocab extension is ON for training, embedding extension should also be
         # done. If vocab and embeddings are already in sync, it would be a no-op.
         model.extend_embedder_vocab()

@@ -179,13 +179,6 @@ class Trainer(TrainerBase):
         # not already on the GPU then the optimizer is going to be wrong.
         self.model = model
 
-        print("-----------------------------------------------")
-        print("LOADING ADAPTERS!")
-        logger.info("LOADING ADAPTERS")
-
-        self.model.load_adapter("roberta-tapt-sciie-adapter")
-        for name in list(self.model.config.adapters.adapters.keys()):
-            self.set_active_adapters(name)  # set the active adapter
 
         self.iterator = iterator
         self._validation_iterator = validation_iterator
