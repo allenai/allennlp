@@ -90,7 +90,7 @@ class FasterRcnnRegionDetector(RegionDetector):
             for image, (height, width) in zip(images, sizes)
         ]
         standardized = [(x - self.pixel_mean) / self.pixel_std for x in raw_images]
-        return ImageList.from_tensors(standardized, self._model.backbone.size_divisibility)
+        return ImageList.from_tensors(standardized, self.model.backbone.size_divisibility)
 
     def forward(
         self, raw_images: FloatTensor, image_sizes: IntTensor, featurized_images: FloatTensor
