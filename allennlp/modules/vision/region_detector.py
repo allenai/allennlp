@@ -5,7 +5,6 @@ import torch.nn.functional as F
 from torch import nn, FloatTensor, IntTensor
 
 from allennlp.common.detectron import DetectronConfig, ImageList
-from allennlp.common.lazy import Lazy
 from allennlp.common.registrable import Registrable
 
 
@@ -63,35 +62,35 @@ class FasterRcnnRegionDetector(RegionDetector):
 
     def __init__(
         self,
-        config: Lazy[DetectronConfig] = Lazy(DetectronConfig.from_flat_parameters),
+        config: DetectronConfig = DetectronConfig.from_flat_parameters(),
         detections_per_image: int = 36,
     ):
         super().__init__()
-        self.config: DetectronConfig = config.construct()
+        self.config = config
         self.detections_per_image = detections_per_image
         self.register_buffer(
-            "pixel_mean", torch.Tensor(self.config.cfg.MODEL.PIXEL_MEAN).view(-1, 1, 1)
+            "pixel_mean",
+            torch.Tensor(self.config.cfg.MODEL.PIXEL_MEAN)
+            .view(-1, 1, 1)
+            .to(self.config.MODEL.DEVICE),
         )
         self.register_buffer(
-            "pixel_std", torch.Tensor(self.config.cfg.MODEL.PIXEL_STD).view(-1, 1, 1)
+            "pixel_std",
+            torch.Tensor(self.config.cfg.MODEL.PIXEL_STD)
+            .view(-1, 1, 1)
+            .to(self.config.MODEL.DEVICE),
         )
-        self._model_object = None
+        self.model = self.config.build_model()
 
     def preprocess(self, images: FloatTensor, sizes: IntTensor) -> ImageList:
         # Adapted from https://github.com/facebookresearch/detectron2/blob/
         # 268c90107fba2fea18b1132e5f60532595d771c0/detectron2/modeling/meta_arch/rcnn.py#L224.
         raw_images = [
-            (image[:, :height, :width] * 256).byte().to(self.flat_parameters.device)
+            (image[:, :height, :width] * 256).byte().to(self.config.MODEL.DEVICE)
             for image, (height, width) in zip(images, sizes)
         ]
         standardized = [(x - self.pixel_mean) / self.pixel_std for x in raw_images]
         return ImageList.from_tensors(standardized, self._model.backbone.size_divisibility)
-
-    @property
-    def _model(self):
-        if self._model_object is None:
-            self._model_object = self.config.build_model()
-        return self._model_object
 
     def forward(
         self, raw_images: FloatTensor, image_sizes: IntTensor, featurized_images: FloatTensor
@@ -101,25 +100,25 @@ class FasterRcnnRegionDetector(RegionDetector):
         image_list = self.preprocess(raw_images, image_sizes)
 
         # RPN
-        assert len(self._model.proposal_generator.in_features) == 1
+        assert len(self.model.proposal_generator.in_features) == 1
         featurized_images_in_dict = {
-            self._model.proposal_generator.in_features[0]: featurized_images
+            self.model.proposal_generator.in_features[0]: featurized_images
         }
 
-        proposals, _ = self._model.proposal_generator(image_list, featurized_images_in_dict, None)
+        proposals, _ = self.model.proposal_generator(image_list, featurized_images_in_dict, None)
 
         # this will concatenate the pooled_features from different images.
-        _, pooled_features = self._model.roi_heads.get_roi_features(
+        _, pooled_features = self.model.roi_heads.get_roi_features(
             featurized_images_in_dict, proposals
         )
 
-        predictions = self._model.roi_heads.box_predictor(pooled_features)
+        predictions = self.model.roi_heads.box_predictor(pooled_features)
 
         # class probability
         cls_probs = F.softmax(predictions[0], dim=-1)
         cls_probs = cls_probs[:, :-1]  # background is last
 
-        predictions, r_indices = self._model.roi_heads.box_predictor.inference(
+        predictions, r_indices = self.model.roi_heads.box_predictor.inference(
             predictions, proposals
         )
 

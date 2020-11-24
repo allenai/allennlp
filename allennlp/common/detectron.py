@@ -6,7 +6,7 @@ from detectron2.checkpoint import DetectionCheckpointer
 from detectron2.data import DatasetMapper
 from detectron2.layers import ShapeSpec
 from detectron2.modeling import build_model
-from detectron2.modeling.backbone import Backbone, build_backbone
+from detectron2.modeling.backbone import Backbone
 from detectron2.modeling.box_regression import Box2BoxTransform
 from detectron2.modeling.poolers import ROIPooler
 from detectron2.modeling.roi_heads.fast_rcnn import FastRCNNOutputLayers
@@ -28,6 +28,9 @@ from allennlp.common.file_utils import cached_path
 
 
 class DetectronConfig(Registrable):
+    """
+    This is an immutable wrapper around a Detectron2 `CfgNode`.
+    """
 
     default_implementation = "from_model_zoo"
 
@@ -44,6 +47,11 @@ class DetectronConfig(Registrable):
             self.update(overrides)
 
         self.cfg.freeze()
+
+    def __getattr__(self, key: str):
+        if key.isupper():
+            return getattr(self.cfg, key)
+        raise AttributeError
 
     def update(self, other: Union["DetectronConfig", Dict[str, Any]]) -> None:
         def _update(d, u):
@@ -82,14 +90,15 @@ class DetectronConfig(Registrable):
         """
         Build a detectron backbone from this config.
         """
-        return build_backbone(self.cfg)
+        return self.build_model().backbone
 
     def build_model(self) -> nn.Module:
         """
         Build a detectron model from this config.
         """
         model = build_model(self.cfg)
-        DetectionCheckpointer(model).load(self.cfg.MODEL.WEIGHTS)
+        if self.cfg.MODEL.WEIGHTS is not None:
+            DetectionCheckpointer(model).load(self.cfg.MODEL.WEIGHTS)
         model.eval()
         return model
 
@@ -146,7 +155,7 @@ class DetectronConfig(Registrable):
         # ROI head
         roi_head_name: str = "AttributeRes5ROIHeads",  # different from default (Res5ROIHeads)
         roi_head_num_classes: int = 1600,  # different from default (80)
-        roi_head_in_features: Sequence[str] = ("res4"),
+        roi_head_in_features: Sequence[str] = ("res4",),
         roi_head_iou_thresholds: Sequence[float] = (0.5,),
         roi_head_iou_labels: Sequence[int] = (0, 1),
         roi_head_batch_size_per_image: int = 512,
@@ -205,10 +214,10 @@ class DetectronConfig(Registrable):
                     },
                     "RPN": {
                         "HEAD_NAME": rpn_head_name,
-                        "IN_FEATURES": rpn_in_features,
+                        "IN_FEATURES": list(rpn_in_features),
                         "BOUNDARY_THRESH": rpn_boundary_thresh,
-                        "IOU_THRESHOLDS": rpn_iou_thresholds,
-                        "IOU_LABELS": rpn_iou_labels,
+                        "IOU_THRESHOLDS": list(rpn_iou_thresholds),
+                        "IOU_LABELS": list(rpn_iou_labels),
                         "BATCH_SIZE_PER_IMAGE": rpn_batch_size_per_image,
                         "POSITIVE_FRACTION": rpn_positive_fraction,
                         "BBOX_REG_LOSS_TYPE": rpn_bbox_reg_loss_type,
@@ -226,9 +235,9 @@ class DetectronConfig(Registrable):
                     "ROI_HEADS": {
                         "NAME": roi_head_name,
                         "NUM_CLASSES": roi_head_num_classes,
-                        "IN_FEATURES": roi_head_in_features,
-                        "IOU_THRESHOLDS": roi_head_iou_thresholds,
-                        "IOU_LABELS": roi_head_iou_labels,
+                        "IN_FEATURES": list(roi_head_in_features),
+                        "IOU_THRESHOLDS": list(roi_head_iou_thresholds),
+                        "IOU_LABELS": list(roi_head_iou_labels),
                         "BATCH_SIZE_PER_IMAGE": roi_head_batch_size_per_image,
                         "POSITIVE_FRACTION": roi_head_positive_fraction,
                         "SCORE_THRESH_TEST": roi_head_score_thresh_test,

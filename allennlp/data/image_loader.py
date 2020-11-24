@@ -7,7 +7,6 @@ from torch import FloatTensor, IntTensor
 
 from allennlp.common.detectron import DetectronConfig
 from allennlp.common.file_utils import cached_path
-from allennlp.common.lazy import Lazy
 from allennlp.common.registrable import Registrable
 
 OnePath = Union[str, PathLike]
@@ -41,9 +40,9 @@ class ImageLoader(Registrable):
 class DetectronImageLoader(ImageLoader):
     def __init__(
         self,
-        config: Lazy[DetectronConfig] = Lazy(DetectronConfig.from_flat_parameters),
+        config: DetectronConfig = DetectronConfig.from_flat_parameters(),
     ):
-        self.mapper = config.construct().build_dataset_mapper()
+        self.mapper = config.build_dataset_mapper()
 
     def load(self, filenames: ManyPaths) -> ImagesWithSize:
         images = [{"file_name": str(f)} for f in filenames]

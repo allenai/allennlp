@@ -2,7 +2,6 @@ import torch
 from torch import nn, FloatTensor, IntTensor
 
 from allennlp.common.detectron import DetectronConfig, pack_images
-from allennlp.common.lazy import Lazy
 from allennlp.common.registrable import Registrable
 
 
@@ -55,33 +54,29 @@ class ResnetBackbone(GridEmbedder):
 
     def __init__(
         self,
-        config: Lazy[DetectronConfig] = Lazy(DetectronConfig.from_flat_parameters),
+        config: DetectronConfig = DetectronConfig.from_flat_parameters(),
     ):
         super().__init__()
-        self.config: DetectronConfig = config.construct()
+        self.config = config
         self.register_buffer(
-            "pixel_mean", torch.Tensor(self.config.cfg.MODEL.PIXEL_MEAN).view(-1, 1, 1)
+            "pixel_mean",
+            torch.Tensor(self.config.MODEL.PIXEL_MEAN).view(-1, 1, 1).to(self.config.MODEL.DEVICE),
         )
         self.register_buffer(
-            "pixel_std", torch.Tensor(self.config.cfg.MODEL.PIXEL_STD).view(-1, 1, 1)
+            "pixel_std",
+            torch.Tensor(self.config.MODEL.PIXEL_STD).view(-1, 1, 1).to(self.config.MODEL.DEVICE),
         )
-        self._backbone = None
+        self.backbone = self.config.build_backbone()
 
     def preprocess(self, images: FloatTensor, sizes: IntTensor) -> FloatTensor:
         # Adapted from https://github.com/facebookresearch/detectron2/blob/
         # 268c90107fba2fea18b1132e5f60532595d771c0/detectron2/modeling/meta_arch/rcnn.py#L224.
         raw_images = [
-            (image[:, :height, :width] * 256).byte().to(self.flat_parameters.device)
+            (image[:, :height, :width] * 256).byte().to(self.config.MODEL.DEVICE)
             for image, (height, width) in zip(images, sizes)
         ]
         standardized = [(x - self.pixel_mean) / self.pixel_std for x in raw_images]
         return pack_images(standardized, self.backbone.size_divisibility)
-
-    @property
-    def backbone(self):
-        if self._backbone is None:
-            self._backbone = self.config.build_backbone()
-        return self._backbone
 
     def forward(self, images: FloatTensor, sizes: IntTensor) -> FloatTensor:
         images = self.preprocess(images, sizes)
