@@ -22,11 +22,10 @@ class TestVisualEntailmentReader(AllenNlpTestCase):
         assert len(instances) == 16
 
         instance = instances[0]
-        assert len(instance.fields) == 5
-        assert len(instance["sentence1"]) == 12
-        assert len(instance["sentence2"]) == 4
-        sentence_tokens = [t.text for t in instance["sentence1"]]
-        assert sentence_tokens[:6] == ["A", "toddler", "poses", "in", "front", "of"]
+        assert len(instance.fields) == 4
+        assert len(instance["hypothesis"]) == 4
+        sentence_tokens = [t.text for t in instance["hypothesis"]]
+        assert sentence_tokens == ["A", "toddler", "sleeps", "outside."]
         assert instance["label"].label == "contradiction"
 
         batch = Batch(instances)

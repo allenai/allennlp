@@ -45,11 +45,10 @@ class VisualEntailmentReader(VisionReader):
         attempted_instances_count = 0
         failed_instances_count = 0
         for info_dict, processed_image in zip(info_dicts, processed_images):
-            sentence1 = info_dict["sentence1"]
-            sentence2 = info_dict["sentence2"]
+            hypothesis = info_dict["sentence2"]
             answer = info_dict["gold_label"]
 
-            instance = self.text_to_instance(sentence1, sentence2, processed_image, answer)
+            instance = self.text_to_instance(processed_image, hypothesis, answer)
             attempted_instances_count += 1
             if instance is None:
                 failed_instances_count += 1
@@ -66,23 +65,20 @@ class VisualEntailmentReader(VisionReader):
     @overrides
     def text_to_instance(
         self,  # type: ignore
-        sentence1: str,
-        sentence2: str,
         image: Union[str, Tuple[Tensor, Tensor]],
+        hypothesis: str,
         answer: Optional[str] = None,
         *,
         use_cache: bool = True,
     ) -> Optional[Instance]:
 
-        tokenized_sentence1 = self._tokenizer.tokenize(sentence1)
-        tokenized_sentence2 = self._tokenizer.tokenize(sentence2)
+        tokenized_hypothesis = self._tokenizer.tokenize(hypothesis)
 
-        sentence1_field = TextField(tokenized_sentence1, None)
-        sentence2_field = TextField(tokenized_sentence2, None)
+        hypothesis_field = TextField(tokenized_hypothesis, None)
 
         from allennlp.data import Field
 
-        fields: Dict[str, Field] = {"sentence1": sentence1_field, "sentence2": sentence2_field}
+        fields: Dict[str, Field] = {"hypothesis": hypothesis_field}
 
         if image is not None:
             if isinstance(image, str):
@@ -104,5 +100,4 @@ class VisualEntailmentReader(VisionReader):
 
     @overrides
     def apply_token_indexers(self, instance: Instance) -> None:
-        instance["sentence1"].token_indexers = self._token_indexers  # type: ignore
-        instance["sentence2"].token_indexers = self._token_indexers  # type: ignore
+        instance["hypothesis"].token_indexers = self._token_indexers  # type: ignore
