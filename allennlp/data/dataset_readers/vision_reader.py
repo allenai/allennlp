@@ -57,8 +57,8 @@ class VisionReader(DatasetReader):
     token_indexers: `Dict[str, TokenIndexer]`, optional
     cuda_device: `Union[int, torch.device]`, optional
     max_instances: `int`, optional
-    image_processing_batch_size: `int`, default = `8`
-    skip_image_feature_extraction: `bool`, default = `False`
+    image_processing_batch_size: `int`, optional (default = `8`)
+    skip_image_feature_extraction: `bool`, optional (default = `False`)
     """
 
     def __init__(
