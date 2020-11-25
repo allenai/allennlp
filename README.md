@@ -150,7 +150,6 @@ to distribute as a plugin, see the [subcommand API docs](https://docs.allennlp.o
 
 AllenNLP requires Python 3.6.1 or later and [PyTorch](https://pytorch.org/).
 It's recommended that you install the PyTorch ecosystem **before** installing AllenNLP by following the instructions on [pytorch.org](https://pytorch.org/).
-If you intend to utilize the vision features of this library, you'll also need to install [detectron2](https://github.com/facebookresearch/detectron2), which requires PyTorch to be installed first.
 
 The preferred way to install AllenNLP is via `pip`. Just run `pip install allennlp`. Or, if you want the vision
 features of the library, run `pip install allennlp[vision]`.

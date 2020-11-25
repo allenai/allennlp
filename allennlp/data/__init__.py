@@ -18,7 +18,7 @@ from allennlp.data.vocabulary import Vocabulary
 from allennlp.data.batch import Batch
 
 try:
-    from allennlp.data.image_loader import ImageLoader, DetectronImageLoader
+    from allennlp.data.image_loader import ImageLoader, TorchImageLoader
 except ModuleNotFoundError as err:
-    if err.name not in ("detectron2", "torchvision"):
+    if err.name != "torchvision":
         raise
