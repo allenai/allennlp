@@ -89,10 +89,6 @@ class VisualEntailmentReader(VisionReader):
             fields["box_coordinates"] = ArrayField(coords)
 
         if label:
-            if label == "-":
-                # No gold label could be decided.
-                return None
-
             fields["label"] = LabelField(label)
 
         return Instance(fields)
