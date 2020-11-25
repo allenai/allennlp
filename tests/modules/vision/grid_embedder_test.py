@@ -9,8 +9,11 @@ from allennlp.modules.vision.grid_embedder import DetectronBackbone
 class TestDetectronBackbone(AllenNlpTestCase):
     @requires_gpu
     def test_forward_runs(self):
-        loader = DetectronImageLoader()
-        backbone = DetectronBackbone(config=DetectronConfig.from_flat_parameters(device=0))
+        config = DetectronConfig.from_model_zoo(
+            "COCO-InstanceSegmentation/mask_rcnn_R_101_C4_3x.yaml", device="cuda:0"
+        )
+        loader = DetectronImageLoader(config)
+        backbone = DetectronBackbone(config)
         image_pixels, image_size = loader(self.FIXTURES_ROOT / "detectron" / "000000001268.jpg")
         image_height = image_size[0]  # 800 for the image above
         image_width = image_size[1]  # 1199 for the image above
@@ -22,6 +25,9 @@ class TestDetectronBackbone(AllenNlpTestCase):
         assert result.size() == (1, backbone.get_output_dim(), expected_height, expected_width)
 
     def test_output_shape_is_correct(self):
-        backbone = DetectronBackbone()
+        config = DetectronConfig.from_model_zoo(
+            "COCO-InstanceSegmentation/mask_rcnn_R_101_C4_3x.yaml"
+        )
+        backbone = DetectronBackbone(config)
         assert backbone.get_output_dim() == 1024
         assert backbone.get_stride() == 16

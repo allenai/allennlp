@@ -40,7 +40,7 @@ class ImageLoader(Registrable):
 class DetectronImageLoader(ImageLoader):
     def __init__(
         self,
-        config: DetectronConfig = DetectronConfig.from_flat_parameters(),
+        config: DetectronConfig,
     ):
         self.mapper = config.build_dataset_mapper()
 

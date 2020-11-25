@@ -1,7 +1,6 @@
-from typing import Dict
+from typing import Dict, NamedTuple
 
 import torch
-import torch.nn.functional as F
 from torch import nn, FloatTensor, IntTensor
 
 from allennlp.common.detectron import DetectronConfig, ImageList
@@ -57,43 +56,37 @@ class RandomRegionDetector(RegionDetector):
 class DetectronRcnnRegionDetector(RegionDetector):
     def __init__(
         self,
-        config: DetectronConfig = DetectronConfig.from_flat_parameters(),
-        detections_per_image: int = 36,
-    ):
-
-@RegionDetector.register("faster_rcnn")
-class FasterRcnnRegionDetector(RegionDetector):
-    """
-    Faster R-CNN (https://arxiv.org/abs/1506.01497) with ResNet backbone.
-    Based on detectron2 v0.2
-    """
-
-    def __init__(
-        self,
-        config: DetectronConfig = DetectronConfig.from_flat_parameters(),
+        config: DetectronConfig,
         detections_per_image: int = 36,
     ):
         super().__init__()
+
+        if config.MODEL.META_ARCHITECTURE != "GeneralizedRCNN":
+            raise ValueError("Expected a GeneralizedRCNN detectron meta architecture")
+
         self.config = config
         self.detections_per_image = detections_per_image
-        self.register_buffer(
-            "pixel_mean",
-            torch.Tensor(self.config.cfg.MODEL.PIXEL_MEAN)
-            .view(-1, 1, 1)
-            .to(self.config.MODEL.DEVICE),
-        )
-        self.register_buffer(
-            "pixel_std",
-            torch.Tensor(self.config.cfg.MODEL.PIXEL_STD)
-            .view(-1, 1, 1)
-            .to(self.config.MODEL.DEVICE),
-        )
-        self.model = self.config.build_model()
+        model = self.config.build_model()
+
+        # HACK: We don't actually need to backbone of the model, at least not it's weights,
+        # so to save memory we remove it from the model and patch it with a small class
+        # that will work in its place.
+        class BackbonePatch(NamedTuple):
+            size_divisibility: int = 0
+
+        backbone_patch = BackbonePatch(size_divisibility=model.backbone.size_divisibility)
+        del model.backbone
+        model.backbone = backbone_patch
+
+        self.model = model
+
         if len(self.model.proposal_generator.in_features) != 1:
             raise ValueError(
-                "FasterRcnnRegionDetector currently only supports detectron proposal generators "
+                "DetectronRcnnRegionDetector currently only supports detectron proposal generators "
                 "that take a single input feature"
             )
+
+        self._in_feature_name = self.model.proposal_generator.in_features[0]
 
     def preprocess(self, images: FloatTensor, sizes: IntTensor) -> ImageList:
         # Adapted from https://github.com/facebookresearch/detectron2/blob/
@@ -103,90 +96,30 @@ class FasterRcnnRegionDetector(RegionDetector):
             for image, (height, width) in zip(images, sizes)
         ]
         standardized = [(x - self.pixel_mean) / self.pixel_std for x in raw_images]
-        return ImageList.from_tensors(standardized, self.model.backbone.size_divisibility)
+        return ImageList.from_tensors(standardized, self._size_divisibility)
 
     def forward(
         self, raw_images: FloatTensor, image_sizes: IntTensor, featurized_images: FloatTensor
     ) -> Dict[str, torch.Tensor]:
-        batch_size = len(image_sizes)
+        # Adapted from https://github.com/facebookresearch/detectron2/blob/
+        # 786875e03a3d88a06e4b3ff9cfd5120b0f04e14c/detectron2/modeling/meta_arch/rcnn.py#L177.
 
-        image_list = self.preprocess(raw_images, image_sizes)
+        # Detectron expects the input to look like this:
+        batched_inputs = [
+            {"image": (image[:, :height, :width] * 256).byte().to(self.config.MODEL.DEVICE)}
+            for image, (height, width) in zip(raw_images, image_sizes)
+        ]
 
-        # Need to put in dictionary form to pass to the proposal generator.
-        featurized_images_in_dict = {
-            self.model.proposal_generator.in_features[0]: featurized_images
-        }
+        # Run through the same steps as in detectron2 GeneralizedRCNN.inference(),
+        # except we skip the backbone since we already have image features.
+        images = self.model.preprocess_image(batched_inputs)
+        features = {self._in_feature_name: featurized_images}
+        proposals, _ = self.model.proposal_generator(images, features, None)
+        results, _ = self.model.roi_heads(images, features, proposals, None)
+        results = self.model._postprocess(results, batched_inputs, images.image_sizes)
 
-        proposals, _ = self.model.proposal_generator(image_list, featurized_images_in_dict, None)
+        # Now we just to transform `results` to match the format our RegionDetector base
+        # class specifies.
+        # `results` is a list of length batch size.
 
-        # this will concatenate the pooled_features from different images.
-        _, pooled_features = self.model.roi_heads.get_roi_features(
-            featurized_images_in_dict, proposals
-        )
-
-        predictions = self.model.roi_heads.box_predictor(pooled_features)
-
-        # class probability
-        cls_probs = F.softmax(predictions[0], dim=-1)
-        cls_probs = cls_probs[:, :-1]  # background is last
-
-        predictions, r_indices = self.model.roi_heads.box_predictor.inference(
-            predictions, proposals
-        )
-
-        batch_coordinates = []
-        batch_features = []
-        batch_probs = []
-        batch_num_detections = torch.zeros(
-            batch_size, device=image_list.tensor.device, dtype=torch.int16
-        )
-        num_classes = cls_probs.size(-1)
-
-        proposal_start = 0
-        for image_num, image_proposal_indices in enumerate(r_indices):
-            # "proposals" are the things that the proposal generator above thought might be useful
-            # boxes.  "detections" are proposals that made it passed the ROI feature and box
-            # predictor step.  We keep only the "detections", but we the features and predictions
-            # come from before we decided which things were "detections".
-            num_detections = len(image_proposal_indices)
-            num_image_proposals = len(proposals[image_num])
-            batch_num_detections[image_num] = num_detections
-
-            coordinates = proposals[image_num].proposal_boxes.tensor[image_proposal_indices]
-
-            # Detectron puts all of the features and predictions into a squashed tensor of shape
-            # (total_num_proposals, feature_dim | num_classes).  This means that we have to iterate
-            # over these tensors in a funny way, keeping track of where we are in the tensor,
-            # instead of just doing a simple `.view()`.
-            image_features = torch.narrow(pooled_features, 0, proposal_start, num_image_proposals)
-            features = image_features[image_proposal_indices]
-            image_probs = torch.narrow(cls_probs, 0, proposal_start, num_image_proposals)
-            probs = image_probs[image_proposal_indices]
-
-            proposal_start += num_image_proposals
-            if num_detections < self.detections_per_image:
-                num_to_add = self.detections_per_image - num_detections
-
-                coords_padding = coordinates.new_zeros(size=(num_to_add, 4))
-                coordinates = torch.cat([coordinates, coords_padding], dim=0)
-
-                probs_padding = probs.new_zeros(size=(num_to_add, num_classes))
-                probs = torch.cat([probs, probs_padding], dim=0)
-
-                num_features = features.size(-1)
-                features_padding = features.new_zeros(size=(num_to_add, num_features))
-                features = torch.cat([features, features_padding], dim=0)
-
-            batch_coordinates.append(coordinates)
-            batch_features.append(features)
-            batch_probs.append(probs)
-
-        features_tensor = torch.stack(batch_features, dim=0)
-        coordinates = torch.stack(batch_coordinates, dim=0)
-        probs_tensor = torch.stack(batch_probs, dim=0)
-        return {
-            "features": features_tensor,
-            "coordinates": coordinates,
-            "class_probs": probs_tensor,
-            "num_regions": batch_num_detections,
-        }
+        return results

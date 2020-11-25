@@ -54,17 +54,17 @@ class DetectronBackbone(GridEmbedder):
 
     def __init__(
         self,
-        config: DetectronConfig = DetectronConfig.from_flat_parameters(),
+        config: DetectronConfig,
     ):
         super().__init__()
         self.config = config
         self.register_buffer(
             "pixel_mean",
-            torch.Tensor(self.config.MODEL.PIXEL_MEAN).view(-1, 1, 1).to(self.config.MODEL.DEVICE),
+            torch.Tensor(self.config.MODEL.PIXEL_MEAN).view(-1, 1, 1).to(self.config.device),
         )
         self.register_buffer(
             "pixel_std",
-            torch.Tensor(self.config.MODEL.PIXEL_STD).view(-1, 1, 1).to(self.config.MODEL.DEVICE),
+            torch.Tensor(self.config.MODEL.PIXEL_STD).view(-1, 1, 1).to(self.config.device),
         )
         self.backbone = self.config.build_backbone()
         if len(self.backbone.output_shape()) != 1:
@@ -77,7 +77,7 @@ class DetectronBackbone(GridEmbedder):
         # Adapted from https://github.com/facebookresearch/detectron2/blob/
         # 268c90107fba2fea18b1132e5f60532595d771c0/detectron2/modeling/meta_arch/rcnn.py#L224.
         raw_images = [
-            (image[:, :height, :width] * 256).byte().to(self.config.MODEL.DEVICE)
+            (image[:, :height, :width] * 256).byte().to(self.config.device)
             for image, (height, width) in zip(images, sizes)
         ]
         standardized = [(x - self.pixel_mean) / self.pixel_std for x in raw_images]
