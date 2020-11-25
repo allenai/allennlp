@@ -50,9 +50,6 @@ class VisionReader(DatasetReader):
     region_detector: `RegionDetector`
         For pulling out regions of the image (both coordinates and features) that will be used by
         downstream models.
-    data_dir: `str`
-        Path to directory containing text files for each dataset split. These files contain
-        the sentences and metadata for each task instance.
     tokenizer: `Tokenizer`, optional
     token_indexers: `Dict[str, TokenIndexer]`, optional
     cuda_device: `Union[int, torch.device]`, optional

@@ -67,13 +67,12 @@ class VisualEntailmentReader(VisionReader):
         self,  # type: ignore
         image: Union[str, Tuple[Tensor, Tensor]],
         hypothesis: str,
-        answer: Optional[str] = None,
+        label: Optional[str] = None,
         *,
         use_cache: bool = True,
     ) -> Optional[Instance]:
 
         tokenized_hypothesis = self._tokenizer.tokenize(hypothesis)
-
         hypothesis_field = TextField(tokenized_hypothesis, None)
 
         from allennlp.data import Field
@@ -89,12 +88,12 @@ class VisualEntailmentReader(VisionReader):
             fields["box_features"] = ArrayField(features)
             fields["box_coordinates"] = ArrayField(coords)
 
-        if answer:
-            if answer == "-":
+        if label:
+            if label == "-":
                 # No gold label could be decided.
                 return None
 
-            fields["label"] = LabelField(answer)
+            fields["label"] = LabelField(label)
 
         return Instance(fields)
 
