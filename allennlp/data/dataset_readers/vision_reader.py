@@ -1,3 +1,4 @@
+import fnmatch
 import glob
 import logging
 from os import PathLike
@@ -43,7 +44,8 @@ class VisionReader(DatasetReader):
     ----------
 
     image_dir: `str`
-        Path to directory containing `png` image files.
+        Path to directory containing image files. The structure of the directory doesn't matter. We
+        find images by finding filenames that match `*[image_id].jpg`.
     image_featurizer: `GridEmbedder`
         The backbone image processor (like a ResNet), whose output will be passed to the region
         detector for finding object boxes in the image.

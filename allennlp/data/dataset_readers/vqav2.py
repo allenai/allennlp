@@ -298,6 +298,20 @@ class VQAv2Reader(VisionReader):
                 for a in answer_vocab.get_token_to_index_vocabulary("answers").keys()
             )
 
+        # normalize self.images some more
+        # At this point, self.images maps filenames to full paths, but we want to map image ids to full paths.
+        filename_re = re.compile(r".*(\d{12})\.jpg")
+
+        def id_from_filename(filename: str) -> Optional[int]:
+            match = filename_re.fullmatch(filename)
+            if match is None:
+                return None
+            return int(match.group(1))
+
+        self.images = {id_from_filename(name): full_path for name, full_path in self.images.items()}
+        if None in self.images:
+            del self.images[None]
+
     @overrides
     def _read(self, splits_or_list_of_splits: Union[str, List[str]]):
         # if we are given a list of splits, concatenate them
@@ -384,9 +398,7 @@ class VQAv2Reader(VisionReader):
         questions = []
         with open(cached_path(split.questions, extract_archive=True)) as f:
             questions_file = json.load(f)
-        image_subtype = questions_file["data_subtype"]
         for ques in questions_file["questions"]:
-            ques["image_subtype"] = image_subtype
             questions.append(ques)
         questions = questions[question_slice]
 
@@ -397,10 +409,7 @@ class VQAv2Reader(VisionReader):
             # them in batches. So this code gathers up instances until it has enough to fill up a batch
             # that needs processing, and then processes them all.
             processed_images = self._process_image_paths(
-                self.images[
-                    f"COCO_{question_dict['image_subtype']}_{question_dict['image_id']:012d}.jpg"
-                ]
-                for question_dict in question_dicts
+                self.images[int(question_dict["image_id"])] for question_dict in question_dicts
             )
         else:
             processed_images = [None for i in range(len(question_dicts))]
