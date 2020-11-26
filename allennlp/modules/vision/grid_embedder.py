@@ -120,3 +120,6 @@ class ResnetBackbone(GridEmbedder):
             self.flat_parameters = self.flat_parameters._replace(device=device)
             if self._pipeline_object is not None:
                 self._pipeline_object.model.to(device)
+            return self
+        else:
+            return super().to(device)
