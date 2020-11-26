@@ -1,22 +1,27 @@
-from typing import Union
+from collections import OrderedDict
+from typing import Tuple
 
-import torch
 from torch import nn, FloatTensor, IntTensor
+import torchvision
 
 from allennlp.common.registrable import Registrable
 
 
 class GridEmbedder(nn.Module, Registrable):
     """
-    A `GridEmbedder` takes a batch of images as a tensor with the dimensions
-    (Batch, Color, Height, Width), and returns a tensor in the format
-    (Batch, Features, new_height, new_width).
-
-    For every image, it embeds a patch of the image, and returns the embedding
-    of the patch. The size of the image might change during this operation.
+    A `GridEmbedder` takes a batch of images as a tensor with shape
+    `(batch_size, color_channels, height, width)`, and returns an ordered dictionary
+    of tensors with shape `(batch_size, *)`, each representing a specific feature.
     """
 
-    def forward(self, images: FloatTensor, sizes: IntTensor) -> FloatTensor:
+    def forward(self, images: FloatTensor, sizes: IntTensor) -> "OrderedDict[str, FloatTensor]":
+        raise NotImplementedError()
+
+    def get_feature_names(self) -> Tuple[str, ...]:
+        """
+        Returns the feature names, in order, i.e. the keys of the ordered output
+        dictionary from `.forward()`.
+        """
         raise NotImplementedError()
 
     def get_output_dim(self) -> int:
@@ -37,80 +42,72 @@ class GridEmbedder(nn.Module, Registrable):
 
 @GridEmbedder.register("null")
 class NullGridEmbedder(GridEmbedder):
-    """A `GridEmbedder` that returns the input image as given."""
+    """
+    A `GridEmbedder` that returns the input image as given.
+    """
 
-    def forward(self, images: FloatTensor, sizes: IntTensor) -> FloatTensor:
-        return images
+    def forward(self, images: FloatTensor, sizes: IntTensor) -> "OrderedDict[str, FloatTensor]":
+        out = OrderedDict()
+        out["0"] = images
+        return out
 
-    def get_output_dim(self) -> int:
-        return 3
-
-    def get_stride(self) -> int:
-        return 1
+    def get_feature_names(self) -> Tuple[str, ...]:
+        return ("0",)
 
 
 @GridEmbedder.register("resnet_backbone")
 class ResnetBackbone(GridEmbedder):
-    """Runs an image through resnet, as implemented by Detectron."""
+    """
+    Runs an image through [ResNet](https://api.semanticscholar.org/CorpusID:206594692),
+    as implemented by [torchvision](https://pytorch.org/docs/stable/torchvision/models.html).
+
+    # Parameters
+
+    min_size : `int`, optional (default = `800`)
+        Images smaller than this will be resized up to `min_size` before feeding into the backbone.
+    max_size : `int`, optional (default = `1333`)
+        Images larger than this will be resized down to `max_size` before feeding into the backbone.
+    image_mean : `Tuple[float, float, float]`, optional (default = `(0.485, 0.456, 0.406)`)
+        Mean values for image normalization.
+    image_std : `Tuple[float, float, float]`, optional (default = `(0.229, 0.224, 0.225)`)
+        Standard deviation for image normalization.
+    """
 
     def __init__(
         self,
-        meta_architecture: str = "GeneralizedRCNN",
-        device: Union[str, int, torch.device] = "cpu",
-        weights: str = "RCNN-X152-C4-2020-07-18",
-        attribute_on: bool = True,  # not in detectron2 default config
-        max_attr_per_ins: int = 16,  # not in detectron2 default config
-        stride_in_1x1: bool = False,  # different from default (True)
-        num_groups: int = 32,  # different from default (1)
-        width_per_group: int = 8,  # different from default (64)
-        depth: int = 152,  # different from default (50)
-    ):
+        min_size: int = 800,
+        max_size: int = 1333,
+        image_mean: Tuple[float, float, float] = (0.485, 0.456, 0.406),
+        image_std: Tuple[float, float, float] = (0.229, 0.224, 0.225),
+    ) -> None:
         super().__init__()
-        from allennlp.common import detectron
-
-        self.flat_parameters = detectron.DetectronFlatParameters(
-            max_attr_per_ins=max_attr_per_ins,
-            device=device,
-            weights=weights,
-            meta_architecture=meta_architecture,
-            attribute_on=attribute_on,
-            stride_in_1x1=stride_in_1x1,
-            num_groups=num_groups,
-            width_per_group=width_per_group,
-            depth=depth,
+        self.backbone = torchvision.models.detection.backbone_utils.resnet_fpn_backbone(
+            "resnet50", pretrained=True, trainable_layers=0
         )
-        self._pipeline_object = None
+        self.backbone.eval()
+        self.transform = torchvision.models.detection.transform.GeneralizedRCNNTransform(
+            min_size, max_size, image_mean, image_std
+        )
+        self.feature_names = tuple(
+            [
+                self.backbone.body.return_layers[key]
+                for key in self.backbone.body.keys()
+                if key in self.backbone.body.return_layers
+            ]
+            + ["pool"]
+        )
 
-    @property
-    def _pipeline(self):
-        if self._pipeline_object is None:
-            from allennlp.common import detectron
+    def forward(self, images: FloatTensor, sizes: IntTensor) -> "OrderedDict[str, FloatTensor]":
+        # self.transform takes a list of single images.
+        # shape (image_list[i]): (color_channels, height, width)
+        image_list = list(images)
 
-            self._pipeline_object = detectron.get_pipeline_from_flat_parameters(
-                self.flat_parameters, make_copy=False
-            )
-        return self._pipeline_object
+        transformed_list, _ = self.transform(list(images))
 
-    @property
-    def preprocessor(self):
-        return self._pipeline.model.preprocess_image
+        # shape: (batch_size, color_channels, new_height, new_width)
+        transformed = transformed_list.tensors
 
-    @property
-    def backbone(self):
-        return self._pipeline.model.backbone
+        return self.backbone(transformed)
 
-    def forward(self, images: FloatTensor, sizes: IntTensor) -> FloatTensor:
-        images = [
-            {"image": (image[:, :height, :width] * 256).byte(), "height": height, "width": width}
-            for image, (height, width) in zip(images, sizes)
-        ]
-        images = self.preprocessor(images)  # This returns tensors on the correct device.
-        result = self.backbone(images.tensor)
-        assert len(result) == 1
-        return next(iter(result.values()))
-
-    def get_output_dim(self) -> int:
-        return self.backbone.output_shape()["res4"].channels
-
-    def get_stride(self) -> int:
-        return self.backbone.output_shape()["res4"].stride
+    def get_feature_names(self) -> Tuple[str, ...]:
+        return self.feature_names
