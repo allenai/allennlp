@@ -105,9 +105,10 @@ class VisionReader(DatasetReader):
             logger.info("Discovering images ...")
             self.images = {
                 os.path.basename(filename): filename
+                for extension in {"png", "jpg"}
                 for filename in tqdm(
-                    glob.iglob(os.path.join(image_dir, "**", "*.jpg"), recursive=True),
-                    desc="Discovering images",
+                    glob.iglob(os.path.join(image_dir, "**", f"*.{extension}"), recursive=True),
+                    desc=f"Discovering {extension} images",
                 )
             }
             logger.info("Done discovering images")
