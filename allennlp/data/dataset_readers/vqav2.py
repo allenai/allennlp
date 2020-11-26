@@ -300,7 +300,7 @@ class VQAv2Reader(VisionReader):
 
         # normalize self.images some more
         # At this point, self.images maps filenames to full paths, but we want to map image ids to full paths.
-        filename_re = re.compile(r".*(\d{12})\.jpg")
+        filename_re = re.compile(r".*(\d{12})\.((jpg)|(png))")
 
         def id_from_filename(filename: str) -> Optional[int]:
             match = filename_re.fullmatch(filename)
