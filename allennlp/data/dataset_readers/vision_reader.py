@@ -73,7 +73,7 @@ class VisionReader(DatasetReader):
         cuda_device: Optional[Union[int, torch.device]] = None,
         max_instances: Optional[int] = None,
         image_processing_batch_size: int = 8,
-        skip_image_feature_extraction: bool = False
+        skip_image_feature_extraction: bool = False,
     ) -> None:
         super().__init__(
             max_instances=max_instances,
