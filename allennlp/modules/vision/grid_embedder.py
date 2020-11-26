@@ -114,3 +114,9 @@ class ResnetBackbone(GridEmbedder):
 
     def get_stride(self) -> int:
         return self.backbone.output_shape()["res4"].stride
+
+    def to(self, device):
+        if isinstance(device, int) or isinstance(device, torch.device):
+            self.flat_parameters.device = device
+            if self._pipeline_object is not None:
+                self._pipeline_object.model.to(device)
