@@ -42,25 +42,12 @@ class VisualEntailmentReader(VisionReader):
         else:
             processed_images = [None for i in range(len(info_dicts))]  # type: ignore
 
-        attempted_instances_count = 0
-        failed_instances_count = 0
         for info_dict, processed_image in zip(info_dicts, processed_images):
             hypothesis = info_dict["sentence2"]
             answer = info_dict["gold_label"]
 
             instance = self.text_to_instance(processed_image, hypothesis, answer)
-            attempted_instances_count += 1
-            if instance is None:
-                failed_instances_count += 1
-            else:
-                yield instance
-
-            if attempted_instances_count % 2000 == 0:
-                failed_instances_fraction = failed_instances_count / attempted_instances_count
-                if failed_instances_fraction > 0.1:
-                    logger.warning(
-                        f"{failed_instances_fraction*100:.0f}% of instances have no answers."
-                    )
+            yield instance
 
     @overrides
     def text_to_instance(
@@ -70,7 +57,7 @@ class VisualEntailmentReader(VisionReader):
         label: Optional[str] = None,
         *,
         use_cache: bool = True,
-    ) -> Optional[Instance]:
+    ) -> Instance:
 
         tokenized_hypothesis = self._tokenizer.tokenize(hypothesis)
         hypothesis_field = TextField(tokenized_hypothesis, None)
