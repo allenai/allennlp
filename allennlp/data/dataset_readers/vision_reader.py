@@ -91,6 +91,7 @@ class VisionReader(DatasetReader):
                 cuda_device = -1
         check_for_gpu(cuda_device)
         self.cuda_device = int_to_device(cuda_device)
+        logger.info(f"Processing images on device {cuda_device}")
 
         # tokenizers and indexers
         if tokenizer is None:
