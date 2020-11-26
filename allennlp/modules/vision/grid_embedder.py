@@ -117,6 +117,6 @@ class ResnetBackbone(GridEmbedder):
 
     def to(self, device):
         if isinstance(device, int) or isinstance(device, torch.device):
-            self.flat_parameters.device = device
+            self.flat_parameters = self.flat_parameters._replace(device=device)
             if self._pipeline_object is not None:
                 self._pipeline_object.model.to(device)
