@@ -4,7 +4,7 @@ import logging
 import os
 import shutil
 import time
-import overrides
+from overrides import overrides
 
 from pathlib import Path
 
@@ -30,7 +30,8 @@ class DeepspeedCheckpointer(Checkpointer):
             return
 
         with trainer.get_checkpoint_state() as state:
-            model_engine, model_state, training_states = state
+            model_state, training_states = state
+            model_engine = trainer.model_engine
 
             checkpoint_id = "deepspeed_epoch_{}".format(epoch)
             model_path = os.path.join(self._serialization_dir, "model_state_epoch_{}".format(epoch))
@@ -89,7 +90,7 @@ class DeepspeedCheckpointer(Checkpointer):
                             os.remove(fname)
 
     @overrides
-    def find_latest_checkpoint(self) -> Optional[Tuple[str, str]]:
+    def find_latest_checkpoint(self) -> Optional[Tuple[str, str, str]]:
         latest = super().find_latest_checkpoint()
         if not latest:
             return None
@@ -104,15 +105,15 @@ class DeepspeedCheckpointer(Checkpointer):
             return None
 
         engine_path = checkpoints[-1]
-        return engine_path, model_path, training_state_path
+        return str(engine_path), model_path, training_state_path
 
     @overrides
-    def restore_checkpoint(self) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+    def restore_checkpoint(self) -> Tuple[int, Dict[str, Any], Dict[str, Any]]:
         latest_checkpoint = self.find_latest_checkpoint()
 
         if latest_checkpoint is None:
             # No checkpoint to restore, start at 0
-            return {}, {}, {}
+            return -1, {}, {}
 
         checkpoint_id, model_path, training_state_path = latest_checkpoint
 

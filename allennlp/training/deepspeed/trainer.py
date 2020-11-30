@@ -6,6 +6,7 @@ import time
 import traceback
 from contextlib import contextmanager
 from typing import Any, Dict, Iterator, List, Optional, Tuple, Union
+from overrides import overrides
 
 import torch
 import torch.distributed as dist
@@ -185,7 +186,7 @@ class DeepspeedTrainer(GradientDescentTrainer):
             train_loss += batch_loss
             if reg_loss is not None:
                 batch_reg_loss = reg_loss.item()
-                train_reg_loss += batch_reg_loss # type: ignore
+                train_reg_loss += batch_reg_loss  # type: ignore
 
             self.model_engine.backward(loss)
             self.model_engine.step()
@@ -401,28 +402,6 @@ class DeepspeedTrainer(GradientDescentTrainer):
 
         return metrics
 
-    @contextmanager
-    def get_checkpoint_state(self) -> Iterator[Tuple[Dict[str, Any], Dict[str, Any]]]:
-        if self._moving_average is not None:
-            # Assigning average value to model parameters.  The checkpointer will call
-            # `restore_state_after_checkpointing` when it is done to put this back to what it was.
-            self._moving_average.assign_average_value()
-
-        model_state = self.model.state_dict()
-
-        # These are the training states we need to persist.
-        training_states = {
-            "metric_tracker": self._metric_tracker.state_dict(),
-            "optimizer": self.optimizer.state_dict(),
-            "batch_num_total": self._batch_num_total,
-        }
-
-        try:
-            yield self.model_engine, model_state, training_states
-        finally:
-            if self._moving_average is not None:
-                self._moving_average.restore()
-
     def _restore_checkpoint(self) -> int:
         """
         Restores the model and training state from the last saved checkpoint.
@@ -441,6 +420,7 @@ class DeepspeedTrainer(GradientDescentTrainer):
         if self._checkpointer is None:
             return 0
 
+        self._checkpointer: DeepspeedCheckpointer
         checkpoint_id, model_state, training_state = self._checkpointer.restore_checkpoint()
 
         if not training_state:
@@ -475,6 +455,7 @@ class DeepspeedTrainer(GradientDescentTrainer):
         return epoch_to_return
 
     @classmethod
+    @overrides
     def from_partial_objects(
         cls,
         model: Model,
@@ -501,7 +482,7 @@ class DeepspeedTrainer(GradientDescentTrainer):
         epoch_callbacks: List[EpochCallback] = None,
         end_callbacks: List[EpochCallback] = None,
         trainer_callbacks: List[TrainerCallback] = None,
-    ) -> "GradientDescentTrainer":
+    ) -> "DeepspeedTrainer":
         if no_grad:
             for name, parameter in model.named_parameters():
                 if any(re.search(regex, name) for regex in no_grad):
@@ -525,12 +506,16 @@ class DeepspeedTrainer(GradientDescentTrainer):
         deepspeed_args_ = deepspeed_args.construct(local_rank=local_rank) or DeepspeedArgs(
             local_rank=local_rank
         )
+
+        if not hasattr(data_loader, 'batch_size'):
+            raise ConfigurationError("Please specify your batch size in Deepspeed config if not using AllennlpDataLoader.")
+
         model_engine, ds_optimizer = _launch_deepspeed(
             model,
             optim_,
             deepspeed_config,
             deepspeed_args_,
-            data_loader.batch_size,
+            data_loader.batch_size, # type: ignore
             num_gradient_accumulation_steps,
         )
 
