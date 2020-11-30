@@ -5,16 +5,16 @@ local num_gpus = 1;
 
 local vocabulary = {
   "type": "from_files",
-  "directory": "https://storage.googleapis.com/allennlp-public-data/vqav2/vqav2_vocab.tar.gz"
+  "directory": "/home/dirkg/allennlp/models/vilbert_vqa_abstract_scenes_vocab.tar.gz"
 };
 
 {
   "dataset_reader": {
     "type": "vqav2",
-    #"image_dir": "/mnt/tank/dirkg/data/vision/coco",
-    #"feature_cache_dir": "/mnt/tank/dirkg/data/vision/vqa_feature_cache",
-    "image_dir": "/Users/dirkg/Documents/data/vision/coco",
-    "feature_cache_dir": "/Users/dirkg/Documents/data/vision/coco/feature_cache/vqa",
+    "image_dir": "/mnt/tank/dirkg/data/vision/vqa",
+    "feature_cache_dir": "/mnt/tank/dirkg/data/vision/feature_cache",
+    #"image_dir": "/Users/dirkg/Documents/data/vision/coco",
+    #"feature_cache_dir": "/Users/dirkg/Documents/data/vision/coco/feature_cache/vqa",
     "image_loader": "detectron",
     "image_featurizer": "resnet_backbone",
     "region_detector": "faster_rcnn",
@@ -29,16 +29,16 @@ local vocabulary = {
       }
     },
     #"max_instances": 1000,
-    "image_processing_batch_size": 16,
+    "image_processing_batch_size": 32,
     "answer_vocab": vocabulary,
-    "keep_unanswerable_questions": false
+    "keep_unanswerable_questions": true
   },
   "validation_dataset_reader": self.dataset_reader {
     "keep_unanswerable_questions": true
   },
   "vocabulary": vocabulary,
-  "train_data_path": ["balanced_real_train", "balanced_real_val[1000:]"],
-  "validation_data_path": "balanced_real_val[:1000]",
+  "train_data_path": ["abstract_scenes_train", "abstract_scenes_val[1000:]"],
+  "validation_data_path": "abstract_scenes_val[:1000]",
   "model": {
     "type": "vqa_vilbert",
     "text_embeddings": {
@@ -98,7 +98,7 @@ local vocabulary = {
     "learning_rate_scheduler": {
       "type": "linear_with_warmup",
       "warmup_steps": 300000 / 30,
-      "num_steps_per_epoch": std.ceil(644401 / $["data_loader"]["batch_size"] / $["trainer"]["num_gradient_accumulation_steps"])
+      "num_steps_per_epoch": std.ceil(90000 / $["data_loader"]["batch_size"] / $["trainer"]["num_gradient_accumulation_steps"])
     },
     "validation_metric": "+fscore",
     "num_epochs": 20,
