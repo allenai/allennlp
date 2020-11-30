@@ -157,7 +157,6 @@ class VisionReader(DatasetReader):
         def yield_batch():
             # process the images
             paths = list(unprocessed_paths)
-            print(len(paths))
             images, sizes = self.image_loader(paths)
             with torch.no_grad():
                 images = images.to(self.cuda_device)

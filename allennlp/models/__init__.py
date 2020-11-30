@@ -9,3 +9,4 @@ from allennlp.models.basic_classifier import BasicClassifier
 from allennlp.models.multitask import MultiTaskModel
 from allennlp.models.simple_tagger import SimpleTagger
 from allennlp.models.vilbert_vqa import VqaVilbert
+from allennlp.models.visual_entailment import VisualEntailmentModel
