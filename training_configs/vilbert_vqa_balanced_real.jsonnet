@@ -1,6 +1,6 @@
 local model_name = "bert-base-uncased";
 local effective_batch_size = 128;
-local gpu_batch_size = 32;
+local gpu_batch_size = 128;
 local num_gpus = 1;
 
 local vocabulary = {
