@@ -29,7 +29,7 @@ local vocabulary = {
       }
     },
     #"max_instances": 1000,
-    "image_processing_batch_size": 16,
+    "image_processing_batch_size": 32,
     "answer_vocab": vocabulary,
     "keep_unanswerable_questions": false
   },
