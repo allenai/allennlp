@@ -1,4 +1,4 @@
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from enum import IntEnum
 from allennlp.common import FromParams
 from dataclasses import dataclass, asdict
@@ -7,31 +7,36 @@ from dataclasses import dataclass, asdict
 @dataclass
 class DeepspeedFP16Config(FromParams):
     enabled: bool = True
-    loss_scale: float = 0.
+    loss_scale: float = 0.0
     initial_scale_power: int = 32
     loss_scale_window: int = 1000
     hysteresis: int = 2
-    min_loss_scale: float = 1.
+    min_loss_scale: float = 1.0
+
 
 @dataclass
 class DeepspeedAMPConfig(FromParams):
     enabled: bool = False
     opt_level: str = "O1"
 
+
 @dataclass
 class DeepspeedOptimizerConfig(FromParams):
     type: str
     params: Dict[str, Any]
+
 
 @dataclass
 class DeepspeedLRSchedulerConfig(FromParams):
     type: str
     params: Dict[str, Any]
 
+
 class DeepspeedZeROStage(IntEnum):
     DISABLED = 0
     OPTIMIZER = 1
     GRADIENT = 2
+
 
 @dataclass
 class DeepspeedZeROConfig(FromParams):
@@ -50,9 +55,9 @@ class DeepspeedConfig(FromParams):
     zero_optimization: DeepspeedZeROConfig
     fp16: DeepspeedFP16Config
     amp: DeepspeedAMPConfig = DeepspeedAMPConfig()
-    optimizer: DeepspeedOptimizerConfig = None
-    scheduler: DeepspeedLRSchedulerConfig = None
-    
+    optimizer: Optional[DeepspeedOptimizerConfig] = None
+    scheduler: Optional[DeepspeedLRSchedulerConfig] = None
+
     zero_allow_untested_optimizer: bool = True
     wall_clock_breakdown: bool = False
 
@@ -65,4 +70,4 @@ class DeepspeedArgs(FromParams):
     local_rank: int
     deepspeed: bool = True
     deepspeed_mpi: bool = False
-    deepspeed_config: str = None
+    deepspeed_config: Optional[str] = None

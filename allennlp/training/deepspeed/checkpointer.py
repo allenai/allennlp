@@ -1,10 +1,10 @@
-from typing import Union, Dict, Any, List, Tuple, Optional
+from typing import Union, Dict, Any, Tuple, Optional, Iterable
 
 import logging
 import os
-import re
 import shutil
 import time
+import overrides
 
 from pathlib import Path
 
@@ -12,35 +12,35 @@ import torch
 
 import allennlp
 from allennlp.nn import util as nn_util
-from allennlp.training import util as training_util, Checkpointer
+from allennlp.training import Checkpointer
 
 logger = logging.getLogger(__name__)
-_DeepspeedTrainer = "allennlp.training.deepspeed.trainer.DeepspeedTrainer"
 
 
 class DeepspeedCheckpointer(Checkpointer):
+    @overrides
     def save_checkpoint(
         self,
         epoch: Union[int, str],
-        trainer: _DeepspeedTrainer,
+        trainer: "allennlp.training.deepspeed.trainer.DeepspeedTrainer",
         is_best_so_far: bool = False,
-        save_model_only=False,
+        save_model_only: bool = False,
     ) -> None:
         if self._serialization_dir is None:
             return
 
         with trainer.get_checkpoint_state() as state:
             model_engine, model_state, training_states = state
-            
+
             checkpoint_id = "deepspeed_epoch_{}".format(epoch)
             model_path = os.path.join(self._serialization_dir, "model_state_epoch_{}".format(epoch))
             model_engine.save_checkpoint(self._serialization_dir, checkpoint_id)
 
             # TODO
-            # Model will need a weight file to load; 
+            # Model will need a weight file to load;
             # not sure if ZeRO stage 2 will mess this up
             if not os.path.isfile(model_path):
-                    torch.save(model_state, model_path)
+                torch.save(model_state, model_path)
             if save_model_only:
                 return
 
@@ -58,9 +58,9 @@ class DeepspeedCheckpointer(Checkpointer):
                 self._serialization_dir,
             )
             shutil.copyfile(model_path, os.path.join(self._serialization_dir, "best.th"))
-            
+
             engine_dir = os.path.join(self._serialization_dir, "best_deepspeed")
-            shutil.rmtree(engine_dir, ignore_errors=True) # in case no previous checkpoints
+            shutil.rmtree(engine_dir, ignore_errors=True)  # in case no previous checkpoints
             shutil.copytree(os.path.join(self._serialization_dir, checkpoint_id), engine_dir)
 
         if (
@@ -79,10 +79,7 @@ class DeepspeedCheckpointer(Checkpointer):
                     time_since_checkpoint_kept = (
                         save_time - self._last_permanent_saved_checkpoint_time
                     )
-                    if (
-                        time_since_checkpoint_kept
-                        > self._keep_serialized_model_every_num_seconds
-                    ):
+                    if time_since_checkpoint_kept > self._keep_serialized_model_every_num_seconds:
                         # We want to keep this checkpoint.
                         remove_path = False
                         self._last_permanent_saved_checkpoint_time = save_time
@@ -91,6 +88,7 @@ class DeepspeedCheckpointer(Checkpointer):
                         if os.path.isfile(fname):
                             os.remove(fname)
 
+    @overrides
     def find_latest_checkpoint(self) -> Optional[Tuple[str, str]]:
         latest = super().find_latest_checkpoint()
         if not latest:
@@ -98,7 +96,9 @@ class DeepspeedCheckpointer(Checkpointer):
 
         model_path, training_state_path = latest
 
-        checkpoints = (self._serialization_dir and Path(self._serialization_dir).glob('deepspeed_epoch_*')) or []
+        checkpoints: Iterable[Path] = (
+            self._serialization_dir and Path(self._serialization_dir).glob("deepspeed_epoch_*")
+        ) or []
         checkpoints = sorted(c for c in checkpoints if c.is_dir())
         if not checkpoints:
             return None
@@ -106,6 +106,7 @@ class DeepspeedCheckpointer(Checkpointer):
         engine_path = checkpoints[-1]
         return engine_path, model_path, training_state_path
 
+    @overrides
     def restore_checkpoint(self) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         latest_checkpoint = self.find_latest_checkpoint()
 
