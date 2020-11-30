@@ -39,13 +39,19 @@ class ImageLoader(Registrable):
 
     pad_value : `float`, optional (default = `0.0`)
         The value to use for padding.
+
+    device : `str`, optional (default  = `"cpu"`)
+        A torch device identifier to put the image and size tensors on.
     """
 
     default_implementation = "torch"
 
-    def __init__(self, size_divisibility: int = 0, pad_value: float = 0.0) -> None:
+    def __init__(
+        self, size_divisibility: int = 0, pad_value: float = 0.0, device: str = "cpu"
+    ) -> None:
         self.size_divisibility = size_divisibility
         self.pad_value = pad_value
+        self.device = device
 
     def __call__(self, filename_or_filenames: Union[OnePath, ManyPaths]) -> ImagesWithSize:
         if not isinstance(filename_or_filenames, (list, tuple)):
@@ -55,9 +61,12 @@ class ImageLoader(Registrable):
         images: List[FloatTensor] = []
         sizes: List[IntTensor] = []
         for filename in filename_or_filenames:
-            image = self.load(cached_path(filename))
+            image = self.load(cached_path(filename)).to(self.device)
             size = cast(
-                IntTensor, torch.tensor([image.shape[-2], image.shape[-1]], dtype=torch.int32)
+                IntTensor,
+                torch.tensor(
+                    [image.shape[-2], image.shape[-1]], dtype=torch.int32, device=self.device
+                ),
             )
             images.append(image)
             sizes.append(size)
@@ -111,13 +120,73 @@ class TorchImageLoader(ImageLoader):
 
     image_backend : `Optional[str]`, optional (default = `None`)
         Set the image backend. Can be one of `"PIL"` or `"accimage"`.
+    resize : `bool`, optional (default = `True`)
+        If `True` (the default), images will be resized when necessary according
+        to the values of `min_size` and `max_size`.
+    normalize: `bool`, optional (default = `True`)
+        If `True` (the default), images will be normalized according to the values
+        of `pixel_mean` and `pixel_std`.
+    min_size : `int`, optional (default = `800`)
+        If `resize` is `True`, images smaller than this will be resized up to `min_size`.
+    max_size : `int`, optional (default = `1333`)
+        If `resize` is `True`, images larger than this will be resized down to `max_size`.
+    pixel_mean : `Tuple[float, float, float]`, optional (default = `(0.485, 0.456, 0.406)`)
+        Mean values for image normalization. The defaults are reasonable for most models
+        from `torchvision`.
+    pixel_std : `Tuple[float, float, float]`, optional (default = `(0.229, 0.224, 0.225)`)
+        Standard deviation for image normalization. The defaults are reasonable for most
+        models from `torchvision`.
+    size_divisibility : `int`, optional (default = `32`)
+        Same parameter as with the `ImageLoader` base class, but the default here is
+        different.
     """
 
-    def __init__(self, image_backend: str = None, **kwargs) -> None:
-        super().__init__(**kwargs)
+    def __init__(
+        self,
+        image_backend: str = None,
+        resize: bool = True,
+        normalize: bool = True,
+        min_size: int = 800,
+        max_size: int = 1333,
+        pixel_mean: Tuple[float, float, float] = (0.485, 0.456, 0.406),
+        pixel_std: Tuple[float, float, float] = (0.229, 0.224, 0.225),
+        size_divisibility: int = 32,
+        **kwargs
+    ) -> None:
+        super().__init__(size_divisibility=size_divisibility, **kwargs)
         if image_backend is not None:
             torchvision.set_image_backend(image_backend)
+        self.resize = resize
+        self.normalize = normalize
+        self.min_size = min_size
+        self.max_size = max_size
+        self.pixel_mean = pixel_mean
+        self.pixel_std = pixel_std
 
     @overrides
     def load(self, filename: OnePath) -> FloatTensor:
-        return torchvision.io.read_image(filename).float() / 256
+        image = torchvision.io.read_image(filename).float().to(self.device) / 256
+        if self.normalize:
+            mean = torch.as_tensor(self.pixel_mean, dtype=image.dtype, device=self.device).view(
+                -1, 1, 1
+            )
+            std = torch.as_tensor(self.pixel_std, dtype=image.dtype, device=self.device).view(
+                -1, 1, 1
+            )
+            image = (image - mean) / std
+        if self.resize:
+            # Adapted from https://github.com/pytorch/vision/blob/
+            # 4521f6d152875974e317fa247a633e9ad1ea05c8/torchvision/models/detection/transform.py#L36.
+            min_size = min(image.shape[-2:])
+            max_size = max(image.shape[-2:])
+            scale_factor = self.min_size / min_size
+            if max_size * scale_factor > self.max_size:
+                scale_factor = self.max_size / max_size
+            image = torch.nn.functional.interpolate(
+                image[None],
+                scale_factor=scale_factor,
+                mode="bilinear",
+                recompute_scale_factor=True,
+                align_corners=False,
+            )[0]
+        return image
