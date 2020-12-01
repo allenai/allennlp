@@ -13,6 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added links to source code in docs.
 - Fixed issue with GradientDescentTrainer when constructed with validation_data_loader==None and learning_rate_scheduler!=None.
 
+### Fixed
+
+- `ShardedDatasetReader` now inherits parameters from `base_reader` when required.
 
 ## [v1.2.2](https://github.com/allenai/allennlp/releases/tag/v1.2.2) - 2020-11-17
 
