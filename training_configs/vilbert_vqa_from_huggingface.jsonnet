@@ -52,10 +52,10 @@ local vocabulary = {
     "image_intermediate_size": 1024,
     "image_attention_dropout": 0.1,
     "image_hidden_dropout": 0.1,
-    "v_biattention_id": [0, 1, 2, 3, 4, 5],
-    "t_biattention_id": [6, 7, 8, 9, 10, 11],
-    "fixed_t_layer": 0,
-    "fixed_v_layer": 0,
+    "image_biattention_id": [0, 1, 2, 3, 4, 5],
+    "text_biattention_id": [6, 7, 8, 9, 10, 11],
+    "text_fixed_layer": 0,
+    "image_fixed_layer": 0,
     "fusion_method": "mul"
   },
   "data_loader": {
