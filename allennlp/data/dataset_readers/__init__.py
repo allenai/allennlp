@@ -23,6 +23,7 @@ try:
     from allennlp.data.dataset_readers.vision_reader import VisionReader
     from allennlp.data.dataset_readers.vqav2 import VQAv2Reader
     from allennlp.data.dataset_readers.visual_entailment import VisualEntailmentReader
+    from allennlp.data.dataset_readers.gqa import GQAReader
 except ModuleNotFoundError as err:
     if err.name not in ("detectron2", "torchvision"):
         raise
