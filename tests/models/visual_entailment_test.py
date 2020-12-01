@@ -27,7 +27,6 @@ class TestVEVilbert(ModelTestCase):
 
     def test_model_loads_weights_correctly(self):
         vocab = Vocabulary()
-        # vocab.add_tokens_to_namespace(["orange", "net", "netting", "pitcher", "catcher"], "answers")
 
         model_name = "epwalsh/bert-xsmall-dummy"
         model = VisualEntailmentModel.from_huggingface_model_name(

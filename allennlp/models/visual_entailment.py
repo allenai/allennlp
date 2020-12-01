@@ -79,7 +79,13 @@ class VisualEntailmentModel(VisionTextModel):
         )
 
     @overrides
-    def _compute_loss_and_metrics(self, batch_size, outputs, label, label_weights=None):  # type: ignore
+    def _compute_loss_and_metrics(
+        self,
+        batch_size: int,
+        outputs: torch.Tensor,
+        label: torch.Tensor,
+        label_weights: Optional[torch.Tensor] = None,
+    ):
         assert label_weights is None
         if label is not None:
             outputs["loss"] = (

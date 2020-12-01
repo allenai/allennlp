@@ -84,7 +84,13 @@ class VqaVilbert(VisionTextModel):
         )
 
     @overrides
-    def _compute_loss_and_metrics(self, batch_size, outputs, label, label_weights):
+    def _compute_loss_and_metrics(
+        self,
+        batch_size: int,
+        outputs: torch.Tensor,
+        label: torch.Tensor,
+        label_weights: Optional[torch.Tensor] = None,
+    ):
         if label is not None and label_weights is not None:
             logits = outputs["logits"]
             label_mask = label > 1  # 0 is padding, 1 is OOV, which we want to ignore

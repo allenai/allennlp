@@ -6,7 +6,8 @@ from overrides import overrides
 import numpy as np
 import torch
 
-from allennlp.data import TextFieldTensors, Vocabulary
+from allennlp.data.fields.text_field import TextFieldTensors
+from allennlp.data.vocabulary import Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules.transformer import (
     TextEmbeddings,
@@ -236,7 +237,13 @@ class VisionTextModel(Model):
 
         return outputs
 
-    def _compute_loss_and_metrics(self, batch_size, outputs, label, label_weights):
+    def _compute_loss_and_metrics(
+        self,
+        batch_size: int,
+        outputs: torch.Tensor,
+        label: torch.Tensor,
+        label_weights: Optional[torch.Tensor] = None,
+    ):
         return outputs
 
     @overrides
