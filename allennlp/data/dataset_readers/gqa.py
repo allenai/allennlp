@@ -1,44 +1,27 @@
-import glob
-from collections import defaultdict
 from os import PathLike
 from typing import (
     Dict,
-    List,
     Union,
     Optional,
-    MutableMapping,
-    NamedTuple,
-    Set,
     Tuple,
-    Iterator,
-    Iterable,
 )
 import json
 import os
-import re
 
 from overrides import overrides
 import torch
 from torch import Tensor
-from tqdm import tqdm
-import torch.distributed as dist
 
-from allennlp.common import util
-from allennlp.common.checks import check_for_gpu, ConfigurationError
-from allennlp.common.util import int_to_device
-from allennlp.common.file_utils import cached_path, TensorCache
+from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
-from allennlp.data.fields import ArrayField, LabelField, ListField, TextField
+from allennlp.data.fields import ArrayField, LabelField, TextField
 from allennlp.data.image_loader import ImageLoader
 from allennlp.data.instance import Instance
-from allennlp.data.token_indexers import PretrainedTransformerIndexer
 from allennlp.data.token_indexers import TokenIndexer
-from allennlp.data.tokenizers import PretrainedTransformerTokenizer
 from allennlp.data.tokenizers import Tokenizer
 from allennlp.modules.vision.grid_embedder import GridEmbedder
 from allennlp.modules.vision.region_detector import RegionDetector
 from allennlp.data.dataset_readers.vision_reader import VisionReader
-
 
 
 @DatasetReader.register("gqa")
@@ -151,7 +134,7 @@ class GQAReader(VisionReader):
         self,  # type: ignore
         question: str,
         image: Union[str, Tuple[Tensor, Tensor]],
-        answers: List[Dict[str, str]] = None,
+        answers: Dict[str, str] = None,
         *,
         use_cache: bool = True,
     ) -> Instance:

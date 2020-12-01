@@ -32,7 +32,11 @@ dataset at every epoch) and a `MultiTaskScheduler` (for ordering the instances w
 - Added abstraction and demo implementation for an image augmentation module.
 - Added abstraction and concrete implementation for region detectors.
 - Transformer toolkit to plug and play with modular components of transformer architectures.
+<<<<<<< HEAD
 - `VisionReader` and `VisionTextModel` base classes added. `VisualEntailment` and `VQA` inherit from these.
+=======
+- Added reader for the GQA dataset
+>>>>>>> typecheck fix
 
 ### Changed
 
