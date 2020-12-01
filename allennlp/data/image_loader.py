@@ -40,14 +40,17 @@ class ImageLoader(Registrable):
     pad_value : `float`, optional (default = `0.0`)
         The value to use for padding.
 
-    device : `str`, optional (default  = `"cpu"`)
+    device : `Union[str, torch.device]`, optional (default  = `"cpu"`)
         A torch device identifier to put the image and size tensors on.
     """
 
     default_implementation = "torch"
 
     def __init__(
-        self, size_divisibility: int = 0, pad_value: float = 0.0, device: str = "cpu"
+        self,
+        size_divisibility: int = 0,
+        pad_value: float = 0.0,
+        device: Union[str, torch.device] = "cpu",
     ) -> None:
         self.size_divisibility = size_divisibility
         self.pad_value = pad_value

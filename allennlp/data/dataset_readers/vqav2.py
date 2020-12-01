@@ -28,6 +28,7 @@ from allennlp.common import util
 from allennlp.common.checks import check_for_gpu
 from allennlp.common.util import int_to_device
 from allennlp.common.file_utils import cached_path, TensorCache
+from allennlp.common.lazy import Lazy
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import ArrayField, LabelField, ListField, TextField
@@ -248,10 +249,10 @@ class VQAv2Reader(DatasetReader):
     ----------
     image_dir: `str`
         Path to directory containing `png` image files.
-    image_featurizer: `GridEmbedder`
+    image_featurizer: `Lazy[GridEmbedder]`
         The backbone image processor (like a ResNet), whose output will be passed to the region
         detector for finding object boxes in the image.
-    region_detector: `RegionDetector`
+    region_detector: `Lazy[RegionDetector]`
         For pulling out regions of the image (both coordinates and features) that will be used by
         downstream models.
     data_dir: `str`
@@ -267,8 +268,8 @@ class VQAv2Reader(DatasetReader):
         self,
         image_dir: Union[str, PathLike],
         image_loader: ImageLoader,
-        image_featurizer: GridEmbedder,
-        region_detector: RegionDetector,
+        image_featurizer: Lazy[GridEmbedder],
+        region_detector: Lazy[RegionDetector],
         *,
         answer_vocab: Union[
             Vocabulary, str
@@ -330,10 +331,14 @@ class VQAv2Reader(DatasetReader):
                 )
             }
             logger.info("Done discovering images")
-            # image loading
+
+            # image loading and featurizing
             self.image_loader = image_loader
-            self.image_featurizer = image_featurizer.to(self.cuda_device)
-            self.region_detector = region_detector.to(self.cuda_device)
+            self.image_loader.device = self.cuda_device
+            self._lazy_image_featurizer = image_featurizer
+            self._image_featurizer = None
+            self._lazy_region_detector = region_detector
+            self._region_detector = None
 
             # feature cache
             self.feature_cache_dir = feature_cache_dir
@@ -342,6 +347,20 @@ class VQAv2Reader(DatasetReader):
             self._coordinates_cache_instance: Optional[MutableMapping[str, Tensor]] = None
 
             self.image_processing_batch_size = image_processing_batch_size
+
+    @property
+    def image_featurizer(self) -> GridEmbedder:
+        if self._image_featurizer is None:
+            self._image_featurizer = self._lazy_image_featurizer.construct().to(self.cuda_device)
+            self._image_featurizer.eval()  # type: ignore[attr-defined]
+        return self._image_featurizer  # type: ignore[return-value]
+
+    @property
+    def region_detector(self) -> RegionDetector:
+        if self._region_detector is None:
+            self._region_detector = self._lazy_region_detector.construct().to(self.cuda_device)
+            self._region_detector.eval()  # type: ignore[attr-defined]
+        return self._region_detector  # type: ignore[return-value]
 
     @property
     def _features_cache(self) -> MutableMapping[str, Tensor]:
@@ -512,8 +531,8 @@ class VQAv2Reader(DatasetReader):
                 sizes = sizes.to(self.cuda_device)
                 featurized_images = self.image_featurizer(images, sizes)
                 detector_results = self.region_detector(images, sizes, featurized_images)
-                features = detector_results["features"]
-                coordinates = detector_results["coordinates"]
+                features = detector_results.features
+                coordinates = detector_results.boxes
 
             # store the processed results in memory, so we can complete the batch
             paths_to_tensors = {path: (features[i], coordinates[i]) for i, path in enumerate(paths)}
