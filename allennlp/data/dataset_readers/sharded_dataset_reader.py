@@ -30,6 +30,10 @@ class ShardedDatasetReader(DatasetReader):
 
     Registered as a `DatasetReader` with name "sharded".
 
+    This class accepts all additional parameters of any `DatasetReader` class via `**kwargs`.
+    We give priority to the values set in the constructor for the instance of this class.
+    Optionally, we will automatically inherit attributes from the `base_reader` when required.
+
     # Parameters
 
     base_reader : `DatasetReader`
@@ -58,6 +62,15 @@ class ShardedDatasetReader(DatasetReader):
         # However we still need to set this flag to `True` after the fact so that
         # all of the instances within each shard are used.
         self.reader.manual_distributed_sharding = True
+
+        # ShardedDatasetReader is a wrapper for the original base_reader so some of the parameters like 'lazy'
+        # can be safely inherited. However, ShardedDatasetReader is a class instance of a DatasetReader as well.
+        # So we give priority to the parameters for the current instance stored in 'kwargs'.
+        # If not present, we check the ones in the base reader
+        for attr_name, attr_val in self.reader.__dict__.items():
+            # copy over only shared attributes between the two classes
+            if attr_name in self.__dict__:
+                setattr(self, attr_name, kwargs.get(attr_name, attr_val))
 
     def text_to_instance(self, *args, **kwargs) -> Instance:
         """
