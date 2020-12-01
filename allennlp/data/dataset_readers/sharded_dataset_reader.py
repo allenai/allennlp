@@ -13,6 +13,8 @@ from allennlp.data.instance import Instance
 
 logger = logging.getLogger(__name__)
 
+_INHERITED_DATASET_PARAMS = ("lazy",)
+
 
 @DatasetReader.register("sharded")
 class ShardedDatasetReader(DatasetReader):
@@ -67,7 +69,8 @@ class ShardedDatasetReader(DatasetReader):
         # can be safely inherited. However, ShardedDatasetReader is a class instance of a DatasetReader as well.
         # So we give priority to the parameters for the current instance stored in 'kwargs'.
         # If not present, we check the ones in the base reader
-        for attr_name, attr_val in self.reader.__dict__.items():
+        for attr_name in _INHERITED_DATASET_PARAMS:
+            attr_val = getattr(self.reader, attr_name)
             # copy over only shared attributes between the two classes
             if attr_name in self.__dict__:
                 setattr(self, attr_name, kwargs.get(attr_name, attr_val))
