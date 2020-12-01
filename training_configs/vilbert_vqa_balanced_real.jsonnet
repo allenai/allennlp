@@ -3,10 +3,16 @@ local effective_batch_size = 128;
 local gpu_batch_size = 128;
 local num_gpus = 1;
 
-local vocabulary = {
-  "type": "from_files",
-  "directory": "/home/dirkg/allennlp/models/vilbert_vqa_balanced_real_vocab.tar.gz"
-};
+local construct_vocab = false;
+
+local vocabulary = if construct_vocab then {
+      // read the files to construct the vocab
+      "min_count": 9
+    } else {
+      // read the constructed vocab
+      "type": "from_files",
+      "directory": "/home/dirkg/allennlp/models/vilbert_vqa_balanced_real_vocab.tar.gz"
+    };
 
 {
   "dataset_reader": {
@@ -30,8 +36,9 @@ local vocabulary = {
     },
     #"max_instances": 1000,
     "image_processing_batch_size": 32,
-    "answer_vocab": vocabulary,
-    "keep_unanswerable_questions": true
+    [if construct_vocab then "answer_vocab"]: vocabulary,
+    "keep_unanswerable_questions": !construct_vocab,
+    "skip_image_feature_extraction": construct_vocab,
   },
   "validation_dataset_reader": self.dataset_reader {
     "keep_unanswerable_questions": true
@@ -90,7 +97,8 @@ local vocabulary = {
     "cuda_devices": std.range(0, num_gpus - 1)
     #"cuda_devices": std.repeat([-1], num_gpus)  # Use this for debugging on CPU
   },
-  "trainer": {
+  // Don't train if we're just constructing vocab. The results would be confusing.
+  [if !construct_vocab then "trainer"]: {
     "optimizer": {
       "type": "huggingface_adamw",
       "lr": 4e-5
