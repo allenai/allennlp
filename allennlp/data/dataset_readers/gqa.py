@@ -123,18 +123,17 @@ class GQAReader(VisionReader):
             )
 
             for question_dict, processed_image in zip(question_dicts, processed_images):
-                answers = {
+                answer = {
                     "answer": question_dict["answer"],
-                    "fullAnswer": question_dict["fullAnswer"],
                 }
-                yield self.text_to_instance(question_dict["question"], processed_image, answers)
+                yield self.text_to_instance(question_dict["question"], processed_image, answer)
 
     @overrides
     def text_to_instance(
         self,  # type: ignore
         question: str,
         image: Union[str, Tuple[Tensor, Tensor]],
-        answers: Dict[str, str] = None,
+        answer: Dict[str, str] = None,
         *,
         use_cache: bool = True,
     ) -> Instance:
@@ -151,8 +150,8 @@ class GQAReader(VisionReader):
             "question": question_field,
         }
 
-        if answers:
-            fields["label"] = LabelField(answers["answer"], label_namespace="answer")
+        if answer:
+            fields["label"] = LabelField(answer["answer"], label_namespace="answer")
 
         return Instance(fields)
 
