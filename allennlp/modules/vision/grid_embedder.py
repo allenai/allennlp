@@ -49,10 +49,10 @@ class ResnetBackbone(GridEmbedder):
 
     def __init__(self) -> None:
         super().__init__()
-        self.backbone = torchvision.models.detection.backbone_utils.resnet_fpn_backbone(
-            "resnet50", pretrained=True, trainable_layers=0
-        )
-        self.backbone.eval()
+        detection_model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=True)
+        self.backbone = detection_model.backbone
+        # Don't need the rest of this.
+        del detection_model
         self.feature_names = tuple(
             [
                 self.backbone.body.return_layers[key]

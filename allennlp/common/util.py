@@ -345,7 +345,7 @@ def import_module_and_submodules(package_name: str) -> None:
         try:
             module = importlib.import_module(package_name)
         except ImportError as err:
-            if err.name in {"detectron2", "torchvision"}:
+            if err.name in {"torchvision"}:
                 logger.warning(
                     "vision module '%s' is unavailable since '%s' is not installed",
                     package_name,

@@ -20,5 +20,5 @@ from allennlp.data.batch import Batch
 try:
     from allennlp.data.image_loader import ImageLoader, TorchImageLoader
 except ModuleNotFoundError as err:
-    if err.name != "torchvision":
+    if err.name not in {"torchvision"}:
         raise

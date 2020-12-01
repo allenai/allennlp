@@ -1,5 +1,7 @@
+import torchvision
+
 from allennlp.common.testing import AllenNlpTestCase, requires_gpu
-from allennlp.data.image_loader import DetectronImageLoader
+from allennlp.data.image_loader import TorchImageLoader
 from allennlp.modules.vision.grid_embedder import ResnetBackbone
 from allennlp.modules.vision.region_detector import FasterRcnnRegionDetector
 
@@ -7,26 +9,51 @@ from allennlp.modules.vision.region_detector import FasterRcnnRegionDetector
 class TestFasterRcnnRegionDetector(AllenNlpTestCase):
     @requires_gpu
     def test_forward_runs(self):
-        loader = DetectronImageLoader()
-        backbone = ResnetBackbone(device=0)
-        num_boxes = 100
-        batch_size = 2
-        detector = FasterRcnnRegionDetector(detections_per_image=num_boxes, device=0)
-        image_pixels, image_size = loader(self.FIXTURES_ROOT / "detectron" / "000000001268.jpg")
-        assert image_size[0] == 800
-        assert image_size[1] == 1199
-        image_pixels = image_pixels.unsqueeze(0).expand(batch_size, -1, -1, -1)
-        image_size = image_size.unsqueeze(0).expand(batch_size, -1)
-        grid_features = backbone(image_pixels, image_size)
-        results = detector(image_pixels, image_size, grid_features)
-        assert results["coordinates"].size() == (batch_size, num_boxes, 4)
-        assert results["features"].size() == (batch_size, num_boxes, 2048)
-        assert results["class_probs"].size() == (batch_size, num_boxes, 1600)
-        assert results["num_regions"].size() == (batch_size,)
+        loader = TorchImageLoader(resize=True, normalize=True, device="cuda:0")
+        backbone = ResnetBackbone().to(device="cuda:0")
+        backbone.eval()
+        detector = FasterRcnnRegionDetector().to(device="cuda:0")
+        detector.eval()
 
-        for batch_index in range(batch_size):
-            # There is some non-determinism in detectron in how many regions it detects on this
-            # image - most of the time it returns 60, but occasionally returns 64.  This is hedging
-            # against the non-determinism, so the test doesn't randomly fail.
-            actual_num_regions = results["num_regions"][batch_index].item()
-            assert actual_num_regions in {60, 64}
+        image_path = (
+            self.FIXTURES_ROOT
+            / "data"
+            / "vqav2"
+            / "images"
+            / "test_fixture"
+            / "COCO_train2014_000000458752.jpg"
+        )
+
+        images, sizes = loader([image_path, image_path])
+        image_features = backbone(images, sizes)
+        del backbone
+        detections = detector(images, sizes, image_features)
+        del detector
+
+        assert len(detections.features) == 2
+        assert len(detections.boxes) == 2
+        assert len(detections.class_probs) == 2
+        assert len(detections.class_labels) == 2
+
+        assert detections.features[0].shape[0] >= 1
+        assert detections.features[0].shape[1] == 1024
+        assert (
+            detections.features[0].shape[0]
+            == detections.boxes[0].shape[0]
+            == detections.class_probs[0].shape[0]
+            == detections.class_labels[0].shape[0]
+        )
+
+        # Okay, cool, so far so good. Now let's make sure the output we got
+        # actually matches exactly what we would get using the full pipeline
+        # directly from torchvision.
+        raw_loader = TorchImageLoader(resize=False, normalize=False, device="cuda:0")
+        image, _ = raw_loader(image_path)
+        model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=True).to("cuda:0")
+        model.eval()
+        result = model([image, image])
+        # We can't compare the boxes directly because the boxes here are post-processed
+        # back to reference the original un-resized image. But we can compare
+        # the labels and scores. They should match exactly.
+        assert (result[0]["labels"] == detections.class_labels[0]).all()
+        assert (result[0]["scores"] == detections.class_probs[0]).all()

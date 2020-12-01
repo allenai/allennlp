@@ -22,5 +22,5 @@ from allennlp.data.dataset_readers.text_classification_json import TextClassific
 try:
     from allennlp.data.dataset_readers.vqav2 import VQAv2Reader
 except ModuleNotFoundError as err:
-    if err.name not in ("detectron2", "torchvision"):
+    if err.name not in {"torchvision"}:
         raise

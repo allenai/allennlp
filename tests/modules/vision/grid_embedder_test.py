@@ -6,18 +6,18 @@ from allennlp.modules.vision.grid_embedder import ResnetBackbone
 class TestResnetBackbone(AllenNlpTestCase):
     @requires_gpu
     def test_forward_runs(self):
-        loader = TorchImageLoader()
+        loader = TorchImageLoader(device="cuda:0")
         backbone = ResnetBackbone().to("cuda:0")
 
         image_pixels, image_size = loader(
-            self.FIXTURES_ROOT
-            / "data"
-            / "vqav2"
-            / "images"
-            / "test_fixture"
-            / "COCO_train2014_000000458752.jpg"
+            [
+                self.FIXTURES_ROOT
+                / "data"
+                / "vqav2"
+                / "images"
+                / "test_fixture"
+                / "COCO_train2014_000000458752.jpg"
+            ]
         )
-        result = backbone(
-            image_pixels.unsqueeze(0).to("cuda:0"), image_size.unsqueeze(0).to("cuda:0")
-        )
+        result = backbone(image_pixels, image_size)
         assert tuple(result.keys()) == backbone.get_feature_names()
