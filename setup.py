@@ -73,7 +73,7 @@ setup(
     ],
     extras_require={
         "vision": [
-            "torchvision>=0.7.0",
+            "torchvision>=0.8.1,<0.9.0",
         ],
     },
     entry_points={"console_scripts": ["allennlp=allennlp.__main__:run"]},
