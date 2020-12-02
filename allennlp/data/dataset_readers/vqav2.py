@@ -1,4 +1,3 @@
-import glob
 import logging
 from collections import Counter
 from os import PathLike
@@ -9,37 +8,28 @@ from typing import (
     Optional,
     MutableMapping,
     NamedTuple,
-    Set,
     Tuple,
-    Iterator,
     Iterable,
 )
 import json
-import os
 import re
 
 from overrides import overrides
 import torch
 from torch import Tensor
-from tqdm import tqdm
-import torch.distributed as dist
 
-from allennlp.common import util
-from allennlp.common.checks import check_for_gpu
-from allennlp.common.util import int_to_device
-from allennlp.common.file_utils import cached_path, TensorCache
 from allennlp.common.lazy import Lazy
+from allennlp.common.file_utils import cached_path
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import Field, ArrayField, LabelField, ListField, TextField
 from allennlp.data.image_loader import ImageLoader
 from allennlp.data.instance import Instance
-from allennlp.data.token_indexers import PretrainedTransformerIndexer
 from allennlp.data.token_indexers import TokenIndexer
-from allennlp.data.tokenizers import PretrainedTransformerTokenizer
 from allennlp.data.tokenizers import Tokenizer
 from allennlp.modules.vision.grid_embedder import GridEmbedder
 from allennlp.modules.vision.region_detector import RegionDetector
+from allennlp.data.dataset_readers.vision_reader import VisionReader
 
 logger = logging.getLogger(__name__)
 
@@ -243,7 +233,7 @@ def get_score(count: int) -> float:
 
 
 @DatasetReader.register("vqav2")
-class VQAv2Reader(DatasetReader):
+class VQAv2Reader(VisionReader):
     """
     Parameters
     ----------
@@ -284,29 +274,18 @@ class VQAv2Reader(DatasetReader):
         keep_unanswerable_questions: bool = True,
     ) -> None:
         super().__init__(
+            image_dir,
+            image_loader,
+            image_featurizer,
+            region_detector,
+            feature_cache_dir=feature_cache_dir,
+            tokenizer=tokenizer,
+            token_indexers=token_indexers,
+            cuda_device=cuda_device,
             max_instances=max_instances,
-            manual_distributed_sharding=True,
-            manual_multi_process_sharding=True,
+            image_processing_batch_size=image_processing_batch_size,
+            skip_image_feature_extraction=skip_image_feature_extraction,
         )
-
-        if cuda_device is None:
-            if torch.cuda.device_count() > 0:
-                if util.is_distributed():
-                    cuda_device = dist.get_rank() % torch.cuda.device_count()
-                else:
-                    cuda_device = 0
-            else:
-                cuda_device = -1
-        check_for_gpu(cuda_device)
-        self.cuda_device = int_to_device(cuda_device)
-
-        # tokenizers and indexers
-        if tokenizer is None:
-            tokenizer = PretrainedTransformerTokenizer("bert-base-uncased")
-        self._tokenizer = tokenizer
-        if token_indexers is None:
-            token_indexers = {"tokens": PretrainedTransformerIndexer("bert-base-uncased")}
-        self._token_indexers = token_indexers
 
         # read answer vocab
         if keep_unanswerable_questions:
@@ -319,74 +298,6 @@ class VQAv2Reader(DatasetReader):
                 preprocess_answer(a)
                 for a in answer_vocab.get_token_to_index_vocabulary("answers").keys()
             )
-
-        self.skip_image_feature_extraction = skip_image_feature_extraction
-        if not skip_image_feature_extraction:
-            logger.info("Discovering images ...")
-            self.images = {
-                os.path.basename(filename): filename
-                for filename in tqdm(
-                    glob.iglob(os.path.join(image_dir, "**", "*.jpg"), recursive=True),
-                    desc="Discovering images",
-                )
-            }
-            logger.info("Done discovering images")
-
-            # image loading and featurizing
-            self.image_loader = image_loader
-            self.image_loader.device = self.cuda_device
-            self._lazy_image_featurizer = image_featurizer
-            self._image_featurizer = None
-            self._lazy_region_detector = region_detector
-            self._region_detector = None
-
-            # feature cache
-            self.feature_cache_dir = feature_cache_dir
-            self.coordinates_cache_dir = feature_cache_dir
-            self._features_cache_instance: Optional[MutableMapping[str, Tensor]] = None
-            self._coordinates_cache_instance: Optional[MutableMapping[str, Tensor]] = None
-
-            self.image_processing_batch_size = image_processing_batch_size
-
-    @property
-    def image_featurizer(self) -> GridEmbedder:
-        if self._image_featurizer is None:
-            self._image_featurizer = self._lazy_image_featurizer.construct().to(self.cuda_device)
-            self._image_featurizer.eval()  # type: ignore[attr-defined]
-        return self._image_featurizer  # type: ignore[return-value]
-
-    @property
-    def region_detector(self) -> RegionDetector:
-        if self._region_detector is None:
-            self._region_detector = self._lazy_region_detector.construct().to(self.cuda_device)
-            self._region_detector.eval()  # type: ignore[attr-defined]
-        return self._region_detector  # type: ignore[return-value]
-
-    @property
-    def _features_cache(self) -> MutableMapping[str, Tensor]:
-        if self._features_cache_instance is None:
-            if self.feature_cache_dir is None:
-                self._features_cache_instance = {}
-            else:
-                os.makedirs(self.feature_cache_dir, exist_ok=True)
-                self._features_cache_instance = TensorCache(
-                    os.path.join(self.feature_cache_dir, "features")
-                )
-
-        return self._features_cache_instance
-
-    @property
-    def _coordinates_cache(self) -> MutableMapping[str, Tensor]:
-        if self._coordinates_cache_instance is None:
-            if self.coordinates_cache_dir is None:
-                self._coordinates_cache_instance = {}
-            else:
-                os.makedirs(self.coordinates_cache_dir, exist_ok=True)
-                self._coordinates_cache_instance = TensorCache(
-                    os.path.join(self.coordinates_cache_dir, "coordinates")
-                )
-
-        return self._coordinates_cache_instance
 
     @overrides
     def _read(self, splits_or_list_of_splits: Union[str, List[str]]):
@@ -515,65 +426,6 @@ class VQAv2Reader(DatasetReader):
                     logger.warning(
                         f"{failed_instances_fraction*100:.0f}% of instances have no answers."
                     )
-
-    def _process_image_paths(
-        self, image_paths: Iterable[str], *, use_cache: bool = True
-    ) -> Iterator[Tuple[Tensor, Tensor]]:
-        batch: List[Union[str, Tuple[Tensor, Tensor]]] = []
-        unprocessed_paths: Set[str] = set()
-
-        def yield_batch():
-            # process the images
-            paths = list(unprocessed_paths)
-            images, sizes = self.image_loader(paths)
-            with torch.no_grad():
-                images = images.to(self.cuda_device)
-                sizes = sizes.to(self.cuda_device)
-                featurized_images = self.image_featurizer(images, sizes)
-                detector_results = self.region_detector(images, sizes, featurized_images)
-                features = detector_results.features
-                coordinates = detector_results.boxes
-
-            # store the processed results in memory, so we can complete the batch
-            paths_to_tensors = {path: (features[i], coordinates[i]) for i, path in enumerate(paths)}
-
-            # store the processed results in the cache
-            if use_cache:
-                for path, (features, coordinates) in paths_to_tensors.items():
-                    basename = os.path.basename(path)
-                    self._features_cache[basename] = features
-                    self._coordinates_cache[basename] = coordinates
-
-            # yield the batch
-            for b in batch:
-                if isinstance(b, str):
-                    yield paths_to_tensors[b]
-                else:
-                    yield b
-
-        for image_path in image_paths:
-            basename = os.path.basename(image_path)
-            try:
-                if use_cache:
-                    features: Tensor = self._features_cache[basename]
-                    coordinates: Tensor = self._coordinates_cache[basename]
-                    if len(batch) <= 0:
-                        yield features, coordinates
-                    else:
-                        batch.append((features, coordinates))
-                else:
-                    # If we're not using the cache, we pretend we had a cache miss here.
-                    raise KeyError
-            except KeyError:
-                batch.append(image_path)
-                unprocessed_paths.add(image_path)
-                if len(unprocessed_paths) >= self.image_processing_batch_size:
-                    yield from yield_batch()
-                    batch = []
-                    unprocessed_paths = set()
-
-        if len(batch) > 0:
-            yield from yield_batch()
 
     @overrides
     def text_to_instance(

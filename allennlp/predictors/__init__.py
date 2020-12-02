@@ -12,6 +12,7 @@ from allennlp.predictors.text_classifier import TextClassifierPredictor
 
 try:
     from allennlp.predictors.vilbert_vqa import VilbertVqaPredictor
+    from allennlp.predictors.visual_entailment import VisualEntailmentPredictor
 except ImportError:
-    # VilbertVqaPredictor is not available if we don't have detectron.
+    # vision-based predictors are not available if we don't have detectron.
     pass

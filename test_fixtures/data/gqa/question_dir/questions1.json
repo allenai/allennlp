@@ -1,0 +1,51 @@
+{
+  "20240871": {
+    "semantic": [
+      {
+        "operation": "select", 
+        "dependencies": [], 
+        "argument": "water (4)"
+      }, 
+      {
+        "operation": "relate", 
+        "dependencies": [0], 
+        "argument": "table,below,s (11)"
+      }, 
+      {
+        "operation": "verify shape", 
+        "dependencies": [1], 
+        "argument": "round"
+      }, 
+      {
+        "operation": "verify material", 
+        "dependencies": [1], 
+        "argument": "wood "
+      }, 
+      {"operation": "and", 
+        "dependencies": [2, 3], 
+        "argument": ""
+      }
+    ], 
+    "entailed": ["20240900", "20240892", "20240891", "20240890", "20240879", "20240896", "20240895", "20240894", "20240875", "20240897", "20240899", "20240898", "20240870", "20240878", "20240910", "20240877", "20240909", "20240886", "20240887", "20240882", "20240911", "20240872", "20240888", "20240889"], "equivalent": ["20240871", "20240870"],
+    "question": "Does the table below the water look wooden and round?", 
+    "imageId": "n166008", 
+    "isBalanced": false, 
+    "groups": {
+      "global": null, 
+      "local": "05-round_wood"
+    }, 
+    "answer": "yes", 
+    "semanticStr": "select: water (4)->relate: table,below,s (11) [0]->verify shape: round [1]->verify material: wood  [1]->and:  [2, 3]", 
+    "annotations": {
+      "answer": {}, 
+      "question": {"2": "11", "5": "4"}, 
+      "fullAnswer": {"2": "11"}
+    }, 
+    "types": {
+      "detailed": "verifyAttrs", 
+      "semantic": "attr",
+      "structural": "logical"
+    }, 
+    "fullAnswer": "Yes, the table is wooden and round."
+  }
+}

@@ -32,6 +32,8 @@ dataset at every epoch) and a `MultiTaskScheduler` (for ordering the instances w
 - Added abstraction and demo implementation for an image augmentation module.
 - Added abstraction and concrete implementation for region detectors.
 - Transformer toolkit to plug and play with modular components of transformer architectures.
+- `VisionReader` and `VisionTextModel` base classes added. `VisualEntailment` and `VQA` inherit from these.
+- Added reader for the GQA dataset
 
 ### Changed
 
@@ -48,6 +50,7 @@ dataset at every epoch) and a `MultiTaskScheduler` (for ordering the instances w
 ### Added
 
 - Added links to source code in docs.
+- Fixed issue with GradientDescentTrainer when constructed with validation_data_loader==None and learning_rate_scheduler!=None.
 
 
 ## [v1.2.2](https://github.com/allenai/allennlp/releases/tag/v1.2.2) - 2020-11-17
