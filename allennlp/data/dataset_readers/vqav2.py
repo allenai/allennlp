@@ -31,7 +31,7 @@ from allennlp.common.file_utils import cached_path, TensorCache
 from allennlp.common.lazy import Lazy
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
-from allennlp.data.fields import ArrayField, LabelField, ListField, TextField
+from allennlp.data.fields import Field, ArrayField, LabelField, ListField, TextField
 from allennlp.data.image_loader import ImageLoader
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import PretrainedTransformerIndexer
@@ -586,7 +586,6 @@ class VQAv2Reader(DatasetReader):
     ) -> Optional[Instance]:
         tokenized_question = self._tokenizer.tokenize(question)
         question_field = TextField(tokenized_question, None)
-        from allennlp.data import Field
 
         fields: Dict[str, Field] = {
             "question": question_field,
@@ -600,6 +599,11 @@ class VQAv2Reader(DatasetReader):
 
             fields["box_features"] = ArrayField(features)
             fields["box_coordinates"] = ArrayField(coords)
+            fields["box_mask"] = ArrayField(
+                features.new_full((features.shape[0],), True, dtype=torch.bool),
+                padding_value=False,
+                dtype=torch.bool,
+            )
 
         if answers:
             answer_fields = []

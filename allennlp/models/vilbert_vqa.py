@@ -5,6 +5,7 @@ from typing import Dict, List, Optional
 
 from overrides import overrides
 import torch
+from transformers.modeling_auto import AutoModel
 
 from allennlp.data import TextFieldTensors, Vocabulary
 from allennlp.models.model import Model
@@ -15,8 +16,6 @@ from allennlp.modules.transformer import (
     TransformerPooler,
 )
 from allennlp.nn import util
-
-from transformers.modeling_auto import AutoModel
 
 logger = logging.getLogger(__name__)
 
@@ -166,6 +165,7 @@ class VqaVilbert(Model):
         self,  # type: ignore
         box_features: torch.Tensor,
         box_coordinates: torch.Tensor,
+        box_mask: torch.Tensor,
         question: TextFieldTensors,
         labels: Optional[torch.Tensor] = None,
         label_weights: Optional[torch.Tensor] = None,
@@ -178,10 +178,6 @@ class VqaVilbert(Model):
         token_type_ids = question["tokens"]["type_ids"]
         attention_mask = question["tokens"]["mask"]
 
-        # All batch instances will always have the same number of images and boxes, so no masking
-        # is necessary, and this is just a tensor of ones.
-        image_attention_mask = torch.ones_like(box_coordinates[:, :, 0])
-
         # (batch_size, num_tokens, embedding_dim)
         embedding_output = self.embeddings(input_ids, token_type_ids)
         num_tokens = embedding_output.size(1)
@@ -193,7 +189,7 @@ class VqaVilbert(Model):
         # causal attention used in OpenAI GPT, we just need to prepare the
         # broadcast dimension here.
         extended_attention_mask = attention_mask.unsqueeze(1).unsqueeze(2).float().log()
-        extended_image_attention_mask = image_attention_mask.unsqueeze(1).unsqueeze(2).float().log()
+        extended_image_attention_mask = box_mask.unsqueeze(1).unsqueeze(2).float().log()
 
         # TODO(matt): it looks like the co-attention logic is all currently commented out; not sure
         # that this is necessary.
