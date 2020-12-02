@@ -291,7 +291,7 @@ class VQAv2Reader(VisionReader):
         max_instances: Optional[int] = None,
         image_processing_batch_size: int = 8,
         run_image_feature_extraction: bool = True,
-        multiple_answers_per_question: bool = True
+        multiple_answers_per_question: bool = True,
     ) -> None:
         super().__init__(
             image_dir,
@@ -330,7 +330,9 @@ class VQAv2Reader(VisionReader):
                     return None
                 return int(match.group(1))
 
-            self.images = {id_from_filename(name): full_path for name, full_path in self.images.items()}
+            self.images = {
+                id_from_filename(name): full_path for name, full_path in self.images.items()
+            }
             if None in self.images:
                 del self.images[None]
 
