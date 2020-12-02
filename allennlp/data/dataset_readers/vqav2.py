@@ -447,9 +447,24 @@ class VQAv2Reader(VisionReader):
             # It would be much easier to just process one image at a time, but it's faster to process
             # them in batches. So this code gathers up instances until it has enough to fill up a batch
             # that needs processing, and then processes them all.
-            processed_images = self._process_image_paths(
-                self.images[int(question_dict["image_id"])] for question_dict in question_dicts
-            )
+
+            try:
+                image_paths = [
+                    self.images[int(question_dict["image_id"])] for question_dict in question_dicts
+                ]
+            except KeyError as e:
+                missing_id = e.args[0]
+                raise KeyError(
+                    missing_id,
+                    f"We could not find an image with the id {missing_id}. "
+                    "Because of the size of the image datasets, we don't download them automatically. "
+                    "Please go to https://visualqa.org/download.html, download the datasets you need, "
+                    "and set the image_dir parameter to point to your download location. This dataset "
+                    "reader does not care about the exact directory structure. It finds the images "
+                    "wherever they are.",
+                )
+
+            processed_images = self._process_image_paths(image_paths)
         else:
             processed_images = [None for i in range(len(question_dicts))]
 
