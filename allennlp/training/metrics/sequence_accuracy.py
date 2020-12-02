@@ -74,7 +74,7 @@ class SequenceAccuracy(Metric):
 
         if is_distributed():
             correct_count = torch.tensor(_correct_count, device=device)
-            total_count = torch.tensor(_total_count, device)
+            total_count = torch.tensor(_total_count, device=device)
             dist.all_reduce(correct_count, op=dist.ReduceOp.SUM)
             dist.all_reduce(total_count, op=dist.ReduceOp.SUM)
             _correct_count = correct_count.item()
