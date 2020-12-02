@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fixed a lot of instances where tensors were first created and then sent to a device
+  with `.to(device)`. Instead, these tensors are now created directly on the target device.
 - Fixed issue with `GradientDescentTrainer` when constructed with `validation_data_loader=None` and `learning_rate_scheduler!=None`.
 - Fixed a bug when removing all handlers in root logger.
 - `ShardedDatasetReader` now inherits parameters from `base_reader` when required.
