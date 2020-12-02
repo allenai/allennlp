@@ -11,8 +11,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Added links to source code in docs.
-- Fixed issue with GradientDescentTrainer when constructed with validation_data_loader==None and learning_rate_scheduler!=None.
 - Added [Gaussian Error Linear Unit (GELU)](https://pytorch.org/docs/stable/generated/torch.nn.GELU.html) as an Activation.
+
+### Fixed
+
+- Fixed issue with `GradientDescentTrainer` when constructed with `validation_data_loader=None` and `learning_rate_scheduler!=None`.
+- Fixed a bug when removing all handlers in root logger.
+- `ShardedDatasetReader` now inherits parameters from `base_reader` when required.
+
 
 ## [v1.2.2](https://github.com/allenai/allennlp/releases/tag/v1.2.2) - 2020-11-17
 
@@ -102,7 +108,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added ability to pass additional key word arguments to `cached_transformers.get()`, which will be passed on to `AutoModel.from_pretrained()`.
 - Added an `overrides` argument to `Predictor.from_path()`.
 - Added a `cached-path` command.
-- Added a function `inspect_cache` to `common.file_utils` that prints useful information about the cache. This can also 
+- Added a function `inspect_cache` to `common.file_utils` that prints useful information about the cache. This can also
   be used from the `cached-path` command with `allennlp cached-path --inspect`.
 - Added a function `remove_cache_entries` to `common.file_utils` that removes any cache entries matching the given
   glob patterns. This can used from the `cached-path` command with `allennlp cached-path --remove some-files-*`.
