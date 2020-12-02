@@ -57,7 +57,7 @@ class SmoothGradient(SaliencyInterpreter):
         def forward_hook(module, inputs, output):
             # Random noise = N(0, stdev * (max-min))
             scale = output.detach().max() - output.detach().min()
-            noise = torch.randn(output.shape).to(output.device) * stdev * scale
+            noise = torch.randn(output.shape, device=output.device) * stdev * scale
 
             # Add the random noise
             output.add_(noise)
