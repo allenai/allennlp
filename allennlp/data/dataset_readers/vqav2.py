@@ -278,10 +278,10 @@ class VQAv2Reader(VisionReader):
 
     def __init__(
         self,
-        image_dir: Union[str, PathLike],
         image_loader: ImageLoader,
         image_featurizer: GridEmbedder,
         region_detector: RegionDetector,
+        image_dir: Union[str, PathLike] = None,
         *,
         answer_vocab: Optional[Union[Vocabulary, str]] = None,
         feature_cache_dir: Optional[Union[str, PathLike]] = None,
@@ -293,6 +293,15 @@ class VQAv2Reader(VisionReader):
         run_image_feature_extraction: bool = True,
         multiple_answers_per_question: bool = True,
     ) -> None:
+        if image_dir is None:
+            raise ValueError(
+                "Because of the size of the image datasets, we don't download them automatically. "
+                "Please go to https://visualqa.org/download.html, download the datasets you need, "
+                "and set the image_dir parameter to point to your download location. This dataset "
+                "reader does not care about the exact directory structure. It finds the images "
+                "wherever they are."
+            )
+
         super().__init__(
             image_dir,
             image_loader,
