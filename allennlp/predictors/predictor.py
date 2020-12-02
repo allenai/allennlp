@@ -135,6 +135,35 @@ class Predictor(Registrable):
 
         return grad_dict, outputs
 
+    def get_embedding_layer(self) -> torch.nn.Module:
+        """
+        Returns the embedding layer of the model.
+        If the predictor wraps around a non-AllenNLP model,
+        this function should be overridden to specify the correct embedding layer.
+        This should be the layer 0 of the embedder.
+        """
+        try:
+            return util.find_embedding_layer(self._model)
+        except RuntimeError:
+            raise RuntimeError(
+                "If the model does not use `TextFieldEmbedder`, please override `get_embedding_layer` "
+                "in your predictor to specify the embedding layer."
+            )
+
+    def get_text_field_embedder(self) -> torch.nn.Module:
+        """
+        Returns the first `TextFieldEmbedder` of the model.
+        If the predictor wraps around a non-AllenNLP model,
+        this function should be overridden to specify the correct embedder.
+        """
+        try:
+            return util.find_text_field_embedder(self._model)
+        except RuntimeError:
+            raise RuntimeError(
+                "If the model does not use `TextFieldEmbedder`, please override `get_text_field_embedder` "
+                "in your predictor to specify the embedding layer."
+            )
+
     def _register_embedding_gradient_hooks(self, embedding_gradients):
         """
         Registers a backward hook on the embedding layer of the model.  Used to save the gradients
@@ -181,9 +210,9 @@ class Predictor(Registrable):
                 self._token_offsets.append(offsets)
 
         hooks = []
-        text_field_embedder = util.find_text_field_embedder(self._model)
+        text_field_embedder = self.get_text_field_embedder()
         hooks.append(text_field_embedder.register_forward_hook(get_token_offsets))
-        embedding_layer = util.find_embedding_layer(self._model)
+        embedding_layer = self.get_embedding_layer()
         hooks.append(embedding_layer.register_backward_hook(hook_layers))
         return hooks
 
