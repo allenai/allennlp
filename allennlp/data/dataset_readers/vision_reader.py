@@ -52,11 +52,20 @@ class VisionReader(DatasetReader):
         For pulling out regions of the image (both coordinates and features) that will be used by
         downstream models.
     tokenizer: `Tokenizer`, optional
+        The `Tokenizer` to use to tokenize the text. By default, this uses the tokenizer for
+        `"bert-base-uncased"`.
     token_indexers: `Dict[str, TokenIndexer]`, optional
+        The `TokenIndexer` to use. By default, this uses the indexer for `"bert-base-uncased"`.
     cuda_device: `Union[int, torch.device]`, optional
+        Either a torch device or a GPU number. This is the GPU we'll use to featurize the images.
     max_instances: `int`, optional
-    image_processing_batch_size: `int`, optional (default = `8`)
-    skip_image_feature_extraction: `bool`, optional (default = `False`)
+        For debugging, you can use this parameter to limit the number of instances the reader
+        returns.
+    image_processing_batch_size: `int`
+        The number of images to process at one time while featurizing. Default is 8.
+    run_image_feature_extraction: `bool`
+        If this is set to `False`, we skip featurizing images completely. This can be useful
+        for debugging or for generating the vocabulary ahead of time. Default is `True`.
     """
 
     def __init__(
@@ -67,12 +76,12 @@ class VisionReader(DatasetReader):
         region_detector: RegionDetector,
         *,
         feature_cache_dir: Optional[Union[str, PathLike]] = None,
-        tokenizer: Tokenizer = None,
-        token_indexers: Dict[str, TokenIndexer] = None,
+        tokenizer: Optional[Tokenizer] = None,
+        token_indexers: Optional[Dict[str, TokenIndexer]] = None,
         cuda_device: Optional[Union[int, torch.device]] = None,
         max_instances: Optional[int] = None,
         image_processing_batch_size: int = 8,
-        skip_image_feature_extraction: bool = False,
+        run_image_feature_extraction: bool = True,
     ) -> None:
         super().__init__(
             max_instances=max_instances,
@@ -100,8 +109,8 @@ class VisionReader(DatasetReader):
             token_indexers = {"tokens": PretrainedTransformerIndexer("bert-base-uncased")}
         self._token_indexers = token_indexers
 
-        self.skip_image_feature_extraction = skip_image_feature_extraction
-        if not skip_image_feature_extraction:
+        self.run_image_feature_extraction = run_image_feature_extraction
+        if run_image_feature_extraction:
             logger.info("Discovering images ...")
             self.images = {
                 os.path.basename(filename): filename

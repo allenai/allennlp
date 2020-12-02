@@ -7,11 +7,11 @@ local construct_vocab = false;
 
 local vocabulary = if construct_vocab then {
       // read the files to construct the vocab
-      "min_count": 9
+      "min_count": {"answers": 9}
     } else {
       // read the constructed vocab
       "type": "from_files",
-      "directory": "/home/dirkg/allennlp/models/vilbert_vqa_balanced_real_vocab.tar.gz"
+      "directory": "https://storage.googleapis.com/allennlp-public-data/vqav2/vilbert_vqa_balanced_real.vocab.tar.gz"
     };
 
 {
@@ -19,8 +19,8 @@ local vocabulary = if construct_vocab then {
     "type": "vqav2",
     "image_dir": "/mnt/tank/dirkg/data/vision/vqa",
     "feature_cache_dir": "/mnt/tank/dirkg/data/vision/feature_cache",
-    #"image_dir": "/Users/dirkg/Documents/data/vision/coco",
-    #"feature_cache_dir": "/Users/dirkg/Documents/data/vision/coco/feature_cache/vqa",
+    #"image_dir": "/Users/dirkg/Documents/data/vision/vqa",
+    #"feature_cache_dir": "/Users/dirkg/Documents/data/vision/vqa/feature_cache",
     "image_loader": "detectron",
     "image_featurizer": "resnet_backbone",
     "region_detector": "faster_rcnn",
@@ -36,12 +36,12 @@ local vocabulary = if construct_vocab then {
     },
     #"max_instances": 1000,
     "image_processing_batch_size": 32,
-    [if construct_vocab then "answer_vocab"]: vocabulary,
-    "keep_unanswerable_questions": !construct_vocab,
-    "skip_image_feature_extraction": construct_vocab,
+    "answer_vocab": if construct_vocab then null else vocabulary,
+    "run_image_feature_extraction": !construct_vocab,
+    "multiple_answers_per_question": !construct_vocab
   },
   "validation_dataset_reader": self.dataset_reader {
-    "keep_unanswerable_questions": true
+    "answer_vocab": null    // make sure we don't skip unanswerable questions during validation
   },
   "vocabulary": vocabulary,
   "train_data_path": ["balanced_real_train", "balanced_real_val[1000:]"],
@@ -91,7 +91,7 @@ local vocabulary = if construct_vocab then {
   "data_loader": {
     "batch_size": gpu_batch_size,
     "shuffle": true,
-    #"max_instances_in_memory": 1024
+    [if !construct_vocab then "max_instances_in_memory"]: 1024
   },
   [if num_gpus > 1 then "distributed"]: {
     "cuda_devices": std.range(0, num_gpus - 1)
@@ -105,8 +105,8 @@ local vocabulary = if construct_vocab then {
     },
     "learning_rate_scheduler": {
       "type": "linear_with_warmup",
-      "warmup_steps": 300000 / 30,
-      #"num_steps_per_epoch": std.ceil(xxxx / $["data_loader"]["batch_size"] / $["trainer"]["num_gradient_accumulation_steps"])
+      "num_steps_per_epoch": std.ceil(658111 / $["data_loader"]["batch_size"] / $["trainer"]["num_gradient_accumulation_steps"]),
+      "warmup_steps": self.num_steps_per_epoch,
     },
     "validation_metric": "+fscore",
     "num_epochs": 20,

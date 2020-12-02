@@ -13,8 +13,8 @@ local vocabulary = {
     "type": "vqav2",
     #"image_dir": "/mnt/tank/dirkg/data/vision/coco",
     #"feature_cache_dir": "/mnt/tank/dirkg/data/vision/vqa_feature_cache",
-    "image_dir": "/Users/dirkg/Documents/data/vision/coco",
-    "feature_cache_dir": "/Users/dirkg/Documents/data/vision/coco/feature_cache/vqa",
+    "image_dir": "/Users/dirkg/Documents/data/vision/vqa",
+    "feature_cache_dir": "/Users/dirkg/Documents/data/vision/vqa/feature_cache",
     "image_loader": "detectron",
     "image_featurizer": "resnet_backbone",
     "region_detector": "faster_rcnn",
@@ -30,11 +30,10 @@ local vocabulary = {
     },
     #"max_instances": 1000,
     "image_processing_batch_size": 32,
-    "answer_vocab": vocabulary,
-    "keep_unanswerable_questions": false
+    "answer_vocab": vocabulary
   },
   "validation_dataset_reader": self.dataset_reader {
-    "keep_unanswerable_questions": true
+    "answer_vocab": null
   },
   "vocabulary": vocabulary,
   "train_data_path": ["balanced_real_train", "balanced_real_val[1000:]"],

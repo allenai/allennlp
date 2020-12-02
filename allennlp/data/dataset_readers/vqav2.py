@@ -238,19 +238,42 @@ class VQAv2Reader(VisionReader):
     ----------
     image_dir: `str`
         Path to directory containing `png` image files.
+    image_loader: `ImageLoader`
+        The image loader component used to load the images.
     image_featurizer: `GridEmbedder`
         The backbone image processor (like a ResNet), whose output will be passed to the region
         detector for finding object boxes in the image.
     region_detector: `RegionDetector`
         For pulling out regions of the image (both coordinates and features) that will be used by
         downstream models.
-    data_dir: `str`
-        Path to directory containing text files for each dataset split. These files contain
-        the sentences and metadata for each task instance.
+    answer_vocab: `Union[Vocabulary, str]`, optional
+        The vocabulary to use for answers. The reader will look into the `"answers"` namespace
+        in the vocabulary to find possible answers.
+        If this is given, the reader only outputs instances with answers contained in this vocab.
+        If this is not given, the reader outputs all instances with all answers.
+        If this is a URL or filename, we will download a previously saved vocabulary from there.
+    feature_cache_dir: `Union[str, PathLike]`, optional
+        An optional directory to cache the featurized images in. Featurizing images takes a long
+        time, and many images are duplicated, so we highly recommend to use this cache.
     tokenizer: `Tokenizer`, optional
-    token_indexers: `Dict[str, TokenIndexer]`
-    lazy : `bool`, optional
-        Whether to load data lazily. Passed to super class.
+        The `Tokenizer` to use to tokenize the text. By default, this uses the tokenizer for
+        `"bert-base-uncased"`.
+    token_indexers: `Dict[str, TokenIndexer]`, optional
+        The `TokenIndexer` to use. By default, this uses the indexer for `"bert-base-uncased"`.
+    cuda_device: `Union[int, torch.device]`, optional
+        Either a torch device or a GPU number. This is the GPU we'll use to featurize the images.
+    max_instances: `int`, optional
+        For debugging, you can use this parameter to limit the number of instances the reader
+        returns.
+    image_processing_batch_size: `int`
+        The number of images to process at one time while featurizing. Default is 8.
+    run_image_feature_extraction: `bool`
+        If this is set to `False`, we skip featurizing images completely. This can be useful
+        for debugging or for generating the vocabulary ahead of time. Default is `True`.
+    multiple_answers_per_question: `bool`
+        VQA questions have multiple answers. By default, we use all of them, and give more
+        points to the more common answer. But VQA also has a special answer, the so-called
+        "multiple choice answer". If this is set to `False`, we only use that answer.
     """
 
     def __init__(
@@ -260,17 +283,15 @@ class VQAv2Reader(VisionReader):
         image_featurizer: GridEmbedder,
         region_detector: RegionDetector,
         *,
-        answer_vocab: Union[
-            Vocabulary, str
-        ] = "https://storage.googleapis.com/allennlp-public-data/vqav2/vqav2_vocab.tar.gz",
+        answer_vocab: Optional[Union[Vocabulary, str]] = None,
         feature_cache_dir: Optional[Union[str, PathLike]] = None,
-        tokenizer: Tokenizer = None,
-        token_indexers: Dict[str, TokenIndexer] = None,
+        tokenizer: Optional[Tokenizer] = None,
+        token_indexers: Optional[Dict[str, TokenIndexer]] = None,
         cuda_device: Optional[Union[int, torch.device]] = None,
         max_instances: Optional[int] = None,
         image_processing_batch_size: int = 8,
-        skip_image_feature_extraction: bool = False,
-        keep_unanswerable_questions: bool = True,
+        run_image_feature_extraction: bool = True,
+        multiple_answers_per_question: bool = True
     ) -> None:
         super().__init__(
             image_dir,
@@ -283,11 +304,11 @@ class VQAv2Reader(VisionReader):
             cuda_device=cuda_device,
             max_instances=max_instances,
             image_processing_batch_size=image_processing_batch_size,
-            skip_image_feature_extraction=skip_image_feature_extraction,
+            run_image_feature_extraction=run_image_feature_extraction,
         )
 
         # read answer vocab
-        if keep_unanswerable_questions:
+        if answer_vocab is None:
             self.answer_vocab = None
         else:
             if isinstance(answer_vocab, str):
@@ -298,19 +319,22 @@ class VQAv2Reader(VisionReader):
                 for a in answer_vocab.get_token_to_index_vocabulary("answers").keys()
             )
 
-        # normalize self.images some more
-        # At this point, self.images maps filenames to full paths, but we want to map image ids to full paths.
-        filename_re = re.compile(r".*(\d{12})\.((jpg)|(png))")
+        if run_image_feature_extraction:
+            # normalize self.images some more
+            # At this point, self.images maps filenames to full paths, but we want to map image ids to full paths.
+            filename_re = re.compile(r".*(\d{12})\.((jpg)|(png))")
 
-        def id_from_filename(filename: str) -> Optional[int]:
-            match = filename_re.fullmatch(filename)
-            if match is None:
-                return None
-            return int(match.group(1))
+            def id_from_filename(filename: str) -> Optional[int]:
+                match = filename_re.fullmatch(filename)
+                if match is None:
+                    return None
+                return int(match.group(1))
 
-        self.images = {id_from_filename(name): full_path for name, full_path in self.images.items()}
-        if None in self.images:
-            del self.images[None]
+            self.images = {id_from_filename(name): full_path for name, full_path in self.images.items()}
+            if None in self.images:
+                del self.images[None]
+
+        self.multiple_answers_per_question = multiple_answers_per_question
 
     @overrides
     def _read(self, splits_or_list_of_splits: Union[str, List[str]]):
@@ -383,17 +407,21 @@ class VQAv2Reader(VisionReader):
         try:
             split = splits[split_name]
         except KeyError:
-            raise ValueError(
-                f"Unrecognized split: {split_name}. We require a split, not a filename, for "
-                "VQA because the image filenames require using the split."
-            )
+            raise ValueError(f"Unrecognized split: {split_name}.")
 
-        annotations_by_question_id = {}
+        answers_by_question_id = {}
         if split.annotations is not None:
             with open(cached_path(split.annotations, extract_archive=True)) as f:
                 annotations = json.load(f)
             for a in annotations["annotations"]:
-                annotations_by_question_id[a["question_id"]] = a
+                qid = a["question_id"]
+                answer_counts: MutableMapping[str, int] = Counter()
+                if self.multiple_answers_per_question:
+                    for answer in (answer_dict["answer"] for answer_dict in a["answers"]):
+                        answer_counts[preprocess_answer(answer)] += 1
+                else:
+                    answer_counts[preprocess_answer(a["multiple_choice_answer"])] = 1
+                answers_by_question_id[qid] = answer_counts
 
         questions = []
         with open(cached_path(split.questions, extract_archive=True)) as f:
@@ -404,7 +432,7 @@ class VQAv2Reader(VisionReader):
 
         question_dicts = list(self.shard_iterable(questions))
         processed_images: Iterable[Optional[Tuple[Tensor, Tensor]]]
-        if not self.skip_image_feature_extraction:
+        if self.run_image_feature_extraction:
             # It would be much easier to just process one image at a time, but it's faster to process
             # them in batches. So this code gathers up instances until it has enough to fill up a batch
             # that needs processing, and then processes them all.
@@ -417,9 +445,7 @@ class VQAv2Reader(VisionReader):
         attempted_instances_count = 0
         failed_instances_count = 0
         for question_dict, processed_image in zip(question_dicts, processed_images):
-            answers = annotations_by_question_id.get(question_dict["question_id"])
-            if answers is not None:
-                answers = answers["answers"]
+            answers = answers_by_question_id.get(question_dict["question_id"])
 
             instance = self.text_to_instance(question_dict["question"], processed_image, answers)
             attempted_instances_count += 1
@@ -440,7 +466,7 @@ class VQAv2Reader(VisionReader):
         self,  # type: ignore
         question: str,
         image: Union[str, Tuple[Tensor, Tensor]],
-        answers: Optional[List[Dict[str, str]]] = None,
+        answer_counts: Optional[MutableMapping[str, int]] = None,
         *,
         use_cache: bool = True,
     ) -> Optional[Instance]:
@@ -461,13 +487,9 @@ class VQAv2Reader(VisionReader):
             fields["box_features"] = ArrayField(features)
             fields["box_coordinates"] = ArrayField(coords)
 
-        if answers:
+        if answer_counts is not None:
             answer_fields = []
             weights = []
-            answer_counts: MutableMapping[str, int] = Counter()
-
-            for answer in (a["answer"] for a in answers):
-                answer_counts[preprocess_answer(answer)] += 1
 
             for answer, count in answer_counts.items():
                 if self.answer_vocab is None or answer in self.answer_vocab:
