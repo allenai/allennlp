@@ -239,6 +239,7 @@ class VQAv2Reader(VisionReader):
     ----------
     image_dir: `str`
         Path to directory containing `png` image files.
+    image_loader : `ImageLoader`
     image_featurizer: `Lazy[GridEmbedder]`
         The backbone image processor (like a ResNet), whose output will be passed to the region
         detector for finding object boxes in the image.

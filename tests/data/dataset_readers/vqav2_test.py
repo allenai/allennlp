@@ -25,7 +25,7 @@ class TestVQAv2Reader(AllenNlpTestCase):
         assert len(instances) == 3
 
         instance = instances[0]
-        assert len(instance.fields) == 5
+        assert len(instance.fields) == 6
         assert len(instance["question"]) == 7
         question_tokens = [t.text for t in instance["question"]]
         assert question_tokens == ["What", "is", "this", "photo", "taken", "looking", "through?"]
@@ -46,3 +46,10 @@ class TestVQAv2Reader(AllenNlpTestCase):
 
         # (batch size, num boxes (fake), 4 coords)
         assert tensors["box_coordinates"].size() == (3, 2, 4)
+
+        # (batch size, num boxes (fake),)
+        assert tensors["box_mask"].size() == (3, 2)
+
+        # Nothing should be masked out since the number of fake boxes is the same
+        # for each item in the batch.
+        assert tensors["box_mask"].all()

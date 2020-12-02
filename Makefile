@@ -53,7 +53,7 @@ format :
 
 .PHONY : typecheck
 typecheck :
-	mypy .
+	mypy . --cache-dir=/dev/null
 
 .PHONY : test
 test :

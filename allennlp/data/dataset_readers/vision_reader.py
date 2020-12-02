@@ -45,6 +45,7 @@ class VisionReader(DatasetReader):
 
     image_dir: `str`
         Path to directory containing `png` image files.
+    image_loader : `ImageLoader`
     image_featurizer: `Lazy[GridEmbedder]`
         The backbone image processor (like a ResNet), whose output will be passed to the region
         detector for finding object boxes in the image.
@@ -181,11 +182,9 @@ class VisionReader(DatasetReader):
                 images = images.to(self.cuda_device)
                 sizes = sizes.to(self.cuda_device)
                 featurized_images = self.image_featurizer(images, sizes)
-                print("done featurizing")
                 detector_results = self.region_detector(images, sizes, featurized_images)
-                print("done detecting")
-                features = detector_results["features"]
-                coordinates = detector_results["coordinates"]
+                features = detector_results.features
+                coordinates = detector_results.boxes
 
             # store the processed results in memory, so we can complete the batch
             paths_to_tensors = {path: (features[i], coordinates[i]) for i, path in enumerate(paths)}
