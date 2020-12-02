@@ -24,3 +24,23 @@ def bench_remove_sentence_boundaries(benchmark):
     # shape: (32, 50)
     mask = torch.tensor([[True] * 50, [True] * 30 + [False] * 20] * 16, device=device)
     benchmark(util.remove_sentence_boundaries, tensor, mask)
+
+
+@requires_gpu
+def bench_create_tensor_then_send_to_device(benchmark):
+    device = torch.device("cuda:0")
+
+    def create_tensor():
+        return torch.rand((32, 50)).to(device)
+
+    benchmark(create_tensor)
+
+
+@requires_gpu
+def bench_create_tensor_directly_on_device(benchmark):
+    device = torch.device("cuda:0")
+
+    def create_tensor():
+        return torch.rand((32, 50), device=device)
+
+    benchmark(create_tensor)
