@@ -17,10 +17,10 @@ local vocabulary = if construct_vocab then {
 {
   "dataset_reader": {
     "type": "vqav2",
-    #"image_dir": "/mnt/tank/dirkg/data/vision/coco",
-    #"feature_cache_dir": "/mnt/tank/dirkg/data/vision/vqa_feature_cache",
-    "image_dir": "/Users/dirkg/Documents/data/vision/vqa",
-    "feature_cache_dir": "/Users/dirkg/Documents/data/vision/vqa/feature_cache",
+    "image_dir": "/mnt/tank/dirkg/data/vision/vqa",
+    "feature_cache_dir": "/mnt/tank/dirkg/data/vision/feature_cache",
+    #"image_dir": "/Users/dirkg/Documents/data/vision/vqa",
+    #"feature_cache_dir": "/Users/dirkg/Documents/data/vision/vqa/feature_cache",
     "image_loader": "detectron",
     "image_featurizer": "resnet_backbone",
     "region_detector": "faster_rcnn",
@@ -68,7 +68,7 @@ local vocabulary = if construct_vocab then {
   "data_loader": {
     "batch_size": gpu_batch_size,
     "shuffle": true,
-    "max_instances_in_memory": 1024
+    [if !construct_vocab then "max_instances_in_memory"]: 1024
   },
   [if num_gpus > 1 then "distributed"]: {
     "cuda_devices": std.range(0, num_gpus - 1)
