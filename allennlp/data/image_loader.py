@@ -40,7 +40,7 @@ class ImageLoader(Registrable):
     pad_value : `float`, optional (default = `0.0`)
         The value to use for padding.
 
-    device : `Union[str, torch.device]`, optional (default  = `"cpu"`)
+    device : `Union[str, torch.device]`, optional (default = `"cpu"`)
         A torch device identifier to put the image and size tensors on.
     """
 

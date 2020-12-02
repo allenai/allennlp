@@ -82,7 +82,7 @@ class FasterRcnnRegionDetector(RegionDetector):
     using the `TorchImageLoader` with the default settings.
 
     !!! Note
-        This module does not have any trainable parameters.
+        This module does not have any trainable parameters by default.
         All pretrained weights are frozen.
     """
 
@@ -102,7 +102,7 @@ class FasterRcnnRegionDetector(RegionDetector):
         image_features: "OrderedDict[str, FloatTensor]",
     ) -> RegionDetectorOutput:
         """
-        Extract regions are region features from the given images.
+        Extract regions and region features from the given images.
 
         In most cases `image_features` should come directly from the `ResnetBackbone`
         `GridEmbedder`. The `images` themselves should be standardized and resized
