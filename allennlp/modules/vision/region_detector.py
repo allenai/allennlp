@@ -75,20 +75,50 @@ class RandomRegionDetector(RegionDetector):
 @RegionDetector.register("faster_rcnn")
 class FasterRcnnRegionDetector(RegionDetector):
     """
-    [Faster R-CNN](https://arxiv.org/abs/1506.01497) pretrained region detector.
+    A [Faster R-CNN](https://arxiv.org/abs/1506.01497) pretrained region detector.
 
     Unless you really know what you're doing, this should be used with the image
     features created from the `ResnetBackbone` `GridEmbedder` and on images loaded
     using the `TorchImageLoader` with the default settings.
 
+
     !!! Note
         This module does not have any trainable parameters by default.
         All pretrained weights are frozen.
+
+    # Parameters
+
+    box_score_thresh : `float`, optional (default = `0.05`)
+        During inference, only proposal boxes / regions with a label classification score
+        greater than `box_score_thresh` will be returned.
+
+    box_nms_thresh : `float`, optional (default = `0.5`)
+        During inference, non-maximum suppression (NMS) will applied to groups of boxes
+        that share a common label.
+
+        NMS iteratively removes lower scoring boxes which have an intersection-over-union (IoU)
+        greater than `box_nms_thresh` with another higher scoring box.
+
+    max_boxes_per_image : `int`, optional (default = `100`)
+        During inference, at most `max_boxes_per_image` boxes will be returned. The
+        number of boxes returned will vary by image and will often be lower
+        than `max_boxes_per_image` depending on the values of `box_score_thresh`
+        and `box_nms_thresh`.
     """
 
-    def __init__(self):
+    def __init__(
+        self,
+        box_score_thresh: float = 0.05,
+        box_nms_thresh: float = 0.5,
+        max_boxes_per_image: int = 100,
+    ):
         super().__init__()
-        self.detector = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=True)
+        self.detector = torchvision.models.detection.fasterrcnn_resnet50_fpn(
+            pretrained=True,
+            box_score_thresh=box_score_thresh,
+            box_nms_thresh=box_nms_thresh,
+            box_detections_per_img=max_boxes_per_image,
+        )
         # Don't need this since the features will be calculated elsewhere.
         del self.detector.backbone
         # Freeze all weights.
