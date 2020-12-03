@@ -44,7 +44,8 @@ class VisionReader(DatasetReader):
     ----------
 
     image_dir: `str`
-        Path to directory containing `png` image files.
+        Path to directory containing image files. The structure of the directory doesn't matter. We
+        find images by finding filenames that match `*[image_id].jpg`.
     image_loader : `ImageLoader`
     image_featurizer: `Lazy[GridEmbedder]`
         The backbone image processor (like a ResNet), whose output will be passed to the region
@@ -53,11 +54,20 @@ class VisionReader(DatasetReader):
         For pulling out regions of the image (both coordinates and features) that will be used by
         downstream models.
     tokenizer: `Tokenizer`, optional
+        The `Tokenizer` to use to tokenize the text. By default, this uses the tokenizer for
+        `"bert-base-uncased"`.
     token_indexers: `Dict[str, TokenIndexer]`, optional
+        The `TokenIndexer` to use. By default, this uses the indexer for `"bert-base-uncased"`.
     cuda_device: `Union[int, torch.device]`, optional
+        Either a torch device or a GPU number. This is the GPU we'll use to featurize the images.
     max_instances: `int`, optional
-    image_processing_batch_size: `int`, optional (default = `8`)
-    skip_image_feature_extraction: `bool`, optional (default = `False`)
+        For debugging, you can use this parameter to limit the number of instances the reader
+        returns.
+    image_processing_batch_size: `int`
+        The number of images to process at one time while featurizing. Default is 8.
+    run_image_feature_extraction: `bool`
+        If this is set to `False`, we skip featurizing images completely. This can be useful
+        for debugging or for generating the vocabulary ahead of time. Default is `True`.
     """
 
     def __init__(
@@ -68,12 +78,12 @@ class VisionReader(DatasetReader):
         region_detector: Lazy[RegionDetector],
         *,
         feature_cache_dir: Optional[Union[str, PathLike]] = None,
-        tokenizer: Tokenizer = None,
-        token_indexers: Dict[str, TokenIndexer] = None,
+        tokenizer: Optional[Tokenizer] = None,
+        token_indexers: Optional[Dict[str, TokenIndexer]] = None,
         cuda_device: Optional[Union[int, torch.device]] = None,
         max_instances: Optional[int] = None,
         image_processing_batch_size: int = 8,
-        skip_image_feature_extraction: bool = False
+        run_image_feature_extraction: bool = True,
     ) -> None:
         super().__init__(
             max_instances=max_instances,
@@ -91,6 +101,7 @@ class VisionReader(DatasetReader):
                 cuda_device = -1
         check_for_gpu(cuda_device)
         self.cuda_device = int_to_device(cuda_device)
+        logger.info(f"Processing images on device {cuda_device}")
 
         # tokenizers and indexers
         if tokenizer is None:
@@ -100,14 +111,15 @@ class VisionReader(DatasetReader):
             token_indexers = {"tokens": PretrainedTransformerIndexer("bert-base-uncased")}
         self._token_indexers = token_indexers
 
-        self.skip_image_feature_extraction = skip_image_feature_extraction
-        if not skip_image_feature_extraction:
+        self.run_image_feature_extraction = run_image_feature_extraction
+        if run_image_feature_extraction:
             logger.info("Discovering images ...")
             self.images = {
                 os.path.basename(filename): filename
+                for extension in {"png", "jpg"}
                 for filename in tqdm(
-                    glob.iglob(os.path.join(image_dir, "**", "*.jpg"), recursive=True),
-                    desc="Discovering images",
+                    glob.iglob(os.path.join(image_dir, "**", f"*.{extension}"), recursive=True),
+                    desc=f"Discovering {extension} images",
                 )
             }
             logger.info("Done discovering images")
