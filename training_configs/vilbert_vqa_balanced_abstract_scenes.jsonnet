@@ -11,7 +11,7 @@ local vocabulary = if construct_vocab then {
     } else {
       // read the constructed vocab
       "type": "from_files",
-      "directory": "https://storage.googleapis.com/allennlp-public-data/vqav2/vilbert_vqa_balanced_real.vocab.tar.gz"
+      "directory": "https://storage.googleapis.com/allennlp-public-data/vqav2/vilbert_vqa_balanced_abstract_scenes.vocab.tar.gz"
     };
 
 {
@@ -44,25 +44,48 @@ local vocabulary = if construct_vocab then {
     "answer_vocab": null    // make sure we don't skip unanswerable questions during validation
   },
   "vocabulary": vocabulary,
-  "train_data_path": ["balanced_real_train", "balanced_real_val[1000:]"],
-  "validation_data_path": "balanced_real_val[:1000]",
+  "train_data_path": ["balanced_bas_train", "balanced_bas_val[1000:]"],
+  "validation_data_path": "balanced_bas_val[:1000]",
   "model": {
-    "type": "vqa_vilbert_from_huggingface",
-    "model_name": model_name,
-    "image_feature_dim": 2048,
-    "image_hidden_size": 1024,
-    "image_num_attention_heads": 8,
-    "image_num_hidden_layers": 6,
-    "combined_hidden_size": 1024,
-    "combined_num_attention_heads": 8,
+    "type": "vqa_vilbert",
+    "text_embeddings": {
+      "vocab_size": 30522,
+      "hidden_size": 768,
+      "pad_token_id": 0,
+      "max_position_embeddings": 50,
+      "type_vocab_size": 4,
+      "dropout": 0.0
+    },
+    "image_embeddings": {
+      "feature_dim": 2048,
+      "hidden_dim": 1024
+    },
+    "encoder": {
+      # text
+      "hidden_size1": 768,
+      "num_hidden_layers1": 12,
+      "intermediate_size1": 3072,
+      "num_attention_heads1": 12,
+      "attention_dropout1": 0.1,
+      "hidden_dropout1": 0.1,
+      "biattention_id1": [6, 7, 8, 9, 10, 11],
+      "fixed_layer1": 0,
+
+      # vision
+      "hidden_size2": 1024,
+      "num_hidden_layers2": 6,
+      "intermediate_size2": 1024,
+      "num_attention_heads2": 8,
+      "attention_dropout2": 0.1,
+      "hidden_dropout2": 0.1,
+      "biattention_id2": [0, 1, 2, 3, 4, 5],
+      "fixed_layer2": 0,
+
+      "combined_num_attention_heads": 8,
+      "combined_hidden_size": 1024,
+      "activation": "gelu",
+    },
     "pooled_output_dim": 1024,
-    "image_intermediate_size": 1024,
-    "image_attention_dropout": 0.1,
-    "image_hidden_dropout": 0.1,
-    "image_biattention_id": [0, 1, 2, 3, 4, 5],
-    "text_biattention_id": [6, 7, 8, 9, 10, 11],
-    "text_fixed_layer": 0,
-    "image_fixed_layer": 0,
     "fusion_method": "mul"
   },
   "data_loader": {
@@ -78,23 +101,15 @@ local vocabulary = if construct_vocab then {
   [if !construct_vocab then "trainer"]: {
     "optimizer": {
       "type": "huggingface_adamw",
-      "lr": 4e-5,
-      "correct_bias": true,
-      "weight_decay": 0.01,
-      "parameter_groups": [[["bias", "LayerNorm\\.weight", "layer_norm\\.weight"], {"weight_decay": 0}]],
+      "lr": 4e-5
     },
     "learning_rate_scheduler": {
       "type": "linear_with_warmup",
-      "num_steps_per_epoch": std.ceil(658111 / $["data_loader"]["batch_size"] / $["trainer"]["num_gradient_accumulation_steps"]),
-      "warmup_steps": std.ceil(self.num_steps_per_epoch / 2),
+      "num_steps_per_epoch": std.ceil(33383 / $["data_loader"]["batch_size"] / $["trainer"]["num_gradient_accumulation_steps"]),
+      "warmup_steps": self.num_steps_per_epoch,
     },
     "validation_metric": "+fscore",
-    "patience": 5,
-    "num_epochs": 30,
-    "num_gradient_accumulation_steps": effective_batch_size / gpu_batch_size / std.max(1, num_gpus),
-    "tensorboard_writer": {
-        "summary_interval": 10,
-        "should_log_learning_rate": true
-    },
+    "num_epochs": 20,
+    "num_gradient_accumulation_steps": effective_batch_size / gpu_batch_size / std.max(1, num_gpus)
   },
 }

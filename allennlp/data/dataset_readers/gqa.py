@@ -60,7 +60,7 @@ class GQAReader(VisionReader):
         cuda_device: Optional[Union[int, torch.device]] = None,
         max_instances: Optional[int] = None,
         image_processing_batch_size: int = 8,
-        skip_image_feature_extraction: bool = False,
+        run_image_feature_extraction: bool = True,
     ) -> None:
         super().__init__(
             image_dir,
@@ -73,7 +73,7 @@ class GQAReader(VisionReader):
             cuda_device=cuda_device,
             max_instances=max_instances,
             image_processing_batch_size=image_processing_batch_size,
-            skip_image_feature_extraction=skip_image_feature_extraction,
+            run_image_feature_extraction=run_image_feature_extraction,
         )
         self.data_dir = data_dir
 

@@ -217,3 +217,14 @@ class FasterRcnnRegionDetector(RegionDetector):
             "class_probs": probs_tensor,
             "num_regions": batch_num_detections,
         }
+
+    def to(self, device):
+        if isinstance(device, int) or isinstance(device, torch.device):
+            if self._model_object is not None:
+                self._model_object.model.to(device)
+            if isinstance(device, torch.device):
+                device = device.index
+            self.flat_parameters = self.flat_parameters._replace(device=device)
+            return self
+        else:
+            return super().to(device)
