@@ -16,7 +16,7 @@ from allennlp.data.fields import ArrayField, LabelField, TextField
 from allennlp.data.instance import Instance
 from allennlp.data.dataset_readers.vision_reader import VisionReader
 
-from allennlp.common.file_utils import json_lines_from_file
+from allennlp.common.file_utils import json_lines_from_file, cached_path
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +29,15 @@ class VisualEntailmentReader(VisionReader):
 
     @overrides
     def _read(self, file_path: str):
+        split_prefix = "https://storage.googleapis.com/allennlp-public-data/snli-ve/"
+        splits = {
+            "dev": split_prefix + "snli_ve_dev.jsonl.gz",
+            "test": split_prefix + "snli_ve_test.jsonl.gz",
+            "train": split_prefix + "snli_ve_train.jsonl.gz",
+        }
+        file_path = splits.get(file_path, file_path)
+        file_path = cached_path(file_path)
+
         lines = json_lines_from_file(file_path)
         info_dicts: List[Dict] = list(self.shard_iterable(lines))  # type: ignore
 
