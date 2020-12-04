@@ -4,6 +4,7 @@ import torch
 from allennlp.common import FromParams
 from allennlp.modules.attention import Attention
 from allennlp.modules.transformer.transformer_module import TransformerModule
+from allennlp.nn import util as nn_util
 
 
 class SelfAttention(TransformerModule, FromParams):
@@ -116,7 +117,7 @@ class SelfAttention(TransformerModule, FromParams):
             mask_reshp = (batch_size, 1, 1, k_length)
             attention_mask = (attention_mask == 0).view(mask_reshp).expand_as(
                 attention_scores
-            ) * -10e5
+            ) * nn_util.min_value_of_dtype(attention_scores.dtype)
             attention_scores = attention_scores + attention_mask
 
         # Normalize the attention scores to probabilities.

@@ -189,11 +189,11 @@ class VisionTextModel(Model):
         # causal attention used in OpenAI GPT, we just need to prepare the
         # broadcast dimension here.
         if attention_mask is not None:
-            extended_attention_mask = attention_mask.unsqueeze(1).unsqueeze(2).float().log()
+            extended_attention_mask = attention_mask.unsqueeze(1).unsqueeze(2)
         else:
             extended_attention_mask = None
 
-        extended_image_attention_mask = box_mask.unsqueeze(1).unsqueeze(2).float().log()
+        extended_image_attention_mask = box_mask.unsqueeze(1).unsqueeze(2)
 
         extended_co_attention_mask = torch.zeros(
             batch_size,
