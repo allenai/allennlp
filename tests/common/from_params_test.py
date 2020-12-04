@@ -859,6 +859,18 @@ class TestFromParams(AllenNlpTestCase):
         with pytest.raises(ConfigurationError, match="Extra parameters"):
             A.from_params(Params({"some_spurious": "key", "value": "pairs"}))
 
+    def test_explicit_kwargs_always_passed_to_constructor(self):
+        class Base(FromParams):
+            def __init__(self, lazy: bool = False) -> None:
+                self.lazy = lazy
+
+        class A(Base):
+            def __init__(self, **kwargs) -> None:
+                assert "lazy" in kwargs
+                super().__init__(**kwargs)
+
+        A.from_params(Params({"lazy": False}))
+
     def test_raises_when_there_are_no_implementations(self):
         class A(Registrable):
             pass
