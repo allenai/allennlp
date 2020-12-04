@@ -97,8 +97,8 @@ class BiModalConnectionLayer(TransformerModule, FromParams):
 
         bi_output1, bi_output2 = self.bimodal_attention(
             input_tensor1,
-            attention_mask1,
             input_tensor2,
+            attention_mask1,
             attention_mask2,
             co_attention_mask,
             use_co_attention_mask,

@@ -73,6 +73,7 @@ class ModelTestCase(AllenNlpTestCase):
         metric_terminal_value: float = None,
         metric_tolerance: float = 1e-4,
         disable_dropout: bool = True,
+        seed: int = None,
     ):
         """
         # Parameters
@@ -108,6 +109,11 @@ class ModelTestCase(AllenNlpTestCase):
             If True we will set all dropout to 0 before checking gradients. (Otherwise, with small
             datasets, you may get zero gradients because of unlucky dropout.)
         """
+        if seed is not None:
+            random.seed(seed)
+            numpy.random.seed(seed)
+            torch.manual_seed(seed)
+
         save_dir = self.TEST_DIR / "save_and_load_test"
         archive_file = save_dir / "model.tar.gz"
         model = train_model_from_file(param_file, save_dir, overrides=overrides)

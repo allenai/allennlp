@@ -77,9 +77,9 @@ class BiModalAttention(TransformerModule, FromParams):
     def forward(
         self,
         input_tensor1,
-        attention_mask1,
         input_tensor2,
-        attention_mask2,
+        attention_mask1=None,
+        attention_mask2=None,
         co_attention_mask=None,
         use_co_attention_mask=False,
     ):
@@ -103,7 +103,8 @@ class BiModalAttention(TransformerModule, FromParams):
         value_layer2 = self._transpose_for_scores(mixed_value_layer2)
 
         attention_scores1 = self.attn1(query_layer2, key_layer1.transpose(-1, -2))
-        attention_scores1 = attention_scores1 + attention_mask1
+        if attention_mask1 is not None:
+            attention_scores1 = attention_scores1 + attention_mask1
         if use_co_attention_mask:
             attention_scores1 = attention_scores1 + co_attention_mask.permute(0, 1, 3, 2)
 
@@ -121,7 +122,8 @@ class BiModalAttention(TransformerModule, FromParams):
 
         attention_scores2 = self.attn2(query_layer1, key_layer2.transpose(-1, -2))
         # we can comment this line for single flow.
-        attention_scores2 = attention_scores2 + attention_mask2
+        if attention_mask2 is not None:
+            attention_scores2 = attention_scores2 + attention_mask2
         if use_co_attention_mask:
             attention_scores2 = attention_scores2 + co_attention_mask
 

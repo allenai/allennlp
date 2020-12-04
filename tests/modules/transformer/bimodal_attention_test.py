@@ -49,7 +49,7 @@ class TestBiModalAttention(AllenNlpTestCase):
 
         self.biattention.forward(
             torch.randn(2, 3, 6),
-            torch.randn(2, 2, 3, 3),
             torch.randn(2, 3, 4),
+            torch.randn(2, 2, 3, 3),
             torch.randn(2, 2, 3, 3),
         )

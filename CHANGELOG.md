@@ -10,6 +10,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added `TensorCache` class for caching tensors on disk
+- Added reader for the NLVR2 dataset
+- Added cache for Detectron models that we might re-use several times in the code base
+- Added abstraction and concrete implementation for image loading
+- Added abstraction and concrete implementation for `GridEmbedder`
+- Added abstraction and demo implementation for an image augmentation module.
+- Added abstraction and concrete implementation for region detectors.
 - A new high-performance default `DataLoader`: `MultiProcessDataLoading`.
 - A `MultiTaskModel` and abstractions to use with it, including `Backbone` and `Head`.  The
   `MultiTaskModel` first runs its inputs through the `Backbone`, then passes the result (and
@@ -25,6 +32,8 @@ dataset at every epoch) and a `MultiTaskScheduler` (for ordering the instances w
 - Added abstraction and demo implementation for an image augmentation module.
 - Added abstraction and concrete implementation for region detectors.
 - Transformer toolkit to plug and play with modular components of transformer architectures.
+- `VisionReader` and `VisionTextModel` base classes added. `VisualEntailment` and `VQA` inherit from these.
+- Added reader for the GQA dataset
 
 ### Changed
 
@@ -33,10 +42,15 @@ dataset at every epoch) and a `MultiTaskScheduler` (for ordering the instances w
 - The `DataLoader` now decides whether to load instances lazily or not.
   With the `PyTorchDataLoader` this is controlled with the `lazy` parameter, but with
   the `MultiProcessDataLoading` this is controlled by the `max_instances_in_memory` setting.
-- `TensorField` is now implemented in terms of torch tensors, not numpy.
+- `ArrayField` is now called `TensorField`, and implemented in terms of torch tensors, not numpy.
 
 
 ## Unreleased (1.x branch)
+
+### Added
+
+- Added links to source code in docs.
+- Fixed issue with GradientDescentTrainer when constructed with validation_data_loader==None and learning_rate_scheduler!=None.
 
 
 ## [v1.2.2](https://github.com/allenai/allennlp/releases/tag/v1.2.2) - 2020-11-17
