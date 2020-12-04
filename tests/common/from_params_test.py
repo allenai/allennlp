@@ -873,14 +873,11 @@ class TestFromParams(AllenNlpTestCase):
         A.from_params(Params({"lazy": False}))
 
         class B(Base):
-            def __init__(self, lazy: bool = True, **kwargs) -> None:
-                super().__init__(lazy=lazy, **kwargs)
+            def __init__(self, **kwargs) -> None:
+                super().__init__(lazy=True, **kwargs)
 
         b = B.from_params(Params({}))
         assert b.lazy is True
-
-        b = B.from_params(Params({"lazy": False}))
-        assert b.lazy is False
 
     def test_raises_when_there_are_no_implementations(self):
         class A(Registrable):
