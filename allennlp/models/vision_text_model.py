@@ -219,6 +219,7 @@ class VisionTextModel(Model):
         extended_image_attention_mask = box_mask.unsqueeze(1).unsqueeze(2)
 
         # Shape: (batch_size, feature_size, num_tokens)
+        # TODO (epwalsh): Why all zeros?? This doesn't seem right.
         extended_co_attention_mask = torch.zeros(
             batch_size,
             feature_size,
@@ -258,6 +259,8 @@ class VisionTextModel(Model):
 
         # Shape: (batch_size, num_labels)
         logits = self.classifier(pooled_output)
+
+        # Use a sigmoid here because we could have multiple correct answers.
         # Shape: (batch_size, num_labels)
         probs = torch.sigmoid(logits)
 
