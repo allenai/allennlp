@@ -6,3 +6,4 @@ from allennlp.data.data_loaders.pytorch_data_loader import (
     AllennlpDataset,
     AllennlpLazyDataset,
 )
+from allennlp.data.data_loaders.multitask_data_loader import MultiTaskDataLoader
