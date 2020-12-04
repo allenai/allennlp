@@ -167,6 +167,25 @@ class VisionTextModel(Model):
         label: Optional[torch.Tensor] = None,
         label_weights: Optional[torch.Tensor] = None,
     ) -> Dict[str, torch.Tensor]:
+        """
+        # Parameters
+
+        box_features : `Tensor`
+            Shape: `(batch_size, num_boxes, feature_size)`
+
+        box_coordinates : `Tensor`
+            Shape: `(batch_size, num_boxes, 4)`
+
+        box_mask : `Tensor`
+            A bool and 0-1 tensor of shape `(batch_size, num_boxes)`.
+
+        text : `TextFieldTensors`
+
+        label : `Optional[Tensor]`
+
+        label_weights : `Optional[Tensor]`
+
+        """
 
         batch_size, _, feature_size = box_features.size()
 
@@ -175,26 +194,31 @@ class VisionTextModel(Model):
         else:
             token_ids = text["tokens"]["tokens"]
 
+        # Shape: (batch_size, num_tokens)
         token_type_ids = text["tokens"].get("type_ids")
+        # Shape: (batch_size, num_tokens)
         attention_mask = text["tokens"].get("mask")
 
-        # (batch_size, num_tokens, embedding_dim)
+        # Shape: (batch_size, num_tokens, embedding_dim)
         embedding_output = self.embeddings(token_ids, token_type_ids)
         num_tokens = embedding_output.size(1)
 
         # We create a 3D attention mask from a 2D tensor mask.
-        # Sizes are [batch_size, 1, 1, to_seq_length]
-        # So we can broadcast to [batch_size, num_heads, from_seq_length, to_seq_length]
+        # Sizes are [batch_size, 1, 1, num_tokens]
+        # So we can broadcast to [batch_size, num_heads, from_seq_length, num_tokens]
         # this attention mask is more simple than the triangular masking of
         # causal attention used in OpenAI GPT, we just need to prepare the
         # broadcast dimension here.
         if attention_mask is not None:
+            # Shape: (batch_size, 1, 1, num_tokens)
             extended_attention_mask = attention_mask.unsqueeze(1).unsqueeze(2)
         else:
             extended_attention_mask = None
 
+        # Shape: (batch_size, 1, 1, num_boxes)
         extended_image_attention_mask = box_mask.unsqueeze(1).unsqueeze(2)
 
+        # Shape: (batch_size, feature_size, num_tokens)
         extended_co_attention_mask = torch.zeros(
             batch_size,
             feature_size,
@@ -202,9 +226,11 @@ class VisionTextModel(Model):
             dtype=extended_image_attention_mask.dtype,
         )
 
-        # (batch_size, num_boxes, image_embedding_dim)
+        # Shape: (batch_size, num_boxes, image_embedding_dim)
         v_embedding_output = self.image_embeddings(box_features, box_coordinates)
 
+        # Shape (encoded_layers_t): (batch_size, num_tokens, embedding_dim, num_layers)
+        # Shape (encoded_layers_v): (batch_size, num_boxes, image_embedding_dim, num_layers)
         encoded_layers_t, encoded_layers_v = self.encoder(
             embedding_output,
             v_embedding_output,
@@ -213,10 +239,14 @@ class VisionTextModel(Model):
             extended_co_attention_mask,
         )
 
+        # Shape: (batch_size, num_tokens, embedding_dim)
         sequence_output_t = encoded_layers_t[:, :, :, -1]
+        # Shape: (batch_size, num_boxes, image_embedding_dim)
         sequence_output_v = encoded_layers_v[:, :, :, -1]
 
+        # Shape: (batch_size, pooled_output_dim)
         pooled_output_t = self.t_pooler(sequence_output_t)
+        # Shape: (batch_size, pooled_output_dim)
         pooled_output_v = self.v_pooler(sequence_output_v)
 
         if self.fusion_method == "sum":
@@ -226,7 +256,9 @@ class VisionTextModel(Model):
         else:
             raise ValueError(f"Fusion method '{self.fusion_method}' not supported")
 
+        # Shape: (batch_size, num_labels)
         logits = self.classifier(pooled_output)
+        # Shape: (batch_size, num_labels)
         probs = torch.sigmoid(logits)
 
         outputs = {"logits": logits, "probs": probs}
