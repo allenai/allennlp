@@ -483,9 +483,6 @@ def _train_worker(
     return None
 
 
-DataPath = Union[str, List[str], Dict[str, str]]
-
-
 class TrainModel(Registrable):
     """
     This class exists so that we can easily read a configuration file with the `allennlp train`
@@ -557,16 +554,16 @@ class TrainModel(Registrable):
         serialization_dir: str,
         local_rank: int,
         dataset_reader: DatasetReader,
-        train_data_path: DataPath,
+        train_data_path: Any,
         model: Lazy[Model],
         data_loader: Lazy[DataLoader],
         trainer: Lazy[Trainer],
         vocabulary: Lazy[Vocabulary] = Lazy(Vocabulary),
         datasets_for_vocab_creation: List[str] = None,
         validation_dataset_reader: DatasetReader = None,
-        validation_data_path: DataPath = None,
+        validation_data_path: Any = None,
         validation_data_loader: Lazy[DataLoader] = None,
-        test_data_path: DataPath = None,
+        test_data_path: Any = None,
         evaluate_on_test: bool = False,
         batch_weight_key: str = "",
     ) -> "TrainModel":
