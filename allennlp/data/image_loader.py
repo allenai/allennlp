@@ -48,6 +48,7 @@ class ImageLoader(Registrable):
 
     def __init__(
         self,
+        *,
         size_divisibility: int = 0,
         pad_value: float = 0.0,
         device: Union[str, torch.device] = "cpu",
@@ -146,6 +147,7 @@ class TorchImageLoader(ImageLoader):
 
     def __init__(
         self,
+        *,
         image_backend: str = None,
         resize: bool = True,
         normalize: bool = True,
@@ -154,7 +156,7 @@ class TorchImageLoader(ImageLoader):
         pixel_mean: Tuple[float, float, float] = (0.485, 0.456, 0.406),
         pixel_std: Tuple[float, float, float] = (0.229, 0.224, 0.225),
         size_divisibility: int = 32,
-        **kwargs
+        **kwargs,
     ) -> None:
         super().__init__(size_divisibility=size_divisibility, **kwargs)
         if image_backend is not None:

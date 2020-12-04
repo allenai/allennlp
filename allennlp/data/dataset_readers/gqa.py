@@ -153,7 +153,7 @@ class GQAReader(VisionReader):
             "box_features": ArrayField(features),
             "box_coordinates": ArrayField(coords),
             "box_mask": ArrayField(
-                features.new_full((features.shape[0],), True, dtype=torch.bool),
+                features.new_ones((features.shape[0],), dtype=torch.bool),
                 padding_value=False,
                 dtype=torch.bool,
             ),

@@ -108,6 +108,7 @@ class FasterRcnnRegionDetector(RegionDetector):
 
     def __init__(
         self,
+        *,
         box_score_thresh: float = 0.05,
         box_nms_thresh: float = 0.5,
         max_boxes_per_image: int = 100,

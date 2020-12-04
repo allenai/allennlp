@@ -74,7 +74,7 @@ class VisualEntailmentReader(VisionReader):
             fields["box_features"] = ArrayField(features)
             fields["box_coordinates"] = ArrayField(coords)
             fields["box_mask"] = ArrayField(
-                features.new_full((features.shape[0],), True, dtype=torch.bool),
+                features.new_ones((features.shape[0],), dtype=torch.bool),
                 padding_value=False,
                 dtype=torch.bool,
             )
