@@ -463,8 +463,7 @@ class VQAv2Reader(VisionReader):
         attempted_instances_count = 0
         failed_instances_count = 0
         for question_dict, processed_image in zip(question_dicts, processed_images):
-            answers = answers_by_question_id.get(question_dict["question_id"])
-
+            answers = answers_by_question_id.get(str(question_dict["question_id"]))
             instance = self.text_to_instance(question_dict["question"], processed_image, answers)
             attempted_instances_count += 1
             if instance is None:
@@ -556,7 +555,7 @@ class VQAv2Reader(VisionReader):
                                 answer_counts[preprocess_answer(answer)] += 1
                         else:
                             answer_counts[preprocess_answer(a["multiple_choice_answer"])] = 1
-                        answers_by_question_id[qid] = answer_counts
+                        answers_by_question_id[str(qid)] = answer_counts
                     logger.info("Caching annotation answer counts to %s", cache.path)
                     with cache.writer() as f:
                         json.dump(answers_by_question_id, f)
