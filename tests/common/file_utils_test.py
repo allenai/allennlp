@@ -22,6 +22,7 @@ from allennlp.common.file_utils import (
     _find_entries,
     inspect_cache,
     remove_cache_entries,
+    LocalCacheResource,
 )
 from allennlp.common.testing import AllenNlpTestCase
 
@@ -449,3 +450,20 @@ class TestCacheFile(AllenNlpTestCase):
                 raise IOError("I made this up")
         assert not os.path.exists(handle.name)
         assert not os.path.exists(cache_filename)
+
+
+class TestLocalCacheResource(AllenNlpTestCase):
+    def test_local_cache_resource(self):
+        with LocalCacheResource("some-computation", "version-1", cache_dir=self.TEST_DIR) as cache:
+            assert not cache.cached()
+
+            with cache.writer() as w:
+                json.dump({"a": 1}, w)
+
+        with LocalCacheResource("some-computation", "version-1", cache_dir=self.TEST_DIR) as cache:
+            assert cache.cached()
+
+            with cache.reader() as r:
+                data = json.load(r)
+
+            assert data["a"] == 1

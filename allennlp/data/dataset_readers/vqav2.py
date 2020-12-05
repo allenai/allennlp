@@ -1,6 +1,5 @@
 import logging
 from collections import Counter
-import os
 from os import PathLike
 from typing import (
     Dict,
@@ -14,9 +13,7 @@ from typing import (
 )
 import json
 import re
-import time
 
-from filelock import FileLock
 from overrides import overrides
 import torch
 from torch import Tensor
@@ -24,11 +21,7 @@ from torch import Tensor
 from allennlp.common.lazy import Lazy
 from allennlp.common.file_utils import (
     cached_path,
-    CacheFile,
-    CACHE_DIRECTORY,
-    _Meta,
-    _resource_to_filename,
-    _get_resource_size,
+    LocalCacheResource,
 )
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
@@ -543,17 +536,13 @@ class VQAv2Reader(VisionReader):
             # Pre-processing the annotations is time-consuming, so we don't want to
             # have to re-do it each time we call read(). So we cache this result.
             annotations_path = cached_path(split.annotations, extract_archive=True)
-            answers_by_question_id_cache = os.path.join(
-                CACHE_DIRECTORY,
-                _resource_to_filename(split.annotations + "-cache", annotations_path),
-            )
-            with FileLock(answers_by_question_id_cache + ".lock"):
-                if os.path.exists(answers_by_question_id_cache):
+            with LocalCacheResource(split.annotations + "-cache", annotations_path) as cache:
+                if cache.cached():
                     logger.info(
                         "Reading annotation answer counts from cache at %s",
-                        answers_by_question_id_cache,
+                        cache.path,
                     )
-                    with open(answers_by_question_id_cache) as f:
+                    with cache.reader() as f:
                         answers_by_question_id = json.load(f)
                 else:
                     logger.info("Calculating annotation answer counts...")
@@ -568,17 +557,7 @@ class VQAv2Reader(VisionReader):
                         else:
                             answer_counts[preprocess_answer(a["multiple_choice_answer"])] = 1
                         answers_by_question_id[qid] = answer_counts
-                    logger.info(
-                        "Caching annotation answer counts to %s", answers_by_question_id_cache
-                    )
-                    with CacheFile(answers_by_question_id_cache, mode="w") as cache_file:
-                        json.dump(answers_by_question_id, cache_file)
-                    meta = _Meta(
-                        resource=split.annotations + "-cache",
-                        cached_path=answers_by_question_id_cache,
-                        creation_time=time.time(),
-                        etag=annotations_path,
-                        size=_get_resource_size(answers_by_question_id_cache),
-                    )
-                    meta.to_file()
+                    logger.info("Caching annotation answer counts to %s", cache.path)
+                    with cache.writer() as f:
+                        json.dump(answers_by_question_id, f)
         return answers_by_question_id

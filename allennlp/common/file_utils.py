@@ -2,6 +2,7 @@
 Utilities for working with the local dataset cache.
 """
 
+from contextlib import contextmanager
 import glob
 import io
 import os
@@ -538,6 +539,76 @@ class CacheFile:
         # Something went wrong, remove the temp file.
         logger.debug("removing temp file %s", self.temp_file.name)
         os.remove(self.temp_file.name)
+        return False
+
+
+class LocalCacheResource:
+    """
+    This is a context manager that can be used to fetch and cache arbitrary resources locally
+    using the same mechanisms that `cached_path` uses for remote resources.
+
+    It can be used, for example, when you want to cache the result of an expensive computation.
+
+    # Examples
+
+    ```python
+    with LocalCacheResource("long-computation", "v1") as cache:
+        if cache.cached():
+            with cache.reader() as f:
+                # read from cache
+        else:
+            with cache.writer() as f:
+                # write to cache
+    ```
+    """
+
+    def __init__(self, resource_name: str, version: str, cache_dir: str = CACHE_DIRECTORY) -> None:
+        self.resource_name = resource_name
+        self.version = version
+        self.cache_dir = cache_dir
+        self.path = os.path.join(self.cache_dir, _resource_to_filename(resource_name, version))
+        self.file_lock = FileLock(self.path + ".lock")
+
+    def cached(self) -> bool:
+        return os.path.exists(self.path)
+
+    @contextmanager
+    def writer(self, mode="w"):
+        if self.cached():
+            raise ValueError(
+                f"local cache of {self.resource_name} (version '{self.version}') already exists!"
+            )
+
+        with CacheFile(self.path, mode=mode) as f:
+            yield f
+
+        meta = _Meta(
+            resource=self.resource_name,
+            cached_path=self.path,
+            creation_time=time.time(),
+            etag=self.version,
+            size=_get_resource_size(self.path),
+        )
+        meta.to_file()
+
+    @contextmanager
+    def reader(self, mode="r"):
+        if not self.cached():
+            raise ValueError(
+                f"local cache of {self.resource_name} (version '{self.version}') does not exist yet!"
+            )
+
+        with open(self.path, mode) as f:
+            yield f
+
+    def __enter__(self):
+        self.file_lock.acquire()
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.file_lock.release()
+        if exc_value is None:
+            return True
         return False
 
 
