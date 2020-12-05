@@ -38,6 +38,9 @@ class VisionTextModel(Model):
     fusion_method : `str`, optional (default = `"sum"`)
     dropout : `float`, optional (default = `0.1`)
     label_namespace : `str`, optional (default = `"labels"`)
+    is_multilabel: `bool`, optional (default = `False`)
+        Whether the output classification is multilabel.
+        (i.e., can have multiple correct answers)
     """
 
     def __init__(
@@ -50,6 +53,7 @@ class VisionTextModel(Model):
         fusion_method: str = "sum",
         dropout: float = 0.1,
         label_namespace: str = "labels",
+        is_multilabel: bool = False,
     ) -> None:
 
         super().__init__(vocab)
@@ -68,6 +72,8 @@ class VisionTextModel(Model):
 
         self.classifier = torch.nn.Linear(pooled_output_dim, num_labels)
         self.dropout = torch.nn.Dropout(dropout)
+
+        self.is_multilabel = is_multilabel
 
     @classmethod
     def from_huggingface_model_name(
@@ -260,9 +266,11 @@ class VisionTextModel(Model):
         # Shape: (batch_size, num_labels)
         logits = self.classifier(pooled_output)
 
-        # Use a sigmoid here because we could have multiple correct answers.
         # Shape: (batch_size, num_labels)
-        probs = torch.sigmoid(logits)
+        if self.is_multilabel:
+            probs = torch.sigmoid(logits)
+        else:
+            probs = torch.softmax(logits, dim=-1)
 
         outputs = {"logits": logits, "probs": probs}
         outputs = self._compute_loss_and_metrics(batch_size, outputs, label, label_weights)
