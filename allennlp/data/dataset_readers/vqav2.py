@@ -1,5 +1,6 @@
 import logging
 from collections import Counter
+import os
 from os import PathLike
 from typing import (
     Dict,
@@ -13,13 +14,22 @@ from typing import (
 )
 import json
 import re
+import time
 
+from filelock import FileLock
 from overrides import overrides
 import torch
 from torch import Tensor
 
 from allennlp.common.lazy import Lazy
-from allennlp.common.file_utils import cached_path
+from allennlp.common.file_utils import (
+    cached_path,
+    CacheFile,
+    CACHE_DIRECTORY,
+    _Meta,
+    _resource_to_filename,
+    _get_resource_size,
+)
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import Field, ArrayField, LabelField, ListField, TextField
@@ -421,19 +431,7 @@ class VQAv2Reader(VisionReader):
         except KeyError:
             raise ValueError(f"Unrecognized split: {split_name}.")
 
-        answers_by_question_id = {}
-        if split.annotations is not None:
-            with open(cached_path(split.annotations, extract_archive=True)) as f:
-                annotations = json.load(f)
-            for a in annotations["annotations"]:
-                qid = a["question_id"]
-                answer_counts: MutableMapping[str, int] = Counter()
-                if self.multiple_answers_per_question:
-                    for answer in (answer_dict["answer"] for answer_dict in a["answers"]):
-                        answer_counts[preprocess_answer(answer)] += 1
-                else:
-                    answer_counts[preprocess_answer(a["multiple_choice_answer"])] = 1
-                answers_by_question_id[qid] = answer_counts
+        answers_by_question_id = self._get_answers_by_question_id(split)
 
         questions = []
         with open(cached_path(split.questions, extract_archive=True)) as f:
@@ -538,3 +536,49 @@ class VQAv2Reader(VisionReader):
     @overrides
     def apply_token_indexers(self, instance: Instance) -> None:
         instance["question"].token_indexers = self._token_indexers  # type: ignore
+
+    def _get_answers_by_question_id(self, split):
+        answers_by_question_id = {}
+        if split.annotations is not None:
+            # Pre-processing the annotations is time-consuming, so we don't want to
+            # have to re-do it each time we call read(). So we cache this result.
+            annotations_path = cached_path(split.annotations, extract_archive=True)
+            answers_by_question_id_cache = os.path.join(
+                CACHE_DIRECTORY,
+                _resource_to_filename(split.annotations + "-cache", annotations_path),
+            )
+            with FileLock(answers_by_question_id_cache + ".lock"):
+                if os.path.exists(answers_by_question_id_cache):
+                    logger.info(
+                        "Reading annotation answer counts from cache at %s",
+                        answers_by_question_id_cache,
+                    )
+                    with open(answers_by_question_id_cache) as f:
+                        answers_by_question_id = json.load(f)
+                else:
+                    logger.info("Calculating annotation answer counts...")
+                    with open(annotations_path) as f:
+                        annotations = json.load(f)
+                    for a in annotations["annotations"]:
+                        qid = a["question_id"]
+                        answer_counts: MutableMapping[str, int] = Counter()
+                        if self.multiple_answers_per_question:
+                            for answer in (answer_dict["answer"] for answer_dict in a["answers"]):
+                                answer_counts[preprocess_answer(answer)] += 1
+                        else:
+                            answer_counts[preprocess_answer(a["multiple_choice_answer"])] = 1
+                        answers_by_question_id[qid] = answer_counts
+                    logger.info(
+                        "Caching annotation answer counts to %s", answers_by_question_id_cache
+                    )
+                    with CacheFile(answers_by_question_id_cache, mode="w") as cache_file:
+                        json.dump(answers_by_question_id, cache_file)
+                    meta = _Meta(
+                        resource=split.annotations + "-cache",
+                        cached_path=answers_by_question_id_cache,
+                        creation_time=time.time(),
+                        etag=annotations_path,
+                        size=_get_resource_size(answers_by_question_id_cache),
+                    )
+                    meta.to_file()
+        return answers_by_question_id
