@@ -13,6 +13,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added links to source code in docs.
 - Added [Gaussian Error Linear Unit (GELU)](https://pytorch.org/docs/stable/generated/torch.nn.GELU.html) as an Activation.
 
+### Changed
+
+- Renamed module `allennlp.data.tokenizers.token` to `allennlp.data.tokenizers.token_class` to avoid
+  [this bug](https://github.com/allenai/allennlp/issues/4819).
+
 ### Fixed
 
 - Fixed a lot of instances where tensors were first created and then sent to a device

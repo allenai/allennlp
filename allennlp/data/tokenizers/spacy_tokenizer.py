@@ -5,7 +5,7 @@ import spacy
 from spacy.tokens import Doc
 
 from allennlp.common.util import get_spacy_model
-from allennlp.data.tokenizers.token import Token
+from allennlp.data.tokenizers.token_class import Token
 from allennlp.data.tokenizers.tokenizer import Tokenizer
 
 
