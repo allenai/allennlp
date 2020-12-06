@@ -29,7 +29,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   were not passed to the constructor if the value of the parameter was equal to the default value.
   This caused bugs in some edge cases where a subclass that takes `**kwargs` needs to inspect
   `kwargs` before passing them to its superclass.
-- Improved the band-aid solution for segmentation faults and the "ImportError: dlopen: cannot load any more object with static TLS" error.
+- Improved the band-aid solution for segmentation faults and the "ImportError: dlopen: cannot load any more object with static TLS" 
+  by adding a `transformers` import.
 
 
 ## [v1.2.2](https://github.com/allenai/allennlp/releases/tag/v1.2.2) - 2020-11-17
