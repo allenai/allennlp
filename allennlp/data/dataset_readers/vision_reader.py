@@ -178,7 +178,8 @@ class VisionReader(DatasetReader):
             else:
                 os.makedirs(self.feature_cache_dir, exist_ok=True)  # type: ignore
                 self._coordinates_cache_instance = TensorCache(
-                    os.path.join(self.feature_cache_dir, "coordinates")  # type: ignore
+                    os.path.join(self.feature_cache_dir, "coordinates"),  # type: ignore
+                    read_only=self.feature_cache_read_only,
                 )
 
         return self._coordinates_cache_instance
