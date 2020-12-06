@@ -78,6 +78,7 @@ class VisionReader(DatasetReader):
         region_detector: Lazy[RegionDetector],
         *,
         feature_cache_dir: Optional[Union[str, PathLike]] = None,
+        feature_cache_read_only: bool = False,
         tokenizer: Optional[Tokenizer] = None,
         token_indexers: Optional[Dict[str, TokenIndexer]] = None,
         cuda_device: Optional[Union[int, torch.device]] = None,
@@ -134,6 +135,7 @@ class VisionReader(DatasetReader):
 
             # feature cache
             self.feature_cache_dir = feature_cache_dir
+            self.feature_cache_read_only = feature_cache_read_only
             self.coordinates_cache_dir = feature_cache_dir
             self._features_cache_instance: Optional[MutableMapping[str, Tensor]] = None
             self._coordinates_cache_instance: Optional[MutableMapping[str, Tensor]] = None
@@ -162,7 +164,8 @@ class VisionReader(DatasetReader):
             else:
                 os.makedirs(self.feature_cache_dir, exist_ok=True)
                 self._features_cache_instance = TensorCache(
-                    os.path.join(self.feature_cache_dir, "features")
+                    os.path.join(self.feature_cache_dir, "features"),
+                    read_only=self.feature_cache_read_only,
                 )
 
         return self._features_cache_instance

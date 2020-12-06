@@ -402,7 +402,11 @@ class TensorCache(MutableMapping[str, Tensor], ABC):
     """
 
     def __init__(
-        self, filename: Union[str, PathLike], *, map_size: int = 1024 * 1024 * 1024 * 1024
+        self,
+        filename: Union[str, PathLike],
+        *,
+        map_size: int = 1024 * 1024 * 1024 * 1024,
+        read_only: bool = False,
     ) -> None:
         """
         Creates a `TensorCache` by either opening an existing one on disk, or creating
@@ -422,6 +426,7 @@ class TensorCache(MutableMapping[str, Tensor], ABC):
             until it is really needed.
         """
         cpu_count = os.cpu_count() or 1
+        self.read_only = read_only
         self.lmdb_env = lmdb.open(
             filename,
             subdir=False,
@@ -432,6 +437,8 @@ class TensorCache(MutableMapping[str, Tensor], ABC):
             sync=True,
             readahead=False,
             meminit=False,
+            readonly=read_only,
+            lock=not read_only,
         )
 
         # We have another cache here that makes sure we return the same object for the same key. Without it,
@@ -466,6 +473,9 @@ class TensorCache(MutableMapping[str, Tensor], ABC):
             return tensor
 
     def __setitem__(self, key: str, tensor: torch.Tensor):
+        if self.read_only:
+            raise ValueError("cannot write to a read-only cache")
+
         encoded_key = key.encode()
         buffer = io.BytesIO()
         if tensor.storage().size() != np.prod(tensor.size()):
@@ -478,6 +488,9 @@ class TensorCache(MutableMapping[str, Tensor], ABC):
         self.cache_cache[key] = tensor
 
     def __delitem__(self, key: str):
+        if self.read_only:
+            raise ValueError("cannot write to a read-only cache")
+
         encoded_key = key.encode()
         with self.lmdb_env.begin(write=True) as txn:
             txn.delete(encoded_key)
