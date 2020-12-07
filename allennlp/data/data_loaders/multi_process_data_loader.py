@@ -94,39 +94,37 @@ class MultiProcessDataLoader(DataLoader):
         The [start method](https://docs.python.org/3.7/library/multiprocessing.html#contexts-and-start-methods)
         used to spin up workers.
 
-    instance_queue_size: `int`, optional (default = `1000`)
-        This determines the size of the
-        [multiprocessing queue](https://docs.python.org/3.7/library/multiprocessing.html#multiprocessing.Queue)
-        used to pass `Instance`s from worker processes to the consuming process when
-        `num_workers > 0`.
-
-        The default value should be reasonable for most use-cases.
-
-    instance_chunk_size: `int`, optional (default = `10`)
-        This determines how many `Instance`s are sent through the instance queue
-        at a time when `num_workers > 0`.
-
-        The default value should be reasonable for most use-cases.
-
-    batch_queue_size: `int`, optional (default = `1000`)
-        This determines the size of the of the
-        [multiprocessing queue](https://docs.python.org/3.7/library/multiprocessing.html#multiprocessing.Queue)
-        used to pass `TensorDict` batches to the consuming process when `num_workers > 0`.
-
-        The default value should be reasonable for most use-cases.
-
-    batch_chunk_size: `int`, optional (default = `10`)
-        This determines how many `TensorDict`s are sent through the batch queue at a time
-        when `num_workers > 0`.
-
-        The default value should be reasonable for most use-cases.
-
-
     !!! Note
         In a typical AllenNLP configuration file, the `reader` and `data_path` parameters don't
         get an entry under the "data_loader". The `reader` is constructed separately from
         the corresponding `dataset_reader` params, and the `data_path` is taken from the
         `train_data_path`, `validation_data_path`, or `test_data_path`.
+
+    !!! Warning
+        Multiprocessing code in Python is complicated! Especially code that involves lower-level libraries
+        which may be spawning their own threads / processes. If you run into dead-locks while
+        using `num_workers > 0`, luckily there are two simple work-arounds which usually fix the issue.
+
+        The first work-around is to disable parallelism for these low-level libraries.
+        For example, setting the environment variables `OMP_NUM_THREADS=1` and `TOKENIZERS_PARALLELISM=0`
+        will do so for PyTorch and Numpy (for CPU operations) and HugggingFace Tokenizers, respectively.
+
+        Alternatively, changing the `start_method` to "spawn" (when available, depending on your OS)
+        may fix your issues without disabling parallelism for other libraries.
+
+        See [issue #4848](https://github.com/allenai/allennlp/issues/4848) for more info.
+
+    !!! Warning
+        Another issue besides dead-locks that you could run into when using `num_workers > 0`
+        is running out of shared memory, since tensors are passed between processes
+        using shared memory, and some systems impose strict limits on the allowed size of shared
+        memory.
+
+        Luckily there is also a simple work-around for this. Either decrease `max_instances_in_memory`
+        or increase your system's `ulimit`.
+
+        See [issue #4847](https://github.com/allenai/allennlp/issues/4847) for more info.
+
     """  # noqa: E501
 
     def __init__(
@@ -142,10 +140,6 @@ class MultiProcessDataLoader(DataLoader):
         collate_fn: Callable[[List[Instance]], TensorDict] = allennlp_collate,
         max_instances_in_memory: int = None,
         start_method: str = "fork",
-        instance_queue_size: int = 1000,
-        instance_chunk_size: int = 10,
-        batch_queue_size: int = 1000,
-        batch_chunk_size: int = 10,
     ) -> None:
         # Do some parameter validation.
         if num_workers is not None and num_workers < 0:
@@ -186,10 +180,6 @@ class MultiProcessDataLoader(DataLoader):
         self.collate_fn = collate_fn
         self.max_instances_in_memory = max_instances_in_memory
         self.start_method = start_method
-        self._instance_queue_size = instance_queue_size
-        self._instance_chunk_size = instance_chunk_size
-        self._batch_queue_size = batch_queue_size
-        self._batch_chunk_size = batch_chunk_size
 
         # If max_instances_in_memory is not given, we'll keep a cache of all instances in this list.
         self._instances: Optional[List[Instance]] = None
@@ -201,6 +191,12 @@ class MultiProcessDataLoader(DataLoader):
         if self.max_instances_in_memory is None:
             # Load all instances right away.
             deque(self.iter_instances(), maxlen=0)
+
+    def index_with(self, vocab: Vocabulary) -> None:
+        self._vocab = vocab
+        if self._instances:
+            for instance in self._instances:
+                instance.index_fields(vocab)
 
     def __len__(self) -> int:
         if self.batches_per_epoch is not None:
@@ -264,7 +260,7 @@ class MultiProcessDataLoader(DataLoader):
                     yield instance
             else:
                 ctx = mp.get_context(self.start_method)
-                queue: mp.JoinableQueue = ctx.JoinableQueue(self._instance_queue_size)
+                queue: mp.JoinableQueue = ctx.JoinableQueue()
                 workers = self._start_instance_workers(queue, ctx)
 
                 try:
@@ -275,13 +271,38 @@ class MultiProcessDataLoader(DataLoader):
                             self._instances.append(instance)  # type: ignore
                         yield instance
                 finally:
-                    self._join_workers(workers)
+                    if hasattr(queue, "close"):  # for compat with different Python versions.
+                        queue.close()  # type: ignore[attr-defined]
+                    self._join_workers(workers, queue)
 
-    def index_with(self, vocab: Vocabulary) -> None:
-        self._vocab = vocab
-        if self._instances:
-            for instance in self._instances:
-                instance.index_fields(vocab)
+    def _iter_batches(self) -> Iterator[TensorDict]:
+        if self._instances is not None or self.num_workers <= 0:
+            for batch in self._instances_to_batches(self.iter_instances()):
+                yield batch
+        else:
+            ctx = mp.get_context(self.start_method)
+
+            queue: mp.JoinableQueue = ctx.JoinableQueue()
+            workers = self._start_batch_workers(queue, ctx)
+
+            try:
+                # We can now start consuming from the `queue` as the batch workers
+                # produce batches.
+                done_count: int = 0
+                while done_count < self.num_workers:
+                    for batch, worker_error in iter(queue.get, (None, None)):
+                        if worker_error is not None:
+                            e, tb = worker_error
+                            sys.stderr.write("".join(tb))
+                            raise e
+
+                        yield batch
+                        queue.task_done()
+                    done_count += 1
+            finally:
+                if hasattr(queue, "close"):  # for compat with different Python versions.
+                    queue.close()  # type: ignore[attr-defined]
+                self._join_workers(workers, queue)
 
     def _start_instance_workers(self, queue: mp.JoinableQueue, ctx) -> List[BaseProcess]:
         workers: List[BaseProcess] = []
@@ -293,42 +314,39 @@ class MultiProcessDataLoader(DataLoader):
             workers.append(worker)
         return workers
 
-    def _join_workers(self, workers: List[BaseProcess]) -> None:
+    def _start_batch_workers(self, queue: mp.JoinableQueue, ctx) -> List[BaseProcess]:
+        workers: List[BaseProcess] = []
+        for worker_id in range(self.num_workers):
+            worker: BaseProcess = ctx.Process(
+                target=self._batch_worker, args=(worker_id, queue), daemon=True
+            )
+            worker.start()
+            workers.append(worker)
+        return workers
+
+    def _join_workers(self, workers: List[BaseProcess], queue) -> None:
+        # Each worker will be blocking on a call to `queue.join()`,
+        # calling `queue.task_done()` times the number of workers will
+        # call the `queue.join()` to return, and each worker should exit on its own.
+        for _ in range(len(workers)):
+            queue.task_done()
+        # If for some reason the workers don't exit properly, we go through and terminate
+        # them anyway.
         for worker in workers:
             if worker.is_alive():
                 worker.terminate()
 
-    def _gather_instances(self, queue: mp.JoinableQueue) -> Iterable[Instance]:
-        done_count: int = 0
-        while done_count < self.num_workers:
-            for instances_chunk, worker_error in iter(queue.get, (None, None)):
-                if worker_error is not None:
-                    e, tb = worker_error
-                    sys.stderr.write("".join(tb))
-                    raise e
-
-                for instance in instances_chunk:
-                    self.reader.apply_token_indexers(instance)
-                    if self._vocab is not None:
-                        instance.index_fields(self._vocab)
-                    yield instance
-                queue.task_done()
-            queue.task_done()
-            done_count += 1
-
     def _instance_worker(self, worker_id: int, queue: mp.JoinableQueue) -> None:
         try:
             self.reader._set_worker_info(WorkerInfo(self.num_workers, worker_id))
-
             instances = self.reader.read(self.data_path)
             checked_for_token_indexers: bool = False
-
-            for instances_chunk in lazy_groups_of(instances, self._instance_chunk_size):
+            for instance in instances:
                 # Check the first instance to make sure it doesn't contain any TextFields with
                 # token_indexers because we don't want to be duplicating those by sending
                 # them across processes.
                 if not checked_for_token_indexers:
-                    for field_name, field in instances_chunk[0].fields.items():
+                    for field_name, field in instance.fields.items():
                         if isinstance(field, TextField) and field._token_indexers is not None:
                             raise ValueError(
                                 f"Found a TextField ({field_name}) with token_indexers already "
@@ -340,24 +358,67 @@ class MultiProcessDataLoader(DataLoader):
                                 "so already)."
                             )
                     checked_for_token_indexers = True
-                queue.put((instances_chunk, None))
+                queue.put((instance, None))
         except Exception as e:
             queue.put((None, (e, traceback.format_exc())))
 
         # Indicate to the consumer that this worker is finished.
         queue.put((None, None))
 
-        # Wait for consumer to finish to avoid prematurely closing the queue.
+        # Wait until this process can safely exit.
         queue.join()
 
+    def _batch_worker(self, worker_id: int, queue: mp.JoinableQueue) -> None:
+        try:
+            self.reader._set_worker_info(WorkerInfo(self.num_workers, worker_id))
+            instances = self.reader.read(self.data_path)
+            for batch in self._instances_to_batches(instances):
+                queue.put((batch, None))
+        except Exception as e:
+            queue.put((None, (e, traceback.format_exc())))
+
+        # Indicate to the consumer (main thread) that this worker is finished.
+        queue.put((None, None))
+
+        # Wait until this process can safely exit.
+        queue.join()
+
+    def _gather_instances(self, queue: mp.JoinableQueue) -> Iterable[Instance]:
+        done_count: int = 0
+        while done_count < self.num_workers:
+            for instance, worker_error in iter(queue.get, (None, None)):
+                if worker_error is not None:
+                    e, tb = worker_error
+                    sys.stderr.write("".join(tb))
+                    raise e
+
+                self.reader.apply_token_indexers(instance)
+                if self._vocab is not None:
+                    instance.index_fields(self._vocab)
+                yield instance
+                queue.task_done()
+            done_count += 1
+
+    def _index_instance(self, instance: Instance) -> Instance:
+        self.reader.apply_token_indexers(instance)
+        assert self._vocab is not None
+        instance.index_fields(self._vocab)
+        return instance
+
     def _instances_to_batches(self, instance_iterator: Iterable[Instance]) -> Iterator[TensorDict]:
+        instance_iterator = (self._index_instance(instance) for instance in instance_iterator)
+
         if self.max_instances_in_memory is not None:
+            max_instances_in_memory = max(
+                1, self.max_instances_in_memory // max(self.num_workers, 1)
+            )
             if self.shuffle:
                 instance_iterator = shuffle_iterable(
-                    instance_iterator, self.max_instances_in_memory
+                    instance_iterator,
+                    max_instances_in_memory,
                 )
             instance_chunks: Iterable[List[Instance]] = lazy_groups_of(
-                instance_iterator, self.max_instances_in_memory
+                instance_iterator, max_instances_in_memory
             )
         else:
             instance_chunks = [list(instance_iterator)]
@@ -384,66 +445,3 @@ class MultiProcessDataLoader(DataLoader):
                 ):
                     break
                 yield self.collate_fn(batch)
-
-    def _iter_batches(self) -> Iterator[TensorDict]:
-        if self._instances is not None or self.num_workers <= 0:
-            for batch in self._instances_to_batches(self.iter_instances()):
-                yield batch
-        else:
-            ctx = mp.get_context(self.start_method)
-
-            # First we start "instance workers", which are in charge of generating raw
-            # instances using self.reader. The generated instances are then put
-            # into the `instance_queue` for the `batch_worker` to consume.
-            instance_queue: mp.JoinableQueue = ctx.JoinableQueue(self._instance_queue_size)
-            instance_workers = self._start_instance_workers(instance_queue, ctx)
-
-            # Now start the `batch_worker`. This worker consumes from the `instance_queue`
-            # and puts the resulting batches into the `batch_queue`.
-            batch_queue: mp.JoinableQueue = ctx.JoinableQueue(self._batch_queue_size)
-            batch_worker: BaseProcess = ctx.Process(
-                target=self._batch_worker,
-                args=(
-                    instance_queue,
-                    batch_queue,
-                ),
-                daemon=True,
-            )
-            batch_worker.start()
-
-            try:
-                # We can now start consuming from the `batch_queue` as the `batch_worker`
-                # produces batches.
-                for batch_group, worker_error in iter(batch_queue.get, (None, None)):
-                    if worker_error is not None:
-                        e, tb = worker_error
-                        sys.stderr.write("".join(tb))
-                        raise e
-
-                    yield from batch_group
-                    batch_queue.task_done()
-
-                # Indicate to the worker (producer of batch groups) that we've consumed
-                # everything.
-                batch_queue.task_done()
-            finally:
-                self._join_workers(instance_workers + [batch_worker])
-
-    def _batch_worker(
-        self, instance_queue: mp.JoinableQueue, batch_queue: mp.JoinableQueue
-    ) -> None:
-        try:
-            for batch_chunk in lazy_groups_of(
-                self._instances_to_batches(self._gather_instances(instance_queue)),
-                self._batch_chunk_size,
-            ):
-                batch_queue.put((batch_chunk, None))
-        except Exception as e:
-            batch_queue.put((None, (e, traceback.format_exc())))
-
-        # Indicate to the consumer (main thread) that this worker is finished.
-        batch_queue.put((None, None))
-
-        # Wait for the consumer (in the main process) to finish receiving all batch groups
-        # to avoid prematurely closing the queue.
-        batch_queue.join()

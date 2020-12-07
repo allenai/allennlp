@@ -150,7 +150,7 @@ class TestTrainer(TrainerTestBase):
             self.model,
             self.optimizer,
             self.data_loader_lazy,
-            validation_data_loader=self.validation_data_loader,
+            #  validation_data_loader=self.validation_data_loader,
             num_epochs=num_epochs,
             serialization_dir=self.TEST_DIR,
         )

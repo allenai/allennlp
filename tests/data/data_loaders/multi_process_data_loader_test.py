@@ -105,6 +105,7 @@ def test_error_raised_when_text_fields_contain_token_indexers(max_instances_in_m
         dict(max_instances_in_memory=10, num_workers=0, batch_size=1),
         dict(num_workers=0, batch_size=1),
     ],
+    ids=str,
 )
 def test_multi_process_data_loader(options):
     reader = MockDatasetReader()
@@ -131,12 +132,15 @@ def test_multi_process_data_loader(options):
     loader.index_with(vocab)
 
     # Run through a couple epochs to make sure we collect all of the instances.
-    for _ in range(2):
+    for epoch in range(2):
         indices: List[int] = []
         for batch in loader:
             for index in batch["index"]:
                 indices.append(index)  # type: ignore
-        assert len(indices) == len(set(indices)) == MockDatasetReader.NUM_INSTANCES
+        # Ensure no duplicates.
+        assert len(indices) == len(set(indices)), indices
+        # Ensure all collected.
+        assert len(indices) == MockDatasetReader.NUM_INSTANCES, epoch
 
 
 def test_drop_last():
