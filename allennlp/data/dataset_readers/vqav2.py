@@ -283,10 +283,10 @@ class VQAv2Reader(VisionReader):
     def __init__(
         self,
         image_loader: ImageLoader,
-        image_featurizer: Lazy[GridEmbedder],
-        region_detector: Lazy[RegionDetector],
         image_dir: Union[str, PathLike] = None,
         *,
+        image_featurizer: Optional[Lazy[GridEmbedder]] = None,
+        region_detector: Optional[Lazy[RegionDetector]] = None,
         answer_vocab: Optional[Union[Vocabulary, str]] = None,
         feature_cache_dir: Optional[Union[str, PathLike]] = None,
         feature_cache_read_only: bool = False,
@@ -310,8 +310,8 @@ class VQAv2Reader(VisionReader):
         super().__init__(
             image_dir,
             image_loader,
-            image_featurizer,
-            region_detector,
+            image_featurizer=image_featurizer,
+            region_detector=region_detector,
             feature_cache_dir=feature_cache_dir,
             feature_cache_read_only=feature_cache_read_only,
             tokenizer=tokenizer,
