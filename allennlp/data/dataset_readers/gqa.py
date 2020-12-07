@@ -13,8 +13,9 @@ import torch
 from torch import Tensor
 
 from allennlp.common.file_utils import cached_path
+from allennlp.data.vocabulary import Vocabulary
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
-from allennlp.data.fields import ArrayField, LabelField, TextField
+from allennlp.data.fields import ArrayField, LabelField, ListField, TextField
 from allennlp.data.image_loader import ImageLoader
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import TokenIndexer
@@ -53,6 +54,7 @@ class GQAReader(VisionReader):
         image_featurizer: GridEmbedder,
         region_detector: RegionDetector,
         *,
+        answer_vocab: Optional[Union[str, Vocabulary]] = None,
         feature_cache_dir: Optional[Union[str, PathLike]] = None,
         data_dir: Optional[Union[str, PathLike]] = None,
         tokenizer: Tokenizer = None,
@@ -61,6 +63,7 @@ class GQAReader(VisionReader):
         max_instances: Optional[int] = None,
         image_processing_batch_size: int = 8,
         skip_image_feature_extraction: bool = False,
+        keep_unanswerable_questions: bool = True,
     ) -> None:
         super().__init__(
             image_dir,
@@ -76,6 +79,17 @@ class GQAReader(VisionReader):
             skip_image_feature_extraction=skip_image_feature_extraction,
         )
         self.data_dir = data_dir
+
+        # read answer vocab
+        if keep_unanswerable_questions or not answer_vocab:
+            self.answer_vocab = None
+        else:
+            if isinstance(answer_vocab, str):
+                answer_vocab = cached_path(answer_vocab, extract_archive=True)
+                answer_vocab = Vocabulary.from_files(answer_vocab)
+            self.answer_vocab = frozenset(
+                answer_vocab.get_token_to_index_vocabulary("answers").keys()
+            )
 
     @overrides
     def _read(self, split_or_filename: str):
@@ -123,18 +137,17 @@ class GQAReader(VisionReader):
             )
 
             for question_dict, processed_image in zip(question_dicts, processed_images):
-                answers = {
+                answer = {
                     "answer": question_dict["answer"],
-                    "fullAnswer": question_dict["fullAnswer"],
                 }
-                yield self.text_to_instance(question_dict["question"], processed_image, answers)
+                yield self.text_to_instance(question_dict["question"], processed_image, answer)
 
     @overrides
     def text_to_instance(
         self,  # type: ignore
         question: str,
         image: Union[str, Tuple[Tensor, Tensor]],
-        answers: Dict[str, str] = None,
+        answer: Dict[str, str] = None,
         *,
         use_cache: bool = True,
     ) -> Instance:
@@ -151,8 +164,12 @@ class GQAReader(VisionReader):
             "question": question_field,
         }
 
-        if answers:
-            fields["label"] = LabelField(answers["answer"], label_namespace="answer")
+        if answer:
+            if not self.answer_vocab or answer["answer"] in self.answer_vocab:
+                fields["labels"] = ListField(
+                    [LabelField(answer["answer"], label_namespace="answers")]
+                )
+                fields["label_weights"] = ArrayField(torch.tensor([1.0]))
 
         return Instance(fields)
 
