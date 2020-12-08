@@ -131,17 +131,24 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: Set Docker tag
-      run: |
-        echo "DOCKER_TAG=$GITHUB_SHA" >> $GITHUB_ENV
+    - name: Setup Python
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python }}
 
-    - name: Build test image
-      run: |
-        make docker-test-image DOCKER_TAG=$DOCKER_TAG
+    - uses: actions/cache@v2
+      with:
+        path: ${{ env.pythonLocation }}
+        key: ${{ runner.os }}-pydeps-${{ env.pythonLocation }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
 
-    - name: Run transformer toolkit tests
+    - name: Install requirements
       run: |
-        make docker-test-run DOCKER_TAG=$DOCKER_TAG ARGS='test-transformer-toolkit'
+        make install
+
+    - name: Run tests
+      if: always()
+      run: |
+        make test-transformer-toolkit
 
   check_models:
     name: Check Models
