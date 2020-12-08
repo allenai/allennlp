@@ -120,10 +120,13 @@ jobs:
         pip uninstall --yes allennlp
 
   transformers:
-    name: Transformer toolkit
+    name: Transformer Toolkit
     # Don't run for forks.
     if: github.repository == 'allenai/allennlp'
     runs-on: [self-hosted, CPU-only]
+    strategy:
+      matrix:
+        python: ['3.7', '3.8']
 
     steps:
     - uses: actions/checkout@v2

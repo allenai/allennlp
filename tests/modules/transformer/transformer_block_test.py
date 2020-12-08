@@ -47,6 +47,7 @@ def get_modules(params_dict):
     return modules
 
 
+@pytest.mark.transformer_toolkit
 class TestTransformerBlock(AllenNlpTestCase):
     def setup_method(self):
         super().setup_method()
