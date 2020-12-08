@@ -61,6 +61,7 @@ class VisualEntailmentModel(VisionTextModel):
             fusion_method,
             dropout,
             label_namespace,
+            is_multilabel=False,
         )
 
         self.accuracy = CategoricalAccuracy()

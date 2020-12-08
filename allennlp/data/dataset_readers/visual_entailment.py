@@ -32,7 +32,7 @@ class VisualEntailmentReader(VisionReader):
         lines = json_lines_from_file(file_path)
         info_dicts: List[Dict] = list(self.shard_iterable(lines))  # type: ignore
 
-        if not self.skip_image_feature_extraction:
+        if self.run_image_feature_extraction:
             # It would be much easier to just process one image at a time, but it's faster to process
             # them in batches. So this code gathers up instances until it has enough to fill up a batch
             # that needs processing, and then processes them all.
