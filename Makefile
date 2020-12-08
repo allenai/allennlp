@@ -79,7 +79,7 @@ benchmarks :
 
 .PHONY : test-transformer-toolkit
 test-transformer-toolkit :
-	pytest -v -n2 --forked --color=yes --durations=10 -m "transformer_toolkit"
+	pytest -v --color=yes -m "transformer_toolkit"
 
 #
 # Setup helpers
