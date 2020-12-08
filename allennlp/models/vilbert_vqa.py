@@ -58,6 +58,7 @@ class VqaVilbert(VisionTextModel):
             fusion_method,
             dropout,
             label_namespace,
+            is_multilabel=True,
         )
 
         self.loss = torch.nn.BCELoss()
