@@ -125,51 +125,50 @@ class TestTransformerBlock(AllenNlpTestCase):
 
         assert torch.allclose(output[0], hf_output[0])
 
-    # @pytest.mark.parametrize(
-    #     "pretrained_name",
-    #     [
-    #         "bert-base-uncased",
-    #         "roberta-base",
-    #     ],
-    # )
-    # def test_loading_from_pretrained_weights_using_model_name(self, pretrained_name):
+    @pytest.mark.parametrize(
+        "pretrained_name",
+        [
+            "bert-base-uncased",
+        ],
+    )
+    def test_loading_from_pretrained_weights_using_model_name(self, pretrained_name):
 
-    #     torch.manual_seed(1234)
-    #     pretrained = cached_transformers.get(pretrained_name, False)
+        torch.manual_seed(1234)
+        pretrained = cached_transformers.get(pretrained_name, False)
 
-    #     if "distilbert" in pretrained_name:
-    #         pretrained_module = pretrained.transformer
-    #     else:
-    #         pretrained_module = pretrained.encoder
+        if "distilbert" in pretrained_name:
+            pretrained_module = pretrained.transformer
+        else:
+            pretrained_module = pretrained.encoder
 
-    #     torch.manual_seed(1234)
-    #     module = TransformerBlock.from_pretrained_module(pretrained_name)
-    #     mapping = {
-    #         val: key
-    #         for key, val in module._construct_default_mapping(
-    #             pretrained_module, "huggingface", {}
-    #         ).items()
-    #     }
-    #     assert_equal_parameters(pretrained_module, module, mapping=mapping)
+        torch.manual_seed(1234)
+        module = TransformerBlock.from_pretrained_module(pretrained_name)
+        mapping = {
+            val: key
+            for key, val in module._construct_default_mapping(
+                pretrained_module, "huggingface", {}
+            ).items()
+        }
+        assert_equal_parameters(pretrained_module, module, mapping=mapping)
 
-    #     batch_size = 2
-    #     seq_len = 768
-    #     dim = dict(module.named_modules())["layers.0.attention.self.query"].in_features
-    #     hidden_states = torch.randn(batch_size, seq_len, dim)
-    #     attention_mask = torch.randn(batch_size, seq_len)
-    #     mask_reshp = (batch_size, 1, 1, dim)
-    #     attention_mask_hf = (attention_mask == 0).view(mask_reshp).expand(
-    #         batch_size, 12, seq_len, seq_len
-    #     ) * -10e5
+        # batch_size = 1
+        # seq_len = 768
+        # dim = dict(module.named_modules())["layers.0.attention.self.query"].in_features
+        # hidden_states = torch.randn(batch_size, seq_len, dim)
+        # attention_mask = torch.randn(batch_size, seq_len)
+        # mask_reshp = (batch_size, 1, 1, dim)
+        # attention_mask_hf = (attention_mask == 0).view(mask_reshp).expand(
+        #     batch_size, 12, seq_len, seq_len
+        # ) * -10e5
 
-    #     torch.manual_seed(1234)
-    #     output = module.forward(hidden_states, attention_mask=attention_mask.squeeze())[0]
-    #     torch.manual_seed(1234)
-    #     hf_output = pretrained_module.forward(hidden_states, attention_mask=attention_mask_hf)[0]
+        # torch.manual_seed(1234)
+        # output = module.forward(hidden_states, attention_mask=attention_mask.squeeze())[0]
+        # torch.manual_seed(1234)
+        # hf_output = pretrained_module.forward(hidden_states, attention_mask=attention_mask_hf)[0]
 
-    #     # FIX: look into the reason for mismatch.
-    #     # Update: The discrepancy comes from torch.nn.Dropout layer, despite setting random seeds.
-    #     # Have also tried setting random seeds right before the actual call to dropout in both modules.
-    #     # assert torch.allclose(output, hf_output)
-    #     print(output)
-    #     print(hf_output)
+        # # FIX: look into the reason for mismatch.
+        # # Update: The discrepancy comes from torch.nn.Dropout layer, despite setting random seeds.
+        # # Have also tried setting random seeds right before the actual call to dropout in both modules.
+        # # assert torch.allclose(output, hf_output)
+        # print(output)
+        # print(hf_output)
