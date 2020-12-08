@@ -1,3 +1,4 @@
+import pytest
 import torch
 from overrides import overrides
 
@@ -11,6 +12,7 @@ from allennlp.modules.transformer import TransformerBlock, TransformerEmbeddings
 from allennlp.common.testing import AllenNlpTestCase
 
 
+@pytest.mark.transformer_toolkit
 class TestTransformerToolkit(AllenNlpTestCase):
     def setup_method(self):
         super().setup_method()

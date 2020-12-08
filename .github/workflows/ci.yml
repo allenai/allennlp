@@ -119,6 +119,27 @@ jobs:
         # See https://github.com/pypa/pip/issues/4537.
         pip uninstall --yes allennlp
 
+  transformers:
+    name: Transformer toolkit
+    # Don't run for forks.
+    if: github.repository == 'allenai/allennlp'
+    runs-on: [self-hosted, CPU-only]
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set Docker tag
+      run: |
+        echo "DOCKER_TAG=$GITHUB_SHA" >> $GITHUB_ENV
+
+    - name: Build test image
+      run: |
+        make docker-test-image DOCKER_TAG=$DOCKER_TAG
+
+    - name: Run transformer toolkit tests
+      run: |
+        make docker-test-run DOCKER_TAG=$DOCKER_TAG ARGS='test-transformer-toolkit'
+
   check_models:
     name: Check Models
     runs-on: ubuntu-latest
