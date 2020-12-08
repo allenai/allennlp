@@ -109,21 +109,21 @@ class TestTransformerBlock(AllenNlpTestCase):
             mapping,
         )
 
-    # @pytest.mark.parametrize("module_name, hf_module", get_modules(PARAMS_DICT).items())
-    # def test_forward_against_huggingface_outputs(self, module_name, hf_module):
-    #     hidden_states = torch.randn(2, 3, 6)
-    #     attention_mask = torch.tensor([[0, 1, 0], [1, 1, 0]])
+    @pytest.mark.parametrize("module_name, hf_module", get_modules(PARAMS_DICT).items())
+    def test_forward_against_huggingface_outputs(self, module_name, hf_module):
+        hidden_states = torch.randn(2, 3, 6)
+        attention_mask = torch.tensor([[0, 1, 0], [1, 1, 0]])
 
-    #     block = TransformerBlock.from_pretrained_module(hf_module)
+        block = TransformerBlock.from_pretrained_module(hf_module)
 
-    #     torch.manual_seed(1234)
-    #     output = block.forward(hidden_states, attention_mask=attention_mask)
-    #     # We do this because bert, roberta, electra process the attention_mask at the model level.
-    #     attention_mask_hf = (attention_mask == 0).view((2, 1, 1, 3)).expand(2, 2, 3, 3) * -10e5
-    #     torch.manual_seed(1234)
-    #     hf_output = hf_module.forward(hidden_states, attention_mask=attention_mask_hf)
+        torch.manual_seed(1234)
+        output = block.forward(hidden_states, attention_mask=attention_mask)
+        # We do this because bert, roberta, electra process the attention_mask at the model level.
+        attention_mask_hf = (attention_mask == 0).view((2, 1, 1, 3)).expand(2, 2, 3, 3) * -10e5
+        torch.manual_seed(1234)
+        hf_output = hf_module.forward(hidden_states, attention_mask=attention_mask_hf)
 
-    #     assert torch.allclose(output[0], hf_output[0])
+        assert torch.allclose(output[0], hf_output[0])
 
     # @pytest.mark.parametrize(
     #     "pretrained_name",
