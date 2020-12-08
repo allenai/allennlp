@@ -67,7 +67,6 @@ test-with-cov :
 			--cov-config=.coveragerc \
 			--cov=$(SRC) \
 			--cov-report=xml
-			-m "not transformer_toolkit"
 
 .PHONY : gpu-test
 gpu-test : check-for-cuda

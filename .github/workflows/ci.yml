@@ -119,37 +119,6 @@ jobs:
         # See https://github.com/pypa/pip/issues/4537.
         pip uninstall --yes allennlp
 
-  transformers:
-    name: Transformer Toolkit
-    # Don't run for forks.
-    if: github.repository == 'allenai/allennlp'
-    runs-on: [self-hosted, CPU-only]
-    strategy:
-      matrix:
-        python: ['3.7', '3.8']
-
-    steps:
-    - uses: actions/checkout@v2
-
-    - name: Setup Python
-      uses: actions/setup-python@v1
-      with:
-        python-version: ${{ matrix.python }}
-
-    - uses: actions/cache@v2
-      with:
-        path: ${{ env.pythonLocation }}
-        key: ${{ runner.os }}-pydeps-${{ env.pythonLocation }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
-
-    - name: Install requirements
-      run: |
-        make install
-
-    - name: Run tests
-      if: always()
-      run: |
-        make test-transformer-toolkit
-
   check_models:
     name: Check Models
     runs-on: ubuntu-latest
