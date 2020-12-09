@@ -1,4 +1,4 @@
-local model_name = "bert-base-uncased";
+local model_name = "bert-large-uncased";
 local effective_batch_size = 128;
 local gpu_batch_size = 128;
 local num_gpus = 1;
@@ -11,17 +11,17 @@ local vocabulary = if construct_vocab then {
     } else {
       // read the constructed vocab
       "type": "from_files",
-      "directory": "https://storage.googleapis.com/allennlp-public-data/vqav2/vilbert_vqa_balanced_real.vocab.tar.gz"
+      "directory": "https://storage.googleapis.com/allennlp-public-data/vqav2/vilbert_vqa_balanced_real.bert-large.vocab.tar.gz"
     };
 
 {
   "dataset_reader": {
     "type": "vqav2",
-    "image_dir": "/mnt/tank/dirkg/data/vision/vqa/balanced_real",
-    "feature_cache_dir": "/mnt/tank/dirkg/data/vision/balanced_real/feature_cache",
-    #"image_dir": "/Users/dirkg/Documents/data/vision/vqa/balanced_real",
-    #"feature_cache_dir": "/Users/dirkg/Documents/data/vision/vqa/balanced_real/feature_cache",
-    "image_loader": "detectron",
+    #"image_dir": "/mnt/tank/dirkg/data/vision/vqa/balanced_real",
+    #"feature_cache_dir": "/mnt/tank/dirkg/data/vision/balanced_real/feature_cache",
+    "image_dir": "/Users/dirkg/Documents/data/vision/vqa/balanced_real",
+    "feature_cache_dir": "/Users/dirkg/Documents/data/vision/vqa/balanced_real/feature_cache",
+    "image_loader": "torch",
     "image_featurizer": "resnet_backbone",
     "region_detector": "faster_rcnn",
     "tokenizer": {
@@ -49,7 +49,7 @@ local vocabulary = if construct_vocab then {
   "model": {
     "type": "vqa_vilbert_from_huggingface",
     "model_name": model_name,
-    "image_feature_dim": 2048,
+    "image_feature_dim": 1024,
     "image_hidden_size": 1024,
     "image_num_attention_heads": 8,
     "image_num_hidden_layers": 6,
@@ -60,7 +60,7 @@ local vocabulary = if construct_vocab then {
     "image_attention_dropout": 0.1,
     "image_hidden_dropout": 0.1,
     "image_biattention_id": [0, 1, 2, 3, 4, 5],
-    "text_biattention_id": [6, 7, 8, 9, 10, 11],
+    "text_biattention_id": [18, 19, 20, 21, 22, 23],
     "text_fixed_layer": 0,
     "image_fixed_layer": 0,
     "fusion_method": "mul"
@@ -78,10 +78,13 @@ local vocabulary = if construct_vocab then {
   [if !construct_vocab then "trainer"]: {
     "optimizer": {
       "type": "huggingface_adamw",
-      "lr": 4e-5,
+      "lr": 4e-4,
       "correct_bias": true,
       "weight_decay": 0.01,
-      "parameter_groups": [[["bias", "LayerNorm\\.weight", "layer_norm\\.weight"], {"weight_decay": 0}]],
+      "parameter_groups": [
+        // [["bias", "LayerNorm\\.weight", "layer_norm\\.weight"], {"weight_decay": 0}], // can't use both at the same time
+        [["^embeddings\\.", "^encoder.layers1\\.", "^t_pooler\\."], {"lr": 4e-5}]
+      ],
     },
     "learning_rate_scheduler": {
       "type": "linear_with_warmup",
