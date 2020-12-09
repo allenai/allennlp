@@ -128,19 +128,22 @@ def check_tarfile(tar_file: tarfile.TarFile):
             or tarinfo.islnk()
             or tarinfo.issym()
         ):
-            raise ValueError(f"Tar file {tar_file.name} contains invalid member {tarinfo.name}.")
+            raise ValueError(
+                f"Tar file {str(tar_file.name)} contains invalid member {tarinfo.name}."
+            )
 
         target_path = normalize_path(tarinfo.name)
         if os.path.commonprefix([base_path, target_path]) != base_path:
             raise ValueError(
-                f"Tar file {tar_file.name} is trying to create a file outside of its extraction directory."
+                f"Tar file {str(tar_file.name)} is trying to create a file outside of its extraction directory."
             )
 
         if tarinfo.islnk() or tarinfo.issym():
             target_path = normalize_path(tarinfo.linkname)
             if os.path.commonprefix([base_path, target_path]) != base_path:
                 raise ValueError(
-                    f"Tar file {tar_file.name} is trying to link to a file outside of its extraction directory."
+                    f"Tar file {str(tar_file.name)} is trying to link to a file "
+                    "outside of its extraction directory."
                 )
 
 
