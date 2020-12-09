@@ -12,7 +12,24 @@ from allennlp.modules.transformer.output_layer import OutputLayer
 
 
 class AttentionLayer(TransformerModule, FromParams):
+    """
+    This module wraps the self-attention with the output-layer, similar to the architecture in BERT.
+    Details in the paper:
+    [BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding, Devlin et al, 2019]
+    (https://api.semanticscholar.org/CorpusID:52967399)
+
+    # Parameters
+
+    hidden_size: `int`
+    num_attention_heads: `int`
+    attention_dropout: `float` (default = `0.0`)
+        Dropout probability for the `SelfAttention` layer.
+    hidden_dropout: `float` (default = `0.0`)
+        Dropout probability for the `OutputLayer`.
+    """
+
     _relevant_module = "encoder.layers.0.attention"
+    _huggingface_mapping = {"layer": "layers"}
 
     def __init__(
         self,
@@ -28,14 +45,20 @@ class AttentionLayer(TransformerModule, FromParams):
     def forward(
         self,
         input_tensor: torch.Tensor,
-        attention_mask: torch.Tensor,
+        attention_mask: torch.BoolTensor,
         head_mask: Optional[torch.Tensor] = None,
         encoder_hidden_states: Optional[torch.Tensor] = None,
-        encoder_attention_mask: Optional[torch.Tensor] = None,
         output_attentions: bool = False,
     ):
-        if encoder_attention_mask is not None:
-            attention_mask = encoder_attention_mask
+        """
+        input_tensor : `torch.Tensor`
+            Shape `batch_size x seq_len x hidden_dim`
+        attention_mask : `torch.BoolTensor`, optional
+            Shape `batch_size x seq_len`
+        head_mask : `torch.BoolTensor`, optional
+        output_attentions : `bool`
+            Whether to also return the attention probabilities, default = `False`
+        """
         self_output = self.self(
             input_tensor,
             encoder_hidden_states,
@@ -71,6 +94,25 @@ class AttentionLayer(TransformerModule, FromParams):
 
 
 class TransformerLayer(TransformerModule, FromParams):
+    """
+    This module is a single transformer layer, mapping to `BertLayer` in the architecture in BERT.
+    Details in the paper:
+    [BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding, Devlin et al, 2019]
+    (https://api.semanticscholar.org/CorpusID:52967399)
+
+    # Parameters
+
+    hidden_size: `int`
+    intermediate_size: `int`
+    num_attention_heads: `int`
+    attention_dropout: `float` (default = `0.0`)
+        Dropout probability for the `SelfAttention` layer.
+    hidden_dropout: `float` (default = `0.0`)
+        Dropout probability for the `OutputLayer`.
+    activation: `Union[str, torch.nn.Module]`
+
+    """
+
     _relevant_module = "encoder.layers.0"
     _huggingface_mapping = {"layer": "layers"}
 
@@ -79,9 +121,9 @@ class TransformerLayer(TransformerModule, FromParams):
         hidden_size: int,
         intermediate_size: int,
         num_attention_heads: int,
-        attention_dropout: float,
-        hidden_dropout: float,
-        activation: Union[str, torch.nn.Module],
+        attention_dropout: float = 0.0,
+        hidden_dropout: float = 0.0,
+        activation: Union[str, torch.nn.Module] = "relu",
     ):
         super().__init__()
         self.attention = AttentionLayer(
@@ -103,15 +145,22 @@ class TransformerLayer(TransformerModule, FromParams):
         attention_mask: torch.Tensor,
         head_mask: Optional[torch.Tensor] = None,
         encoder_hidden_states: Optional[torch.Tensor] = None,
-        encoder_attention_mask: Optional[torch.Tensor] = None,
         output_attentions: bool = False,
     ):
+        """
+        hidden_states : `torch.Tensor`
+            Shape `batch_size x seq_len x hidden_dim`
+        attention_mask : `torch.BoolTensor`, optional
+            Shape `batch_size x seq_len`
+        head_mask : `torch.BoolTensor`, optional
+        output_attentions : `bool`
+            Whether to also return the attention probabilities, default = `False`
+        """
         attention_outputs = self.attention(
             hidden_states,
             attention_mask,
             head_mask,
             encoder_hidden_states,
-            encoder_attention_mask,
             output_attentions,
         )
         attention_output = attention_outputs[0]

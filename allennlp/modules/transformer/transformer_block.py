@@ -10,6 +10,24 @@ from allennlp.modules.transformer.transformer_module import TransformerModule
 
 
 class TransformerBlock(TransformerModule, FromParams):
+    """
+    This module is the basic transformer block, which acts as an encoder.
+    Details in the paper:
+    [BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding, Devlin et al, 2019]
+    (https://api.semanticscholar.org/CorpusID:52967399)
+
+    # Parameters
+
+    num_hidden_layers : `int`
+    hidden_size : `int`
+    intermediate_size : `int`
+    num_attention_heads : `int`
+    attention_dropout : `float` (default = `0.0`)
+        Dropout probability for the `SelfAttention` layer.
+    hidden_dropout : `float` (default = `0.0`)
+        Dropout probability for the `OutputLayer`.
+    activation : `Union[str, torch.nn.Module]` (default = `"relu"`)
+    """
 
     _huggingface_mapping = {"layer": "layers"}
     _relevant_module = "encoder"
@@ -42,10 +60,20 @@ class TransformerBlock(TransformerModule, FromParams):
         attention_mask: Optional[torch.Tensor] = None,
         head_mask: Optional[torch.Tensor] = None,
         encoder_hidden_states: Optional[torch.Tensor] = None,
-        encoder_attention_mask: Optional[torch.Tensor] = None,
         output_attentions: bool = False,
         output_hidden_states: bool = False,
     ):
+        """
+        hidden_states : `torch.Tensor`
+            Shape `batch_size x seq_len x hidden_dim`
+        attention_mask : `torch.BoolTensor`, optional
+            Shape `batch_size x seq_len`
+        head_mask : `torch.BoolTensor`, optional
+        output_attentions : `bool`
+            Whether to also return the attention probabilities, default = `False`
+        output_hidden_states : `bool`
+            Whether to return the hidden_states for all layers, default = `False`
+        """
         all_hidden_states = () if output_hidden_states else None
         all_attentions = () if output_attentions else None
         for i, layer_module in enumerate(self.layers):
@@ -59,7 +87,6 @@ class TransformerBlock(TransformerModule, FromParams):
                 attention_mask,
                 layer_head_mask,
                 encoder_hidden_states,
-                encoder_attention_mask,
                 output_attentions,
             )
             hidden_states = layer_outputs[0]
