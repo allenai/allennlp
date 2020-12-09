@@ -100,4 +100,7 @@ local vocabulary = if construct_vocab then {
         "should_log_learning_rate": true
     },
   },
+  "random_seed": 42,
+  "numpy_seed": 42,
+  "pytorch_seed": 42,
 }

@@ -112,4 +112,7 @@ local vocabulary = if construct_vocab then {
     "num_epochs": 20,
     "num_gradient_accumulation_steps": effective_batch_size / gpu_batch_size / std.max(1, num_gpus)
   },
+  "random_seed": 42,
+  "numpy_seed": 42,
+  "pytorch_seed": 42,
 }
