@@ -74,6 +74,11 @@ class BiModalAttention(TransformerModule, FromParams):
         x = x.view(*new_x_shape)
         return x.permute(0, 2, 1, 3)
 
+    @staticmethod
+    def _apply_mask(values: torch.FloatTensor, mask: torch.BoolTensor) -> torch.FloatTensor:
+        mask = (~mask) * -10e5
+        return values + mask
+
     def forward(
         self,
         input_tensor1,
@@ -104,9 +109,9 @@ class BiModalAttention(TransformerModule, FromParams):
 
         attention_scores1 = self.attn1(query_layer2, key_layer1.transpose(-1, -2))
         if attention_mask1 is not None:
-            attention_scores1 = attention_scores1 + attention_mask1
+            attention_scores1 = self._apply_mask(attention_scores1, attention_mask1)
         if use_co_attention_mask:
-            attention_scores1 = attention_scores1 + co_attention_mask.permute(0, 1, 3, 2)
+            attention_scores1 = self._apply_mask(attention_scores1, co_attention_mask.permute(0, 1, 3, 2))
 
         # Normalize the attention scores to probabilities.
         attention_probs1 = torch.nn.Softmax(dim=-1)(attention_scores1)
@@ -123,9 +128,9 @@ class BiModalAttention(TransformerModule, FromParams):
         attention_scores2 = self.attn2(query_layer1, key_layer2.transpose(-1, -2))
         # we can comment this line for single flow.
         if attention_mask2 is not None:
-            attention_scores2 = attention_scores2 + attention_mask2
+            attention_scores2 = self._apply_mask(attention_scores2, attention_mask2)
         if use_co_attention_mask:
-            attention_scores2 = attention_scores2 + co_attention_mask
+            attention_scores2 = self._apply_mask(attention_scores2, co_attention_mask)
 
         # Normalize the attention scores to probabilities.
         attention_probs2 = torch.nn.Softmax(dim=-1)(attention_scores2)
