@@ -6,7 +6,7 @@ from overrides import overrides
 from transformers import PreTrainedTokenizer
 
 from allennlp.common.util import sanitize_wordpiece
-from allennlp.data.tokenizers.token import Token
+from allennlp.data.tokenizers.token_class import Token
 from allennlp.data.tokenizers.tokenizer import Tokenizer
 
 logger = logging.getLogger(__name__)
