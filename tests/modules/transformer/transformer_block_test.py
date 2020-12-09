@@ -157,7 +157,6 @@ class TestTransformerBlock(AllenNlpTestCase):
         attention_mask = torch.randn(batch_size, seq_len)
         mask_reshp = (batch_size, 1, 1, dim)
         attention_mask_hf = (attention_mask == 0).view(mask_reshp)
-
         attention_mask_hf = attention_mask_hf.expand(batch_size, 12, seq_len, seq_len) * -10e5
 
         torch.manual_seed(1234)
@@ -168,6 +167,8 @@ class TestTransformerBlock(AllenNlpTestCase):
         # FIX: look into the reason for mismatch.
         # Update: The discrepancy comes from torch.nn.Dropout layer, despite setting random seeds.
         # Have also tried setting random seeds right before the actual call to dropout in both modules.
+        # While the issue has been isolated, not removing this comment till we can figure out a way
+        # to get deterministic outputs from dropout.
         # assert torch.allclose(output, hf_output)
         print(output)
         print(hf_output)

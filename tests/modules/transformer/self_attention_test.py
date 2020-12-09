@@ -160,6 +160,6 @@ class TestSelfAttention(AllenNlpTestCase):
         # FIX: look into the reason for mismatch.
         # Update: The discrepancy comes from torch.nn.Dropout layer, despite setting random seeds.
         # Have also tried setting random seeds right before the actual call to dropout in both modules.
-        # assert torch.allclose(output, hf_output)
+        assert torch.allclose(output, hf_output)
         print(output)
         print(hf_output)
