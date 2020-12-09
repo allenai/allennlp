@@ -1,5 +1,6 @@
 import logging
 from collections import Counter
+from functools import lru_cache
 from os import PathLike
 from typing import (
     Dict,
@@ -19,10 +20,7 @@ import torch
 from torch import Tensor
 
 from allennlp.common.lazy import Lazy
-from allennlp.common.file_utils import (
-    cached_path,
-    LocalCacheResource,
-)
+from allennlp.common.file_utils import cached_path
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import Field, ArrayField, LabelField, ListField, TextField
@@ -203,7 +201,7 @@ punct = [
 def process_punctuation(inText: str) -> str:
     outText = inText
     for p in punct:
-        if (p + " " in inText or " " + p in inText) or (re.search(comma_strip, inText) is not None):
+        if (p + " " in inText or " " + p in inText) or (comma_strip.search(inText) is not None):
             outText = outText.replace(p, "")
         else:
             outText = outText.replace(p, " ")
@@ -225,6 +223,7 @@ def process_digit_article(input: str) -> str:
     return " ".join(output)
 
 
+@lru_cache(maxsize=None)
 def preprocess_answer(answer: str) -> str:
     answer = process_digit_article(process_punctuation(answer))
     answer = answer.replace(",", "")
@@ -534,31 +533,17 @@ class VQAv2Reader(VisionReader):
     def _get_answers_by_question_id(self, split):
         answers_by_question_id = {}
         if split.annotations is not None:
-            # Pre-processing the annotations is time-consuming, so we don't want to
-            # have to re-do it each time we call read(). So we cache this result.
+            logger.info("Calculating annotation answer counts...")
             annotations_path = cached_path(split.annotations, extract_archive=True)
-            with LocalCacheResource(split.annotations + "-cache", annotations_path) as cache:
-                if cache.cached():
-                    logger.info(
-                        "Reading annotation answer counts from cache at %s",
-                        cache.path,
-                    )
-                    with cache.reader() as f:
-                        answers_by_question_id = json.load(f)
+            with open(annotations_path) as f:
+                annotations = json.load(f)
+            for a in annotations["annotations"]:
+                qid = a["question_id"]
+                answer_counts: MutableMapping[str, int] = Counter()
+                if self.multiple_answers_per_question:
+                    for answer in (answer_dict["answer"] for answer_dict in a["answers"]):
+                        answer_counts[preprocess_answer(answer)] += 1
                 else:
-                    logger.info("Calculating annotation answer counts...")
-                    with open(annotations_path) as f:
-                        annotations = json.load(f)
-                    for a in annotations["annotations"]:
-                        qid = a["question_id"]
-                        answer_counts: MutableMapping[str, int] = Counter()
-                        if self.multiple_answers_per_question:
-                            for answer in (answer_dict["answer"] for answer_dict in a["answers"]):
-                                answer_counts[preprocess_answer(answer)] += 1
-                        else:
-                            answer_counts[preprocess_answer(a["multiple_choice_answer"])] = 1
-                        answers_by_question_id[str(qid)] = answer_counts
-                    logger.info("Caching annotation answer counts to %s", cache.path)
-                    with cache.writer() as f:
-                        json.dump(answers_by_question_id, f)
+                    answer_counts[preprocess_answer(a["multiple_choice_answer"])] = 1
+                answers_by_question_id[str(qid)] = answer_counts
         return answers_by_question_id
