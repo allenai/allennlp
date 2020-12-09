@@ -253,7 +253,7 @@ class Embedding(TokenEmbedder):
         vocab_namespace = vocab_namespace or self._vocab_namespace
         if not vocab_namespace:
             # It's not safe to default to "tokens" or any other namespace.
-            logging.info(
+            logger.info(
                 "Loading a model trained before embedding extension was implemented; "
                 "pass an explicit vocab namespace if you want to extend the vocabulary."
             )
@@ -294,7 +294,7 @@ class Embedding(TokenEmbedder):
             # It's better to warn here and not give error because there is no way to distinguish between
             # whether pretrained-file wasn't used during training or user forgot to pass / passed incorrect
             # mapping. Raising an error would prevent fine-tuning in the former case.
-            logging.warning(
+            logger.warning(
                 f"Embedding at model_path, {model_path} cannot locate the pretrained_file. "
                 f"{extra_info} If you are fine-tuning and want to use using pretrained_file for "
                 f"embedding extension, please pass the mapping by --embedding-sources argument."
