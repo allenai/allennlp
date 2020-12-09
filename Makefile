@@ -76,10 +76,6 @@ gpu-test : check-for-cuda
 benchmarks :
 	pytest -c benchmarks/pytest.ini benchmarks/
 
-.PHONY : test-transformer-toolkit
-test-transformer-toolkit :
-	pytest -v --color=yes -m "transformer_toolkit"
-
 #
 # Setup helpers
 #
