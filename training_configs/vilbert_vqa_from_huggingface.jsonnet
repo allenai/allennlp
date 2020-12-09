@@ -17,10 +17,10 @@ local vocabulary = if construct_vocab then {
 {
   "dataset_reader": {
     "type": "vqav2",
-    #"image_dir": "/mnt/tank/dirkg/data/vision/vqa/balanced_real",
-    #"feature_cache_dir": "/mnt/tank/dirkg/data/vision/balanced_real/feature_cache",
-    "image_dir": "/Users/dirkg/Documents/data/vision/vqa/balanced_real",
-    "feature_cache_dir": "/Users/dirkg/Documents/data/vision/vqa/balanced_real/feature_cache",
+    "image_dir": "/mnt/tank/dirkg/data/vision/vqa/balanced_real",
+    "feature_cache_dir": "/mnt/tank/dirkg/data/vision/balanced_real/feature_cache",
+    #"image_dir": "/Users/dirkg/Documents/data/vision/vqa/balanced_real",
+    #"feature_cache_dir": "/Users/dirkg/Documents/data/vision/vqa/balanced_real/feature_cache",
     "image_loader": "torch",
     "image_featurizer": "resnet_backbone",
     "region_detector": "faster_rcnn",
