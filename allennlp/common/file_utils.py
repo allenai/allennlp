@@ -571,6 +571,8 @@ class LocalCacheResource:
                 # read from cache
         else:
             with cache.writer() as f:
+                # do the computation
+                # ...
                 # write to cache
     ```
     """
