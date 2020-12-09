@@ -1,6 +1,6 @@
 local model_name = "bert-large-uncased";
 local effective_batch_size = 128;
-local gpu_batch_size = 128;
+local gpu_batch_size = 16;
 local num_gpus = 1;
 
 local construct_vocab = false;
@@ -35,7 +35,7 @@ local vocabulary = if construct_vocab then {
       }
     },
     #"max_instances": 1000,
-    "image_processing_batch_size": 32,
+    "image_processing_batch_size": 16,
     "answer_vocab": if construct_vocab then null else vocabulary,
     "run_image_feature_extraction": !construct_vocab,
     "multiple_answers_per_question": !construct_vocab
