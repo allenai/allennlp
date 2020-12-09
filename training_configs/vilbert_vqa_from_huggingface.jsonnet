@@ -63,7 +63,9 @@ local vocabulary = if construct_vocab then {
     "text_biattention_id": [18, 19, 20, 21, 22, 23],
     "text_fixed_layer": 0,
     "image_fixed_layer": 0,
-    "fusion_method": "mul"
+    "fusion_method": "mul",
+    "ignore_text": false, # debug setting
+    "ignore_image": false, # debug setting
   },
   "data_loader": {
     "batch_size": gpu_batch_size,

@@ -54,6 +54,9 @@ class VisionTextModel(Model):
         dropout: float = 0.1,
         label_namespace: str = "labels",
         is_multilabel: bool = False,
+        *,
+        ignore_text: bool = False,
+        ignore_image: bool = False
     ) -> None:
 
         super().__init__(vocab)
@@ -74,6 +77,8 @@ class VisionTextModel(Model):
         self.dropout = torch.nn.Dropout(dropout)
 
         self.is_multilabel = is_multilabel
+        self.ignore_text = ignore_text
+        self.ignore_images = ignore_image
 
     @classmethod
     def from_huggingface_model_name(
@@ -96,6 +101,9 @@ class VisionTextModel(Model):
         image_fixed_layer: int,
         pooled_dropout: float = 0.1,
         fusion_method: str = "sum",
+        *,
+        ignore_text: bool = False,
+        ignore_image: bool = False
     ):
         transformer = AutoModel.from_pretrained(model_name)
 
@@ -161,6 +169,8 @@ class VisionTextModel(Model):
             pooled_output_dim=pooled_output_dim,
             fusion_method=fusion_method,
             dropout=pooled_dropout,
+            ignore_text=ignore_text,
+            ignore_image=ignore_image
         )
 
     @overrides
@@ -192,6 +202,26 @@ class VisionTextModel(Model):
         label_weights : `Optional[Tensor]`
 
         """
+
+        if self.ignore_images:
+            box_features = torch.zeros_like(box_features)
+            box_coordinates = torch.zeros_like(box_coordinates)
+            box_coordinates[..., 2] = 1
+            box_coordinates[..., 3] = 1
+            box_mask = torch.ones_like(box_mask)
+
+        if self.ignore_text:
+            dummy_text = {}
+            for embedder_name, tensor_dict in text.items():
+                dummy_tensor_dict = {}
+                for tensor_name, tensor in tensor_dict.items():
+                    if "mask" in tensor_name:
+                        tensor = torch.ones_like(tensor)
+                    else:
+                        tensor = torch.zeros_like(tensor)
+                    dummy_tensor_dict[tensor_name] = tensor
+                dummy_text[embedder_name] = dummy_tensor_dict
+            text = dummy_text
 
         batch_size, _, feature_size = box_features.size()
 

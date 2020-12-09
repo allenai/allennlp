@@ -48,6 +48,9 @@ class VqaVilbert(VisionTextModel):
         fusion_method: str = "sum",
         dropout: float = 0.1,
         label_namespace: str = "answers",
+        *,
+        ignore_text: bool = False,
+        ignore_image: bool = False
     ) -> None:
         super().__init__(
             vocab,
@@ -59,6 +62,8 @@ class VqaVilbert(VisionTextModel):
             dropout,
             label_namespace,
             is_multilabel=True,
+            ignore_text=ignore_text,
+            ignore_image=ignore_image
         )
 
         self.loss = torch.nn.BCELoss()
