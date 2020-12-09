@@ -181,6 +181,20 @@ class MultiProcessDataLoader(DataLoader):
         self.max_instances_in_memory = max_instances_in_memory
         self.start_method = start_method
 
+        # To make sure we have some backpressure in the worker queues we try to set
+        # reasonable defaults for the maximum size of these queues.
+        # They have to be big enough that is doesn't hurt performance, but small enough
+        # that they don't take up too many resources when there is a bottleneck on the
+        # consuming end of a queue.
+        self._max_instance_queue_size = (
+            None if max_instances_in_memory is None else max_instances_in_memory * 4
+        )
+        self._max_batch_queue_size = (
+            None
+            if max_instances_in_memory is None
+            else 4 * max_instances_in_memory // (batch_size or 1)
+        )
+
         # If max_instances_in_memory is not given, we'll keep a cache of all instances in this list.
         self._instances: Optional[List[Instance]] = None
         # Keeps track of state when `batches_per_epoch` is used.
@@ -260,7 +274,11 @@ class MultiProcessDataLoader(DataLoader):
                     yield instance
             else:
                 ctx = mp.get_context(self.start_method)
-                queue: mp.JoinableQueue = ctx.JoinableQueue()
+                queue: mp.JoinableQueue = (
+                    ctx.JoinableQueue()
+                    if self._max_instance_queue_size is None
+                    else ctx.JoinableQueue(maxsize=self._max_instance_queue_size)
+                )
                 workers = self._start_instance_workers(queue, ctx)
 
                 try:
@@ -282,7 +300,11 @@ class MultiProcessDataLoader(DataLoader):
         else:
             ctx = mp.get_context(self.start_method)
 
-            queue: mp.JoinableQueue = ctx.JoinableQueue()
+            queue: mp.JoinableQueue = (
+                ctx.JoinableQueue()
+                if self._max_batch_queue_size is None
+                else ctx.JoinableQueue(maxsize=self._max_batch_queue_size)
+            )
             workers = self._start_batch_workers(queue, ctx)
 
             try:
@@ -329,7 +351,11 @@ class MultiProcessDataLoader(DataLoader):
         # calling `queue.task_done()` times the number of workers will
         # call the `queue.join()` to return, and each worker should exit on its own.
         for _ in range(len(workers)):
-            queue.task_done()
+            try:
+                queue.task_done()
+            except ValueError:
+                # This happens if a worker died early.
+                break
         # If for some reason the workers don't exit properly, we go through and terminate
         # them anyway.
         for worker in workers:
@@ -412,15 +438,25 @@ class MultiProcessDataLoader(DataLoader):
             max_instances_in_memory = max(
                 1, self.max_instances_in_memory // max(self.num_workers, 1)
             )
+
+            if max_instances_in_memory > 1 and self.batch_size is not None and self.batch_size > 1:
+                # Make sure max_instances_in_memory is a multiple of `batch_size`.
+                max_instances_in_memory = (
+                    (max_instances_in_memory + self.batch_size - 1) // self.batch_size
+                ) * self.batch_size
+
             if self.shuffle:
                 instance_iterator = shuffle_iterable(
                     instance_iterator,
                     max_instances_in_memory,
                 )
+
             instance_chunks: Iterable[List[Instance]] = lazy_groups_of(
                 instance_iterator, max_instances_in_memory
             )
         else:
+            # At this point we've already loaded the instances in memory and indexed them,
+            # so this won't take long.
             instance_chunks = [list(instance_iterator)]
             if self.shuffle:
                 random.shuffle(instance_chunks[0])
