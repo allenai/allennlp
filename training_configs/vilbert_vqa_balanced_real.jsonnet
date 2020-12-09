@@ -17,11 +17,11 @@ local vocabulary = if construct_vocab then {
 {
   "dataset_reader": {
     "type": "vqav2",
-    "image_dir": "/mnt/tank/dirkg/data/vision/vqa",
-    "feature_cache_dir": "/mnt/tank/dirkg/data/vision/feature_cache",
-    #"image_dir": "/Users/dirkg/Documents/data/vision/vqa",
-    #"feature_cache_dir": "/Users/dirkg/Documents/data/vision/vqa/feature_cache",
-    "image_loader": "detectron",
+    "image_dir": "/mnt/tank/dirkg/data/vision/vqabalanced_real/",
+    "feature_cache_dir": "/mnt/tank/dirkg/data/vision/balanced_real/feature_cache",
+    #"image_dir": "/Users/dirkg/Documents/data/vision/vqa/balanced_real",
+    #"feature_cache_dir": "/Users/dirkg/Documents/data/vision/vqa/balanced_real/feature_cache",
+    "image_loader": "torch",
     "image_featurizer": "resnet_backbone",
     "region_detector": "faster_rcnn",
     "tokenizer": {
@@ -57,7 +57,7 @@ local vocabulary = if construct_vocab then {
       "dropout": 0.0
     },
     "image_embeddings": {
-      "feature_dim": 2048,
+      "feature_dim": 1024,
       "hidden_dim": 1024
     },
     "encoder": {
