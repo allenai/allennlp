@@ -38,8 +38,8 @@ class FakeModelForTestingInterpret(Model):
 
 
 class FakePredictorForTestingInterpret(TextClassifierPredictor):
-    def get_embedding_layer(self):
+    def get_interpretable_layer(self):
         return self._model.embedder
 
-    def get_text_field_embedder(self):
+    def get_interpretable_text_field_embedder(self):
         return self._model.embedder

@@ -92,7 +92,7 @@ class Hotflip(Attacker):
         final output embedding. We then group all of those output embeddings into an "embedding
         matrix".
         """
-        embedding_layer = self.predictor.get_embedding_layer()
+        embedding_layer = self.predictor.get_interpretable_layer()
         self.embedding_layer = embedding_layer
         if isinstance(embedding_layer, (Embedding, torch.nn.modules.sparse.Embedding)):
             # If we're using something that already has an only embedding matrix, we can just use
