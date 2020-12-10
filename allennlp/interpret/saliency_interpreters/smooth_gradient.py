@@ -8,7 +8,6 @@ from allennlp.common.util import JsonDict, sanitize
 from allennlp.data import Instance
 from allennlp.interpret.saliency_interpreters.saliency_interpreter import SaliencyInterpreter
 from allennlp.predictors import Predictor
-from allennlp.nn import util
 
 
 @SaliencyInterpreter.register("smooth-gradient")
@@ -64,7 +63,7 @@ class SmoothGradient(SaliencyInterpreter):
             output.add_(noise)
 
         # Register the hook
-        embedding_layer = util.find_embedding_layer(self.predictor._model)
+        embedding_layer = self.predictor.get_interpretable_layer()
         handle = embedding_layer.register_forward_hook(forward_hook)
         return handle
 
