@@ -69,7 +69,7 @@ def sanitize(x: Any) -> Any:
     can be serialized into JSON.
     """
     # Import here to avoid circular references
-    from allennlp.data.tokenizers.token import Token
+    from allennlp.data.tokenizers import Token
 
     if isinstance(x, (str, float, int, bool)):
         # x is already serializable

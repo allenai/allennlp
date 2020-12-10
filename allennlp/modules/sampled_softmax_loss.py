@@ -155,7 +155,7 @@ class SampledSoftmaxLoss(torch.nn.Module):
 
         if embeddings.shape[0] == 0:
             # empty batch
-            return torch.tensor(0.0).to(embeddings.device)
+            return torch.tensor(0.0, device=embeddings.device)
 
         if not self.training:
             return self._forward_eval(embeddings, targets)
