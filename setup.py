@@ -65,6 +65,7 @@ setup(
         "scipy",
         "pytest",
         "transformers>=3.4,<4.1",
+        "sentencepiece",
         "jsonpickle",
         "dataclasses;python_version<'3.7'",
         "filelock>=3.0,<3.1",
