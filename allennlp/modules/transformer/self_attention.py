@@ -4,6 +4,7 @@ import torch
 from allennlp.common import FromParams
 from allennlp.modules.attention import Attention
 from allennlp.modules.transformer.transformer_module import TransformerModule
+from allennlp.nn import util as nn_util
 
 
 class SelfAttention(TransformerModule, FromParams):
@@ -72,6 +73,17 @@ class SelfAttention(TransformerModule, FromParams):
         x = x.view(*new_x_shape)
         return x.permute(0, 2, 1, 3)
 
+    @staticmethod
+    def _apply_mask(values: torch.FloatTensor, mask: torch.BoolTensor) -> torch.FloatTensor:
+        if len(mask.shape) == 2:
+            # We create a 4D attention mask from a 2D tensor mask.
+            # The shape is `batch_size x 1 x 1 x seq_len` which is broadcast
+            # to `batch_size x num_attention_heads x seq_len x seq_len`
+            mask = mask.unsqueeze(1).unsqueeze(2)
+        # `mask==1` to convert float tensors.
+        mask = (~(mask == 1)) * nn_util.min_value_of_dtype(values.dtype)
+        return values + mask
+
     def forward(
         self,
         query_states: torch.Tensor,
@@ -99,9 +111,6 @@ class SelfAttention(TransformerModule, FromParams):
         if value_states is None:
             value_states = query_states
 
-        batch_size = query_states.size(0)
-        k_length = key_states.size(1)
-
         mixed_query_layer = self.query(query_states)
         mixed_key_layer = self.key(key_states)
         mixed_value_layer = self.value(value_states)
@@ -113,13 +122,8 @@ class SelfAttention(TransformerModule, FromParams):
         attention_scores = self.attn(query_layer, key_layer.transpose(-1, -2))
 
         if attention_mask is not None:
-            mask_reshp = (batch_size, 1, 1, k_length)
-            attention_mask = (attention_mask == 0).view(mask_reshp).expand_as(
-                attention_scores
-            ) * -10e5
-            attention_scores = attention_scores + attention_mask
+            attention_scores = self._apply_mask(attention_scores, attention_mask)
 
-        # Normalize the attention scores to probabilities.
         attention_probs = torch.nn.Softmax(dim=-1)(attention_scores)
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.

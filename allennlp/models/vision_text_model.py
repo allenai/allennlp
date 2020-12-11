@@ -185,24 +185,21 @@ class VisionTextModel(Model):
 
         # All batch instances will always have the same number of images and boxes, so no masking
         # is necessary, and this is just a tensor of ones.
-        image_attention_mask = torch.ones_like(box_coordinates[:, :, 0], dtype=torch.bool)
+        image_attention_mask = torch.ones_like(box_coordinates[:, :, 0])
 
         # (batch_size, num_tokens, embedding_dim)
         embedding_output = self.embeddings(token_ids, token_type_ids)
         num_tokens = embedding_output.size(1)
 
-        # We create a 3D attention mask from a 2D tensor mask.
-        # Sizes are [batch_size, 1, 1, to_seq_length]
-        # So we can broadcast to [batch_size, num_heads, from_seq_length, to_seq_length]
         # this attention mask is more simple than the triangular masking of
         # causal attention used in OpenAI GPT, we just need to prepare the
         # broadcast dimension here.
         if attention_mask is not None:
-            extended_attention_mask = attention_mask.unsqueeze(1).unsqueeze(2)
+            extended_attention_mask = attention_mask
         else:
             extended_attention_mask = None
 
-        extended_image_attention_mask = image_attention_mask.unsqueeze(1).unsqueeze(2)
+        extended_image_attention_mask = image_attention_mask
 
         extended_co_attention_mask = torch.zeros(
             batch_size,
