@@ -2,10 +2,8 @@ import torch
 
 from allennlp.common import FromParams
 from allennlp.modules.attention import Attention
-
-# from allennlp.modules.transformer.attention_scores import ATTN_MAP
-
 from allennlp.modules.transformer.transformer_module import TransformerModule
+from allennlp.nn import util as nn_util
 
 
 class BiModalAttention(TransformerModule, FromParams):
@@ -14,6 +12,39 @@ class BiModalAttention(TransformerModule, FromParams):
     [ViLBERT: Pretraining Task-Agnostic Visiolinguistic Representations
     for Vision-and-Language Tasks (Lu et al, 2019)]
     (https://api.semanticscholar.org/CorpusID:199453025).
+
+    From the paper:
+
+    "The keys and values from each modality are passed as input to the
+    other modality’s multi-headed attention block. Consequentially, the
+    attention block produces attention-pooled features for each modality
+    conditioned on the other."
+
+    For example, considering the case when the first modality is image,
+    and the second modality is language, the module performs
+    "image-conditioned language attention in the visual stream and
+    language-conditioned image attention in the linguistic stream."
+
+    # Parameters
+
+    hidden_size1 : `int`
+        The input hidden dim for the first modality.
+    hidden_size2 : `int`
+        The input hidden dim for the second modality.
+    combined_hidden_size : `int`
+        The output hidden dim for both modalities; it should be a multiple
+        of `num_attention_heads`.
+    num_attention_heads : `int`
+        The number of attention heads.
+    dropout1 : `float` (default = `0.0`)
+        The dropout probability for the first modality stream.
+    dropout2 : `float` (default = `0.0`)
+        The dropout probability for the second modality stream.
+    scoring_func1 : `str` (default = `scaled_dot_product`)
+        The name of the attention-calculating function to be used for the first modality.
+    scoring_func2 : `str` (default = `scaled_dot_product`)
+        The name of the attention-calculating function to be used for the second modality.
+        Eg. `additive`, `linear`, etc. For a complete list, please check :mod:`allennlp.modules.attention`.
     """
 
     def __init__(
@@ -22,8 +53,8 @@ class BiModalAttention(TransformerModule, FromParams):
         hidden_size2: int,
         combined_hidden_size: int,
         num_attention_heads: int,
-        dropout1: float,
-        dropout2: float,
+        dropout1: float = 0.0,
+        dropout2: float = 0.0,
         scoring_func1: str = "scaled_dot_product",
         scoring_func2: str = "scaled_dot_product",
     ):
@@ -36,7 +67,12 @@ class BiModalAttention(TransformerModule, FromParams):
 
         self.num_attention_heads = num_attention_heads
         self.attention_head_size = int(combined_hidden_size / num_attention_heads)
+
+        # This is basically the `combined_hidden_size`, since we already ensure
+        # that `combined_hidden_size` is divisible by `num_attention_heads`.
         self.all_head_size = self.num_attention_heads * self.attention_head_size
+
+        # First modality:
 
         self.query1 = torch.nn.Linear(hidden_size1, self.all_head_size)
         self.key1 = torch.nn.Linear(hidden_size1, self.all_head_size)
@@ -51,6 +87,8 @@ class BiModalAttention(TransformerModule, FromParams):
             self.attn1 = Attention.by_name(self.scoring_func1)()
 
         self.dropout1 = torch.nn.Dropout(dropout1)
+
+        # Second modality:
 
         self.query2 = torch.nn.Linear(hidden_size2, self.all_head_size)
         self.key2 = torch.nn.Linear(hidden_size2, self.all_head_size)
@@ -74,6 +112,11 @@ class BiModalAttention(TransformerModule, FromParams):
         x = x.view(*new_x_shape)
         return x.permute(0, 2, 1, 3)
 
+    @staticmethod
+    def _apply_mask(values: torch.FloatTensor, mask: torch.BoolTensor) -> torch.FloatTensor:
+        mask = (~mask) * nn_util.min_value_of_dtype(values.dtype)
+        return values + mask
+
     def forward(
         self,
         input_tensor1,
@@ -83,8 +126,33 @@ class BiModalAttention(TransformerModule, FromParams):
         co_attention_mask=None,
         use_co_attention_mask=False,
     ):
+        """
+        input_tensor1 : `torch.Tensor`
+            Shape `batch_size x seq_len1 x hidden_dim1`
+            where `seq_len1` can be the sequence length
+            when the modality is text, or the number of
+            regions when the modality is image.
+        input_tensor2 : `torch.Tensor`
+            Shape `batch_size x seq_len2 x hidden_dim2`
+            where `seq_len2` can be the sequence length
+            when the modality is text, or the number of
+            regions when the modality is image.
+        attention_mask1 : `torch.BoolTensor`, optional
+            Shape `batch_size x seq_len`
+        attention_mask : `torch.BoolTensor`, optional
+            Shape `batch_size x seq_len`
+        co_attention_mask : `torch.Tensor`, optional
+            Shape `batch_size x seq_len1 x seq_len2 x all_head_size`
+            This mask is for cases when you already have some prior information
+            about the interaction between the two modalities. For example,
+            if you know which words correspond to which regions in the image,
+            this mask can be applied to limit the attention given the bias.
+        use_co_attention_mask : `bool`
+            # TODO: is this flag necessary?
+            Whether to use co_attention_mask or not, default = `False`.
+        """
 
-        # for first modality.
+        # for the first modality:
         mixed_query_layer1 = self.query1(input_tensor1)
         mixed_key_layer1 = self.key1(input_tensor1)
         mixed_value_layer1 = self.value1(input_tensor1)
@@ -93,7 +161,7 @@ class BiModalAttention(TransformerModule, FromParams):
         key_layer1 = self._transpose_for_scores(mixed_key_layer1)
         value_layer1 = self._transpose_for_scores(mixed_value_layer1)
 
-        # for second modality:
+        # for the second modality:
         mixed_query_layer2 = self.query2(input_tensor2)
         mixed_key_layer2 = self.key2(input_tensor2)
         mixed_value_layer2 = self.value2(input_tensor2)
@@ -102,13 +170,15 @@ class BiModalAttention(TransformerModule, FromParams):
         key_layer2 = self._transpose_for_scores(mixed_key_layer2)
         value_layer2 = self._transpose_for_scores(mixed_value_layer2)
 
+        # Conditioning the second modality on the first one.
         attention_scores1 = self.attn1(query_layer2, key_layer1.transpose(-1, -2))
         if attention_mask1 is not None:
-            attention_scores1 = attention_scores1 + attention_mask1
+            attention_scores1 = self._apply_mask(attention_scores1, attention_mask1)
         if use_co_attention_mask:
-            attention_scores1 = attention_scores1 + co_attention_mask.permute(0, 1, 3, 2)
+            attention_scores1 = self._apply_mask(
+                attention_scores1, co_attention_mask.permute(0, 1, 3, 2)
+            )
 
-        # Normalize the attention scores to probabilities.
         attention_probs1 = torch.nn.Softmax(dim=-1)(attention_scores1)
 
         # This is actually dropping out entire tokens to attend to, which might
@@ -120,14 +190,14 @@ class BiModalAttention(TransformerModule, FromParams):
         new_context_layer_shape1 = context_layer1.size()[:-2] + (self.all_head_size,)
         context_layer1 = context_layer1.view(*new_context_layer_shape1)
 
+        # Conditioning the first modality on the second one.
         attention_scores2 = self.attn2(query_layer1, key_layer2.transpose(-1, -2))
         # we can comment this line for single flow.
         if attention_mask2 is not None:
-            attention_scores2 = attention_scores2 + attention_mask2
+            attention_scores2 = self._apply_mask(attention_scores2, attention_mask2)
         if use_co_attention_mask:
-            attention_scores2 = attention_scores2 + co_attention_mask
+            attention_scores2 = self._apply_mask(attention_scores2, co_attention_mask)
 
-        # Normalize the attention scores to probabilities.
         attention_probs2 = torch.nn.Softmax(dim=-1)(attention_scores2)
 
         # This is actually dropping out entire tokens to attend to, which might
