@@ -4,7 +4,6 @@ import torch
 from allennlp.common import FromParams
 from allennlp.modules.attention import Attention
 from allennlp.modules.transformer.transformer_module import TransformerModule
-from allennlp.nn import util as nn_util
 
 
 class SelfAttention(TransformerModule, FromParams):
@@ -81,7 +80,7 @@ class SelfAttention(TransformerModule, FromParams):
             # to `batch_size x num_attention_heads x seq_len x seq_len`
             mask = mask.unsqueeze(1).unsqueeze(2)
         # `mask==1` to convert float tensors.
-        mask = (~(mask == 1)) * nn_util.min_value_of_dtype(values.dtype)
+        mask = (~(mask == 1)) * -10e5  # to ensure that the model also works in half-precision mode.
         return values + mask
 
     def forward(
