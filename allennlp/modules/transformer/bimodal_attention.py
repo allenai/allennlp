@@ -119,7 +119,7 @@ class BiModalAttention(TransformerModule, FromParams):
             # to `batch_size x num_attention_heads x source_seq_len x target_seq_len`
             mask = mask.unsqueeze(1).unsqueeze(2)
         # `mask==1` to convert float tensors.
-        mask = (~(mask == 1)) * -10e5  # to ensure that the model also works in half-precision mode.
+        mask = (~(mask == 1)) * -10e5  # -10e5 to ensure that the model also works in half-precision mode.
         return values + mask
 
     def forward(
