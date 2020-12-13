@@ -3,6 +3,7 @@ import torch
 from allennlp.common import FromParams
 from allennlp.modules.attention import Attention
 from allennlp.modules.transformer.transformer_module import TransformerModule
+from allennlp.modules.transformer.util import apply_mask
 
 
 class BiModalAttention(TransformerModule, FromParams):
@@ -111,17 +112,6 @@ class BiModalAttention(TransformerModule, FromParams):
         x = x.view(*new_x_shape)
         return x.permute(0, 2, 1, 3)
 
-    @staticmethod
-    def _apply_mask(values: torch.FloatTensor, mask: torch.BoolTensor) -> torch.FloatTensor:
-        if len(mask.shape) == 2:
-            # We create a 4D attention mask from a 2D tensor mask.
-            # The shape is `batch_size x 1 x 1 x target_seq_len` which is broadcast
-            # to `batch_size x num_attention_heads x source_seq_len x target_seq_len`
-            mask = mask.unsqueeze(1).unsqueeze(2)
-        # `mask==1` to convert float tensors.
-        mask = (~(mask == 1)) * -10e5  # -10e5 to ensure that the model also works in half-precision mode.
-        return values + mask
-
     def forward(
         self,
         input_tensor1,
@@ -178,11 +168,9 @@ class BiModalAttention(TransformerModule, FromParams):
         # Conditioning the second modality on the first one.
         attention_scores1 = self.attn1(query_layer2, key_layer1.transpose(-1, -2))
         if attention_mask1 is not None:
-            attention_scores1 = self._apply_mask(attention_scores1, attention_mask1)
+            attention_scores1 = apply_mask(attention_scores1, attention_mask1)
         if use_co_attention_mask:
-            attention_scores1 = self._apply_mask(
-                attention_scores1, co_attention_mask.permute(0, 1, 3, 2)
-            )
+            attention_scores1 = apply_mask(attention_scores1, co_attention_mask.permute(0, 1, 3, 2))
 
         attention_probs1 = torch.nn.Softmax(dim=-1)(attention_scores1)
 
@@ -199,9 +187,9 @@ class BiModalAttention(TransformerModule, FromParams):
         attention_scores2 = self.attn2(query_layer1, key_layer2.transpose(-1, -2))
         # we can comment this line for single flow.
         if attention_mask2 is not None:
-            attention_scores2 = self._apply_mask(attention_scores2, attention_mask2)
+            attention_scores2 = apply_mask(attention_scores2, attention_mask2)
         if use_co_attention_mask:
-            attention_scores2 = self._apply_mask(attention_scores2, co_attention_mask)
+            attention_scores2 = apply_mask(attention_scores2, co_attention_mask)
 
         attention_probs2 = torch.nn.Softmax(dim=-1)(attention_scores2)
 

@@ -4,6 +4,7 @@ import torch
 from allennlp.common import FromParams
 from allennlp.modules.attention import Attention
 from allennlp.modules.transformer.transformer_module import TransformerModule
+from allennlp.modules.transformer.util import apply_mask
 
 
 class SelfAttention(TransformerModule, FromParams):
@@ -72,17 +73,6 @@ class SelfAttention(TransformerModule, FromParams):
         x = x.view(*new_x_shape)
         return x.permute(0, 2, 1, 3)
 
-    @staticmethod
-    def _apply_mask(values: torch.FloatTensor, mask: torch.BoolTensor) -> torch.FloatTensor:
-        if len(mask.shape) == 2:
-            # We create a 4D attention mask from a 2D tensor mask.
-            # The shape is `batch_size x 1 x 1 x seq_len` which is broadcast
-            # to `batch_size x num_attention_heads x seq_len x seq_len`
-            mask = mask.unsqueeze(1).unsqueeze(2)
-        # `mask==1` to convert float tensors.
-        mask = (~(mask == 1)) * -10e5  # to ensure that the model also works in half-precision mode.
-        return values + mask
-
     def forward(
         self,
         query_states: torch.Tensor,
@@ -121,7 +111,7 @@ class SelfAttention(TransformerModule, FromParams):
         attention_scores = self.attn(query_layer, key_layer.transpose(-1, -2))
 
         if attention_mask is not None:
-            attention_scores = self._apply_mask(attention_scores, attention_mask)
+            attention_scores = apply_mask(attention_scores, attention_mask)
 
         attention_probs = torch.nn.Softmax(dim=-1)(attention_scores)
         # This is actually dropping out entire tokens to attend to, which might
