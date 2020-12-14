@@ -30,7 +30,7 @@ class TestGQAReader(AllenNlpTestCase):
         assert len(instance["question"]) == 6
         question_tokens = [t.text for t in instance["question"]]
         assert question_tokens == ["What", "is", "hanging", "above", "the", "chalkboard?"]
-        assert instance["label"].label == "picture"
+        assert instance["labels"][0].label == "picture"
 
         batch = Batch(instances)
         batch.index_instances(Vocabulary())
@@ -66,7 +66,7 @@ class TestGQAReader(AllenNlpTestCase):
             "and",
             "round?",
         ]
-        assert instance["label"].label == "yes"
+        assert instance["labels"][0].label == "yes"
 
         batch = Batch(instances)
         batch.index_instances(Vocabulary())
