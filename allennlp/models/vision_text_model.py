@@ -56,7 +56,7 @@ class VisionTextModel(Model):
         is_multilabel: bool = False,
         *,
         ignore_text: bool = False,
-        ignore_image: bool = False
+        ignore_image: bool = False,
     ) -> None:
 
         super().__init__(vocab)
@@ -103,7 +103,7 @@ class VisionTextModel(Model):
         fusion_method: str = "sum",
         *,
         ignore_text: bool = False,
-        ignore_image: bool = False
+        ignore_image: bool = False,
     ):
         transformer = AutoModel.from_pretrained(model_name)
 
@@ -170,7 +170,7 @@ class VisionTextModel(Model):
             fusion_method=fusion_method,
             dropout=pooled_dropout,
             ignore_text=ignore_text,
-            ignore_image=ignore_image
+            ignore_image=ignore_image,
         )
 
     @overrides

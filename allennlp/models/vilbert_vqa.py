@@ -63,7 +63,7 @@ class VqaVilbert(VisionTextModel):
             label_namespace,
             is_multilabel=True,
             ignore_text=ignore_text,
-            ignore_image=ignore_image
+            ignore_image=ignore_image,
         )
 
         self.loss = torch.nn.BCELoss()
