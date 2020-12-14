@@ -4,6 +4,7 @@ import torch
 from allennlp.common import FromParams
 from allennlp.modules.attention import Attention
 from allennlp.modules.transformer.transformer_module import TransformerModule
+from allennlp.modules.transformer.util import apply_mask
 
 
 class SelfAttention(TransformerModule, FromParams):
@@ -99,9 +100,6 @@ class SelfAttention(TransformerModule, FromParams):
         if value_states is None:
             value_states = query_states
 
-        batch_size = query_states.size(0)
-        k_length = key_states.size(1)
-
         mixed_query_layer = self.query(query_states)
         mixed_key_layer = self.key(key_states)
         mixed_value_layer = self.value(value_states)
@@ -113,15 +111,9 @@ class SelfAttention(TransformerModule, FromParams):
         attention_scores = self.attn(query_layer, key_layer.transpose(-1, -2))
 
         if attention_mask is not None:
-            mask_reshp = (batch_size, 1, 1, k_length)
-            attention_mask = (attention_mask == 0).view(mask_reshp).expand_as(
-                attention_scores
-            ) * -10e5
-            attention_scores = attention_scores + attention_mask
+            attention_scores = apply_mask(attention_scores, attention_mask)
 
-        # Normalize the attention scores to probabilities.
         attention_probs = torch.nn.Softmax(dim=-1)(attention_scores)
-
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
         attention_probs = self.dropout(attention_probs)
@@ -130,7 +122,6 @@ class SelfAttention(TransformerModule, FromParams):
             attention_probs = attention_probs * head_mask
 
         context_layer = torch.matmul(attention_probs, value_layer)
-
         context_layer = context_layer.permute(0, 2, 1, 3).contiguous()
         new_context_layer_shape = context_layer.size()[:-2] + (self.all_head_size,)
         context_layer = context_layer.view(*new_context_layer_shape)
