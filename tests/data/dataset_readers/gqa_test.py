@@ -26,7 +26,7 @@ class TestGQAReader(AllenNlpTestCase):
         assert len(instances) == 1
 
         instance = instances[0]
-        assert len(instance.fields) == 5
+        assert len(instance.fields) == 6
         assert len(instance["question"]) == 6
         question_tokens = [t.text for t in instance["question"]]
         assert question_tokens == ["What", "is", "hanging", "above", "the", "chalkboard?"]
@@ -51,7 +51,7 @@ class TestGQAReader(AllenNlpTestCase):
         assert len(instances) == 2
 
         instance = instances[1]
-        assert len(instance.fields) == 5
+        assert len(instance.fields) == 6
         assert len(instance["question"]) == 10
         question_tokens = [t.text for t in instance["question"]]
         assert question_tokens == [
