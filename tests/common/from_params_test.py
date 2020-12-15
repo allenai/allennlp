@@ -851,6 +851,26 @@ class TestFromParams(AllenNlpTestCase):
         with pytest.raises(ConfigurationError, match="Extra parameters"):
             A.from_params(Params({"some_spurious": "key", "value": "pairs"}))
 
+    def test_explicit_kwargs_always_passed_to_constructor(self):
+        class Base(FromParams):
+            def __init__(self, lazy: bool = False, x: int = 0) -> None:
+                self.lazy = lazy
+                self.x = x
+
+        class A(Base):
+            def __init__(self, **kwargs) -> None:
+                assert "lazy" in kwargs
+                super().__init__(**kwargs)
+
+        A.from_params(Params({"lazy": False}))
+
+        class B(Base):
+            def __init__(self, **kwargs) -> None:
+                super().__init__(lazy=True, **kwargs)
+
+        b = B.from_params(Params({}))
+        assert b.lazy is True
+
     def test_raises_when_there_are_no_implementations(self):
         class A(Registrable):
             pass
@@ -922,6 +942,16 @@ class TestFromParams(AllenNlpTestCase):
         assert bar.b == "hi"
         assert bar.c == {"2": "3"}
         assert bar.d == 0
+
+        class Baz(Foo):
+            def __init__(self, a: int, b: Optional[str] = "a", **kwargs) -> None:
+                super().__init__(a, b=b, **kwargs)
+
+        baz = Baz.from_params(Params({"a": 2, "b": None}))
+        assert baz.b is None
+
+        baz = Baz.from_params(Params({"a": 2}))
+        assert baz.b == "a"
 
     def test_from_params_base_class_kwargs_crashes_if_params_not_handled(self):
         class Bar(FromParams):

@@ -13,7 +13,7 @@ import torch
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.data.fields.sequence_field import SequenceField
-from allennlp.data.tokenizers.token import Token
+from allennlp.data.tokenizers import Token
 from allennlp.data.token_indexers.token_indexer import TokenIndexer, IndexedTokenList
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.nn import util

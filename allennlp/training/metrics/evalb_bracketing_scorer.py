@@ -155,9 +155,9 @@ class EvalbBracketingScorer(Metric):
 
         if is_distributed():
             device = torch.device("cuda" if dist.get_backend() == "nccl" else "cpu")
-            correct_predicted_brackets = torch.tensor(_correct_predicted_brackets).to(device)
-            predicted_brackets = torch.tensor(_predicted_brackets).to(device)
-            gold_brackets = torch.tensor(_gold_brackets).to(device)
+            correct_predicted_brackets = torch.tensor(_correct_predicted_brackets, device=device)
+            predicted_brackets = torch.tensor(_predicted_brackets, device=device)
+            gold_brackets = torch.tensor(_gold_brackets, device=device)
             dist.all_reduce(correct_predicted_brackets, op=dist.ReduceOp.SUM)
             dist.all_reduce(predicted_brackets, op=dist.ReduceOp.SUM)
             dist.all_reduce(gold_brackets, op=dist.ReduceOp.SUM)

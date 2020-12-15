@@ -5,7 +5,7 @@ import torch
 
 from allennlp.common.util import pad_sequence_to_length
 from allennlp.data.vocabulary import Vocabulary
-from allennlp.data.tokenizers.token import Token
+from allennlp.data.tokenizers import Token
 from allennlp.data.fields.field import Field
 
 

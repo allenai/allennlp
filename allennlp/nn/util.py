@@ -1548,7 +1548,6 @@ def add_sentence_boundary_token_ids(
         The new mask for the tensor, taking into account the appended tokens
         marking the beginning and end of the sentence.
     """
-    # TODO: matthewp, profile this transfer
     sequence_lengths = mask.sum(dim=1).detach().cpu().numpy()
     tensor_shape = list(tensor.data.shape)
     new_shape = list(tensor_shape)
@@ -1603,7 +1602,6 @@ def remove_sentence_boundaries(
     new_mask : `torch.BoolTensor`
         The new mask for the tensor of shape `(batch_size, timesteps - 2)`.
     """
-    # TODO: matthewp, profile this transfer
     sequence_lengths = mask.sum(dim=1).detach().cpu().numpy()
     tensor_shape = list(tensor.data.shape)
     new_shape = list(tensor_shape)
