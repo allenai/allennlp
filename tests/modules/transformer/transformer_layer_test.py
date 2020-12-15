@@ -8,12 +8,12 @@ from allennlp.common.testing import assert_equal_parameters
 from allennlp.modules.transformer import AttentionLayer, TransformerLayer
 from allennlp.common.testing import AllenNlpTestCase
 
-from transformers.configuration_bert import BertConfig
-from transformers.modeling_bert import BertAttention, BertLayer
-from transformers.configuration_roberta import RobertaConfig
-from transformers.modeling_roberta import RobertaAttention, RobertaLayer
-from transformers.configuration_electra import ElectraConfig
-from transformers.modeling_electra import ElectraAttention, ElectraLayer
+from transformers.models.bert.configuration_bert import BertConfig
+from transformers.models.bert.modeling_bert import BertAttention, BertLayer
+from transformers.models.roberta.configuration_roberta import RobertaConfig
+from transformers.models.roberta.modeling_roberta import RobertaAttention, RobertaLayer
+from transformers.models.electra.configuration_electra import ElectraConfig
+from transformers.models.electra.modeling_electra import ElectraAttention, ElectraLayer
 
 ATTENTION_PARAMS_DICT = {
     "hidden_size": 6,
