@@ -9,12 +9,12 @@ from allennlp.common.testing import assert_equal_parameters
 from allennlp.modules.transformer import TransformerBlock
 from allennlp.common.testing import AllenNlpTestCase
 
-from transformers.configuration_bert import BertConfig
-from transformers.modeling_bert import BertEncoder
-from transformers.configuration_roberta import RobertaConfig
-from transformers.modeling_roberta import RobertaEncoder
-from transformers.configuration_electra import ElectraConfig
-from transformers.modeling_electra import ElectraEncoder
+from transformers.models.bert.configuration_bert import BertConfig
+from transformers.models.bert.modeling_bert import BertEncoder
+from transformers.models.roberta.configuration_roberta import RobertaConfig
+from transformers.models.roberta.modeling_roberta import RobertaEncoder
+from transformers.models.electra.configuration_electra import ElectraConfig
+from transformers.models.electra.modeling_electra import ElectraEncoder
 
 PARAMS_DICT = {
     "num_hidden_layers": 3,

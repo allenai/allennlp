@@ -13,7 +13,7 @@ from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path
 from allennlp.common.util import lazy_groups_of
 from allennlp.data.instance import Instance
-from allennlp.data.tokenizers.token import Token
+from allennlp.data.tokenizers.token_class import Token
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.data.batch import Batch
 from allennlp.data.fields import TextField

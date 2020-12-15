@@ -5,6 +5,7 @@ from typing import Dict, List, Optional
 from overrides import overrides
 import numpy as np
 import torch
+from transformers import AutoModel
 
 from allennlp.data.fields.text_field import TextFieldTensors
 from allennlp.data.vocabulary import Vocabulary
@@ -15,8 +16,6 @@ from allennlp.modules.transformer import (
     BiModalEncoder,
     TransformerPooler,
 )
-
-from transformers.modeling_auto import AutoModel
 
 logger = logging.getLogger(__name__)
 
@@ -107,7 +106,7 @@ class VisionTextModel(Model):
         if hasattr(transformer.config, "embedding_size"):
             config = transformer.config
 
-            from transformers.modeling_albert import AlbertModel
+            from transformers.models.albert.modeling_albert import AlbertModel
 
             if isinstance(transformer, AlbertModel):
                 linear_transform = deepcopy(transformer.encoder.embedding_hidden_mapping_in)
