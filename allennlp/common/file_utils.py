@@ -33,11 +33,13 @@ from zipfile import ZipFile, is_zipfile
 import tarfile
 import shutil
 import time
+import warnings
 
 import boto3
 import botocore
 from botocore.exceptions import ClientError, EndpointConnectionError
-from filelock import FileLock
+from filelock import FileLock as _FileLock
+from overrides import overrides
 import requests
 from requests.adapters import HTTPAdapter
 from requests.exceptions import ConnectionError
@@ -61,6 +63,38 @@ if os.path.exists(DEPRECATED_CACHE_DIRECTORY):
         f"Deprecated cache directory found ({DEPRECATED_CACHE_DIRECTORY}).  "
         f"Please remove this directory from your system to free up space."
     )
+
+
+class FileLock(_FileLock):
+    """
+    This is just a subclass of the `FileLock` class from the `filelock` library, except that
+    it adds an additional argument to the `__init__` method: `read_only_ok`.
+
+    By default this flag is `False`, which an exception will be thrown when a lock
+    can't be acquired due to lack of write permissions.
+    But if this flag is set to `True`, a warning will be emitted instead of an error when
+    the lock already exists but the lock can't be acquired because write access is blocked.
+    """
+
+    def __init__(
+        self, lock_file: Union[str, PathLike], timeout=-1, read_only_ok: bool = False
+    ) -> None:
+        super().__init__(str(lock_file), timeout=timeout)
+        self._read_only_ok = read_only_ok
+
+    @overrides
+    def acquire(self, timeout=None, poll_interval=0.05):
+        try:
+            super().acquire(timeout=timeout, poll_intervall=poll_interval)
+        except PermissionError:
+            if os.path.isfile(self._lock_file) and self._read_only_ok:
+                warnings.warn(
+                    f"Lacking permissions required to obtain lock '{self._lock_file}'. "
+                    "Race conditions are possible if other processes are writing to the same resource.",
+                    UserWarning,
+                )
+            else:
+                raise
 
 
 def _resource_to_filename(resource: str, etag: str = None) -> str:
@@ -583,7 +617,7 @@ def get_from_cache(url: str, cache_dir: Union[str, Path] = None) -> str:
     # on the call to `lock.acquire()` until the process currently holding the lock
     # releases it.
     logger.debug("waiting to acquire lock on %s", cache_path)
-    with FileLock(cache_path + ".lock"):
+    with FileLock(cache_path + ".lock", read_only_ok=True):
         if os.path.exists(cache_path):
             logger.info("cache of %s is up-to-date", url)
         else:
