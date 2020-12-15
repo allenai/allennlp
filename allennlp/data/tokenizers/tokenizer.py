@@ -2,7 +2,7 @@ from typing import List, Optional
 import logging
 
 from allennlp.common import Registrable
-from allennlp.data.tokenizers.token import Token
+from allennlp.data.tokenizers.token_class import Token
 
 
 logger = logging.getLogger(__name__)

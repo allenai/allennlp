@@ -99,4 +99,5 @@ Registrable._registry[Activation] = {
     "softsign": (torch.nn.Softsign, None),
     "tanhshrink": (torch.nn.Tanhshrink, None),
     "selu": (torch.nn.SELU, None),
+    "gelu": (torch.nn.GELU, None),
 }

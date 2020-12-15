@@ -1,7 +1,7 @@
-from collections import Counter
 import glob
 import os
 import tarfile
+from collections import Counter
 from typing import Tuple
 
 from allennlp.common.testing import AllenNlpTestCase
@@ -73,3 +73,20 @@ class TestShardedDatasetReader(AllenNlpTestCase):
 
     def test_sharded_read_archive(self):
         self.read_and_check_instances(str(self.archive_filename))
+
+    def test_attributes_inheritance(self):
+        # current reader has lazy set to true
+        base_reader = SequenceTaggingDatasetReader(lazy=True)
+        reader = ShardedDatasetReader(base_reader=base_reader)
+
+        assert (
+            reader.lazy
+        ), "The ShardedDatasetReader didn't inherit the 'lazy' attribute from base_reader"
+
+    def test_set_attributes_main(self):
+        base_reader = SequenceTaggingDatasetReader(lazy=True)
+        reader = ShardedDatasetReader(base_reader=base_reader, lazy=False)
+
+        assert (
+            not reader.lazy
+        ), "The ShardedDatasetReader inherited the 'lazy' attribute from base_reader. It should be False"

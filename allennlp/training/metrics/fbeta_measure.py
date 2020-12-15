@@ -142,7 +142,7 @@ class FBetaMeasure(Metric):
         # Watch it:
         # The total numbers of true positives under all _predicted_ classes are zeros.
         if true_positives_bins.shape[0] == 0:
-            true_positive_sum = torch.zeros(num_classes, device=predictions.device)
+            true_positive_sum = torch.zeros(num_classes, device=device)
         else:
             true_positive_sum = torch.bincount(
                 true_positives_bins.long(), minlength=num_classes
@@ -154,7 +154,7 @@ class FBetaMeasure(Metric):
         if pred_bins.shape[0] != 0:
             pred_sum = torch.bincount(pred_bins, minlength=num_classes).float()
         else:
-            pred_sum = torch.zeros(num_classes, device=predictions.device)
+            pred_sum = torch.zeros(num_classes, device=device)
 
         gold_labels_bins = gold_labels[mask].long()
         if gold_labels.shape[0] != 0:
@@ -165,9 +165,7 @@ class FBetaMeasure(Metric):
         self._total_sum += mask.sum().to(torch.float)
 
         if is_distributed():
-            true_positive_sum = torch.tensor(true_positive_sum).to(device)
-            pred_sum = torch.tensor(pred_sum).to(device)
-            true_sum = torch.tensor(true_sum).to(device)
+            true_positive_sum = torch.tensor(true_positive_sum, device=device)
             dist.all_reduce(true_positive_sum, op=dist.ReduceOp.SUM)
             dist.all_reduce(pred_sum, op=dist.ReduceOp.SUM)
             dist.all_reduce(true_sum, op=dist.ReduceOp.SUM)

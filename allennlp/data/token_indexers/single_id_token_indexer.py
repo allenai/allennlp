@@ -4,7 +4,7 @@ import itertools
 from overrides import overrides
 
 from allennlp.data.vocabulary import Vocabulary
-from allennlp.data.tokenizers.token import Token
+from allennlp.data.tokenizers import Token
 from allennlp.data.token_indexers.token_indexer import TokenIndexer, IndexedTokenList
 
 
