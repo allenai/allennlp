@@ -268,6 +268,11 @@ class TestFileUtils(AllenNlpTestCase):
         with open(filename, "r") as f:
             assert f.read().startswith("I mean, ")
 
+    def test_extract_with_external_symlink(self):
+        dangerous_file = self.FIXTURES_ROOT / "common" / "external_symlink.tar.gz"
+        with pytest.raises(ValueError):
+            cached_path(dangerous_file, extract_archive=True)
+
     def test_open_compressed(self):
         uncompressed_file = self.FIXTURES_ROOT / "embeddings/fake_embeddings.5d.txt"
         with open_compressed(uncompressed_file) as f:
