@@ -30,10 +30,6 @@ class ShardedDatasetReader(DatasetReader):
 
     Registered as a `DatasetReader` with name "sharded".
 
-    This class accepts all additional parameters of any `DatasetReader` class via `**kwargs`.
-    We give priority to the values set in the constructor for the instance of this class.
-    Optionally, we will automatically inherit attributes from the `base_reader` when required.
-
     # Parameters
 
     base_reader : `DatasetReader`
@@ -41,12 +37,6 @@ class ShardedDatasetReader(DatasetReader):
     """
 
     def __init__(self, base_reader: DatasetReader, **kwargs) -> None:
-        # ShardedDatasetReader is a wrapper for the original base_reader so some of the parameters like 'lazy'
-        # can be safely inherited. However, ShardedDatasetReader is a class instance of a DatasetReader as well.
-        # So we give priority to the parameters for the current instance stored in 'kwargs'.
-        # If not present, we check the ones in the base reader
-        kwargs["lazy"] = kwargs.get("lazy", base_reader.lazy)
-
         super().__init__(
             manual_distributed_sharding=True, manual_multi_process_sharding=True, **kwargs
         )
