@@ -1,9 +1,12 @@
 local model_name = "bert-large-uncased";
+local vocab_size = 30522;     // for bert-*-uncased models
+//local vocab_size = 28996;   // for bert-*-cased models
 local effective_batch_size = 128;
-local gpu_batch_size = 16;
+local gpu_batch_size = 32;
 local num_gpus = 1;
 
 local construct_vocab = false;
+local dataset = "balanced_real";
 
 local vocabulary = if construct_vocab then {
       // read the files to construct the vocab
@@ -11,16 +14,18 @@ local vocabulary = if construct_vocab then {
     } else {
       // read the constructed vocab
       "type": "from_files",
-      "directory": "https://storage.googleapis.com/allennlp-public-data/vqav2/vilbert_vqa_balanced_real.bert-large.vocab.tar.gz"
+      "directory": std.format(
+        "https://storage.googleapis.com/allennlp-public-data/vqav2/vilbert_vqa_%s.%s.vocab.tar.gz",
+        [dataset, model_name])
     };
 
 {
   "dataset_reader": {
     "type": "vqav2",
-    "image_dir": "/mnt/tank/dirkg/data/vision/vqa/balanced_real",
-    "feature_cache_dir": "/mnt/tank/dirkg/data/vision/balanced_real/feature_cache",
-    #"image_dir": "/Users/dirkg/Documents/data/vision/vqa/balanced_real",
-    #"feature_cache_dir": "/Users/dirkg/Documents/data/vision/vqa/balanced_real/feature_cache",
+    "image_dir": std.format("/mnt/tank/dirkg/data/vision/vqa/%s", dataset),
+    "feature_cache_dir": std.format("/mnt/tank/dirkg/data/vision/vqa/%s/feature_cache", dataset),
+    #"image_dir": std.format("/Users/dirkg/Documents/data/vision/vqa/%s", dataset),
+    #"feature_cache_dir": std.format("/Users/dirkg/Documents/data/vision/vqa/%s/feature_cache", dataset),
     "image_loader": "torch",
     "image_featurizer": "resnet_backbone",
     "region_detector": "faster_rcnn",
@@ -44,8 +49,8 @@ local vocabulary = if construct_vocab then {
     "answer_vocab": null    // make sure we don't skip unanswerable questions during validation
   },
   "vocabulary": vocabulary,
-  "train_data_path": ["balanced_real_train", "balanced_real_val[1000:]"],
-  "validation_data_path": "balanced_real_val[:1000]",
+  "train_data_path": [std.format("%s_train", dataset), std.format("%s_val[1000:]", dataset)],
+  "validation_data_path": std.format("%s_val[:1000]", dataset),
   "model": {
     "type": "vqa_vilbert_from_huggingface",
     "model_name": model_name,
@@ -70,7 +75,7 @@ local vocabulary = if construct_vocab then {
   "data_loader": {
     "batch_size": gpu_batch_size,
     "shuffle": true,
-    [if !construct_vocab then "max_instances_in_memory"]: 1024
+    //[if !construct_vocab then "max_instances_in_memory"]: 1024
   },
   [if num_gpus > 1 then "distributed"]: {
     "cuda_devices": std.range(0, num_gpus - 1)
@@ -85,13 +90,14 @@ local vocabulary = if construct_vocab then {
       "weight_decay": 0.01,
       "parameter_groups": [
         // [["bias", "LayerNorm\\.weight", "layer_norm\\.weight"], {"weight_decay": 0}], // can't use both at the same time
+        // smaller learning rate for the pretrained weights
         [["^embeddings\\.", "^encoder.layers1\\.", "^t_pooler\\."], {"lr": 4e-5}]
       ],
     },
     "learning_rate_scheduler": {
       "type": "linear_with_warmup",
-      "num_steps_per_epoch": std.ceil(658111 / $["data_loader"]["batch_size"] / $["trainer"]["num_gradient_accumulation_steps"]),
-      "warmup_steps": std.ceil(self.num_steps_per_epoch / 2),
+      //"num_steps_per_epoch": std.ceil(658111 / $["data_loader"]["batch_size"] / $["trainer"]["num_gradient_accumulation_steps"]),
+      "warmup_steps": 5000
     },
     "validation_metric": "+fscore",
     "patience": 5,
