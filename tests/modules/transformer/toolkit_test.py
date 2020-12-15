@@ -1,7 +1,6 @@
 import torch
 from overrides import overrides
-
-from transformers.modeling_albert import AlbertEmbeddings
+from transformers.models.albert.modeling_albert import AlbertEmbeddings
 
 from allennlp.common import cached_transformers
 from allennlp.common.testing import assert_equal_parameters

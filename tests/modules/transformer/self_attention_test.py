@@ -9,14 +9,14 @@ from allennlp.common.testing import assert_equal_parameters
 from allennlp.modules.transformer import SelfAttention
 from allennlp.common.testing import AllenNlpTestCase
 
-from transformers.configuration_bert import BertConfig
-from transformers.modeling_bert import BertSelfAttention
-from transformers.configuration_roberta import RobertaConfig
-from transformers.modeling_roberta import RobertaSelfAttention
-from transformers.configuration_electra import ElectraConfig
-from transformers.modeling_electra import ElectraSelfAttention
-from transformers.configuration_distilbert import DistilBertConfig
-from transformers.modeling_distilbert import MultiHeadSelfAttention
+from transformers.models.bert.configuration_bert import BertConfig
+from transformers.models.bert.modeling_bert import BertSelfAttention
+from transformers.models.roberta.configuration_roberta import RobertaConfig
+from transformers.models.roberta.modeling_roberta import RobertaSelfAttention
+from transformers.models.electra.configuration_electra import ElectraConfig
+from transformers.models.electra.modeling_electra import ElectraSelfAttention
+from transformers.models.distilbert.configuration_distilbert import DistilBertConfig
+from transformers.models.distilbert.modeling_distilbert import MultiHeadSelfAttention
 
 PARAMS_DICT = {
     "hidden_size": 6,

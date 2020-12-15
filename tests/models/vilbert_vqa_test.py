@@ -1,4 +1,4 @@
-from transformers.modeling_auto import AutoModel
+from transformers import AutoModel
 
 from allennlp.common.testing import ModelTestCase
 from allennlp.data import Vocabulary
