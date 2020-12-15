@@ -18,11 +18,6 @@ from transformers.modeling_electra import ElectraSelfAttention
 from transformers.configuration_distilbert import DistilBertConfig
 from transformers.modeling_distilbert import MultiHeadSelfAttention
 
-# from transformers.configuration_mobilebert import MobileBertConfig
-# from transformers.modeling_mobilebert import MobileBertSelfAttention
-# from transformers.configuration_t5 import T5Config
-# from transformers.modeling_t5 import T5LayerSelfAttention
-
 PARAMS_DICT = {
     "hidden_size": 6,
     "num_attention_heads": 2,
@@ -35,7 +30,7 @@ def get_modules(params_dict):
     params = copy.deepcopy(params_dict)
     params["attention_probs_dropout_prob"] = params.pop("dropout")
 
-    # bert, roberta, electra, layoutlm self attentions have the same code.
+    # bert, roberta, electra self attentions have the same code.
 
     torch.manual_seed(1234)
     hf_module = BertSelfAttention(BertConfig(**params))
@@ -56,20 +51,6 @@ def get_modules(params_dict):
     distilparams["attention_dropout"] = distilparams.pop("dropout")
     hf_module = MultiHeadSelfAttention(DistilBertConfig(**distilparams))
     modules["distilbert"] = hf_module
-
-    # torch.manual_seed(1234)
-    # mobileparams = copy.deepcopy(params_dict)
-    # mobileparams["true_hidden_size"] = mobileparams["hidden_size"]
-    # hf_module = MobileBertSelfAttention(MobileBertConfig(**params))
-    # modules["mobile_bert"] = hf_module
-
-    # torch.manual_seed(1234)
-    # t5params = copy.deepcopy(params_dict)
-    # t5params["num_heads"] = t5params.pop("num_attention_heads")
-    # t5params["d_model"] = t5params.pop("hidden_size")
-    # t5params["dropout_rate"] = t5params.pop("dropout")
-    # hf_module = T5LayerSelfAttention(T5Config(**t5params))
-    # modules["t5"] = hf_module
 
     return modules
 

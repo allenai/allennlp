@@ -56,7 +56,7 @@ class VisionTextModel(Model):
         is_multilabel: bool = False,
         *,
         ignore_text: bool = False,
-        ignore_image: bool = False
+        ignore_image: bool = False,
     ) -> None:
 
         super().__init__(vocab)
@@ -103,7 +103,7 @@ class VisionTextModel(Model):
         fusion_method: str = "sum",
         *,
         ignore_text: bool = False,
-        ignore_image: bool = False
+        ignore_image: bool = False,
     ):
         transformer = AutoModel.from_pretrained(model_name)
 
@@ -170,7 +170,7 @@ class VisionTextModel(Model):
             fusion_method=fusion_method,
             dropout=pooled_dropout,
             ignore_text=ignore_text,
-            ignore_image=ignore_image
+            ignore_image=ignore_image,
         )
 
     @overrides
@@ -239,20 +239,15 @@ class VisionTextModel(Model):
         embedding_output = self.embeddings(token_ids, token_type_ids)
         num_tokens = embedding_output.size(1)
 
-        # We create a 3D attention mask from a 2D tensor mask.
-        # Sizes are [batch_size, 1, 1, num_tokens]
-        # So we can broadcast to [batch_size, num_heads, from_seq_length, num_tokens]
         # this attention mask is more simple than the triangular masking of
         # causal attention used in OpenAI GPT, we just need to prepare the
         # broadcast dimension here.
         if attention_mask is not None:
-            # Shape: (batch_size, 1, 1, num_tokens)
-            extended_attention_mask = attention_mask.unsqueeze(1).unsqueeze(2)
+            extended_attention_mask = attention_mask
         else:
             extended_attention_mask = None
 
-        # Shape: (batch_size, 1, 1, num_boxes)
-        extended_image_attention_mask = box_mask.unsqueeze(1).unsqueeze(2)
+        extended_image_attention_mask = box_mask
 
         # Shape: (batch_size, feature_size, num_tokens)
         # TODO (epwalsh): Why all zeros?? This doesn't seem right.

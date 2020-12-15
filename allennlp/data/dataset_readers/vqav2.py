@@ -530,24 +530,6 @@ class VQAv2Reader(VisionReader):
     def apply_token_indexers(self, instance: Instance) -> None:
         instance["question"].token_indexers = self._token_indexers  # type: ignore
 
-    #  def _get_answers_by_question_id(self, split):
-    #      answers_by_question_id = {}
-    #      if split.annotations is not None:
-    #          logger.info("Calculating annotation answer counts...")
-    #          annotations_path = cached_path(split.annotations, extract_archive=True)
-    #          with open(annotations_path) as f:
-    #              annotations = json.load(f)
-    #          for a in annotations["annotations"]:
-    #              qid = a["question_id"]
-    #              answer_counts: MutableMapping[str, int] = Counter()
-    #              if self.multiple_answers_per_question:
-    #                  for answer in (answer_dict["answer"] for answer_dict in a["answers"]):
-    #                      answer_counts[preprocess_answer(answer)] += 1
-    #              else:
-    #                  answer_counts[preprocess_answer(a["multiple_choice_answer"])] = 1
-    #              answers_by_question_id[str(qid)] = answer_counts
-    #      return answers_by_question_id
-
     def _get_answers_by_question_id(self, split):
         answers_by_question_id = {}
         if split.annotations is not None:

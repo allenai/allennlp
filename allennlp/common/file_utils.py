@@ -38,6 +38,7 @@ from zipfile import ZipFile, is_zipfile
 import tarfile
 import shutil
 import pickle
+import warnings
 
 import numpy as np
 import time
@@ -426,9 +427,21 @@ class TensorCache(MutableMapping[str, Tensor], ABC):
             until it is really needed.
         """
         cpu_count = os.cpu_count() or 1
-        self.read_only = read_only
+        if os.path.exists(filename):
+            if os.path.isfile(filename):
+                # If the file is not writable, set read_only to True, but issue a warning.
+                if not os.access(filename, os.W_OK):
+                    if not read_only:
+                        warnings.warn(
+                            f"File '{filename}' is read-only, so cache will be read-only",
+                            UserWarning,
+                        )
+                    read_only = True
+            else:
+                # If it's not a file, raise an error.
+                raise ValueError("Expect a file, found a directory instead")
         self.lmdb_env = lmdb.open(
-            filename,
+            str(filename),
             subdir=False,
             map_size=map_size,
             max_readers=cpu_count * 2,
@@ -448,6 +461,10 @@ class TensorCache(MutableMapping[str, Tensor], ABC):
         # cache at the same time. We can guarantee though that it is up to date as long as processes either
         # write new values, or read existing ones.
         self.cache_cache: MutableMapping[str, Tensor] = WeakValueDictionary()
+
+    @property
+    def read_only(self) -> bool:
+        return self.lmdb_env.flags()["readonly"]
 
     def __contains__(self, key: object):
         if not isinstance(key, str):
