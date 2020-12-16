@@ -4,7 +4,7 @@ import pytest
 
 from allennlp.data.instance import Instance
 from allennlp.data.dataset_readers import DatasetReader
-from allennlp.data.data_loaders import MultiProcessDataLoader
+from allennlp.data.data_loaders import MultiProcessDataLoader, WorkerError
 from allennlp.data.fields import TextField, MetadataField
 from allennlp.data.tokenizers import PretrainedTransformerTokenizer
 from allennlp.data.token_indexers import PretrainedTransformerIndexer
@@ -84,7 +84,7 @@ def test_error_raised_when_text_fields_contain_token_indexers(max_instances_in_m
     killed.
     """
 
-    with pytest.raises(ValueError, match="Make sure your dataset reader's text_to_instance()"):
+    with pytest.raises(WorkerError, match="Make sure your dataset reader's text_to_instance()"):
         loader = MultiProcessDataLoader(
             MockOldDatasetReader(),
             "this-path-doesn't-matter",
