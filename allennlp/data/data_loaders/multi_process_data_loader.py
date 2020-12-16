@@ -316,7 +316,7 @@ class MultiProcessDataLoader(DataLoader):
                         if worker_error is not None:
                             e, tb = worker_error
                             sys.stderr.write("".join(tb))
-                            raise e
+                            raise WorkerError(e)
 
                         yield batch
                         queue.task_done()
@@ -386,7 +386,7 @@ class MultiProcessDataLoader(DataLoader):
                     checked_for_token_indexers = True
                 queue.put((instance, None))
         except Exception as e:
-            queue.put((None, (e, traceback.format_exc())))
+            queue.put((None, (str(e), traceback.format_exc())))
 
         # Indicate to the consumer that this worker is finished.
         queue.put((None, None))
@@ -401,7 +401,7 @@ class MultiProcessDataLoader(DataLoader):
             for batch in self._instances_to_batches(instances):
                 queue.put((batch, None))
         except Exception as e:
-            queue.put((None, (e, traceback.format_exc())))
+            queue.put((None, (str(e), traceback.format_exc())))
 
         # Indicate to the consumer (main thread) that this worker is finished.
         queue.put((None, None))
@@ -416,7 +416,7 @@ class MultiProcessDataLoader(DataLoader):
                 if worker_error is not None:
                     e, tb = worker_error
                     sys.stderr.write("".join(tb))
-                    raise e
+                    raise WorkerError(e)
 
                 self.reader.apply_token_indexers(instance)
                 if self._vocab is not None:
@@ -481,3 +481,11 @@ class MultiProcessDataLoader(DataLoader):
                 ):
                     break
                 yield self.collate_fn(batch)
+
+
+class WorkerError(Exception):
+    """
+    An error raised when a worker fails.
+    """
+
+    pass
