@@ -49,8 +49,8 @@ class TestBiModalEncoder(AllenNlpTestCase):
 
         embedding1 = torch.randn(16, 34, self.params_dict["hidden_size1"])
         embedding2 = torch.randn(16, 2, self.params_dict["hidden_size2"])
-        attn_mask1 = torch.randn(16, 1, 1, 34)
-        attn_mask2 = torch.randn(16, 1, 1, 2)
+        attn_mask1 = torch.randint(0, 2, (16, 1, 1, 34)) == 1
+        attn_mask2 = torch.randint(0, 2, (16, 1, 1, 2)) == 1
 
         self.bimodal_encoder.forward(embedding1, embedding2, attn_mask1, attn_mask2)
 
@@ -89,7 +89,7 @@ class TestBiModalEncoder(AllenNlpTestCase):
         encoder = BiModalEncoder()
         embedding1 = torch.randn(16, 34, 1024)
         embedding2 = torch.randn(16, 2, 1024)
-        attn_mask1 = torch.randn(16, 1, 1, 34)
-        attn_mask2 = torch.randn(16, 1, 1, 2)
+        attn_mask1 = torch.randint(0, 2, (16, 1, 1, 34)) == 1
+        attn_mask2 = torch.randint(0, 2, (16, 1, 1, 2)) == 1
 
         encoder.forward(embedding1, embedding2, attn_mask1, attn_mask2)

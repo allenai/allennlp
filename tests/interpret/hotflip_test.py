@@ -1,3 +1,4 @@
+from pytest import raises
 import torch
 
 from allennlp.common.testing import AllenNlpTestCase
@@ -5,7 +6,14 @@ from allennlp.data.token_indexers import TokenCharactersIndexer
 from allennlp.interpret.attackers import Hotflip
 from allennlp.models.archival import load_archive
 from allennlp.modules.token_embedders import EmptyEmbedder
-from allennlp.predictors import Predictor
+from allennlp.predictors import Predictor, TextClassifierPredictor
+from allennlp.data.dataset_readers import TextClassificationJsonReader
+from allennlp.data.vocabulary import Vocabulary
+
+from allennlp.common.testing.interpret_test import (
+    FakeModelForTestingInterpret,
+    FakePredictorForTestingInterpret,
+)
 
 
 class TestHotflip(AllenNlpTestCase):
@@ -60,3 +68,32 @@ class TestHotflip(AllenNlpTestCase):
         hotflipper._first_order_taylor(
             grad=torch.rand((10,)).numpy(), token_idx=torch.tensor(60), sign=1
         )
+
+    def test_interpret_fails_when_embedding_layer_not_found(self):
+        inputs = {"sentence": "I always write unit tests for my code."}
+        vocab = Vocabulary()
+        vocab.add_tokens_to_namespace([w for w in inputs["sentence"].split(" ")])
+        model = FakeModelForTestingInterpret(vocab, max_tokens=len(inputs["sentence"].split(" ")))
+        predictor = TextClassifierPredictor(model, TextClassificationJsonReader())
+
+        hotflipper = Hotflip(predictor)
+        with raises(RuntimeError):
+            hotflipper.initialize()
+
+    def test_interpret_works_with_custom_embedding_layer(self):
+        inputs = {"sentence": "I always write unit tests for my code"}
+        vocab = Vocabulary()
+        vocab.add_tokens_to_namespace([w for w in inputs["sentence"].split(" ")])
+        model = FakeModelForTestingInterpret(vocab, max_tokens=len(inputs["sentence"].split(" ")))
+        predictor = FakePredictorForTestingInterpret(model, TextClassificationJsonReader())
+
+        hotflipper = Hotflip(predictor)
+        hotflipper.initialize()
+        attack = hotflipper.attack_from_json(inputs, "tokens", "grad_input_1")
+        assert attack is not None
+        assert "final" in attack
+        assert "original" in attack
+        assert "outputs" in attack
+        assert len(attack["final"][0]) == len(
+            attack["original"]
+        )  # hotflip replaces words without removing

@@ -20,7 +20,7 @@ DOCKER_TEST_TORCH_VERSION = 'torch==1.7.0+cu110 torchvision==0.8.1+cu110 -f http
 DOCKER_TEST_DETECTRON_VERSION = 'detectron2 -f https://dl.fbaipublicfiles.com/detectron2/wheels/cu110/torch1.7/index.html'
 DOCKER_RUN_CMD = docker run --rm \
 		-v $$HOME/.allennlp:/root/.allennlp \
-		-v $$HOME/.cache/torch:/root/.cache/torch \
+		-v $$HOME/.cache/huggingface:/root/.cache/huggingface \
 		-v $$HOME/nltk_data:/root/nltk_data
 
 ifeq ($(shell uname),Darwin)

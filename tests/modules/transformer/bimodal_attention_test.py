@@ -50,6 +50,6 @@ class TestBiModalAttention(AllenNlpTestCase):
         self.biattention.forward(
             torch.randn(2, 3, 6),
             torch.randn(2, 3, 4),
-            torch.randn(2, 2, 3, 3),
-            torch.randn(2, 2, 3, 3),
+            torch.randint(0, 2, (2, 2, 3, 3)) == 1,  # creating boolean tensors
+            torch.randint(0, 2, (2, 2, 3, 3)) == 1,
         )

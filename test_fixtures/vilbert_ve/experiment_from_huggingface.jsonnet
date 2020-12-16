@@ -38,7 +38,7 @@ local model_name = "epwalsh/bert-xsmall-dummy";
     "text_fixed_layer": 0,
 
     "combined_hidden_size": 200,
-    "combined_num_attention_heads": 2,
+    "combined_num_attention_heads": 4,
 
     "pooled_output_dim": 100,
     "fusion_method": "sum",

@@ -47,11 +47,36 @@ dataset at every epoch) and a `MultiTaskScheduler` (for ordering the instances w
 
 ## Unreleased (1.x branch)
 
+
+## [v1.3.0](https://github.com/allenai/allennlp/releases/tag/v1.3.0) - 2020-12-15
+
 ### Added
 
 - Added links to source code in docs.
-- Fixed issue with GradientDescentTrainer when constructed with validation_data_loader==None and learning_rate_scheduler!=None.
+- Added `get_embedding_layer` and `get_text_field_embedder` to the `Predictor` class; to specify embedding layers for non-AllenNLP models.
+- Added [Gaussian Error Linear Unit (GELU)](https://pytorch.org/docs/stable/generated/torch.nn.GELU.html) as an Activation.
 
+### Changed
+
+- Renamed module `allennlp.data.tokenizers.token` to `allennlp.data.tokenizers.token_class` to avoid
+  [this bug](https://github.com/allenai/allennlp/issues/4819).
+- `transformers` dependency updated to version 4.0.1.
+
+### Fixed
+
+- Fixed a lot of instances where tensors were first created and then sent to a device
+  with `.to(device)`. Instead, these tensors are now created directly on the target device.
+- Fixed issue with `GradientDescentTrainer` when constructed with `validation_data_loader=None` and `learning_rate_scheduler!=None`.
+- Fixed a bug when removing all handlers in root logger.
+- `ShardedDatasetReader` now inherits parameters from `base_reader` when required.
+- Fixed an issue in `FromParams` where parameters in the `params` object used to a construct a class
+  were not passed to the constructor if the value of the parameter was equal to the default value.
+  This caused bugs in some edge cases where a subclass that takes `**kwargs` needs to inspect
+  `kwargs` before passing them to its superclass.
+- Improved the band-aid solution for segmentation faults and the "ImportError: dlopen: cannot load any more object with static TLS" 
+  by adding a `transformers` import.
+- Added safety checks for extracting tar files
+- Turned superfluous warning to info when extending the vocab in the embedding matrix, if no pretrained file was provided
 
 ## [v1.2.2](https://github.com/allenai/allennlp/releases/tag/v1.2.2) - 2020-11-17
 
@@ -141,7 +166,7 @@ dataset at every epoch) and a `MultiTaskScheduler` (for ordering the instances w
 - Added ability to pass additional key word arguments to `cached_transformers.get()`, which will be passed on to `AutoModel.from_pretrained()`.
 - Added an `overrides` argument to `Predictor.from_path()`.
 - Added a `cached-path` command.
-- Added a function `inspect_cache` to `common.file_utils` that prints useful information about the cache. This can also 
+- Added a function `inspect_cache` to `common.file_utils` that prints useful information about the cache. This can also
   be used from the `cached-path` command with `allennlp cached-path --inspect`.
 - Added a function `remove_cache_entries` to `common.file_utils` that removes any cache entries matching the given
   glob patterns. This can used from the `cached-path` command with `allennlp cached-path --remove some-files-*`.

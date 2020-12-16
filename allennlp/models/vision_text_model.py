@@ -5,6 +5,7 @@ from typing import Dict, List, Optional
 from overrides import overrides
 import numpy as np
 import torch
+from transformers import AutoModel
 
 from allennlp.data.fields.text_field import TextFieldTensors
 from allennlp.data.vocabulary import Vocabulary
@@ -15,8 +16,6 @@ from allennlp.modules.transformer import (
     BiModalEncoder,
     TransformerPooler,
 )
-
-from transformers.modeling_auto import AutoModel
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +37,9 @@ class VisionTextModel(Model):
     fusion_method : `str`, optional (default = `"sum"`)
     dropout : `float`, optional (default = `0.1`)
     label_namespace : `str`, optional (default = `"labels"`)
+    is_multilabel: `bool`, optional (default = `False`)
+        Whether the output classification is multilabel.
+        (i.e., can have multiple correct answers)
     """
 
     def __init__(
@@ -50,6 +52,7 @@ class VisionTextModel(Model):
         fusion_method: str = "sum",
         dropout: float = 0.1,
         label_namespace: str = "labels",
+        is_multilabel: bool = False,
     ) -> None:
 
         super().__init__(vocab)
@@ -68,6 +71,8 @@ class VisionTextModel(Model):
 
         self.classifier = torch.nn.Linear(pooled_output_dim, num_labels)
         self.dropout = torch.nn.Dropout(dropout)
+
+        self.is_multilabel = is_multilabel
 
     @classmethod
     def from_huggingface_model_name(
@@ -101,7 +106,7 @@ class VisionTextModel(Model):
         if hasattr(transformer.config, "embedding_size"):
             config = transformer.config
 
-            from transformers.modeling_albert import AlbertModel
+            from transformers.models.albert.modeling_albert import AlbertModel
 
             if isinstance(transformer, AlbertModel):
                 linear_transform = deepcopy(transformer.encoder.embedding_hidden_mapping_in)
@@ -185,18 +190,15 @@ class VisionTextModel(Model):
         embedding_output = self.embeddings(token_ids, token_type_ids)
         num_tokens = embedding_output.size(1)
 
-        # We create a 3D attention mask from a 2D tensor mask.
-        # Sizes are [batch_size, 1, 1, to_seq_length]
-        # So we can broadcast to [batch_size, num_heads, from_seq_length, to_seq_length]
         # this attention mask is more simple than the triangular masking of
         # causal attention used in OpenAI GPT, we just need to prepare the
         # broadcast dimension here.
         if attention_mask is not None:
-            extended_attention_mask = attention_mask.unsqueeze(1).unsqueeze(2).float().log()
+            extended_attention_mask = attention_mask
         else:
             extended_attention_mask = None
 
-        extended_image_attention_mask = image_attention_mask.unsqueeze(1).unsqueeze(2).float().log()
+        extended_image_attention_mask = image_attention_mask
 
         extended_co_attention_mask = torch.zeros(
             batch_size,
@@ -230,7 +232,10 @@ class VisionTextModel(Model):
             raise ValueError(f"Fusion method '{self.fusion_method}' not supported")
 
         logits = self.classifier(pooled_output)
-        probs = torch.sigmoid(logits)
+        if self.is_multilabel:
+            probs = torch.sigmoid(logits)
+        else:
+            probs = torch.softmax(logits, dim=-1)
 
         outputs = {"logits": logits, "probs": probs}
         outputs = self._compute_loss_and_metrics(batch_size, outputs, label, label_weights)
