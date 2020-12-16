@@ -469,6 +469,8 @@ class TensorCache(MutableMapping[str, Tensor], ABC):
             that number. Reasonable operating systems don't actually allocate that space
             until it is really needed.
         """
+        filename = str(filename)
+
         cpu_count = os.cpu_count() or 1
         if os.path.exists(filename):
             if os.path.isfile(filename):
@@ -483,8 +485,28 @@ class TensorCache(MutableMapping[str, Tensor], ABC):
             else:
                 # If it's not a file, raise an error.
                 raise ValueError("Expect a file, found a directory instead")
+
+        use_lock = True
+        if read_only:
+            # Check if the lock file is writable. If it's not, then we won't be able to use the lock.
+
+            # This is always how lmdb names the lock file.
+            lock_filename = filename + "-lock"
+            if os.path.isfile(lock_filename):
+                use_lock = os.access(lock_filename, os.W_OK)
+            else:
+                # If the lock file doesn't exist yet, then the directory needs to be writable in
+                # order to create and use the lock file.
+                use_lock = os.access(os.path.dirname(lock_filename), os.W_OK)
+
+        if not use_lock:
+            warnings.warn(
+                f"Lacking permissions to use lock file on cache '{filename}'.\nUse at your own risk!",
+                UserWarning,
+            )
+
         self.lmdb_env = lmdb.open(
-            str(filename),
+            filename,
             subdir=False,
             map_size=map_size,
             max_readers=cpu_count * 2,
@@ -494,7 +516,7 @@ class TensorCache(MutableMapping[str, Tensor], ABC):
             readahead=False,
             meminit=False,
             readonly=read_only,
-            lock=not read_only,
+            lock=use_lock,
         )
 
         # We have another cache here that makes sure we return the same object for the same key. Without it,
