@@ -18,7 +18,7 @@ DOCKER_TORCH_VERSION = 'torch==1.7.0 torchvision==0.8.1'
 DOCKER_TEST_TORCH_VERSION = 'torch==1.7.0+cu110 torchvision==0.8.1+cu110 -f https://download.pytorch.org/whl/torch_stable.html'
 DOCKER_RUN_CMD = docker run --rm \
 		-v $$HOME/.allennlp:/root/.allennlp \
-		-v $$HOME/.cache/torch:/root/.cache/torch \
+		-v $$HOME/.cache/huggingface:/root/.cache/huggingface \
 		-v $$HOME/nltk_data:/root/nltk_data
 
 ifeq ($(shell uname),Darwin)
