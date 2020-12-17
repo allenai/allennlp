@@ -2,6 +2,7 @@
 Utilities for working with the local dataset cache.
 """
 
+from contextlib import contextmanager
 import glob
 import io
 import os
@@ -37,6 +38,7 @@ from zipfile import ZipFile, is_zipfile
 import tarfile
 import shutil
 import pickle
+import warnings
 
 import numpy as np
 import time
@@ -444,7 +446,11 @@ class TensorCache(MutableMapping[str, Tensor], ABC):
     """
 
     def __init__(
-        self, filename: Union[str, PathLike], *, map_size: int = 1024 * 1024 * 1024 * 1024
+        self,
+        filename: Union[str, PathLike],
+        *,
+        map_size: int = 1024 * 1024 * 1024 * 1024,
+        read_only: bool = False,
     ) -> None:
         """
         Creates a `TensorCache` by either opening an existing one on disk, or creating
@@ -463,7 +469,42 @@ class TensorCache(MutableMapping[str, Tensor], ABC):
             that number. Reasonable operating systems don't actually allocate that space
             until it is really needed.
         """
+        filename = str(filename)
+
         cpu_count = os.cpu_count() or 1
+        if os.path.exists(filename):
+            if os.path.isfile(filename):
+                # If the file is not writable, set read_only to True, but issue a warning.
+                if not os.access(filename, os.W_OK):
+                    if not read_only:
+                        warnings.warn(
+                            f"File '{filename}' is read-only, so cache will be read-only",
+                            UserWarning,
+                        )
+                    read_only = True
+            else:
+                # If it's not a file, raise an error.
+                raise ValueError("Expect a file, found a directory instead")
+
+        use_lock = True
+        if read_only:
+            # Check if the lock file is writable. If it's not, then we won't be able to use the lock.
+
+            # This is always how lmdb names the lock file.
+            lock_filename = filename + "-lock"
+            if os.path.isfile(lock_filename):
+                use_lock = os.access(lock_filename, os.W_OK)
+            else:
+                # If the lock file doesn't exist yet, then the directory needs to be writable in
+                # order to create and use the lock file.
+                use_lock = os.access(os.path.dirname(lock_filename), os.W_OK)
+
+        if not use_lock:
+            warnings.warn(
+                f"Lacking permissions to use lock file on cache '{filename}'.\nUse at your own risk!",
+                UserWarning,
+            )
+
         self.lmdb_env = lmdb.open(
             filename,
             subdir=False,
@@ -474,6 +515,8 @@ class TensorCache(MutableMapping[str, Tensor], ABC):
             sync=True,
             readahead=False,
             meminit=False,
+            readonly=read_only,
+            lock=use_lock,
         )
 
         # We have another cache here that makes sure we return the same object for the same key. Without it,
@@ -483,6 +526,10 @@ class TensorCache(MutableMapping[str, Tensor], ABC):
         # cache at the same time. We can guarantee though that it is up to date as long as processes either
         # write new values, or read existing ones.
         self.cache_cache: MutableMapping[str, Tensor] = WeakValueDictionary()
+
+    @property
+    def read_only(self) -> bool:
+        return self.lmdb_env.flags()["readonly"]
 
     def __contains__(self, key: object):
         if not isinstance(key, str):
@@ -508,6 +555,9 @@ class TensorCache(MutableMapping[str, Tensor], ABC):
             return tensor
 
     def __setitem__(self, key: str, tensor: torch.Tensor):
+        if self.read_only:
+            raise ValueError("cannot write to a read-only cache")
+
         encoded_key = key.encode()
         buffer = io.BytesIO()
         if tensor.storage().size() != np.prod(tensor.size()):
@@ -520,6 +570,9 @@ class TensorCache(MutableMapping[str, Tensor], ABC):
         self.cache_cache[key] = tensor
 
     def __delitem__(self, key: str):
+        if self.read_only:
+            raise ValueError("cannot write to a read-only cache")
+
         encoded_key = key.encode()
         with self.lmdb_env.begin(write=True) as txn:
             txn.delete(encoded_key)
@@ -581,6 +634,78 @@ class CacheFile:
         # Something went wrong, remove the temp file.
         logger.debug("removing temp file %s", self.temp_file.name)
         os.remove(self.temp_file.name)
+        return False
+
+
+class LocalCacheResource:
+    """
+    This is a context manager that can be used to fetch and cache arbitrary resources locally
+    using the same mechanisms that `cached_path` uses for remote resources.
+
+    It can be used, for example, when you want to cache the result of an expensive computation.
+
+    # Examples
+
+    ```python
+    with LocalCacheResource("long-computation", "v1") as cache:
+        if cache.cached():
+            with cache.reader() as f:
+                # read from cache
+        else:
+            with cache.writer() as f:
+                # do the computation
+                # ...
+                # write to cache
+    ```
+    """
+
+    def __init__(self, resource_name: str, version: str, cache_dir: str = CACHE_DIRECTORY) -> None:
+        self.resource_name = resource_name
+        self.version = version
+        self.cache_dir = cache_dir
+        self.path = os.path.join(self.cache_dir, _resource_to_filename(resource_name, version))
+        self.file_lock = FileLock(self.path + ".lock")
+
+    def cached(self) -> bool:
+        return os.path.exists(self.path)
+
+    @contextmanager
+    def writer(self, mode="w"):
+        if self.cached():
+            raise ValueError(
+                f"local cache of {self.resource_name} (version '{self.version}') already exists!"
+            )
+
+        with CacheFile(self.path, mode=mode) as f:
+            yield f
+
+        meta = _Meta(
+            resource=self.resource_name,
+            cached_path=self.path,
+            creation_time=time.time(),
+            etag=self.version,
+            size=_get_resource_size(self.path),
+        )
+        meta.to_file()
+
+    @contextmanager
+    def reader(self, mode="r"):
+        if not self.cached():
+            raise ValueError(
+                f"local cache of {self.resource_name} (version '{self.version}') does not exist yet!"
+            )
+
+        with open(self.path, mode) as f:
+            yield f
+
+    def __enter__(self):
+        self.file_lock.acquire()
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.file_lock.release()
+        if exc_value is None:
+            return True
         return False
 
 

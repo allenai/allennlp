@@ -21,6 +21,7 @@ import torch.distributed as dist
 
 from allennlp.common import util
 from allennlp.common.checks import check_for_gpu
+from allennlp.common.lazy import Lazy
 from allennlp.common.util import int_to_device
 from allennlp.common.file_utils import TensorCache
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
@@ -45,10 +46,11 @@ class VisionReader(DatasetReader):
     image_dir: `str`
         Path to directory containing image files. The structure of the directory doesn't matter. We
         find images by finding filenames that match `*[image_id].jpg`.
-    image_featurizer: `GridEmbedder`
+    image_loader : `ImageLoader`
+    image_featurizer: `Lazy[GridEmbedder]`
         The backbone image processor (like a ResNet), whose output will be passed to the region
         detector for finding object boxes in the image.
-    region_detector: `RegionDetector`
+    region_detector: `Lazy[RegionDetector]`
         For pulling out regions of the image (both coordinates and features) that will be used by
         downstream models.
     tokenizer: `Tokenizer`, optional
@@ -72,10 +74,11 @@ class VisionReader(DatasetReader):
         self,
         image_dir: Union[str, PathLike],
         image_loader: ImageLoader,
-        image_featurizer: GridEmbedder,
-        region_detector: RegionDetector,
         *,
+        image_featurizer: Optional[Lazy[GridEmbedder]] = None,
+        region_detector: Optional[Lazy[RegionDetector]] = None,
         feature_cache_dir: Optional[Union[str, PathLike]] = None,
+        feature_cache_read_only: bool = False,
         tokenizer: Optional[Tokenizer] = None,
         token_indexers: Optional[Dict[str, TokenIndexer]] = None,
         cuda_device: Optional[Union[int, torch.device]] = None,
@@ -121,18 +124,41 @@ class VisionReader(DatasetReader):
                 )
             }
             logger.info("Done discovering images")
-            # image loading
+
+            # image loading and featurizing
             self.image_loader = image_loader
-            self.image_featurizer = image_featurizer.to(self.cuda_device)
-            self.region_detector = region_detector.to(self.cuda_device)
+            self.image_loader.device = self.cuda_device
+            self._lazy_image_featurizer = image_featurizer
+            self._image_featurizer = None
+            self._lazy_region_detector = region_detector
+            self._region_detector = None
 
             # feature cache
             self.feature_cache_dir = feature_cache_dir
+            self.feature_cache_read_only = feature_cache_read_only
             self.coordinates_cache_dir = feature_cache_dir
             self._features_cache_instance: Optional[MutableMapping[str, Tensor]] = None
             self._coordinates_cache_instance: Optional[MutableMapping[str, Tensor]] = None
 
             self.image_processing_batch_size = image_processing_batch_size
+
+    @property
+    def image_featurizer(self) -> GridEmbedder:
+        if self._image_featurizer is None:
+            if self._lazy_image_featurizer is None:
+                raise ValueError("image_featurizer was not specified")
+            self._image_featurizer = self._lazy_image_featurizer.construct().to(self.cuda_device)  # type: ignore
+            self._image_featurizer.eval()  # type: ignore[attr-defined]
+        return self._image_featurizer  # type: ignore[return-value]
+
+    @property
+    def region_detector(self) -> RegionDetector:
+        if self._region_detector is None:
+            if self._lazy_region_detector is None:
+                raise ValueError("region_detector was not specified")
+            self._region_detector = self._lazy_region_detector.construct().to(self.cuda_device)  # type: ignore
+            self._region_detector.eval()  # type: ignore[attr-defined]
+        return self._region_detector  # type: ignore[return-value]
 
     @property
     def _features_cache(self) -> MutableMapping[str, Tensor]:
@@ -142,7 +168,8 @@ class VisionReader(DatasetReader):
             else:
                 os.makedirs(self.feature_cache_dir, exist_ok=True)
                 self._features_cache_instance = TensorCache(
-                    os.path.join(self.feature_cache_dir, "features")
+                    os.path.join(self.feature_cache_dir, "features"),
+                    read_only=self.feature_cache_read_only,
                 )
 
         return self._features_cache_instance
@@ -155,7 +182,8 @@ class VisionReader(DatasetReader):
             else:
                 os.makedirs(self.feature_cache_dir, exist_ok=True)  # type: ignore
                 self._coordinates_cache_instance = TensorCache(
-                    os.path.join(self.feature_cache_dir, "coordinates")  # type: ignore
+                    os.path.join(self.feature_cache_dir, "coordinates"),  # type: ignore
+                    read_only=self.feature_cache_read_only,
                 )
 
         return self._coordinates_cache_instance
@@ -175,8 +203,8 @@ class VisionReader(DatasetReader):
                 sizes = sizes.to(self.cuda_device)
                 featurized_images = self.image_featurizer(images, sizes)
                 detector_results = self.region_detector(images, sizes, featurized_images)
-                features = detector_results["features"]
-                coordinates = detector_results["coordinates"]
+                features = detector_results.features
+                coordinates = detector_results.boxes
 
             # store the processed results in memory, so we can complete the batch
             paths_to_tensors = {path: (features[i], coordinates[i]) for i, path in enumerate(paths)}

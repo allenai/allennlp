@@ -13,6 +13,7 @@ import torch
 from torch import Tensor
 
 from allennlp.common.file_utils import cached_path
+from allennlp.common.lazy import Lazy
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import ArrayField, LabelField, ListField, TextField
@@ -32,10 +33,11 @@ class GQAReader(VisionReader):
     ----------
     image_dir: `str`
         Path to directory containing `png` image files.
-    image_featurizer: `GridEmbedder`
+    image_loader : `ImageLoader`
+    image_featurizer: `Lazy[GridEmbedder]`
         The backbone image processor (like a ResNet), whose output will be passed to the region
         detector for finding object boxes in the image.
-    region_detector: `RegionDetector`
+    region_detector: `Lazy[RegionDetector]`
         For pulling out regions of the image (both coordinates and features) that will be used by
         downstream models.
     data_dir: `str`
@@ -51,9 +53,9 @@ class GQAReader(VisionReader):
         self,
         image_dir: Union[str, PathLike],
         image_loader: ImageLoader,
-        image_featurizer: GridEmbedder,
-        region_detector: RegionDetector,
         *,
+        image_featurizer: Optional[Lazy[GridEmbedder]] = None,
+        region_detector: Optional[Lazy[RegionDetector]] = None,
         answer_vocab: Optional[Union[str, Vocabulary]] = None,
         feature_cache_dir: Optional[Union[str, PathLike]] = None,
         data_dir: Optional[Union[str, PathLike]] = None,
@@ -68,8 +70,8 @@ class GQAReader(VisionReader):
         super().__init__(
             image_dir,
             image_loader,
-            image_featurizer,
-            region_detector,
+            image_featurizer=image_featurizer,
+            region_detector=region_detector,
             feature_cache_dir=feature_cache_dir,
             tokenizer=tokenizer,
             token_indexers=token_indexers,
@@ -119,6 +121,9 @@ class GQAReader(VisionReader):
         else:
             files = [filename]
 
+        # Ensure order is deterministic.
+        files.sort()
+
         for data_file in files:
             with open(cached_path(data_file, extract_archive=True)) as f:
                 questions_with_annotations = json.load(f)
@@ -161,6 +166,11 @@ class GQAReader(VisionReader):
         fields = {
             "box_features": ArrayField(features),
             "box_coordinates": ArrayField(coords),
+            "box_mask": ArrayField(
+                features.new_ones((features.shape[0],), dtype=torch.bool),
+                padding_value=False,
+                dtype=torch.bool,
+            ),
             "question": question_field,
         }
 

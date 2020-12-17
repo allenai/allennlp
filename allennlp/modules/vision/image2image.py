@@ -7,9 +7,9 @@ from allennlp.common.registrable import Registrable
 
 class Image2ImageModule(nn.Module, Registrable):
     """
-    An Image2ImageModule takes a batch of images as a tensor with the dimensions
-    (Batch, Color, Height, Width), and returns a tensor in the same format, after
-    applying some transformation on the images.
+    An `Image2ImageModule` takes a batch of images as a tensor with the dimensions
+    `(batch_size, color_channels, height, width)`, and returns a tensor in the same format,
+    after applying some transformation on the images.
     """
 
     def forward(self, images: FloatTensor, sizes: IntTensor):

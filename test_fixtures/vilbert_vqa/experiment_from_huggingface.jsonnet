@@ -3,7 +3,7 @@ local model_name = "epwalsh/bert-xsmall-dummy";
   "dataset_reader": {
     "type": "vqav2",
     "image_dir": "test_fixtures/data/vqav2/images",
-    "image_loader": "detectron",
+    "image_loader": "torch",
     "image_featurizer": "null",
     "region_detector": "random",
     "tokenizer": {

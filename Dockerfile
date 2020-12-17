@@ -18,12 +18,10 @@ LABEL com.nvidia.volumes.needed="nvidia_driver"
 
 WORKDIR /stage/allennlp
 
-# Install torch and detectron2 first. This build arg should be in the form of a version requirement,
+# Install torch ecosystem first. This build arg should be in the form of a version requirement,
 # like 'torch==1.7' or 'torch==1.7+cu102 -f https://download.pytorch.org/whl/torch_stable.html'.
 ARG TORCH
 RUN pip install --no-cache-dir ${TORCH}
-ARG DETECTRON
-RUN pip install --no-cache-dir ${DETECTRON}
 
 # Installing AllenNLP's dependencies is the most time-consuming part of building
 # this Docker image, so we make use of layer caching here by adding the minimal files
@@ -32,11 +30,11 @@ COPY allennlp/version.py allennlp/version.py
 COPY setup.py .
 RUN touch allennlp/__init__.py \
     && touch README.md \
-    && pip install --no-cache-dir -e .[vision]
+    && pip install --no-cache-dir -e .
 
 # Now add the full package source and re-install just the package.
 COPY allennlp allennlp
-RUN pip install --no-cache-dir --no-deps -e .[vision]
+RUN pip install --no-cache-dir --no-deps -e .
 
 WORKDIR /app/
 

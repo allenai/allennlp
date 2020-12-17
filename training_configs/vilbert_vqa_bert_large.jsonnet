@@ -1,9 +1,12 @@
-local model_name = "bert-base-uncased";
+local model_name = "bert-large-uncased";
+local vocab_size = 30522;     // for bert-*-uncased models
+//local vocab_size = 28996;   // for bert-*-cased models
 local effective_batch_size = 128;
-local gpu_batch_size = 128;
+local gpu_batch_size = 32;
 local num_gpus = 1;
 
 local construct_vocab = false;
+local dataset = "balanced_real";
 
 local vocabulary = if construct_vocab then {
       // read the files to construct the vocab
@@ -11,17 +14,19 @@ local vocabulary = if construct_vocab then {
     } else {
       // read the constructed vocab
       "type": "from_files",
-      "directory": "https://storage.googleapis.com/allennlp-public-data/vqav2/vilbert_vqa_balanced_abstract_scenes.vocab.tar.gz"
+      "directory": std.format(
+        "https://storage.googleapis.com/allennlp-public-data/vqav2/vilbert_vqa_%s.%s.vocab.tar.gz",
+        [dataset, model_name])
     };
 
 {
   "dataset_reader": {
     "type": "vqav2",
-    "image_dir": "/mnt/tank/dirkg/data/vision/vqa",
-    "feature_cache_dir": "/mnt/tank/dirkg/data/vision/feature_cache",
-    #"image_dir": "/Users/dirkg/Documents/data/vision/vqa",
-    #"feature_cache_dir": "/Users/dirkg/Documents/data/vision/vqa/feature_cache",
-    "image_loader": "detectron",
+    "image_dir": std.format("/mnt/tank/dirkg/data/vision/vqa/%s", dataset),
+    "feature_cache_dir": std.format("/mnt/tank/dirkg/data/vision/vqa/%s/feature_cache", dataset),
+    #"image_dir": std.format("/Users/dirkg/Documents/data/vision/vqa/%s", dataset),
+    #"feature_cache_dir": std.format("/Users/dirkg/Documents/data/vision/vqa/%s/feature_cache", dataset),
+    "image_loader": "torch",
     "image_featurizer": "resnet_backbone",
     "region_detector": "faster_rcnn",
     "tokenizer": {
@@ -44,31 +49,31 @@ local vocabulary = if construct_vocab then {
     "answer_vocab": null    // make sure we don't skip unanswerable questions during validation
   },
   "vocabulary": vocabulary,
-  "train_data_path": ["balanced_bas_train", "balanced_bas_val[1000:]"],
-  "validation_data_path": "balanced_bas_val[:1000]",
+  "train_data_path": [std.format("%s_train", dataset), std.format("%s_val[1000:]", dataset)],
+  "validation_data_path": std.format("%s_val[:1000]", dataset),
   "model": {
     "type": "vqa_vilbert",
     "text_embeddings": {
-      "vocab_size": 30522,
-      "hidden_size": 768,
+      "vocab_size": vocab_size,
+      "hidden_size": 1024,
       "pad_token_id": 0,
-      "max_position_embeddings": 50,
-      "type_vocab_size": 4,
-      "dropout": 0.0
+      "max_position_embeddings": 512,
+      "type_vocab_size": 2,
+      "dropout": 0.1
     },
     "image_embeddings": {
-      "feature_dim": 2048,
+      "feature_dim": 1024,
       "hidden_dim": 1024
     },
     "encoder": {
       # text
-      "hidden_size1": 768,
-      "num_hidden_layers1": 12,
-      "intermediate_size1": 3072,
-      "num_attention_heads1": 12,
+      "hidden_size1": 1024,
+      "num_hidden_layers1": 24,
+      "intermediate_size1": 4096,
+      "num_attention_heads1": 16,
       "attention_dropout1": 0.1,
       "hidden_dropout1": 0.1,
-      "biattention_id1": [6, 7, 8, 9, 10, 11],
+      "biattention_id1": [18, 19, 20, 21, 22, 23],
       "fixed_layer1": 0,
 
       # vision
@@ -91,25 +96,28 @@ local vocabulary = if construct_vocab then {
   "data_loader": {
     "batch_size": gpu_batch_size,
     "shuffle": true,
-    [if !construct_vocab then "max_instances_in_memory"]: 1024
+    //[if !construct_vocab then "max_instances_in_memory"]: 1024
   },
   [if num_gpus > 1 then "distributed"]: {
     "cuda_devices": std.range(0, num_gpus - 1)
-    #"cuda_devices": std.repeat([-1], num_gpus)  # Use this for debugging on CPU
+    //"cuda_devices": std.repeat([-1], num_gpus)  # Use this for debugging on CPU
   },
   // Don't train if we're just constructing vocab. The results would be confusing.
   [if !construct_vocab then "trainer"]: {
     "optimizer": {
       "type": "huggingface_adamw",
-      "lr": 4e-5
+      "lr": 4e-4
     },
     "learning_rate_scheduler": {
       "type": "linear_with_warmup",
-      "num_steps_per_epoch": std.ceil(33383 / $["data_loader"]["batch_size"] / $["trainer"]["num_gradient_accumulation_steps"]),
-      "warmup_steps": self.num_steps_per_epoch,
+      //"num_steps_per_epoch": std.ceil(0 / $["data_loader"]["batch_size"] / $["trainer"]["num_gradient_accumulation_steps"]),
+      "warmup_steps": 5000,
     },
     "validation_metric": "+fscore",
-    "num_epochs": 20,
+    "num_epochs": 50,
     "num_gradient_accumulation_steps": effective_batch_size / gpu_batch_size / std.max(1, num_gpus)
   },
+  "random_seed": 876170670,
+  "numpy_seed": 876170670,
+  "pytorch_seed": 876170670,
 }

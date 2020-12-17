@@ -9,10 +9,11 @@ from typing import (
 )
 
 from overrides import overrides
+import torch
 from torch import Tensor
 
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
-from allennlp.data.fields import ArrayField, LabelField, TextField
+from allennlp.data.fields import Field, ArrayField, LabelField, TextField
 from allennlp.data.instance import Instance
 from allennlp.data.dataset_readers.vision_reader import VisionReader
 
@@ -62,8 +63,6 @@ class VisualEntailmentReader(VisionReader):
         tokenized_hypothesis = self._tokenizer.tokenize(hypothesis)
         hypothesis_field = TextField(tokenized_hypothesis, None)
 
-        from allennlp.data import Field
-
         fields: Dict[str, Field] = {"hypothesis": hypothesis_field}
 
         if image is not None:
@@ -74,6 +73,11 @@ class VisualEntailmentReader(VisionReader):
 
             fields["box_features"] = ArrayField(features)
             fields["box_coordinates"] = ArrayField(coords)
+            fields["box_mask"] = ArrayField(
+                features.new_ones((features.shape[0],), dtype=torch.bool),
+                padding_value=False,
+                dtype=torch.bool,
+            )
 
         if label:
             fields["label"] = LabelField(label)
