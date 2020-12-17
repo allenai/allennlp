@@ -138,7 +138,7 @@ class VisionReader(DatasetReader):
             self._region_detector = None
 
         self.produce_featurized_images = (
-            (self.image_loader and self.image_featurizer and self.region_detector) or
+            (image_loader and image_featurizer and region_detector) or
             (self.feature_cache_dir and self.coordinates_cache_dir and self.read_from_cache)
         )
         if self.produce_featurized_images:
