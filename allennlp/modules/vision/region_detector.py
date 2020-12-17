@@ -11,10 +11,32 @@ from allennlp.common import Registrable
 
 
 class RegionDetectorOutput(NamedTuple):
+    """
+    The output type from the forward pass of a `RegionDetector`.
+    """
+
     features: List[Tensor]
+    """
+    A list of tensors, each with shape `(num_boxes, feature_dim)`.
+    """
+
     boxes: List[Tensor]
+    """
+    A list of tensors containing the coordinates for each box. Each has shape `(num_boxes, 4)`.
+    """
+
     class_probs: Optional[List[Tensor]] = None
+    """
+    An optional list of tensors. These tensors can have shape `(num_boxes,)` or
+    `(num_boxes, *)` if probabilities for multiple classes are given.
+    """
+
     class_labels: Optional[List[Tensor]] = None
+    """
+    An optional list of tensors that give the labels corresponding to the `class_probs`
+    tensors. This should be non-`None` whenever `class_probs` is, and each tensor
+    should have the same shape as the corresponding tensor from `class_probs`.
+    """
 
 
 class RegionDetector(nn.Module, Registrable):
@@ -29,7 +51,8 @@ class RegionDetector(nn.Module, Registrable):
     - `boxes` (`List[Tensor]`): The coordinates of each region within the original image, with shape
       `(num_boxes, 4)`.
     - `class_probs` (`Optional[List[Tensor]]`): Class probabilities from some object
-      detector that was used to find the regions of interest, with shape `(num_predicted_classes,)`.
+      detector that was used to find the regions of interest, with shape `(num_boxes,)`
+      or `(num_boxes, *)` if probabilities for more than one class are given.
     - `class_labels` (`Optional[List[Tensor]]`): The labels corresponding to `class_probs`.
       Each tensor in this list has the same shape as the corresponding tensor in `class_probs`.
 

@@ -78,6 +78,7 @@ class VisionReader(DatasetReader):
         image_featurizer: Optional[Lazy[GridEmbedder]] = None,
         region_detector: Optional[Lazy[RegionDetector]] = None,
         feature_cache_dir: Optional[Union[str, PathLike]] = None,
+        feature_cache_read_only: bool = False,
         tokenizer: Optional[Tokenizer] = None,
         token_indexers: Optional[Dict[str, TokenIndexer]] = None,
         cuda_device: Optional[Union[int, torch.device]] = None,
@@ -167,6 +168,24 @@ class VisionReader(DatasetReader):
         if self._region_detector is None:
             if self._lazy_region_detector is None:
                 return None
+            self._region_detector = self._lazy_region_detector.construct().to(self.cuda_device)  # type: ignore
+            self._region_detector.eval()  # type: ignore[attr-defined]
+        return self._region_detector  # type: ignore[return-value]
+
+    @property
+    def image_featurizer(self) -> GridEmbedder:
+        if self._image_featurizer is None:
+            if self._lazy_image_featurizer is None:
+                raise ValueError("image_featurizer was not specified")
+            self._image_featurizer = self._lazy_image_featurizer.construct().to(self.cuda_device)  # type: ignore
+            self._image_featurizer.eval()  # type: ignore[attr-defined]
+        return self._image_featurizer  # type: ignore[return-value]
+
+    @property
+    def region_detector(self) -> RegionDetector:
+        if self._region_detector is None:
+            if self._lazy_region_detector is None:
+                raise ValueError("region_detector was not specified")
             self._region_detector = self._lazy_region_detector.construct().to(self.cuda_device)  # type: ignore
             self._region_detector.eval()  # type: ignore[attr-defined]
         return self._region_detector  # type: ignore[return-value]
