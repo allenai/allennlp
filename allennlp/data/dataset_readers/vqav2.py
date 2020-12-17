@@ -255,7 +255,7 @@ class VQAv2Reader(VisionReader):
         If this is given, the reader only outputs instances with answers contained in this vocab.
         If this is not given, the reader outputs all instances with all answers.
         If this is a URL or filename, we will download a previously saved vocabulary from there.
-    feature_cache_dir: `Union[str, PathLike]`, optional
+    features_cache_dir: `Union[str, PathLike]`, optional
         An optional directory to cache the featurized images in. Featurizing images takes a long
         time, and many images are duplicated, so we highly recommend to use this cache.
     tokenizer: `Tokenizer`, optional
@@ -270,9 +270,6 @@ class VQAv2Reader(VisionReader):
         returns.
     image_processing_batch_size: `int`
         The number of images to process at one time while featurizing. Default is 8.
-    run_image_feature_extraction: `bool`
-        If this is set to `False`, we skip featurizing images completely. This can be useful
-        for debugging or for generating the vocabulary ahead of time. Default is `True`.
     multiple_answers_per_question: `bool`
         VQA questions have multiple answers. By default, we use all of them, and give more
         points to the more common answer. But VQA also has a special answer, the so-called
@@ -281,21 +278,21 @@ class VQAv2Reader(VisionReader):
 
     def __init__(
         self,
-        image_loader: ImageLoader,
         image_dir: Union[str, PathLike] = None,
         *,
+        image_loader: Optional[ImageLoader] = None,
         image_featurizer: Optional[Lazy[GridEmbedder]] = None,
         region_detector: Optional[Lazy[RegionDetector]] = None,
         answer_vocab: Optional[Union[Vocabulary, str]] = None,
-        feature_cache_dir: Optional[Union[str, PathLike]] = None,
-        feature_cache_read_only: bool = False,
+        features_cache_dir: Optional[Union[str, PathLike]] = None,
         tokenizer: Optional[Tokenizer] = None,
         token_indexers: Optional[Dict[str, TokenIndexer]] = None,
         cuda_device: Optional[Union[int, torch.device]] = None,
         max_instances: Optional[int] = None,
         image_processing_batch_size: int = 8,
-        run_image_feature_extraction: bool = True,
         multiple_answers_per_question: bool = True,
+        read_from_cache: bool = True,
+        write_to_cache: bool = True,
     ) -> None:
         if image_dir is None:
             raise ValueError(
@@ -308,17 +305,17 @@ class VQAv2Reader(VisionReader):
 
         super().__init__(
             image_dir,
-            image_loader,
+            image_loader=image_loader,
             image_featurizer=image_featurizer,
             region_detector=region_detector,
-            feature_cache_dir=feature_cache_dir,
-            feature_cache_read_only=feature_cache_read_only,
+            features_cache_dir=features_cache_dir,
             tokenizer=tokenizer,
             token_indexers=token_indexers,
             cuda_device=cuda_device,
             max_instances=max_instances,
             image_processing_batch_size=image_processing_batch_size,
-            run_image_feature_extraction=run_image_feature_extraction,
+            read_from_cache=read_from_cache,
+            write_to_cache=write_to_cache,
         )
 
         # read answer vocab
@@ -333,7 +330,7 @@ class VQAv2Reader(VisionReader):
                 for a in answer_vocab.get_token_to_index_vocabulary("answers").keys()
             )
 
-        if run_image_feature_extraction:
+        if self.produce_featurized_images:
             # normalize self.images some more
             # At this point, self.images maps filenames to full paths, but we want to map image ids to full paths.
             filename_re = re.compile(r".*(\d{12})\.((jpg)|(png))")
@@ -436,7 +433,7 @@ class VQAv2Reader(VisionReader):
 
         question_dicts = list(self.shard_iterable(questions))
         processed_images: Iterable[Optional[Tuple[Tensor, Tensor]]]
-        if self.run_image_feature_extraction:
+        if self.produce_featurized_images:
             # It would be much easier to just process one image at a time, but it's faster to process
             # them in batches. So this code gathers up instances until it has enough to fill up a batch
             # that needs processing, and then processes them all.

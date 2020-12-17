@@ -20,7 +20,7 @@ from tqdm import tqdm
 import torch.distributed as dist
 
 from allennlp.common import util
-from allennlp.common.checks import check_for_gpu
+from allennlp.common.checks import check_for_gpu, ConfigurationError
 from allennlp.common.lazy import Lazy
 from allennlp.common.util import int_to_device
 from allennlp.common.file_utils import TensorCache
@@ -65,7 +65,7 @@ class VisionReader(DatasetReader):
         returns.
     image_processing_batch_size: `int`
         The number of images to process at one time while featurizing. Default is 8.
-    run_image_feature_extraction: `bool`
+    produce_featurized_images: `bool`
         If this is set to `False`, we skip featurizing images completely. This can be useful
         for debugging or for generating the vocabulary ahead of time. Default is `True`.
     """
@@ -73,36 +73,24 @@ class VisionReader(DatasetReader):
     def __init__(
         self,
         image_dir: Union[str, PathLike],
-        image_loader: ImageLoader,
         *,
+        image_loader: Optional[ImageLoader] = None,
         image_featurizer: Optional[Lazy[GridEmbedder]] = None,
         region_detector: Optional[Lazy[RegionDetector]] = None,
-        feature_cache_dir: Optional[Union[str, PathLike]] = None,
-        feature_cache_read_only: bool = False,
+        features_cache_dir: Optional[Union[str, PathLike]] = None,
         tokenizer: Optional[Tokenizer] = None,
         token_indexers: Optional[Dict[str, TokenIndexer]] = None,
         cuda_device: Optional[Union[int, torch.device]] = None,
         max_instances: Optional[int] = None,
         image_processing_batch_size: int = 8,
-        run_image_feature_extraction: bool = True,
+        read_from_cache: bool = True,
+        write_to_cache: bool = True,
     ) -> None:
         super().__init__(
             max_instances=max_instances,
             manual_distributed_sharding=True,
             manual_multi_process_sharding=True,
         )
-
-        if cuda_device is None:
-            if torch.cuda.device_count() > 0:
-                if util.is_distributed():
-                    cuda_device = dist.get_rank() % torch.cuda.device_count()
-                else:
-                    cuda_device = 0
-            else:
-                cuda_device = -1
-        check_for_gpu(cuda_device)
-        self.cuda_device = int_to_device(cuda_device)
-        logger.info(f"Processing images on device {cuda_device}")
 
         # tokenizers and indexers
         if tokenizer is None:
@@ -112,8 +100,48 @@ class VisionReader(DatasetReader):
             token_indexers = {"tokens": PretrainedTransformerIndexer("bert-base-uncased")}
         self._token_indexers = token_indexers
 
-        self.run_image_feature_extraction = run_image_feature_extraction
-        if run_image_feature_extraction:
+        if not ((image_loader is None) == (image_featurizer is None) == (region_detector is None)):
+            raise ConfigurationError(
+                "Please either specify all of image_loader, image_featurizer, and region_detector, "
+                "or specify none of them if you don't want to featurize images.")
+
+        # feature cache
+        self.features_cache_dir = features_cache_dir
+        self.coordinates_cache_dir = features_cache_dir
+        if features_cache_dir:
+            self.read_from_cache = read_from_cache
+            self.write_to_cache = write_to_cache
+            self._features_cache_instance: Optional[MutableMapping[str, Tensor]] = None
+            self._coordinates_cache_instance: Optional[MutableMapping[str, Tensor]] = None
+            self.image_processing_batch_size = image_processing_batch_size
+
+        # image processors
+        if image_loader and image_featurizer and region_detector:
+            if cuda_device is None:
+                if torch.cuda.device_count() > 0:
+                    if util.is_distributed():
+                        cuda_device = dist.get_rank() % torch.cuda.device_count()
+                    else:
+                        cuda_device = 0
+                else:
+                    cuda_device = -1
+            check_for_gpu(cuda_device)
+            self.cuda_device = int_to_device(cuda_device)
+            logger.info(f"Processing images on device {cuda_device}")
+
+            # image loading and featurizing
+            self.image_loader = image_loader
+            self.image_loader.device = self.cuda_device
+            self._lazy_image_featurizer = image_featurizer
+            self._image_featurizer = None
+            self._lazy_region_detector = region_detector
+            self._region_detector = None
+
+        self.produce_featurized_images = (
+            (self.image_loader and self.image_featurizer and self.region_detector) or
+            (self.features_cache_dir and self.coordinates_cache_dir and self.read_from_cache)
+        )
+        if self.produce_featurized_images:
             logger.info("Discovering images ...")
             self.images = {
                 os.path.basename(filename): filename
@@ -125,37 +153,20 @@ class VisionReader(DatasetReader):
             }
             logger.info("Done discovering images")
 
-            # image loading and featurizing
-            self.image_loader = image_loader
-            self.image_loader.device = self.cuda_device
-            self._lazy_image_featurizer = image_featurizer
-            self._image_featurizer = None
-            self._lazy_region_detector = region_detector
-            self._region_detector = None
-
-            # feature cache
-            self.feature_cache_dir = feature_cache_dir
-            self.feature_cache_read_only = feature_cache_read_only
-            self.coordinates_cache_dir = feature_cache_dir
-            self._features_cache_instance: Optional[MutableMapping[str, Tensor]] = None
-            self._coordinates_cache_instance: Optional[MutableMapping[str, Tensor]] = None
-
-            self.image_processing_batch_size = image_processing_batch_size
-
     @property
-    def image_featurizer(self) -> GridEmbedder:
+    def image_featurizer(self) -> Optional[GridEmbedder]:
         if self._image_featurizer is None:
             if self._lazy_image_featurizer is None:
-                raise ValueError("image_featurizer was not specified")
+                return None
             self._image_featurizer = self._lazy_image_featurizer.construct().to(self.cuda_device)  # type: ignore
             self._image_featurizer.eval()  # type: ignore[attr-defined]
         return self._image_featurizer  # type: ignore[return-value]
 
     @property
-    def region_detector(self) -> RegionDetector:
+    def region_detector(self) -> Optional[RegionDetector]:
         if self._region_detector is None:
             if self._lazy_region_detector is None:
-                raise ValueError("region_detector was not specified")
+                return None
             self._region_detector = self._lazy_region_detector.construct().to(self.cuda_device)  # type: ignore
             self._region_detector.eval()  # type: ignore[attr-defined]
         return self._region_detector  # type: ignore[return-value]
@@ -163,13 +174,13 @@ class VisionReader(DatasetReader):
     @property
     def _features_cache(self) -> MutableMapping[str, Tensor]:
         if self._features_cache_instance is None:
-            if self.feature_cache_dir is None:
+            if self.features_cache_dir is None:
                 self._features_cache_instance = {}
             else:
-                os.makedirs(self.feature_cache_dir, exist_ok=True)
+                os.makedirs(self.features_cache_dir, exist_ok=True)
                 self._features_cache_instance = TensorCache(
-                    os.path.join(self.feature_cache_dir, "features"),
-                    read_only=self.feature_cache_read_only,
+                    os.path.join(self.features_cache_dir, "features"),
+                    read_only=not self.write_to_cache,
                 )
 
         return self._features_cache_instance
@@ -180,17 +191,21 @@ class VisionReader(DatasetReader):
             if self.coordinates_cache_dir is None:
                 self._coordinates_cache_instance = {}
             else:
-                os.makedirs(self.feature_cache_dir, exist_ok=True)  # type: ignore
+                os.makedirs(self.features_cache_dir, exist_ok=True)  # type: ignore
                 self._coordinates_cache_instance = TensorCache(
-                    os.path.join(self.feature_cache_dir, "coordinates"),  # type: ignore
-                    read_only=self.feature_cache_read_only,
+                    os.path.join(self.features_cache_dir, "coordinates"),  # type: ignore
+                    read_only=not self.write_to_cache,
                 )
 
         return self._coordinates_cache_instance
 
-    def _process_image_paths(
-        self, image_paths: Iterable[str], *, use_cache: bool = True
-    ) -> Iterator[Tuple[Tensor, Tensor]]:
+    def _process_image_paths(self, image_paths: Iterable[str]) -> Iterator[Tuple[Tensor, Tensor]]:
+        assert (
+            (self._features_cache and self._coordinates_cache and self.read_from_cache) or
+            (self.image_loader and self.image_featurizer and self.region_detector)
+        ), "For _process_image_paths() to work, we need either a features cache, or an image loader, " \
+           "an image featurizer, and a region detector."
+
         batch: List[Union[str, Tuple[Tensor, Tensor]]] = []
         unprocessed_paths: Set[str] = set()
 
@@ -210,7 +225,7 @@ class VisionReader(DatasetReader):
             paths_to_tensors = {path: (features[i], coordinates[i]) for i, path in enumerate(paths)}
 
             # store the processed results in the cache
-            if use_cache:
+            if self.write_to_cache:
                 for path, (features, coordinates) in paths_to_tensors.items():
                     basename = os.path.basename(path)
                     self._features_cache[basename] = features
@@ -226,7 +241,7 @@ class VisionReader(DatasetReader):
         for image_path in image_paths:
             basename = os.path.basename(image_path)
             try:
-                if use_cache:
+                if self.read_from_cache:
                     features: Tensor = self._features_cache[basename]
                     coordinates: Tensor = self._coordinates_cache[basename]
                     if len(batch) <= 0:
@@ -237,6 +252,8 @@ class VisionReader(DatasetReader):
                     # If we're not using the cache, we pretend we had a cache miss here.
                     raise KeyError
             except KeyError:
+                if not (self.image_loader and self.region_detector and self.image_featurizer):
+                    raise KeyError(f"Could not find {basename} in the feature cache, and image featurizers are not defined.")
                 batch.append(image_path)
                 unprocessed_paths.add(image_path)
                 if len(unprocessed_paths) >= self.image_processing_batch_size:
