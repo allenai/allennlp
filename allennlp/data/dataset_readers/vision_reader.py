@@ -77,7 +77,7 @@ class VisionReader(DatasetReader):
         image_loader: Optional[ImageLoader] = None,
         image_featurizer: Optional[Lazy[GridEmbedder]] = None,
         region_detector: Optional[Lazy[RegionDetector]] = None,
-        features_cache_dir: Optional[Union[str, PathLike]] = None,
+        feature_cache_dir: Optional[Union[str, PathLike]] = None,
         tokenizer: Optional[Tokenizer] = None,
         token_indexers: Optional[Dict[str, TokenIndexer]] = None,
         cuda_device: Optional[Union[int, torch.device]] = None,
@@ -106,12 +106,12 @@ class VisionReader(DatasetReader):
                 "or specify none of them if you don't want to featurize images.")
 
         # feature cache
-        self.features_cache_dir = features_cache_dir
-        self.coordinates_cache_dir = features_cache_dir
-        if features_cache_dir:
+        self.feature_cache_dir = feature_cache_dir
+        self.coordinates_cache_dir = feature_cache_dir
+        if feature_cache_dir:
             self.read_from_cache = read_from_cache
             self.write_to_cache = write_to_cache
-            self._features_cache_instance: Optional[MutableMapping[str, Tensor]] = None
+            self._feature_cache_instance: Optional[MutableMapping[str, Tensor]] = None
             self._coordinates_cache_instance: Optional[MutableMapping[str, Tensor]] = None
             self.image_processing_batch_size = image_processing_batch_size
 
@@ -139,7 +139,7 @@ class VisionReader(DatasetReader):
 
         self.produce_featurized_images = (
             (self.image_loader and self.image_featurizer and self.region_detector) or
-            (self.features_cache_dir and self.coordinates_cache_dir and self.read_from_cache)
+            (self.feature_cache_dir and self.coordinates_cache_dir and self.read_from_cache)
         )
         if self.produce_featurized_images:
             logger.info("Discovering images ...")
@@ -172,18 +172,18 @@ class VisionReader(DatasetReader):
         return self._region_detector  # type: ignore[return-value]
 
     @property
-    def _features_cache(self) -> MutableMapping[str, Tensor]:
-        if self._features_cache_instance is None:
-            if self.features_cache_dir is None:
-                self._features_cache_instance = {}
+    def _feature_cache(self) -> MutableMapping[str, Tensor]:
+        if self._feature_cache_instance is None:
+            if self.feature_cache_dir is None:
+                self._feature_cache_instance = {}
             else:
-                os.makedirs(self.features_cache_dir, exist_ok=True)
-                self._features_cache_instance = TensorCache(
-                    os.path.join(self.features_cache_dir, "features"),
+                os.makedirs(self.feature_cache_dir, exist_ok=True)
+                self._feature_cache_instance = TensorCache(
+                    os.path.join(self.feature_cache_dir, "features"),
                     read_only=not self.write_to_cache,
                 )
 
-        return self._features_cache_instance
+        return self._feature_cache_instance
 
     @property
     def _coordinates_cache(self) -> MutableMapping[str, Tensor]:
@@ -191,9 +191,9 @@ class VisionReader(DatasetReader):
             if self.coordinates_cache_dir is None:
                 self._coordinates_cache_instance = {}
             else:
-                os.makedirs(self.features_cache_dir, exist_ok=True)  # type: ignore
+                os.makedirs(self.feature_cache_dir, exist_ok=True)  # type: ignore
                 self._coordinates_cache_instance = TensorCache(
-                    os.path.join(self.features_cache_dir, "coordinates"),  # type: ignore
+                    os.path.join(self.feature_cache_dir, "coordinates"),  # type: ignore
                     read_only=not self.write_to_cache,
                 )
 
@@ -201,7 +201,7 @@ class VisionReader(DatasetReader):
 
     def _process_image_paths(self, image_paths: Iterable[str]) -> Iterator[Tuple[Tensor, Tensor]]:
         assert (
-            (self._features_cache and self._coordinates_cache and self.read_from_cache) or
+            (self._feature_cache and self._coordinates_cache and self.read_from_cache) or
             (self.image_loader and self.image_featurizer and self.region_detector)
         ), "For _process_image_paths() to work, we need either a features cache, or an image loader, " \
            "an image featurizer, and a region detector."
@@ -228,7 +228,7 @@ class VisionReader(DatasetReader):
             if self.write_to_cache:
                 for path, (features, coordinates) in paths_to_tensors.items():
                     basename = os.path.basename(path)
-                    self._features_cache[basename] = features
+                    self._feature_cache[basename] = features
                     self._coordinates_cache[basename] = coordinates
 
             # yield the batch
@@ -242,7 +242,7 @@ class VisionReader(DatasetReader):
             basename = os.path.basename(image_path)
             try:
                 if self.read_from_cache:
-                    features: Tensor = self._features_cache[basename]
+                    features: Tensor = self._feature_cache[basename]
                     coordinates: Tensor = self._coordinates_cache[basename]
                     if len(batch) <= 0:
                         yield features, coordinates

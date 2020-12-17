@@ -255,7 +255,7 @@ class VQAv2Reader(VisionReader):
         If this is given, the reader only outputs instances with answers contained in this vocab.
         If this is not given, the reader outputs all instances with all answers.
         If this is a URL or filename, we will download a previously saved vocabulary from there.
-    features_cache_dir: `Union[str, PathLike]`, optional
+    feature_cache_dir: `Union[str, PathLike]`, optional
         An optional directory to cache the featurized images in. Featurizing images takes a long
         time, and many images are duplicated, so we highly recommend to use this cache.
     tokenizer: `Tokenizer`, optional
@@ -284,7 +284,7 @@ class VQAv2Reader(VisionReader):
         image_featurizer: Optional[Lazy[GridEmbedder]] = None,
         region_detector: Optional[Lazy[RegionDetector]] = None,
         answer_vocab: Optional[Union[Vocabulary, str]] = None,
-        features_cache_dir: Optional[Union[str, PathLike]] = None,
+        feature_cache_dir: Optional[Union[str, PathLike]] = None,
         tokenizer: Optional[Tokenizer] = None,
         token_indexers: Optional[Dict[str, TokenIndexer]] = None,
         cuda_device: Optional[Union[int, torch.device]] = None,
@@ -308,7 +308,7 @@ class VQAv2Reader(VisionReader):
             image_loader=image_loader,
             image_featurizer=image_featurizer,
             region_detector=region_detector,
-            features_cache_dir=features_cache_dir,
+            feature_cache_dir=feature_cache_dir,
             tokenizer=tokenizer,
             token_indexers=token_indexers,
             cuda_device=cuda_device,
