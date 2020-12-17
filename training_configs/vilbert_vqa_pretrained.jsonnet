@@ -22,13 +22,13 @@ local vocabulary = if construct_vocab then {
 {
   "dataset_reader": {
     "type": "vqav2",
-    "image_dir": std.format("/mnt/tank/dirkg/data/vision/vqa/%s", dataset),
-    "feature_cache_dir": std.format("/mnt/tank/dirkg/data/vision/vqa/%s/feature_cache", dataset),
-    #"image_dir": std.format("/Users/dirkg/Documents/data/vision/vqa/%s", dataset),
-    #"feature_cache_dir": std.format("/Users/dirkg/Documents/data/vision/vqa/%s/feature_cache", dataset),
-    "image_loader": "torch",
-    "image_featurizer": "resnet_backbone",
-    "region_detector": "faster_rcnn",
+    #"image_dir": std.format("/mnt/tank/dirkg/data/vision/vqa/%s", dataset),
+    #"feature_cache_dir": std.format("/mnt/tank/dirkg/data/vision/vqa/%s/feature_cache", dataset),
+    "image_dir": std.format("/Users/dirkg/Documents/data/vision/vqa/%s", dataset),
+    "feature_cache_dir": "/Users/dirkg/Documents/data/vision/coco/vilbert-multitask-features/fixed-path",
+    [if !construct_vocab then "image_loader"]: "torch",
+    [if !construct_vocab then "image_featurizer"]: "resnet_backbone",
+    [if !construct_vocab then "region_detector"]: "faster_rcnn",
     "tokenizer": {
       "type": "pretrained_transformer",
       "model_name": model_name
@@ -42,8 +42,9 @@ local vocabulary = if construct_vocab then {
     #"max_instances": 1000,
     "image_processing_batch_size": 16,
     "answer_vocab": if construct_vocab then null else vocabulary,
-    "run_image_feature_extraction": !construct_vocab,
-    "multiple_answers_per_question": !construct_vocab
+    "multiple_answers_per_question": !construct_vocab,
+    "read_from_cache": true,
+    "write_to_cache": false
   },
   "validation_dataset_reader": self.dataset_reader {
     "answer_vocab": null    // make sure we don't skip unanswerable questions during validation
