@@ -291,7 +291,6 @@ class VQAv2Reader(VisionReader):
         max_instances: Optional[int] = None,
         image_processing_batch_size: int = 8,
         multiple_answers_per_question: bool = True,
-        read_from_cache: bool = True,
         write_to_cache: bool = True,
     ) -> None:
         run_featurization = image_loader and image_featurizer and region_detector
@@ -315,7 +314,6 @@ class VQAv2Reader(VisionReader):
             cuda_device=cuda_device,
             max_instances=max_instances,
             image_processing_batch_size=image_processing_batch_size,
-            read_from_cache=read_from_cache,
             write_to_cache=write_to_cache,
         )
 

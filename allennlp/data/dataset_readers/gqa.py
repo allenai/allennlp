@@ -45,8 +45,6 @@ class GQAReader(VisionReader):
         the sentences and metadata for each task instance.
     tokenizer: `Tokenizer`, optional
     token_indexers: `Dict[str, TokenIndexer]`
-    lazy : `bool`, optional
-        Whether to load data lazily. Passed to super class.
     """
 
     def __init__(
@@ -65,7 +63,6 @@ class GQAReader(VisionReader):
         max_instances: Optional[int] = None,
         image_processing_batch_size: int = 8,
         keep_unanswerable_questions: bool = True,
-        read_from_cache: bool = True,
         write_to_cache: bool = True,
     ) -> None:
         super().__init__(
@@ -79,7 +76,6 @@ class GQAReader(VisionReader):
             cuda_device=cuda_device,
             max_instances=max_instances,
             image_processing_batch_size=image_processing_batch_size,
-            read_from_cache=read_from_cache,
             write_to_cache=write_to_cache,
         )
         self.data_dir = data_dir

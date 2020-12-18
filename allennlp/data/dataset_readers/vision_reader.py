@@ -76,9 +76,6 @@ class VisionReader(DatasetReader):
         returns.
     image_processing_batch_size: `int`
         The number of images to process at one time while featurizing. Default is 8.
-    read_from_cache: `bool`, default `True`
-        Allows the reader to read from the cache. Disabling this is occasionally useful, for
-        example if you don't need images at all because you are building vocab only.
     write_to_cache: `bool`, default `True`
         Allows the reader to write to the cache. Disabling this is useful if you don't want
         to accidentally overwrite a cache you already have, or if you don't have write
@@ -98,7 +95,6 @@ class VisionReader(DatasetReader):
         cuda_device: Optional[Union[int, torch.device]] = None,
         max_instances: Optional[int] = None,
         image_processing_batch_size: int = 8,
-        read_from_cache: bool = True,
         write_to_cache: bool = True,
     ) -> None:
         super().__init__(
@@ -125,12 +121,10 @@ class VisionReader(DatasetReader):
         self.feature_cache_dir = feature_cache_dir
         self.coordinates_cache_dir = feature_cache_dir
         if feature_cache_dir:
-            self.read_from_cache = read_from_cache
             self.write_to_cache = write_to_cache
         else:
             # If we don't have a cache dir, we use a dict in memory as a cache, so we
-            # always read and write.
-            self.read_from_cache = True
+            # always write.
             self.write_to_cache = True
         self._feature_cache_instance: Optional[MutableMapping[str, Tensor]] = None
         self._coordinates_cache_instance: Optional[MutableMapping[str, Tensor]] = None
@@ -160,7 +154,7 @@ class VisionReader(DatasetReader):
 
         self.produce_featurized_images = (
             image_loader and image_featurizer and region_detector
-        ) or (self.feature_cache_dir and self.coordinates_cache_dir and self.read_from_cache)
+        ) or (self.feature_cache_dir and self.coordinates_cache_dir)
         if self.produce_featurized_images:
             logger.info("Discovering images ...")
             self.images = {
@@ -232,14 +226,14 @@ class VisionReader(DatasetReader):
         image_paths: `Iterable[str]`
             the image paths to process
         use_cache: `bool`, default = `True`
-            Usually the cache behavior is governed by the `write_to_cache` and `read_from_cache`
-            parameters given to `__init__()`. But sometimes we want to override this behavior
-            and turn off the cache completely. This parameter lets you do that. This is useful
-            for the `Predictor`, so we can make predictions without having to touch a cache,
+            Usually the cache behavior is governed by the `write_to_cache` parameter given to
+            `__init__()`. But sometimes we want to override this behavior and turn off the
+            cache completely. This parameter lets you do that. This is useful for the
+            `Predictor`, so we can make predictions without having to touch a cache,
             even if the model was trained with a cache.
         """
         assert self.produce_featurized_images, (
-            "For _process_image_paths() to work, we need either a features cache, or an image loader, "
+            "For _process_image_paths() to work, we need either a feature cache, or an image loader, "
             "an image featurizer, and a region detector."
         )
 
@@ -278,7 +272,7 @@ class VisionReader(DatasetReader):
         for image_path in image_paths:
             basename = os.path.basename(image_path)
             try:
-                if use_cache and self.read_from_cache:
+                if use_cache:
                     features: Tensor = self._feature_cache[basename]
                     coordinates: Tensor = self._coordinates_cache[basename]
                     if len(batch) <= 0:
@@ -290,7 +284,7 @@ class VisionReader(DatasetReader):
                     raise KeyError
             except KeyError:
                 if not (self.image_loader and self.region_detector and self.image_featurizer):
-                    if use_cache and self.read_from_cache:
+                    if use_cache:
                         raise KeyError(
                             f"Could not find {basename} in the feature cache, and "
                             "image featurizers are not defined."

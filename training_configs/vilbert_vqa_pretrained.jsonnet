@@ -43,7 +43,6 @@ local vocabulary = if construct_vocab then {
     "image_processing_batch_size": 16,
     "answer_vocab": if construct_vocab then null else vocabulary,
     "multiple_answers_per_question": !construct_vocab,
-    "read_from_cache": true,
     "write_to_cache": false
   },
   "validation_dataset_reader": self.dataset_reader {
