@@ -64,7 +64,7 @@ setup(
         "scikit-learn",
         "scipy",
         "pytest",
-        "transformers>=4.0,<4.1",
+        "transformers>=4.0,<4.2",
         "sentencepiece",
         "jsonpickle",
         "dataclasses;python_version<'3.7'",
