@@ -76,7 +76,7 @@ class VisionReader(DatasetReader):
         returns.
     image_processing_batch_size: `int`
         The number of images to process at one time while featurizing. Default is 8.
-    write_to_cache: `bool`, default `True`
+    write_to_cache: `bool`, optional (default = `True`)
         Allows the reader to write to the cache. Disabling this is useful if you don't want
         to accidentally overwrite a cache you already have, or if you don't have write
         access to the cache you're using.
