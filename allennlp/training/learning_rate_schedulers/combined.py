@@ -103,9 +103,10 @@ class CombinedLearningRateScheduler(LearningRateScheduler):
 
     @overrides
     def get_values(self):
-        if self.current_scheduler is not None:
-            return self.current_scheduler.get_values()
-        return self.base_values
+        """
+        This should never be called directly.
+        """
+        raise NotImplementedError
 
     @overrides
     def step_batch(self, batch_num_total: int = None) -> None:
