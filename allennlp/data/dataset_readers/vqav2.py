@@ -278,7 +278,7 @@ class VQAv2Reader(VisionReader):
 
     def __init__(
         self,
-        image_dir: Union[str, PathLike] = None,
+        image_dir: Optional[Union[str, PathLike]] = None,
         *,
         image_loader: Optional[ImageLoader] = None,
         image_featurizer: Optional[Lazy[GridEmbedder]] = None,

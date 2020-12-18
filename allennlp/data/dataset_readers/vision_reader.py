@@ -84,7 +84,7 @@ class VisionReader(DatasetReader):
 
     def __init__(
         self,
-        image_dir: Union[str, PathLike],
+        image_dir: Optional[Union[str, PathLike]],
         *,
         image_loader: Optional[ImageLoader] = None,
         image_featurizer: Optional[Lazy[GridEmbedder]] = None,
@@ -156,6 +156,16 @@ class VisionReader(DatasetReader):
             image_loader and image_featurizer and region_detector
         ) or (self.feature_cache_dir and self.coordinates_cache_dir)
         if self.produce_featurized_images:
+            if image_dir is None:
+                if image_loader and image_featurizer and region_detector:
+                    raise ConfigurationError("We need an image_dir to featurize images.")
+                else:
+                    raise ConfigurationError(
+                        "We need an image_dir to use a cache of featurized images. Images won't be "
+                        "read if they are cached, but we need the image_dir to determine the right "
+                        "cache keys from the file names."
+                    )
+
             logger.info("Discovering images ...")
             self.images = {
                 os.path.basename(filename): filename
