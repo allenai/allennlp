@@ -52,8 +52,8 @@ class GQAReader(VisionReader):
     def __init__(
         self,
         image_dir: Union[str, PathLike],
-        image_loader: ImageLoader,
         *,
+        image_loader: Optional[ImageLoader] = None,
         image_featurizer: Optional[Lazy[GridEmbedder]] = None,
         region_detector: Optional[Lazy[RegionDetector]] = None,
         answer_vocab: Optional[Union[str, Vocabulary]] = None,
@@ -64,12 +64,13 @@ class GQAReader(VisionReader):
         cuda_device: Optional[Union[int, torch.device]] = None,
         max_instances: Optional[int] = None,
         image_processing_batch_size: int = 8,
-        run_image_feature_extraction: bool = True,
         keep_unanswerable_questions: bool = True,
+        read_from_cache: bool = True,
+        write_to_cache: bool = True,
     ) -> None:
         super().__init__(
             image_dir,
-            image_loader,
+            image_loader=image_loader,
             image_featurizer=image_featurizer,
             region_detector=region_detector,
             feature_cache_dir=feature_cache_dir,
@@ -78,7 +79,8 @@ class GQAReader(VisionReader):
             cuda_device=cuda_device,
             max_instances=max_instances,
             image_processing_batch_size=image_processing_batch_size,
-            run_image_feature_extraction=run_image_feature_extraction,
+            read_from_cache=read_from_cache,
+            write_to_cache=write_to_cache,
         )
         self.data_dir = data_dir
 

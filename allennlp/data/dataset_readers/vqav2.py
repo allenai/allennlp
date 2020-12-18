@@ -285,7 +285,6 @@ class VQAv2Reader(VisionReader):
         region_detector: Optional[Lazy[RegionDetector]] = None,
         answer_vocab: Optional[Union[Vocabulary, str]] = None,
         feature_cache_dir: Optional[Union[str, PathLike]] = None,
-        feature_cache_read_only: bool = False,
         tokenizer: Optional[Tokenizer] = None,
         token_indexers: Optional[Dict[str, TokenIndexer]] = None,
         cuda_device: Optional[Union[int, torch.device]] = None,
@@ -295,7 +294,8 @@ class VQAv2Reader(VisionReader):
         read_from_cache: bool = True,
         write_to_cache: bool = True,
     ) -> None:
-        if image_dir is None:
+        run_featurization = image_loader and image_featurizer and region_detector
+        if image_dir is None and run_featurization:
             raise ValueError(
                 "Because of the size of the image datasets, we don't download them automatically. "
                 "Please go to https://visualqa.org/download.html, download the datasets you need, "
@@ -310,7 +310,6 @@ class VQAv2Reader(VisionReader):
             image_featurizer=image_featurizer,
             region_detector=region_detector,
             feature_cache_dir=feature_cache_dir,
-            feature_cache_read_only=feature_cache_read_only,
             tokenizer=tokenizer,
             token_indexers=token_indexers,
             cuda_device=cuda_device,

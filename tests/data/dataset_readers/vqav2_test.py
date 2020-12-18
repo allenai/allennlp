@@ -53,3 +53,14 @@ class TestVQAv2Reader(AllenNlpTestCase):
         # Nothing should be masked out since the number of fake boxes is the same
         # for each item in the batch.
         assert tensors["box_mask"].all()
+
+    def test_read_without_images(self):
+        reader = VQAv2Reader(
+            tokenizer=WhitespaceTokenizer(),
+            token_indexers={"tokens": SingleIdTokenIndexer()},
+        )
+        instances = list(reader.read("unittest"))
+        assert len(instances) == 3
+        assert "box_coordinates" not in instances[0]
+        assert "box_features" not in instances[0]
+        assert "box_mask" not in instances[0]
