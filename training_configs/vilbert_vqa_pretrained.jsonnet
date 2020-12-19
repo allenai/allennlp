@@ -55,7 +55,7 @@ local vocabulary = if construct_vocab then {
   "model": {
     "type": "vqa_vilbert_from_huggingface",
     "model_name": model_name,
-    "image_feature_dim": 1024,
+    "image_feature_dim": 2048,
     "image_hidden_size": 1024,
     "image_num_attention_heads": 8,
     "image_num_hidden_layers": 6,
@@ -76,7 +76,7 @@ local vocabulary = if construct_vocab then {
   "data_loader": {
     "batch_size": gpu_batch_size,
     "shuffle": true,
-    //[if !construct_vocab then "max_instances_in_memory"]: 1024
+    //[if !construct_vocab then "max_instances_in_memory"]: 10240
   },
   [if num_gpus > 1 then "distributed"]: {
     "cuda_devices": std.range(0, num_gpus - 1)
@@ -86,13 +86,13 @@ local vocabulary = if construct_vocab then {
   [if !construct_vocab then "trainer"]: {
     "optimizer": {
       "type": "huggingface_adamw",
-      "lr": 4e-4,
+      "lr": 4e-5,
       "correct_bias": true,
       "weight_decay": 0.01,
       "parameter_groups": [
         // [["bias", "LayerNorm\\.weight", "layer_norm\\.weight"], {"weight_decay": 0}], // can't use both at the same time
         // smaller learning rate for the pretrained weights
-        [["^embeddings\\.", "^encoder.layers1\\.", "^t_pooler\\."], {"lr": 4e-5}]
+        [["^embeddings\\.", "^encoder.layers1\\.", "^t_pooler\\."], {"lr": 4e-6}]
       ],
     },
     "learning_rate_scheduler": {
