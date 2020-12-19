@@ -1,7 +1,7 @@
 local model_name = "bert-base-uncased";
 local effective_batch_size = 128;
 local gpu_batch_size = 32;
-local num_gpus = 4;
+local num_gpus = 0;
 
 local datadir = "/net/s3/allennlp/akshitab/data/SNLI-VE/data/";
 
