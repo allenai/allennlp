@@ -26,9 +26,9 @@ local datadir = "/net/s3/allennlp/akshitab/data/SNLI-VE/data/";
     "max_instances": 30000,
     "image_processing_batch_size": 16,
   },
-  "validation_dataset_reader": self.dataset_reader,
-  "train_data_path": datadir + "snli_ve_train.jsonl",
-  "validation_data_path": datadir + "snli_ve_dev.jsonl",
+  "train_data_path": "https://storage.googleapis.com/allennlp-public-data/snli-ve/snli_ve_train.jsonl.gz",
+  "validation_data_path": "https://storage.googleapis.com/allennlp-public-data/snli-ve/snli_ve_dev.jsonl.gz",
+  "test_data_path": "https://storage.googleapis.com/allennlp-public-data/snli-ve/snli_ve_test.jsonl.gz",
   "model": {
     "type": "ve_vilbert_from_huggingface",
     "model_name": model_name,
