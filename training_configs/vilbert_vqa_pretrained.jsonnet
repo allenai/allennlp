@@ -53,7 +53,7 @@ local vocabulary = if construct_vocab then {
   "model": {
     "type": "vqa_vilbert_from_huggingface",
     "model_name": model_name,
-    "image_feature_dim": 2048,
+    "image_feature_dim": 1024,
     "image_hidden_size": 1024,
     "image_num_attention_heads": 8,
     "image_num_hidden_layers": 6,
