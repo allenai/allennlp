@@ -288,9 +288,9 @@ jobs:
       run: |
         # Check the install instructions on https://pytorch.org/ to keep these up-to-date.
         if [[ $CUDA == '10.2' ]]; then
-            echo "DOCKER_TORCH_VERSION='torch==1.7.0'" >> $GITHUB_ENV;
+            echo "DOCKER_TORCH_VERSION='torch==1.7.1'" >> $GITHUB_ENV;
         elif [[ $CUDA == '11.0' ]]; then
-            echo "DOCKER_TORCH_VERSION='torch==1.7.0+cu110 -f https://download.pytorch.org/whl/torch_stable.html'" >> $GITHUB_ENV;
+            echo "DOCKER_TORCH_VERSION='torch==1.7.1+cu110 -f https://download.pytorch.org/whl/torch_stable.html'" >> $GITHUB_ENV;
         else
             echo "Unhandled CUDA version $CUDA";
             exit 1;
