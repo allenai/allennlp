@@ -1,8 +1,8 @@
-local model_name = "bert-large-uncased";
+local model_name = "bert-base-uncased";
 local vocab_size = 30522;     // for bert-*-uncased models
 //local vocab_size = 28996;   // for bert-*-cased models
 local effective_batch_size = 128;
-local gpu_batch_size = 32;
+local gpu_batch_size = 128;
 local num_gpus = 1;
 
 local construct_vocab = false;
@@ -22,13 +22,8 @@ local vocabulary = if construct_vocab then {
 {
   "dataset_reader": {
     "type": "vqav2",
-    "image_dir": std.format("/mnt/tank/dirkg/data/vision/vqa/%s", dataset),
-    "feature_cache_dir": std.format("/mnt/tank/dirkg/data/vision/vqa/%s/feature_cache", dataset),
-    #"image_dir": std.format("/Users/dirkg/Documents/data/vision/vqa/%s", dataset),
-    #"feature_cache_dir": std.format("/Users/dirkg/Documents/data/vision/vqa/%s/feature_cache", dataset),
-    [if !construct_vocab then "image_loader"]: "torch",
-    [if !construct_vocab then "image_featurizer"]: "resnet_backbone",
-    [if !construct_vocab then "region_detector"]: "faster_rcnn",
+    #"feature_cache_dir": "/mnt/tank/dirkg/data/vision/coco/vilbert-multitask-features/fixed-path",
+    "feature_cache_dir": "/Users/dirkg/Documents/data/vision/coco/vilbert-multitask-features/fixed-path",
     "tokenizer": {
       "type": "pretrained_transformer",
       "model_name": model_name
@@ -42,7 +37,8 @@ local vocabulary = if construct_vocab then {
     #"max_instances": 1000,
     "image_processing_batch_size": 16,
     "answer_vocab": if construct_vocab then null else vocabulary,
-    "multiple_answers_per_question": !construct_vocab
+    "multiple_answers_per_question": !construct_vocab,
+    "write_to_cache": false
   },
   "validation_dataset_reader": self.dataset_reader {
     "answer_vocab": null    // make sure we don't skip unanswerable questions during validation
@@ -64,7 +60,7 @@ local vocabulary = if construct_vocab then {
     "image_attention_dropout": 0.1,
     "image_hidden_dropout": 0.1,
     "image_biattention_id": [0, 1, 2, 3, 4, 5],
-    "text_biattention_id": [18, 19, 20, 21, 22, 23],
+    "text_biattention_id": [6, 7, 8, 9, 10, 11],
     "text_fixed_layer": 0,
     "image_fixed_layer": 0,
     "fusion_method": "mul",
@@ -95,19 +91,19 @@ local vocabulary = if construct_vocab then {
     },
     "learning_rate_scheduler": {
       "type": "linear_with_warmup",
-      //"num_steps_per_epoch": std.ceil(658111 / $["data_loader"]["batch_size"] / $["trainer"]["num_gradient_accumulation_steps"]),
+      //"num_steps_per_epoch": std.ceil(0 / $["data_loader"]["batch_size"] / $["trainer"]["num_gradient_accumulation_steps"]),
       "warmup_steps": 5000
     },
     "validation_metric": "+fscore",
     "patience": 5,
-    "num_epochs": 30,
+    "num_epochs": 40,
     "num_gradient_accumulation_steps": effective_batch_size / gpu_batch_size / std.max(1, num_gpus),
     "tensorboard_writer": {
         "summary_interval": 10,
         "should_log_learning_rate": true
     },
   },
-  "random_seed": 42,
-  "numpy_seed": 42,
-  "pytorch_seed": 42,
+  "random_seed": 876170670,
+  "numpy_seed": 876170670,
+  "pytorch_seed": 876170670,
 }

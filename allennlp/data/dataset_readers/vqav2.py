@@ -278,7 +278,7 @@ class VQAv2Reader(VisionReader):
 
     def __init__(
         self,
-        image_dir: Union[str, PathLike] = None,
+        image_dir: Optional[Union[str, PathLike]] = None,
         *,
         image_loader: Optional[ImageLoader] = None,
         image_featurizer: Optional[Lazy[GridEmbedder]] = None,
@@ -291,10 +291,10 @@ class VQAv2Reader(VisionReader):
         max_instances: Optional[int] = None,
         image_processing_batch_size: int = 8,
         multiple_answers_per_question: bool = True,
-        read_from_cache: bool = True,
         write_to_cache: bool = True,
     ) -> None:
-        if image_dir is None:
+        run_featurization = image_loader and image_featurizer and region_detector
+        if image_dir is None and run_featurization:
             raise ValueError(
                 "Because of the size of the image datasets, we don't download them automatically. "
                 "Please go to https://visualqa.org/download.html, download the datasets you need, "
@@ -314,7 +314,6 @@ class VQAv2Reader(VisionReader):
             cuda_device=cuda_device,
             max_instances=max_instances,
             image_processing_batch_size=image_processing_batch_size,
-            read_from_cache=read_from_cache,
             write_to_cache=write_to_cache,
         )
 

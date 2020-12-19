@@ -107,7 +107,7 @@ class MultiProcessDataLoader(DataLoader):
 
         The first work-around is to disable parallelism for these low-level libraries.
         For example, setting the environment variables `OMP_NUM_THREADS=1` and `TOKENIZERS_PARALLELISM=0`
-        will do so for PyTorch and Numpy (for CPU operations) and HugggingFace Tokenizers, respectively.
+        will do so for PyTorch and Numpy (for CPU operations) and HuggingFace Tokenizers, respectively.
 
         Alternatively, changing the `start_method` to "spawn" (when available, depending on your OS)
         may fix your issues without disabling parallelism for other libraries.

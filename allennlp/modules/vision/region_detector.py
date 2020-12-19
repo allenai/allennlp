@@ -1,3 +1,5 @@
+import itertools
+import random
 from collections import OrderedDict
 from typing import NamedTuple, Optional, List, Tuple
 
@@ -11,10 +13,32 @@ from allennlp.common import Registrable
 
 
 class RegionDetectorOutput(NamedTuple):
+    """
+    The output type from the forward pass of a `RegionDetector`.
+    """
+
     features: List[Tensor]
+    """
+    A list of tensors, each with shape `(num_boxes, feature_dim)`.
+    """
+
     boxes: List[Tensor]
+    """
+    A list of tensors containing the coordinates for each box. Each has shape `(num_boxes, 4)`.
+    """
+
     class_probs: Optional[List[Tensor]] = None
+    """
+    An optional list of tensors. These tensors can have shape `(num_boxes,)` or
+    `(num_boxes, *)` if probabilities for multiple classes are given.
+    """
+
     class_labels: Optional[List[Tensor]] = None
+    """
+    An optional list of tensors that give the labels corresponding to the `class_probs`
+    tensors. This should be non-`None` whenever `class_probs` is, and each tensor
+    should have the same shape as the corresponding tensor from `class_probs`.
+    """
 
 
 class RegionDetector(nn.Module, Registrable):
@@ -29,7 +53,8 @@ class RegionDetector(nn.Module, Registrable):
     - `boxes` (`List[Tensor]`): The coordinates of each region within the original image, with shape
       `(num_boxes, 4)`.
     - `class_probs` (`Optional[List[Tensor]]`): Class probabilities from some object
-      detector that was used to find the regions of interest, with shape `(num_predicted_classes,)`.
+      detector that was used to find the regions of interest, with shape `(num_boxes,)`
+      or `(num_boxes, *)` if probabilities for more than one class are given.
     - `class_labels` (`Optional[List[Tensor]]`): The labels corresponding to `class_probs`.
       Each tensor in this list has the same shape as the corresponding tensor in `class_probs`.
 
@@ -51,6 +76,19 @@ class RandomRegionDetector(RegionDetector):
     the proposal are a random 10-dimensional vector, and the coordinates are the size of the image.
     """
 
+    def __init__(self, seed: Optional[int] = None):
+        super().__init__()
+        self.random = random.Random(seed)
+
+    def _seeded_random_tensor(self, *shape: int, device) -> torch.FloatTensor:
+        """PyTorch's random functions can't take a random seed. There is only one global
+        random seed in torch, but that's not deterministic enough for us. So we use Python's
+        random source to make random tensors."""
+        result = torch.zeros(*shape, dtype=torch.float32, device=device)
+        for coordinates in itertools.product(*(range(size) for size in result.shape)):
+            result[coordinates] = self.random.uniform(-1, 1)
+        return result
+
     def forward(
         self,
         images: FloatTensor,
@@ -59,7 +97,7 @@ class RandomRegionDetector(RegionDetector):
     ) -> RegionDetectorOutput:
         batch_size, num_features, height, width = images.size()
         features = [
-            torch.rand(2, 10, dtype=torch.float32, device=images.device) for _ in range(batch_size)
+            self._seeded_random_tensor(2, 10, device=images.device) for _ in range(batch_size)
         ]
         boxes = [
             torch.zeros(2, 4, dtype=torch.float32, device=images.device) for _ in range(batch_size)
