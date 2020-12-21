@@ -27,7 +27,7 @@ def parse_args():
 if __name__ == "__main__":
     args = parse_args()
     os.makedirs(args.cache_dir, exist_ok=True)
-    features_cache = TensorCache(os.path.join(args.cache_dir, "features"))
+    feature_cache = TensorCache(os.path.join(args.cache_dir, "features"))
     coordinates_cache = TensorCache(os.path.join(args.cache_dir, "coordinates"))
     image_paths = []
     for extension in IMG_EXTENSIONS:
@@ -54,13 +54,13 @@ if __name__ == "__main__":
             coordinates = detector_results["coordinates"]
         for filename, image_features, image_coordinates in zip(batch, features, coordinates):
             filename = os.path.basename(filename)
-            features_cache[filename] = features.cpu()
+            feature_cache[filename] = features.cpu()
             coordinates_cache[filename] = coordinates.cpu()
 
     image_path_batch = []
     for image_path in tqdm(image_paths, desc="Processing images"):
         key = os.path.basename(image_path)
-        if key in features_cache and key in coordinates_cache:
+        if key in feature_cache and key in coordinates_cache:
             continue
         image_path_batch.append(image_path)
 

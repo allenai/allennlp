@@ -5,7 +5,10 @@ local model_name = "epwalsh/bert-xsmall-dummy";
     "image_dir": "test_fixtures/data/vqav2/images",
     "image_loader": "torch",
     "image_featurizer": "null",
-    "region_detector": "random",
+    "region_detector": {
+      "type": "random",
+      "seed": 322
+    },
     "tokenizer": {
       "type": "pretrained_transformer",
       "model_name": model_name

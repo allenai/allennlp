@@ -506,7 +506,7 @@ class TensorCache(MutableMapping[str, Tensor], ABC):
             )
 
         self.lmdb_env = lmdb.open(
-            filename,
+            str(filename),
             subdir=False,
             map_size=map_size,
             max_readers=cpu_count * 2,
