@@ -1,11 +1,12 @@
 from typing import List, Iterable
 
+import torch
 import pytest
 
 from allennlp.data.instance import Instance
 from allennlp.data.dataset_readers import DatasetReader
 from allennlp.data.data_loaders import MultiProcessDataLoader, WorkerError
-from allennlp.data.fields import TextField, MetadataField
+from allennlp.data.fields import TextField, MetadataField, TensorField
 from allennlp.data.tokenizers import PretrainedTransformerTokenizer
 from allennlp.data.token_indexers import PretrainedTransformerIndexer
 from allennlp.data.vocabulary import Vocabulary
@@ -43,6 +44,9 @@ class MockDatasetReader(DatasetReader):
         fields = {}
         fields["source"] = TextField(self.tokenizer.tokenize(source))
         fields["index"] = MetadataField(index)  # type: ignore
+        # It's important to have tests that use a tensor field since sending tensors
+        # between processes has a lot of pitfalls.
+        fields["tensor"] = TensorField(torch.tensor([1, 2, 3]))
         if target is not None:
             fields["target"] = TextField(self.tokenizer.tokenize(target))
         return Instance(fields)  # type: ignore
