@@ -1458,7 +1458,7 @@ class TestNnUtil(AllenNlpTestCase):
             def __init__(self):
                 self._device = None
 
-            def to(self, device):
+            def to(self, device, **kwargs):
                 self._device = device
                 return self
 
