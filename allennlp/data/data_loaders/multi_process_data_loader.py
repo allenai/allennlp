@@ -4,7 +4,7 @@ from multiprocessing.process import BaseProcess
 import random
 import sys
 import traceback
-from typing import List, Iterator, Optional, Callable, Iterable
+from typing import List, Iterator, Optional, Iterable
 
 import torch.multiprocessing as mp
 
@@ -75,9 +75,6 @@ class MultiProcessDataLoader(DataLoader):
         the `reader` needs to implement
         [`manual_multi_process_sharding`](/api/data/dataset_readers/dataset_reader/#datasetreader).
 
-    collate_fn: `Callable[[List[Instance]], TensorDict]`, optional (default = `allennlp_collate`)
-        The function used to turn `Instance`s into a `TensorDict` batch.
-
     max_instances_in_memory: `int`, optional (default = `None`)
         If not specified, all instances will be read and cached in memory for the duration
         of the data loader's life. This is generally ideal when your data can fit in memory
@@ -93,6 +90,14 @@ class MultiProcessDataLoader(DataLoader):
     start_method: `str`, optional (default = `"fork"`)
         The [start method](https://docs.python.org/3.7/library/multiprocessing.html#contexts-and-start-methods)
         used to spin up workers.
+
+    pin_memory: `bool`, optional (default = `False`)
+        When `True`, CPU tensors will be put into pinned (page-locked) memory, which results in faster copies to GPU.
+        It also lets you make asyncronous copies to GPU by passing the `non_blocking=True` argument to
+        `.to()` or `.cuda()`.
+
+        See [the PyTorch docs](https://pytorch.org/docs/stable/notes/cuda.html#use-pinned-memory-buffers)
+        for more info.
 
     !!! Note
         In a typical AllenNLP configuration file, the `reader` and `data_path` parameters don't
@@ -131,15 +136,16 @@ class MultiProcessDataLoader(DataLoader):
         self,
         reader: DatasetReader,
         data_path: str,
+        *,
         batch_size: int = None,
         drop_last: bool = False,
         shuffle: bool = False,
         batch_sampler: BatchSampler = None,
         batches_per_epoch: int = None,
         num_workers: int = 0,
-        collate_fn: Callable[[List[Instance]], TensorDict] = allennlp_collate,
         max_instances_in_memory: int = None,
         start_method: str = "fork",
+        pin_memory: bool = False,
     ) -> None:
         # Do some parameter validation.
         if num_workers is not None and num_workers < 0:
@@ -177,9 +183,10 @@ class MultiProcessDataLoader(DataLoader):
         self.batch_sampler = batch_sampler
         self.batches_per_epoch = batches_per_epoch
         self.num_workers = num_workers
-        self.collate_fn = collate_fn
+        self.collate_fn = allennlp_collate
         self.max_instances_in_memory = max_instances_in_memory
         self.start_method = start_method
+        self.pin_memory = pin_memory
 
         # To make sure we have some backpressure in the worker queues we try to set
         # reasonable defaults for the maximum size of these queues.
@@ -480,7 +487,7 @@ class MultiProcessDataLoader(DataLoader):
                     and len(batch) < self.batch_size  # type: ignore[operator]
                 ):
                     break
-                yield self.collate_fn(batch)
+                yield self.collate_fn(batch, pin_memory=self.pin_memory)
 
 
 class WorkerError(Exception):

@@ -1,15 +1,17 @@
-from typing import List, Iterable
+from typing import List, Iterable, Dict
 
 import torch
 import pytest
 
+from allennlp.common.testing import requires_gpu
 from allennlp.data.instance import Instance
 from allennlp.data.dataset_readers import DatasetReader
 from allennlp.data.data_loaders import MultiProcessDataLoader, WorkerError
-from allennlp.data.fields import TextField, MetadataField, TensorField
+from allennlp.data.fields import Field, TextField, MetadataField, TensorField
 from allennlp.data.tokenizers import PretrainedTransformerTokenizer
 from allennlp.data.token_indexers import PretrainedTransformerIndexer
 from allennlp.data.vocabulary import Vocabulary
+from allennlp.nn.util import move_to_device
 
 
 class MockDatasetReader(DatasetReader):
@@ -41,7 +43,7 @@ class MockDatasetReader(DatasetReader):
             yield self.text_to_instance(i, source, target)
 
     def text_to_instance(self, index: int, source: str, target: str = None) -> Instance:  # type: ignore
-        fields = {}
+        fields: Dict[str, Field] = {}
         fields["source"] = TextField(self.tokenizer.tokenize(source))
         fields["index"] = MetadataField(index)  # type: ignore
         # It's important to have tests that use a tensor field since sending tensors
@@ -175,3 +177,24 @@ def test_batches_per_epoch():
 
     assert len(loader) == 10
     assert len(list(loader)) == 10
+
+
+@pytest.mark.parametrize(
+    "options",
+    [
+        dict(num_workers=0, batch_size=2),
+        dict(num_workers=1, batch_size=2),
+        dict(num_workers=1, batch_size=2, max_instances_in_memory=10),
+    ],
+    ids=str,
+)
+@requires_gpu
+def test_pin_memory(options):
+    reader = MockDatasetReader()
+    loader = MultiProcessDataLoader(
+        reader=reader, data_path="this doens't matter", pin_memory=True, **options
+    )
+    vocab = Vocabulary.from_instances(loader.iter_instances())
+    loader.index_with(vocab)
+    for batch in loader:
+        batch = move_to_device(batch, 0)
