@@ -37,9 +37,24 @@ class VisualEntailmentReader(VisionReader):
             # It would be much easier to just process one image at a time, but it's faster to process
             # them in batches. So this code gathers up instances until it has enough to fill up a batch
             # that needs processing, and then processes them all.
-            processed_images = self._process_image_paths(
-                [self.images[info_dict["Flickr30K_ID"] + ".jpg"] for info_dict in info_dicts]
-            )
+            filenames = [info_dict["Flickr30K_ID"] + ".jpg" for info_dict in info_dicts]
+
+            try:
+                processed_images = self._process_image_paths(
+                    [self.images[filename] for filename in filenames]
+                )
+            except KeyError as e:
+                missing_filename = e.args[0]
+                raise KeyError(
+                    missing_filename,
+                    f"We could not find an image with the name {missing_filename}. "
+                    "Because of the size of the image datasets, we don't download them automatically. "
+                    "Please download the images from"
+                    "https://storage.googleapis.com/allennlp-public-data/snli-ve/flickr30k_images.tar.gz, "
+                    "extract them into a directory, and set the image_dir parameter to point to that "
+                    "directory. This dataset reader does not care about the exact directory structure. It "
+                    "finds the images wherever they are.",
+                )
         else:
             processed_images = [None for i in range(len(info_dicts))]  # type: ignore
 
