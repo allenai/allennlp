@@ -13,9 +13,9 @@ MD_DOCS_EXTRAS = $(addprefix $(MD_DOCS_ROOT),README.md CHANGELOG.md CONTRIBUTING
 DOCKER_TAG = latest
 DOCKER_IMAGE_NAME = allennlp/allennlp:$(DOCKER_TAG)
 DOCKER_TEST_IMAGE_NAME = allennlp/test:$(DOCKER_TAG)
-DOCKER_TORCH_VERSION = 'torch==1.7.0'
+DOCKER_TORCH_VERSION = 'torch==1.7.1'
 # Our self-hosted runner currently has CUDA 11.0.
-DOCKER_TEST_TORCH_VERSION = 'torch==1.7.0+cu110 -f https://download.pytorch.org/whl/torch_stable.html'
+DOCKER_TEST_TORCH_VERSION = 'torch==1.7.1+cu110 -f https://download.pytorch.org/whl/torch_stable.html'
 DOCKER_RUN_CMD = docker run --rm \
 		-v $$HOME/.allennlp:/root/.allennlp \
 		-v $$HOME/.cache/huggingface:/root/.cache/huggingface \
