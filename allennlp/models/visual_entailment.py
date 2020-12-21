@@ -50,6 +50,9 @@ class VisualEntailmentModel(VisionTextModel):
         fusion_method: str = "sum",
         dropout: float = 0.1,
         label_namespace: str = "labels",
+        *,
+        ignore_text: bool = False,
+        ignore_image: bool = False,
     ) -> None:
 
         super().__init__(
@@ -71,12 +74,18 @@ class VisualEntailmentModel(VisionTextModel):
         self,  # type: ignore
         box_features: torch.Tensor,
         box_coordinates: torch.Tensor,
+        box_mask: torch.Tensor,
         hypothesis: TextFieldTensors,
         label: Optional[torch.Tensor] = None,
     ) -> Dict[str, torch.Tensor]:
 
         return super().forward(
-            box_features, box_coordinates, text=hypothesis, label=label, label_weights=None
+            box_features,
+            box_coordinates,
+            box_mask,
+            text=hypothesis,
+            label=label,
+            label_weights=None,
         )
 
     @overrides

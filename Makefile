@@ -14,13 +14,11 @@ DOCKER_TAG = latest
 DOCKER_IMAGE_NAME = allennlp/allennlp:$(DOCKER_TAG)
 DOCKER_TEST_IMAGE_NAME = allennlp/test:$(DOCKER_TAG)
 DOCKER_TORCH_VERSION = 'torch==1.7.0 torchvision==0.8.1'
-DOCKER_DETECTRON_VERSION = 'detectron2 -f https://dl.fbaipublicfiles.com/detectron2/wheels/cu102/torch1.7/index.html'
 # Our self-hosted runner currently has CUDA 11.0.
 DOCKER_TEST_TORCH_VERSION = 'torch==1.7.0+cu110 torchvision==0.8.1+cu110 -f https://download.pytorch.org/whl/torch_stable.html'
-DOCKER_TEST_DETECTRON_VERSION = 'detectron2 -f https://dl.fbaipublicfiles.com/detectron2/wheels/cu110/torch1.7/index.html'
 DOCKER_RUN_CMD = docker run --rm \
 		-v $$HOME/.allennlp:/root/.allennlp \
-		-v $$HOME/.cache/torch:/root/.cache/torch \
+		-v $$HOME/.cache/huggingface:/root/.cache/huggingface \
 		-v $$HOME/nltk_data:/root/nltk_data
 
 ifeq ($(shell uname),Darwin)
@@ -87,10 +85,7 @@ install :
 	# Due to a weird thing with pip, we may need egg-info before running `pip install -e`.
 	# See https://github.com/pypa/pip/issues/4537.
 	python setup.py install_egg_info
-	# Install allennlp as editable and all dependencies except detectron since it requires torch to already be installed.
-	grep -Ev 'detectron' dev-requirements.txt | pip install --upgrade --upgrade-strategy eager -e .[vision] -r /dev/stdin
-	# Now install detectron.
-	grep -E 'detectron' dev-requirements.txt | pip install --upgrade -r /dev/stdin
+	pip install --upgrade --upgrade-strategy eager -e . -r dev-requirements.txt
 
 #
 # Documention helpers.
@@ -149,7 +144,6 @@ docker-image :
 		--pull \
 		-f Dockerfile \
 		--build-arg TORCH=$(DOCKER_TORCH_VERSION) \
-		--build-arg DETECTRON=$(DOCKER_DETECTRON_VERSION) \
 		-t $(DOCKER_IMAGE_NAME) .
 
 .PHONY : docker-run
@@ -162,7 +156,6 @@ docker-test-image :
 		--pull \
 		-f Dockerfile.test \
 		--build-arg TORCH=$(DOCKER_TEST_TORCH_VERSION) \
-		--build-arg DETECTRON=$(DOCKER_TEST_DETECTRON_VERSION) \
 		-t $(DOCKER_TEST_IMAGE_NAME) .
 
 .PHONY : docker-test-run

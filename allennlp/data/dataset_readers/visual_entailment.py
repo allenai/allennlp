@@ -9,10 +9,11 @@ from typing import (
 )
 
 from overrides import overrides
+import torch
 from torch import Tensor
 
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
-from allennlp.data.fields import ArrayField, LabelField, TextField
+from allennlp.data.fields import Field, ArrayField, LabelField, TextField
 from allennlp.data.instance import Instance
 from allennlp.data.dataset_readers.vision_reader import VisionReader
 
@@ -32,7 +33,7 @@ class VisualEntailmentReader(VisionReader):
         lines = json_lines_from_file(file_path)
         info_dicts: List[Dict] = list(self.shard_iterable(lines))  # type: ignore
 
-        if self.run_image_feature_extraction:
+        if self.produce_featurized_images:
             # It would be much easier to just process one image at a time, but it's faster to process
             # them in batches. So this code gathers up instances until it has enough to fill up a batch
             # that needs processing, and then processes them all.
@@ -62,8 +63,6 @@ class VisualEntailmentReader(VisionReader):
         tokenized_hypothesis = self._tokenizer.tokenize(hypothesis)
         hypothesis_field = TextField(tokenized_hypothesis, None)
 
-        from allennlp.data import Field
-
         fields: Dict[str, Field] = {"hypothesis": hypothesis_field}
 
         if image is not None:
@@ -74,6 +73,11 @@ class VisualEntailmentReader(VisionReader):
 
             fields["box_features"] = ArrayField(features)
             fields["box_coordinates"] = ArrayField(coords)
+            fields["box_mask"] = ArrayField(
+                features.new_ones((features.shape[0],), dtype=torch.bool),
+                padding_value=False,
+                dtype=torch.bool,
+            )
 
         if label:
             fields["label"] = LabelField(label)

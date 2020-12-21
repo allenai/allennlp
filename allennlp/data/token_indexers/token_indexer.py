@@ -4,7 +4,7 @@ import torch
 
 from allennlp.common import Registrable
 from allennlp.common.util import pad_sequence_to_length
-from allennlp.data.tokenizers.token import Token
+from allennlp.data.tokenizers import Token
 from allennlp.data.vocabulary import Vocabulary
 
 # An indexed token list represents the arguments that will be passed to a TokenEmbedder

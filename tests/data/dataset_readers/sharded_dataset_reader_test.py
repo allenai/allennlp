@@ -1,7 +1,7 @@
-from collections import Counter
 import glob
 import os
 import tarfile
+from collections import Counter
 from typing import Tuple
 
 from allennlp.common.testing import AllenNlpTestCase
