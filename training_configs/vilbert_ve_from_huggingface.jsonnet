@@ -1,7 +1,7 @@
 local model_name = "bert-base-uncased";
 local effective_batch_size = 128;
 local gpu_batch_size = 32;
-local num_gpus = 4;
+local num_gpus = 0;
 
 local datadir = "/net/s3/allennlp/akshitab/data/SNLI-VE/data/";
 
@@ -10,7 +10,7 @@ local datadir = "/net/s3/allennlp/akshitab/data/SNLI-VE/data/";
     "type": "visual-entailment",
     "image_dir": datadir + "Flickr30K/flickr30k_images",
     "feature_cache_dir": datadir + "/feature_cache",
-    "image_loader": "detectron",
+    "image_loader": "torch",
     "image_featurizer": "resnet_backbone",
     "region_detector": "faster_rcnn",
     "tokenizer": {
@@ -23,16 +23,15 @@ local datadir = "/net/s3/allennlp/akshitab/data/SNLI-VE/data/";
         "model_name": model_name
       }
     },
-    "max_instances": 30000,
     "image_processing_batch_size": 16,
   },
-  "validation_dataset_reader": self.dataset_reader,
-  "train_data_path": datadir + "snli_ve_train.jsonl",
-  "validation_data_path": datadir + "snli_ve_dev.jsonl",
+  "train_data_path": "https://storage.googleapis.com/allennlp-public-data/snli-ve/snli_ve_train.jsonl.gz",
+  "validation_data_path": "https://storage.googleapis.com/allennlp-public-data/snli-ve/snli_ve_dev.jsonl.gz",
+  "test_data_path": "https://storage.googleapis.com/allennlp-public-data/snli-ve/snli_ve_test.jsonl.gz",
   "model": {
     "type": "ve_vilbert_from_huggingface",
     "model_name": model_name,
-    "image_feature_dim": 2048,
+    "image_feature_dim": 1024,
     "image_hidden_size": 1024,
     "image_num_attention_heads": 8,
     "image_num_hidden_layers": 6,
@@ -60,14 +59,15 @@ local datadir = "/net/s3/allennlp/akshitab/data/SNLI-VE/data/";
   "trainer": {
     "optimizer": {
         "type": "huggingface_adamw",
-        "lr": 4e-5
+        "lr": 4e-5,
+        "weight_decay": 0.01
     },
     "learning_rate_scheduler": {
       "type": "linear_with_warmup",
-      "warmup_steps": 2000,
-      "num_steps_per_epoch": std.ceil(30000 / $["data_loader"]["batch_size"] / $["trainer"]["num_gradient_accumulation_steps"])
+      "num_steps_per_epoch": std.ceil(529527 / $["data_loader"]["batch_size"] / $["trainer"]["num_gradient_accumulation_steps"]),
+      "warmup_steps": std.ceil(self.num_steps_per_epoch / 2),
     },
-    "validation_metric": "+f1",
+    "validation_metric": "+fscore",
     "num_epochs": 20,
     "num_gradient_accumulation_steps": effective_batch_size / gpu_batch_size / std.max(1, num_gpus)
   },
