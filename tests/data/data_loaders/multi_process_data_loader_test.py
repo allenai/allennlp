@@ -192,7 +192,11 @@ def test_batches_per_epoch():
 def test_pin_memory(options):
     reader = MockDatasetReader()
     loader = MultiProcessDataLoader(
-        reader=reader, data_path="this doens't matter", pin_memory=True, **options
+        reader=reader,
+        data_path="this doens't matter",
+        pin_memory=True,
+        start_method="spawn",
+        **options,
     )
     vocab = Vocabulary.from_instances(loader.iter_instances())
     loader.index_with(vocab)
