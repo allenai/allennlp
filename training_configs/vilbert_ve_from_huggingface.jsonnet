@@ -23,7 +23,6 @@ local datadir = "/net/s3/allennlp/akshitab/data/SNLI-VE/data/";
         "model_name": model_name
       }
     },
-    "max_instances": 30000,
     "image_processing_batch_size": 16,
   },
   "train_data_path": "https://storage.googleapis.com/allennlp-public-data/snli-ve/snli_ve_train.jsonl.gz",
@@ -60,14 +59,15 @@ local datadir = "/net/s3/allennlp/akshitab/data/SNLI-VE/data/";
   "trainer": {
     "optimizer": {
         "type": "huggingface_adamw",
-        "lr": 4e-5
+        "lr": 4e-5,
+        "weight_decay": 0.01
     },
     "learning_rate_scheduler": {
       "type": "linear_with_warmup",
-      "warmup_steps": 2000,
-      "num_steps_per_epoch": std.ceil(30000 / $["data_loader"]["batch_size"] / $["trainer"]["num_gradient_accumulation_steps"])
+      "num_steps_per_epoch": std.ceil(529527 / $["data_loader"]["batch_size"] / $["trainer"]["num_gradient_accumulation_steps"]),
+      "warmup_steps": std.ceil(self.num_steps_per_epoch / 2),
     },
-    "validation_metric": "+f1",
+    "validation_metric": "+fscore",
     "num_epochs": 20,
     "num_gradient_accumulation_steps": effective_batch_size / gpu_batch_size / std.max(1, num_gpus)
   },
