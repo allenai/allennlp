@@ -91,6 +91,7 @@ class TestBucketSampler(SamplerTest):
             sorting_keys=["text"],
             drop_last=True,
         )
+
         # We use a custom collate_fn for testing, which doesn't actually create tensors,
         # just the allennlp Batches.
         def collate_fn(x, **kwargs):
