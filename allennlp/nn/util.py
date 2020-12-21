@@ -36,14 +36,20 @@ def move_to_device(obj, device: Union[torch.device, int], *, non_blocking: bool 
         # `obj.to(torch.device("cpu"))` would result in an error.
         return obj if obj.device == device else obj.to(device=device, non_blocking=non_blocking)
     elif isinstance(obj, dict):
-        return {key: move_to_device(value, device) for key, value in obj.items()}
+        for key, value in obj.items():
+            obj[key] = move_to_device(value, device, non_blocking=non_blocking)
+        return obj
     elif isinstance(obj, list):
-        return [move_to_device(item, device) for item in obj]
+        for i, item in enumerate(obj):
+            obj[i] = move_to_device(item, device, non_blocking=non_blocking)
+        return obj
     elif isinstance(obj, tuple) and hasattr(obj, "_fields"):
         # This is the best way to detect a NamedTuple, it turns out.
-        return obj.__class__(*(move_to_device(item, device) for item in obj))
+        return obj.__class__(
+            *(move_to_device(item, device, non_blocking=non_blocking) for item in obj)
+        )
     elif isinstance(obj, tuple):
-        return tuple(move_to_device(item, device) for item in obj)
+        return tuple(move_to_device(item, device, non_blocking=non_blocking) for item in obj)
     else:
         return obj
 
