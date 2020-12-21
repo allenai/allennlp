@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 T = TypeVar("T")
 
 
-def move_to_device(obj, device: Union[torch.device, int]):
+def move_to_device(obj, device: Union[torch.device, int], *, non_blocking: bool = False):
     """
     Given a structure (possibly) containing Tensors,
     move all the Tensors to the specified device (or do nothing, if they are already on
@@ -34,7 +34,7 @@ def move_to_device(obj, device: Union[torch.device, int]):
         # be a no-op anyway if `obj` is already on `device`. Well that works fine except
         # when PyTorch is not compiled with CUDA support, in which case even calling
         # `obj.to(torch.device("cpu"))` would result in an error.
-        return obj if obj.device == device else obj.to(device)
+        return obj if obj.device == device else obj.to(device=device, non_blocking=non_blocking)
     elif isinstance(obj, dict):
         return {key: move_to_device(value, device) for key, value in obj.items()}
     elif isinstance(obj, list):

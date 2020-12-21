@@ -43,7 +43,8 @@ dataset at every epoch) and a `MultiTaskScheduler` (for ordering the instances w
   With the `PyTorchDataLoader` this is controlled with the `lazy` parameter, but with
   the `MultiProcessDataLoading` this is controlled by the `max_instances_in_memory` setting.
 - `ArrayField` is now called `TensorField`, and implemented in terms of torch tensors, not numpy.
-- Improved `nn.util.move_to_device` function by avoiding an unnecessary recursive check for tensors.
+- Improved `nn.util.move_to_device` function by avoiding an unnecessary recursive check for tensors and
+  adding a `non_blocking` optional argument, which is the same argument as in `torch.Tensor.to()`.
 
 ### Removed
 

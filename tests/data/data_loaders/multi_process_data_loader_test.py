@@ -2,7 +2,6 @@ from typing import List, Iterable, Dict
 
 import torch
 import pytest
-
 from allennlp.common.testing import requires_gpu
 from allennlp.data.instance import Instance
 from allennlp.data.dataset_readers import DatasetReader
@@ -201,4 +200,4 @@ def test_pin_memory(options):
     vocab = Vocabulary.from_instances(loader.iter_instances())
     loader.index_with(vocab)
     for batch in loader:
-        batch = move_to_device(batch, 0)
+        batch = move_to_device(batch, 0, non_blocking=True)
