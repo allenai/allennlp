@@ -1,31 +1,71 @@
-from typing import Dict, List, Tuple, Union
+import itertools
+import random
+from collections import OrderedDict
+from typing import NamedTuple, Optional, List, Tuple
 
 import torch
+from torch import nn, FloatTensor, IntTensor, Tensor
 import torch.nn.functional as F
-from torch import nn, FloatTensor, IntTensor
+import torchvision
+import torchvision.ops.boxes as box_ops
 
 from allennlp.common import Registrable
 
 
+class RegionDetectorOutput(NamedTuple):
+    """
+    The output type from the forward pass of a `RegionDetector`.
+    """
+
+    features: List[Tensor]
+    """
+    A list of tensors, each with shape `(num_boxes, feature_dim)`.
+    """
+
+    boxes: List[Tensor]
+    """
+    A list of tensors containing the coordinates for each box. Each has shape `(num_boxes, 4)`.
+    """
+
+    class_probs: Optional[List[Tensor]] = None
+    """
+    An optional list of tensors. These tensors can have shape `(num_boxes,)` or
+    `(num_boxes, *)` if probabilities for multiple classes are given.
+    """
+
+    class_labels: Optional[List[Tensor]] = None
+    """
+    An optional list of tensors that give the labels corresponding to the `class_probs`
+    tensors. This should be non-`None` whenever `class_probs` is, and each tensor
+    should have the same shape as the corresponding tensor from `class_probs`.
+    """
+
+
 class RegionDetector(nn.Module, Registrable):
     """
-    A `RegionDetector` takes a batch of images as a tensor with the dimensions
-    (Batch, Color, Height, Width), and finds regions of interest (or "boxes") within those images.
+    A `RegionDetector` takes a batch of images, their sizes, and an ordered dictionary
+    of image features as input, and finds regions of interest (or "boxes") within those images.
 
     Those regions of interest are described by three values:
-    - A feature vector for each region, which is a tensor of shape (Batch, NumBoxes, FeatureDim)
-    - The coordinates of each region within the original image, with shape (Batch, NumBoxes, 4)
-    - (Optionally) Class probabilities from some object detector that was used to find the regions
-      of interest, with shape (Batch, NumBoxes, NumClasses).
 
-    Because the class probabilities are an optional return value, we return these tensors in a
-    dictionary, instead of a tuple (so you don't have a confusing check on the tuple size).  The
-    keys are "coordinates", "features", and "class_probs".
+    - `features` (`List[Tensor]`): A feature vector for each region, which is a tensor of shape
+      `(num_boxes, feature_dim)`.
+    - `boxes` (`List[Tensor]`): The coordinates of each region within the original image, with shape
+      `(num_boxes, 4)`.
+    - `class_probs` (`Optional[List[Tensor]]`): Class probabilities from some object
+      detector that was used to find the regions of interest, with shape `(num_boxes,)`
+      or `(num_boxes, *)` if probabilities for more than one class are given.
+    - `class_labels` (`Optional[List[Tensor]]`): The labels corresponding to `class_probs`.
+      Each tensor in this list has the same shape as the corresponding tensor in `class_probs`.
+
     """
 
     def forward(
-        self, raw_images: FloatTensor, image_sizes: IntTensor, featurized_images: FloatTensor
-    ) -> Dict[str, torch.Tensor]:
+        self,
+        images: FloatTensor,
+        sizes: IntTensor,
+        image_features: "OrderedDict[str, FloatTensor]",
+    ) -> RegionDetectorOutput:
         raise NotImplementedError()
 
 
@@ -36,195 +76,253 @@ class RandomRegionDetector(RegionDetector):
     the proposal are a random 10-dimensional vector, and the coordinates are the size of the image.
     """
 
+    def __init__(self, seed: Optional[int] = None):
+        super().__init__()
+        self.random = random.Random(seed)
+
+    def _seeded_random_tensor(self, *shape: int, device) -> torch.FloatTensor:
+        """PyTorch's random functions can't take a random seed. There is only one global
+        random seed in torch, but that's not deterministic enough for us. So we use Python's
+        random source to make random tensors."""
+        result = torch.zeros(*shape, dtype=torch.float32, device=device)
+        for coordinates in itertools.product(*(range(size) for size in result.shape)):
+            result[coordinates] = self.random.uniform(-1, 1)
+        return result
+
     def forward(
-        self, raw_images: FloatTensor, image_sizes: IntTensor, featurized_images: FloatTensor
-    ) -> Dict[str, torch.Tensor]:
-        batch_size, num_features, height, width = raw_images.size()
-        features = torch.rand(batch_size, 2, 10, dtype=featurized_images.dtype).to(
-            raw_images.device
-        )
-        coordinates = torch.zeros(batch_size, 2, 4, dtype=torch.float32).to(raw_images.device)
+        self,
+        images: FloatTensor,
+        sizes: IntTensor,
+        image_features: "OrderedDict[str, FloatTensor]",
+    ) -> RegionDetectorOutput:
+        batch_size, num_features, height, width = images.size()
+        features = [
+            self._seeded_random_tensor(2, 10, device=images.device) for _ in range(batch_size)
+        ]
+        boxes = [
+            torch.zeros(2, 4, dtype=torch.float32, device=images.device) for _ in range(batch_size)
+        ]
         for image_num in range(batch_size):
-            coordinates[image_num, 0, 2] = image_sizes[image_num, 0]
-            coordinates[image_num, 0, 3] = image_sizes[image_num, 1]
-            coordinates[image_num, 1, 2] = image_sizes[image_num, 0]
-            coordinates[image_num, 1, 3] = image_sizes[image_num, 1]
-        return {"features": features, "coordinates": coordinates}
+            boxes[image_num][0, 2] = sizes[image_num, 0]
+            boxes[image_num][0, 3] = sizes[image_num, 1]
+            boxes[image_num][1, 2] = sizes[image_num, 0]
+            boxes[image_num][1, 3] = sizes[image_num, 1]
+        return RegionDetectorOutput(features, boxes)
 
 
 @RegionDetector.register("faster_rcnn")
 class FasterRcnnRegionDetector(RegionDetector):
     """
-    Faster R-CNN (https://arxiv.org/abs/1506.01497) with ResNet backbone.
-    Based on detectron2 v0.2
+    A [Faster R-CNN](https://arxiv.org/abs/1506.01497) pretrained region detector.
+
+    Unless you really know what you're doing, this should be used with the image
+    features created from the `ResnetBackbone` `GridEmbedder` and on images loaded
+    using the `TorchImageLoader` with the default settings.
+
+
+    !!! Note
+        This module does not have any trainable parameters by default.
+        All pretrained weights are frozen.
+
+    # Parameters
+
+    box_score_thresh : `float`, optional (default = `0.05`)
+        During inference, only proposal boxes / regions with a label classification score
+        greater than `box_score_thresh` will be returned.
+
+    box_nms_thresh : `float`, optional (default = `0.5`)
+        During inference, non-maximum suppression (NMS) will applied to groups of boxes
+        that share a common label.
+
+        NMS iteratively removes lower scoring boxes which have an intersection-over-union (IoU)
+        greater than `box_nms_thresh` with another higher scoring box.
+
+    max_boxes_per_image : `int`, optional (default = `100`)
+        During inference, at most `max_boxes_per_image` boxes will be returned. The
+        number of boxes returned will vary by image and will often be lower
+        than `max_boxes_per_image` depending on the values of `box_score_thresh`
+        and `box_nms_thresh`.
     """
 
     def __init__(
         self,
-        meta_architecture: str = "GeneralizedRCNN",
-        device: Union[str, int, torch.device] = "cpu",
-        weights: str = "RCNN-X152-C4-2020-07-18",
-        # RPN
-        rpn_head_name: str = "StandardRPNHead",
-        rpn_in_features: List[str] = ["res4"],
-        rpn_boundary_thresh: int = 0,
-        rpn_iou_thresholds: List[float] = [0.3, 0.7],
-        rpn_iou_labels: List[int] = [0, -1, 1],
-        rpn_batch_size_per_image: int = 256,
-        rpn_positive_fraction: float = 0.5,
-        rpn_bbox_reg_loss_type: str = "smooth_l1",
-        rpn_bbox_reg_loss_weight: float = 1.0,  # different from default (-1)
-        rpn_bbox_reg_weights: Tuple[float, ...] = (1.0, 1.0, 1.0, 1.0),
-        rpn_smooth_l1_beta: float = 0.1111,  # different from default (0.0)
-        rpn_loss_weight: float = 1.0,
-        rpn_pre_nms_topk_train: int = 12000,
-        rpn_pre_nms_topk_test: int = 6000,
-        rpn_post_nms_topk_train: int = 2000,
-        rpn_post_nms_topk_test: int = 1000,
-        rpn_nms_thresh: float = 0.7,
-        rpn_bbox_loss_weight: float = 1.0,  # not in detectron2 default config
-        detections_per_image: int = 36,  # different from default (100)
+        *,
+        box_score_thresh: float = 0.05,
+        box_nms_thresh: float = 0.5,
+        max_boxes_per_image: int = 100,
     ):
         super().__init__()
-
-        from allennlp.common import detectron
-
-        self.flat_parameters = detectron.DetectronFlatParameters(
-            meta_architecture=meta_architecture,
-            weights=weights,
-            device=device,
-            rpn_head_name=rpn_head_name,
-            rpn_in_features=rpn_in_features,
-            rpn_boundary_thresh=rpn_boundary_thresh,
-            rpn_iou_thresholds=rpn_iou_thresholds,
-            rpn_iou_labels=rpn_iou_labels,
-            rpn_batch_size_per_image=rpn_batch_size_per_image,
-            rpn_positive_fraction=rpn_positive_fraction,
-            rpn_bbox_reg_loss_type=rpn_bbox_reg_loss_type,
-            rpn_bbox_reg_loss_weight=rpn_bbox_reg_loss_weight,
-            rpn_bbox_reg_weights=rpn_bbox_reg_weights,
-            rpn_smooth_l1_beta=rpn_smooth_l1_beta,
-            rpn_loss_weight=rpn_loss_weight,
-            rpn_pre_nms_topk_train=rpn_pre_nms_topk_train,
-            rpn_pre_nms_topk_test=rpn_pre_nms_topk_test,
-            rpn_post_nms_topk_train=rpn_post_nms_topk_train,
-            rpn_post_nms_topk_test=rpn_post_nms_topk_test,
-            rpn_nms_thresh=rpn_nms_thresh,
-            rpn_bbox_loss_weight=rpn_bbox_loss_weight,
-            test_detections_per_image=detections_per_image,
+        self.detector = torchvision.models.detection.fasterrcnn_resnet50_fpn(
+            pretrained=True,
+            box_score_thresh=box_score_thresh,
+            box_nms_thresh=box_nms_thresh,
+            box_detections_per_img=max_boxes_per_image,
         )
-        self._model_object = None
-        self.detections_per_image = detections_per_image
-
-    @property
-    def _model(self):
-        if self._model_object is None:
-            from allennlp.common import detectron
-
-            pipeline = detectron.get_pipeline_from_flat_parameters(
-                self.flat_parameters, make_copy=False
-            )
-            self._model_object = pipeline.model
-        return self._model_object
+        # Don't need this since the features will be calculated elsewhere.
+        del self.detector.backbone
+        # Freeze all weights.
+        for parameter in self.detector.parameters():
+            parameter.requires_grad = False
 
     def forward(
-        self, raw_images: FloatTensor, image_sizes: IntTensor, featurized_images: FloatTensor
-    ) -> Dict[str, torch.Tensor]:
-        batch_size = len(image_sizes)
+        self,
+        images: FloatTensor,
+        sizes: IntTensor,
+        image_features: "OrderedDict[str, FloatTensor]",
+    ) -> RegionDetectorOutput:
+        """
+        Extract regions and region features from the given images.
 
-        raw_images = [
-            {"image": (image[:, :height, :width] * 256).byte(), "height": height, "width": width}
-            for image, (height, width) in zip(raw_images, image_sizes)
-        ]
-        image_list = self._model.preprocess_image(raw_images)
+        In most cases `image_features` should come directly from the `ResnetBackbone`
+        `GridEmbedder`. The `images` themselves should be standardized and resized
+        using the default settings for the `TorchImageLoader`.
+        """
+        if self.training:
+            raise RuntimeError(
+                "FasterRcnnRegionDetector can not be used for training at the moment"
+            )
 
-        # RPN
-        assert len(self._model.proposal_generator.in_features) == 1
-        featurized_images_in_dict = {
-            self._model.proposal_generator.in_features[0]: featurized_images
-        }
+        # Adapted from https://github.com/pytorch/vision/blob/
+        # 4521f6d152875974e317fa247a633e9ad1ea05c8/torchvision/models/detection/generalized_rcnn.py#L45
+        # We re-implement essentially the same forward eval pass except that we
+        # skip calling the backbone since we already have the `image_features`,
+        # and we also unpack the call to `roi_heads` so that we can keep the `box_features`
+        # that are created here:
+        # https://github.com/pytorch/vision/blob/
+        # 4521f6d152875974e317fa247a633e9ad1ea05c8/torchvision/models/detection/roi_heads.py#L752-L753
 
-        proposals, _ = self._model.proposal_generator(image_list, featurized_images_in_dict, None)
+        image_shapes: List[Tuple[int, int]] = list((int(h), int(w)) for (h, w) in sizes)
+        image_list = torchvision.models.detection.image_list.ImageList(images, image_shapes)
 
-        # this will concatenate the pooled_features from different images.
-        _, pooled_features = self._model.roi_heads.get_roi_features(
-            featurized_images_in_dict, proposals
+        # `proposals` is a list of tensors, one tensor per image, each representing a
+        # fixed number of proposed regions/boxes.
+        # shape (proposals[i]): (proposals_per_image, 4)
+        proposals: List[Tensor]
+        proposals, _ = self.detector.rpn(image_list, image_features)
+
+        # shape: (batch_size * proposals_per_image, *)
+        box_features = self.detector.roi_heads.box_roi_pool(image_features, proposals, image_shapes)
+
+        # shape: (batch_size * proposals_per_image, *)
+        box_features = self.detector.roi_heads.box_head(box_features)
+
+        # shape (class_logits): (batch_size * proposals_per_image, num_classes)
+        # shape (box_regression): (batch_size * proposals_per_image, regression_output_size)
+        class_logits, box_regression = self.detector.roi_heads.box_predictor(box_features)
+
+        # This step filters down the `proposals` to only detections that reach
+        # a certain threshold.
+        # Each of these is a list of tensors, one for each image in the batch.
+        # shape (boxes[i]): (num_predicted_boxes, 4)
+        # shape (features[i]): (num_predicted_boxes, feature_size)
+        # shape (scores[i]): (num_predicted_classes,)
+        # shape (labels[i]): (num_predicted_classes,)
+        boxes, features, scores, labels = self._postprocess_detections(
+            class_logits, box_features, box_regression, proposals, image_shapes
         )
 
-        predictions = self._model.roi_heads.box_predictor(pooled_features)
+        return RegionDetectorOutput(features, boxes, scores, labels)
 
-        # class probability
-        cls_probs = F.softmax(predictions[0], dim=-1)
-        cls_probs = cls_probs[:, :-1]  # background is last
+    def _postprocess_detections(
+        self,
+        class_logits: Tensor,
+        box_features: Tensor,
+        box_regression: Tensor,
+        proposals: List[Tensor],
+        image_shapes: List[Tuple[int, int]],
+    ) -> Tuple[List[Tensor], List[Tensor], List[Tensor], List[Tensor]]:
+        """
+        Adapted from https://github.com/pytorch/vision/blob/
+        4521f6d152875974e317fa247a633e9ad1ea05c8/torchvision/models/detection/roi_heads.py#L664.
 
-        predictions, r_indices = self._model.roi_heads.box_predictor.inference(
-            predictions, proposals
-        )
+        The only reason we have to re-implement this method is so we can pull out the box
+        features that we want.
+        """
+        device = class_logits.device
+        num_classes = class_logits.shape[-1]
 
-        batch_coordinates = []
-        batch_features = []
-        batch_probs = []
-        batch_num_detections = torch.zeros(
-            batch_size, device=image_list.tensor.device, dtype=torch.int16
-        )
-        num_classes = cls_probs.size(-1)
+        boxes_per_image = [boxes_in_image.shape[0] for boxes_in_image in proposals]
 
-        proposal_start = 0
-        for image_num, image_proposal_indices in enumerate(r_indices):
-            # "proposals" are the things that the proposal generator above thought might be useful
-            # boxes.  "detections" are proposals that made it passed the ROI feature and box
-            # predictor step.  We keep only the "detections", but we the features and predictions
-            # come from before we decided which things were "detections".
-            num_detections = len(image_proposal_indices)
-            num_image_proposals = len(proposals[image_num])
-            batch_num_detections[image_num] = num_detections
+        # shape: (batch_size * boxes_per_image, num_classes, 4)
+        pred_boxes = self.detector.roi_heads.box_coder.decode(box_regression, proposals)
 
-            coordinates = proposals[image_num].proposal_boxes.tensor[image_proposal_indices]
+        pred_scores = F.softmax(class_logits, -1)
 
-            # Detectron puts all of the features and predictions into a squashed tensor of shape
-            # (total_num_proposals, feature_dim | num_classes).  This means that we have to iterate
-            # over these tensors in a funny way, keeping track of where we are in the tensor,
-            # instead of just doing a simple `.view()`.
-            image_features = torch.narrow(pooled_features, 0, proposal_start, num_image_proposals)
-            features = image_features[image_proposal_indices]
-            image_probs = torch.narrow(cls_probs, 0, proposal_start, num_image_proposals)
-            probs = image_probs[image_proposal_indices]
+        pred_boxes_list = pred_boxes.split(boxes_per_image, 0)
+        features_list = box_features.split(boxes_per_image, dim=0)
+        pred_scores_list = pred_scores.split(boxes_per_image, 0)
 
-            proposal_start += num_image_proposals
-            if num_detections < self.detections_per_image:
-                num_to_add = self.detections_per_image - num_detections
+        all_boxes = []
+        all_features = []
+        all_scores = []
+        all_labels = []
+        for boxes, features, scores, image_shape in zip(
+            pred_boxes_list, features_list, pred_scores_list, image_shapes
+        ):
+            # shape: (boxes_per_image, num_classes, 4)
+            boxes = box_ops.clip_boxes_to_image(boxes, image_shape)
 
-                coords_padding = coordinates.new_zeros(size=(num_to_add, 4))
-                coordinates = torch.cat([coordinates, coords_padding], dim=0)
+            # shape: (boxes_per_image, num_classes, feature_size)
+            features = features.unsqueeze(1).expand(boxes.shape[0], boxes.shape[1], -1)
 
-                probs_padding = probs.new_zeros(size=(num_to_add, num_classes))
-                probs = torch.cat([probs, probs_padding], dim=0)
+            # create labels for each prediction
+            # shape: (num_classes,)
+            labels = torch.arange(num_classes, device=device)
+            # shape: (boxes_per_image, num_classes,)
+            labels = labels.view(1, -1).expand_as(scores)
 
-                num_features = features.size(-1)
-                features_padding = features.new_zeros(size=(num_to_add, num_features))
-                features = torch.cat([features, features_padding], dim=0)
+            # remove predictions with the background label
+            # shape: (boxes_per_image, num_classes - 1, 4)
+            boxes = boxes[:, 1:]
+            # shape: (boxes_per_image, num_classes, feature_size)
+            features = features[:, 1:]
+            # shape: (boxes_per_image, num_classes - 1,)
+            scores = scores[:, 1:]
+            # shape: (boxes_per_image, num_classes - 1,)
+            labels = labels[:, 1:]
 
-            batch_coordinates.append(coordinates)
-            batch_features.append(features)
-            batch_probs.append(probs)
+            # batch everything, by making every class prediction be a separate instance
+            # shape: (boxes_per_image * (num_classes - 1), 4)
+            boxes = boxes.reshape(-1, 4)
+            # shape: (boxes_per_image * (num_classes - 1), feature_size)
+            features = features.reshape(boxes.shape[0], -1)
+            # shape: (boxes_per_image * (num_classes - 1),)
+            scores = scores.reshape(-1)
+            # shape: (boxes_per_image * (num_classes - 1),)
+            labels = labels.reshape(-1)
 
-        features_tensor = torch.stack(batch_features, dim=0)
-        coordinates = torch.stack(batch_coordinates, dim=0)
-        probs_tensor = torch.stack(batch_probs, dim=0)
-        return {
-            "features": features_tensor,
-            "coordinates": coordinates,
-            "class_probs": probs_tensor,
-            "num_regions": batch_num_detections,
-        }
+            # remove low scoring boxes
+            inds = torch.where(scores > self.detector.roi_heads.score_thresh)[0]
+            boxes, features, scores, labels = (
+                boxes[inds],
+                features[inds],
+                scores[inds],
+                labels[inds],
+            )
 
-    def to(self, device):
-        if isinstance(device, int) or isinstance(device, torch.device):
-            if self._model_object is not None:
-                self._model_object.model.to(device)
-            if isinstance(device, torch.device):
-                device = device.index
-            self.flat_parameters = self.flat_parameters._replace(device=device)
-            return self
-        else:
-            return super().to(device)
+            # remove empty boxes
+            keep = box_ops.remove_small_boxes(boxes, min_size=1e-2)
+            boxes, features, scores, labels = (
+                boxes[keep],
+                features[keep],
+                scores[keep],
+                labels[keep],
+            )
+
+            # non-maximum suppression, independently done per class
+            keep = box_ops.batched_nms(boxes, scores, labels, self.detector.roi_heads.nms_thresh)
+            # keep only topk scoring predictions
+            keep = keep[: self.detector.roi_heads.detections_per_img]
+            boxes, features, scores, labels = (
+                boxes[keep],
+                features[keep],
+                scores[keep],
+                labels[keep],
+            )
+
+            all_boxes.append(boxes)
+            all_features.append(features)
+            all_scores.append(scores)
+            all_labels.append(labels)
+
+        return all_boxes, all_features, all_scores, all_labels

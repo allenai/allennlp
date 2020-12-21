@@ -49,6 +49,13 @@ dataset at every epoch) and a `MultiTaskScheduler` (for ordering the instances w
 
 ### Added
 
+- Added a new learning rate scheduler: `CombinedLearningRateScheduler`. This can be used to combine different LR schedulers, using one after the other.
+
+
+## [v1.3.0](https://github.com/allenai/allennlp/releases/tag/v1.3.0) - 2020-12-15
+
+### Added
+
 - Added links to source code in docs.
 - Added `get_embedding_layer` and `get_text_field_embedder` to the `Predictor` class; to specify embedding layers for non-AllenNLP models.
 - Added [Gaussian Error Linear Unit (GELU)](https://pytorch.org/docs/stable/generated/torch.nn.GELU.html) as an Activation.
@@ -73,7 +80,7 @@ dataset at every epoch) and a `MultiTaskScheduler` (for ordering the instances w
 - Improved the band-aid solution for segmentation faults and the "ImportError: dlopen: cannot load any more object with static TLS" 
   by adding a `transformers` import.
 - Added safety checks for extracting tar files
-
+- Turned superfluous warning to info when extending the vocab in the embedding matrix, if no pretrained file was provided
 
 ## [v1.2.2](https://github.com/allenai/allennlp/releases/tag/v1.2.2) - 2020-11-17
 

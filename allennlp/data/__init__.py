@@ -15,9 +15,4 @@ from allennlp.data.token_indexers.token_indexer import TokenIndexer, IndexedToke
 from allennlp.data.tokenizers import Token, Tokenizer
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.data.batch import Batch
-
-try:
-    from allennlp.data.image_loader import ImageLoader, DetectronImageLoader
-except ModuleNotFoundError as err:
-    if err.name not in ("detectron2", "torchvision"):
-        raise
+from allennlp.data.image_loader import ImageLoader, TorchImageLoader

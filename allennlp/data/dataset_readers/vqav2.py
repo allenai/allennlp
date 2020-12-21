@@ -1,5 +1,6 @@
 import logging
 from collections import Counter
+from functools import lru_cache
 from os import PathLike
 from typing import (
     Dict,
@@ -18,10 +19,11 @@ from overrides import overrides
 import torch
 from torch import Tensor
 
-from allennlp.common.file_utils import cached_path
+from allennlp.common.lazy import Lazy
+from allennlp.common.file_utils import cached_path, LocalCacheResource
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
-from allennlp.data.fields import ArrayField, LabelField, ListField, TextField
+from allennlp.data.fields import Field, ArrayField, LabelField, ListField, TextField
 from allennlp.data.image_loader import ImageLoader
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import TokenIndexer
@@ -199,7 +201,7 @@ punct = [
 def process_punctuation(inText: str) -> str:
     outText = inText
     for p in punct:
-        if (p + " " in inText or " " + p in inText) or (re.search(comma_strip, inText) is not None):
+        if (p + " " in inText or " " + p in inText) or (comma_strip.search(inText) is not None):
             outText = outText.replace(p, "")
         else:
             outText = outText.replace(p, " ")
@@ -221,6 +223,7 @@ def process_digit_article(input: str) -> str:
     return " ".join(output)
 
 
+@lru_cache(maxsize=None)
 def preprocess_answer(answer: str) -> str:
     answer = process_digit_article(process_punctuation(answer))
     answer = answer.replace(",", "")
@@ -240,10 +243,10 @@ class VQAv2Reader(VisionReader):
         Path to directory containing `png` image files.
     image_loader: `ImageLoader`
         The image loader component used to load the images.
-    image_featurizer: `GridEmbedder`
+    image_featurizer: `Lazy[GridEmbedder]`
         The backbone image processor (like a ResNet), whose output will be passed to the region
         detector for finding object boxes in the image.
-    region_detector: `RegionDetector`
+    region_detector: `Lazy[RegionDetector]`
         For pulling out regions of the image (both coordinates and features) that will be used by
         downstream models.
     answer_vocab: `Union[Vocabulary, str]`, optional
@@ -267,9 +270,6 @@ class VQAv2Reader(VisionReader):
         returns.
     image_processing_batch_size: `int`
         The number of images to process at one time while featurizing. Default is 8.
-    run_image_feature_extraction: `bool`
-        If this is set to `False`, we skip featurizing images completely. This can be useful
-        for debugging or for generating the vocabulary ahead of time. Default is `True`.
     multiple_answers_per_question: `bool`
         VQA questions have multiple answers. By default, we use all of them, and give more
         points to the more common answer. But VQA also has a special answer, the so-called
@@ -278,11 +278,11 @@ class VQAv2Reader(VisionReader):
 
     def __init__(
         self,
-        image_loader: ImageLoader,
-        image_featurizer: GridEmbedder,
-        region_detector: RegionDetector,
-        image_dir: Union[str, PathLike] = None,
+        image_dir: Optional[Union[str, PathLike]] = None,
         *,
+        image_loader: Optional[ImageLoader] = None,
+        image_featurizer: Optional[Lazy[GridEmbedder]] = None,
+        region_detector: Optional[Lazy[RegionDetector]] = None,
         answer_vocab: Optional[Union[Vocabulary, str]] = None,
         feature_cache_dir: Optional[Union[str, PathLike]] = None,
         tokenizer: Optional[Tokenizer] = None,
@@ -290,10 +290,11 @@ class VQAv2Reader(VisionReader):
         cuda_device: Optional[Union[int, torch.device]] = None,
         max_instances: Optional[int] = None,
         image_processing_batch_size: int = 8,
-        run_image_feature_extraction: bool = True,
         multiple_answers_per_question: bool = True,
+        write_to_cache: bool = True,
     ) -> None:
-        if image_dir is None:
+        run_featurization = image_loader and image_featurizer and region_detector
+        if image_dir is None and run_featurization:
             raise ValueError(
                 "Because of the size of the image datasets, we don't download them automatically. "
                 "Please go to https://visualqa.org/download.html, download the datasets you need, "
@@ -304,16 +305,16 @@ class VQAv2Reader(VisionReader):
 
         super().__init__(
             image_dir,
-            image_loader,
-            image_featurizer,
-            region_detector,
+            image_loader=image_loader,
+            image_featurizer=image_featurizer,
+            region_detector=region_detector,
             feature_cache_dir=feature_cache_dir,
             tokenizer=tokenizer,
             token_indexers=token_indexers,
             cuda_device=cuda_device,
             max_instances=max_instances,
             image_processing_batch_size=image_processing_batch_size,
-            run_image_feature_extraction=run_image_feature_extraction,
+            write_to_cache=write_to_cache,
         )
 
         # read answer vocab
@@ -328,7 +329,7 @@ class VQAv2Reader(VisionReader):
                 for a in answer_vocab.get_token_to_index_vocabulary("answers").keys()
             )
 
-        if run_image_feature_extraction:
+        if self.produce_featurized_images:
             # normalize self.images some more
             # At this point, self.images maps filenames to full paths, but we want to map image ids to full paths.
             filename_re = re.compile(r".*(\d{12})\.((jpg)|(png))")
@@ -420,19 +421,7 @@ class VQAv2Reader(VisionReader):
         except KeyError:
             raise ValueError(f"Unrecognized split: {split_name}.")
 
-        answers_by_question_id = {}
-        if split.annotations is not None:
-            with open(cached_path(split.annotations, extract_archive=True)) as f:
-                annotations = json.load(f)
-            for a in annotations["annotations"]:
-                qid = a["question_id"]
-                answer_counts: MutableMapping[str, int] = Counter()
-                if self.multiple_answers_per_question:
-                    for answer in (answer_dict["answer"] for answer_dict in a["answers"]):
-                        answer_counts[preprocess_answer(answer)] += 1
-                else:
-                    answer_counts[preprocess_answer(a["multiple_choice_answer"])] = 1
-                answers_by_question_id[qid] = answer_counts
+        answers_by_question_id = self._get_answers_by_question_id(split)
 
         questions = []
         with open(cached_path(split.questions, extract_archive=True)) as f:
@@ -443,7 +432,7 @@ class VQAv2Reader(VisionReader):
 
         question_dicts = list(self.shard_iterable(questions))
         processed_images: Iterable[Optional[Tuple[Tensor, Tensor]]]
-        if self.run_image_feature_extraction:
+        if self.produce_featurized_images:
             # It would be much easier to just process one image at a time, but it's faster to process
             # them in batches. So this code gathers up instances until it has enough to fill up a batch
             # that needs processing, and then processes them all.
@@ -471,8 +460,7 @@ class VQAv2Reader(VisionReader):
         attempted_instances_count = 0
         failed_instances_count = 0
         for question_dict, processed_image in zip(question_dicts, processed_images):
-            answers = answers_by_question_id.get(question_dict["question_id"])
-
+            answers = answers_by_question_id.get(str(question_dict["question_id"]))
             instance = self.text_to_instance(question_dict["question"], processed_image, answers)
             attempted_instances_count += 1
             if instance is None:
@@ -498,7 +486,6 @@ class VQAv2Reader(VisionReader):
     ) -> Optional[Instance]:
         tokenized_question = self._tokenizer.tokenize(question)
         question_field = TextField(tokenized_question, None)
-        from allennlp.data import Field
 
         fields: Dict[str, Field] = {
             "question": question_field,
@@ -512,6 +499,11 @@ class VQAv2Reader(VisionReader):
 
             fields["box_features"] = ArrayField(features)
             fields["box_coordinates"] = ArrayField(coords)
+            fields["box_mask"] = ArrayField(
+                features.new_ones((features.shape[0],), dtype=torch.bool),
+                padding_value=False,
+                dtype=torch.bool,
+            )
 
         if answer_counts is not None:
             answer_fields = []
@@ -533,3 +525,35 @@ class VQAv2Reader(VisionReader):
     @overrides
     def apply_token_indexers(self, instance: Instance) -> None:
         instance["question"].token_indexers = self._token_indexers  # type: ignore
+
+    def _get_answers_by_question_id(self, split):
+        answers_by_question_id = {}
+        if split.annotations is not None:
+            # Pre-processing the annotations is time-consuming, so we don't want to
+            # have to re-do it each time we call read(). So we cache this result.
+            annotations_path = cached_path(split.annotations, extract_archive=True)
+            with LocalCacheResource(split.annotations + "-cache", annotations_path) as cache:
+                if cache.cached():
+                    logger.info(
+                        "Reading annotation answer counts from cache at %s",
+                        cache.path,
+                    )
+                    with cache.reader() as f:
+                        answers_by_question_id = json.load(f)
+                else:
+                    logger.info("Calculating annotation answer counts...")
+                    with open(annotations_path) as f:
+                        annotations = json.load(f)
+                    for a in annotations["annotations"]:
+                        qid = a["question_id"]
+                        answer_counts: MutableMapping[str, int] = Counter()
+                        if self.multiple_answers_per_question:
+                            for answer in (answer_dict["answer"] for answer_dict in a["answers"]):
+                                answer_counts[preprocess_answer(answer)] += 1
+                        else:
+                            answer_counts[preprocess_answer(a["multiple_choice_answer"])] = 1
+                        answers_by_question_id[str(qid)] = answer_counts
+                    logger.info("Caching annotation answer counts to %s", cache.path)
+                    with cache.writer() as f:
+                        json.dump(answers_by_question_id, f)
+        return answers_by_question_id

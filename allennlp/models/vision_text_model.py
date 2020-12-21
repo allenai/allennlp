@@ -53,6 +53,9 @@ class VisionTextModel(Model):
         dropout: float = 0.1,
         label_namespace: str = "labels",
         is_multilabel: bool = False,
+        *,
+        ignore_text: bool = False,
+        ignore_image: bool = False,
     ) -> None:
 
         super().__init__(vocab)
@@ -73,6 +76,8 @@ class VisionTextModel(Model):
         self.dropout = torch.nn.Dropout(dropout)
 
         self.is_multilabel = is_multilabel
+        self.ignore_text = ignore_text
+        self.ignore_images = ignore_image
 
     @classmethod
     def from_huggingface_model_name(
@@ -95,6 +100,9 @@ class VisionTextModel(Model):
         image_fixed_layer: int,
         pooled_dropout: float = 0.1,
         fusion_method: str = "sum",
+        *,
+        ignore_text: bool = False,
+        ignore_image: bool = False,
     ):
         transformer = AutoModel.from_pretrained(model_name)
 
@@ -160,6 +168,8 @@ class VisionTextModel(Model):
             pooled_output_dim=pooled_output_dim,
             fusion_method=fusion_method,
             dropout=pooled_dropout,
+            ignore_text=ignore_text,
+            ignore_image=ignore_image,
         )
 
     @overrides
@@ -167,10 +177,50 @@ class VisionTextModel(Model):
         self,  # type: ignore
         box_features: torch.Tensor,
         box_coordinates: torch.Tensor,
+        box_mask: torch.Tensor,
         text: TextFieldTensors,
         label: Optional[torch.Tensor] = None,
         label_weights: Optional[torch.Tensor] = None,
     ) -> Dict[str, torch.Tensor]:
+        """
+        # Parameters
+
+        box_features : `Tensor`
+            Shape: `(batch_size, num_boxes, feature_size)`
+
+        box_coordinates : `Tensor`
+            Shape: `(batch_size, num_boxes, 4)`
+
+        box_mask : `Tensor`
+            A bool and 0-1 tensor of shape `(batch_size, num_boxes)`.
+
+        text : `TextFieldTensors`
+
+        label : `Optional[Tensor]`
+
+        label_weights : `Optional[Tensor]`
+
+        """
+
+        if self.ignore_images:
+            box_features = torch.zeros_like(box_features)
+            box_coordinates = torch.zeros_like(box_coordinates)
+            box_coordinates[..., 2] = 1
+            box_coordinates[..., 3] = 1
+            box_mask = torch.ones_like(box_mask)
+
+        if self.ignore_text:
+            dummy_text = {}
+            for embedder_name, tensor_dict in text.items():
+                dummy_tensor_dict = {}
+                for tensor_name, tensor in tensor_dict.items():
+                    if "mask" in tensor_name:
+                        tensor = torch.ones_like(tensor)
+                    else:
+                        tensor = torch.zeros_like(tensor)
+                    dummy_tensor_dict[tensor_name] = tensor
+                dummy_text[embedder_name] = dummy_tensor_dict
+            text = dummy_text
 
         batch_size, _, feature_size = box_features.size()
 
@@ -179,14 +229,12 @@ class VisionTextModel(Model):
         else:
             token_ids = text["tokens"]["tokens"]
 
+        # Shape: (batch_size, num_tokens)
         token_type_ids = text["tokens"].get("type_ids")
+        # Shape: (batch_size, num_tokens)
         attention_mask = text["tokens"].get("mask")
 
-        # All batch instances will always have the same number of images and boxes, so no masking
-        # is necessary, and this is just a tensor of ones.
-        image_attention_mask = torch.ones_like(box_coordinates[:, :, 0])
-
-        # (batch_size, num_tokens, embedding_dim)
+        # Shape: (batch_size, num_tokens, embedding_dim)
         embedding_output = self.embeddings(token_ids, token_type_ids)
         num_tokens = embedding_output.size(1)
 
@@ -198,8 +246,10 @@ class VisionTextModel(Model):
         else:
             extended_attention_mask = None
 
-        extended_image_attention_mask = image_attention_mask
+        extended_image_attention_mask = box_mask
 
+        # Shape: (batch_size, feature_size, num_tokens)
+        # TODO (epwalsh): Why all zeros?? This doesn't seem right.
         extended_co_attention_mask = torch.zeros(
             batch_size,
             feature_size,
@@ -207,9 +257,11 @@ class VisionTextModel(Model):
             dtype=extended_image_attention_mask.dtype,
         )
 
-        # (batch_size, num_boxes, image_embedding_dim)
+        # Shape: (batch_size, num_boxes, image_embedding_dim)
         v_embedding_output = self.image_embeddings(box_features, box_coordinates)
 
+        # Shape (encoded_layers_t): (batch_size, num_tokens, embedding_dim, num_layers)
+        # Shape (encoded_layers_v): (batch_size, num_boxes, image_embedding_dim, num_layers)
         encoded_layers_t, encoded_layers_v = self.encoder(
             embedding_output,
             v_embedding_output,
@@ -218,10 +270,14 @@ class VisionTextModel(Model):
             extended_co_attention_mask,
         )
 
+        # Shape: (batch_size, num_tokens, embedding_dim)
         sequence_output_t = encoded_layers_t[:, :, :, -1]
+        # Shape: (batch_size, num_boxes, image_embedding_dim)
         sequence_output_v = encoded_layers_v[:, :, :, -1]
 
+        # Shape: (batch_size, pooled_output_dim)
         pooled_output_t = self.t_pooler(sequence_output_t)
+        # Shape: (batch_size, pooled_output_dim)
         pooled_output_v = self.v_pooler(sequence_output_v)
 
         if self.fusion_method == "sum":
@@ -231,7 +287,10 @@ class VisionTextModel(Model):
         else:
             raise ValueError(f"Fusion method '{self.fusion_method}' not supported")
 
+        # Shape: (batch_size, num_labels)
         logits = self.classifier(pooled_output)
+
+        # Shape: (batch_size, num_labels)
         if self.is_multilabel:
             probs = torch.sigmoid(logits)
         else:
