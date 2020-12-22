@@ -19,7 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Fixed typo with `LabelField` string representation: removed trailing apostrophe.
-
+- Gradient attribution in AllenNLP Interpret now computed as a function of the predicted class' logit, not its loss.
 
 ## [v1.3.0](https://github.com/allenai/allennlp/releases/tag/v1.3.0) - 2020-12-15
 

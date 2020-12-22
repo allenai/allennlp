@@ -17,7 +17,7 @@ class SimpleGradient(SaliencyInterpreter):
 
     def saliency_interpret_from_json(self, inputs: JsonDict) -> JsonDict:
         """
-        Interprets the model's prediction for inputs.  Gets the gradients of the loss with respect
+        Interprets the model's prediction for inputs.  Gets the gradients of the logits with respect
         to the input and returns those gradients normalized and sanitized.
         """
         labeled_instances = self.predictor.json_to_labeled_instances(inputs)

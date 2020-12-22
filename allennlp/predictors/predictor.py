@@ -73,7 +73,7 @@ class Predictor(Registrable):
 
     def get_gradients(self, instances: List[Instance]) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         """
-        Gets the gradients of the loss with respect to the model inputs.
+        Gets the gradients of the logits with respect to the model inputs.
 
         # Parameters
 
@@ -91,7 +91,7 @@ class Predictor(Registrable):
         Takes a `JsonDict` representing the inputs of the model and converts
         them to [`Instances`](../data/instance.md)), sends these through
         the model [`forward`](../models/model.md#forward) function after registering hooks on the embedding
-        layer of the model. Calls `backward` on the loss and then removes the
+        layer of the model. Calls `backward` on the logits and then removes the
         hooks.
         """
         # set requires_grad to true for all parameters, but save original values to
@@ -113,13 +113,13 @@ class Predictor(Registrable):
                 self._model.forward(**dataset_tensor_dict)  # type: ignore
             )
 
-            loss = outputs["loss"]
+            predicted_logit = outputs["logits"].squeeze(0)[int(torch.argmax(outputs["probs"]))]
             # Zero gradients.
             # NOTE: this is actually more efficient than calling `self._model.zero_grad()`
             # because it avoids a read op when the gradients are first updated below.
             for p in self._model.parameters():
                 p.grad = None
-            loss.backward()
+            predicted_logit.backward()
 
         for hook in hooks:
             hook.remove()
