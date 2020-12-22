@@ -175,10 +175,8 @@ class MultiProcessDataLoader(DataLoader):
             elif max_instances_in_memory < 1:
                 raise ValueError("max_instances_in_memory must be at least 1")
 
-        if pin_memory and max_instances_in_memory is not None and start_method != "spawn":
-            raise ValueError(
-                "start_method must be set to 'spawn' when memory_pinning=True and max_instances_in_memory!=None"
-            )
+        if pin_memory and num_workers > 0 and start_method != "spawn":
+            raise ValueError("start_method must be set to 'spawn' when using memory pinning")
 
         self.reader = reader
         self.data_path = data_path
