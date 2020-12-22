@@ -23,9 +23,9 @@ local vocabulary = if construct_vocab then {
   "dataset_reader": {
     "type": "vqav2",
     "image_dir": std.format("/mnt/tank/dirkg/data/vision/vqa/%s", dataset),
-    "feature_cache_dir": std.format("/mnt/tank/dirkg/data/vision/vqa/%s/feature_cache", dataset),
+    [if !construct_vocab then "feature_cache_dir"]: std.format("/mnt/tank/dirkg/data/vision/vqa/%s/feature_cache", dataset),
     #"image_dir": std.format("/Users/dirkg/Documents/data/vision/vqa/%s", dataset),
-    #"feature_cache_dir": std.format("/Users/dirkg/Documents/data/vision/vqa/%s/feature_cache", dataset),
+    #[if !construct_vocab then "feature_cache_dir"]: std.format("/Users/dirkg/Documents/data/vision/vqa/%s/feature_cache", dataset),
     [if !construct_vocab then "image_loader"]: "torch",
     [if !construct_vocab then "image_featurizer"]: "resnet_backbone",
     [if !construct_vocab then "region_detector"]: "faster_rcnn",

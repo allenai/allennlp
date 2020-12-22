@@ -7,23 +7,21 @@ local construct_vocab = false;
 
 local vocabulary = if construct_vocab then {
       // read the files to construct the vocab
-      "min_count": {"answers": 1}
+      "min_count": {"answers": 9}
     } else {
       // read the constructed vocab
       "type": "from_files",
-      // CHANGE LOC
       "directory": "/Users/jacksons/Projects/gqa-train/vocabulary/vilbert_gqa_train.vocab.tar.gz"
     };
 
 {
   "dataset_reader": {
     "type": "gqa",
-    // CHANGE LOC
-    "image_dir": "/Users/jacksons/Projects/gqa-train/images",
-    "feature_cache_dir": "/Users/jacksons/Projects/gqa-train/feature_cache",
-    "image_loader": "detectron",
-    "image_featurizer": "resnet_backbone",
-    "region_detector": "faster_rcnn",
+    "image_dir": "/Users/dirkg/Documents/data/vision/gqa/images",
+    [if !construct_vocab then "feature_cache_dir"]: "/Users/dirkg/Documents/data/vision/gqa/feature_cache",
+    [if !construct_vocab then "image_loader"]: "torch",
+    [if !construct_vocab then "image_featurizer"]: "resnet_backbone",
+    [if !construct_vocab then "region_detector"]: "faster_rcnn",
     "tokenizer": {
       "type": "pretrained_transformer",
       "model_name": model_name
@@ -34,22 +32,21 @@ local vocabulary = if construct_vocab then {
         "model_name": model_name
       }
     },
-    // Change max instances
-    "max_instances": 1000,
+    #"max_instances": 1000,
     "image_processing_batch_size": 16,
     "answer_vocab": if construct_vocab then null else vocabulary,
-    "keep_unanswerable_questions": false
+    "keep_unanswerable_questions": construct_vocab
   },
   "validation_dataset_reader": self.dataset_reader {
     "keep_unanswerable_questions": true
   },
   "vocabulary": vocabulary,
-  "train_data_path": "testdev_all",
-  "validation_data_path": "val_balanced",
+  "train_data_path": "train_all",
+  "validation_data_path": "testdev_all",
   "model": {
     "type": "vqa_vilbert_from_huggingface",
     "model_name": model_name,
-    "image_feature_dim": 2048,
+    "image_feature_dim": 1024,
     "image_hidden_size": 1024,
     "image_num_attention_heads": 8,
     "image_num_hidden_layers": 6,
@@ -68,11 +65,11 @@ local vocabulary = if construct_vocab then {
   "data_loader": {
     "batch_size": gpu_batch_size,
     "shuffle": true,
-    "max_instances_in_memory": 1024
+    "max_instances_in_memory": 1024*16
   },
   [if num_gpus > 1 then "distributed"]: {
-    #"cuda_devices": std.range(0, num_gpus - 1)
-    "cuda_devices": std.repeat([-1], num_gpus)  # Use this for debugging on CPU
+    "cuda_devices": std.range(0, num_gpus - 1)
+    #"cuda_devices": std.repeat([-1], num_gpus)  # Use this for debugging on CPU
   },
   "trainer": {
     "optimizer": {
@@ -81,8 +78,7 @@ local vocabulary = if construct_vocab then {
     },
     "learning_rate_scheduler": {
       "type": "linear_with_warmup",
-      "warmup_steps": 300000 / 30,
-      "num_steps_per_epoch": std.ceil(644401 / $["data_loader"]["batch_size"] / $["trainer"]["num_gradient_accumulation_steps"])
+      "warmup_steps": 5000,
     },
     "validation_metric": "+fscore",
     "patience": 5,
