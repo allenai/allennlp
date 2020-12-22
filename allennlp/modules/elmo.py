@@ -440,7 +440,7 @@ class _ElmoCharacterEncoder(torch.nn.Module):
         # create the layers, and load the weights
         self._highways = Highway(n_filters, n_highway, activation=torch.nn.functional.relu)
         for k in range(n_highway):
-            # The AllenNLP highway is one matrix multplication with concatenation of
+            # The AllenNLP highway is one matrix multiplication with concatenation of
             # transform and carry weights.
             with h5py.File(cached_path(self._weight_file), "r") as fin:
                 # The weights are transposed due to multiplication order assumptions in tf
