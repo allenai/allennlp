@@ -98,7 +98,7 @@ local vocabulary = if construct_vocab then {
       //"num_steps_per_epoch": std.ceil(658111 / $["data_loader"]["batch_size"] / $["trainer"]["num_gradient_accumulation_steps"]),
       "warmup_steps": 5000
     },
-    "validation_metric": "+fscore",
+    "validation_metric": "+vqa_score",
     "patience": 5,
     "num_epochs": 30,
     "num_gradient_accumulation_steps": effective_batch_size / gpu_batch_size / std.max(1, num_gpus),
