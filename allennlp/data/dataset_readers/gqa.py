@@ -186,7 +186,7 @@ class GQAReader(VisionReader):
             else:
                 features, coords = image
             fields["box_features"] = ArrayField(features)
-            fields["box_coordinates"] = ArrayField(coords),
+            fields["box_coordinates"] = ArrayField(coords)
             fields["box_mask"] = ArrayField(
                 features.new_ones((features.shape[0],), dtype=torch.bool),
                 padding_value=False,
