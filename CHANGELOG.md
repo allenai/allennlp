@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Torch version bumped to 1.7.1 in Docker images.
+- Moving `ModelCard` and `TaskCard` abstractions into the main repository.
 
 ### Fixed
 
