@@ -5,6 +5,9 @@ local num_gpus = 1;
 
 local construct_vocab = false;
 
+#local gqa_dir = "/Users/dirkg/Documents/data/vision/gqa/";
+local gqa_dir = "/mnt/tank/dirkg/data/vision/gqa/";
+
 local vocabulary = if construct_vocab then {
       // read the files to construct the vocab
       "min_count": {"answers": 9}
@@ -17,8 +20,8 @@ local vocabulary = if construct_vocab then {
 {
   "dataset_reader": {
     "type": "gqa",
-    "image_dir": "/Users/dirkg/Documents/data/vision/gqa/images",
-    [if !construct_vocab then "feature_cache_dir"]: "/Users/dirkg/Documents/data/vision/gqa/feature_cache",
+    "image_dir": gqa_dir + "/images",
+    [if !construct_vocab then "feature_cache_dir"]: gqa_dir + "/feature_cache",
     [if !construct_vocab then "image_loader"]: "torch",
     [if !construct_vocab then "image_featurizer"]: "resnet_backbone",
     [if !construct_vocab then "region_detector"]: "faster_rcnn",
