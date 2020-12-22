@@ -11,7 +11,7 @@ local vocabulary = if construct_vocab then {
     } else {
       // read the constructed vocab
       "type": "from_files",
-      "directory": "/Users/jacksons/Projects/gqa-train/vocabulary/vilbert_gqa_train.vocab.tar.gz"
+      "directory": "https://storage.googleapis.com/allennlp-public-data/gqa/vilbert_gqa.vocab.tar.gz"
     };
 
 {
