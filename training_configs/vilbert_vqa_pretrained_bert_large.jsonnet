@@ -95,7 +95,7 @@ local vocabulary = if construct_vocab then {
     },
     "learning_rate_scheduler": {
       "type": "linear_with_warmup",
-      //"num_steps_per_epoch": std.ceil(658111 / $["data_loader"]["batch_size"] / $["trainer"]["num_gradient_accumulation_steps"]),
+      //"num_steps_per_epoch": std.ceil(0 / $["data_loader"]["batch_size"] / $["trainer"]["num_gradient_accumulation_steps"]),
       "warmup_steps": 5000
     },
     "validation_metric": "+vqa_score",
