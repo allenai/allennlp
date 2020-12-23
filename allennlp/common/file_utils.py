@@ -891,7 +891,7 @@ def open_compressed(
         import bz2
 
         open_fn = bz2.open
-    return open_fn(filename, mode=mode, encoding=encoding, **kwargs)
+    return open_fn(cached_path(filename), mode=mode, encoding=encoding, **kwargs)
 
 
 def text_lines_from_file(filename: Union[str, PathLike], strip_lines: bool = True) -> Iterator[str]:
