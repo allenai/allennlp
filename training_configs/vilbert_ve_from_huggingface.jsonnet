@@ -1,4 +1,4 @@
-local model_name = "bert-base-uncased";
+local model_name = "bert-large-uncased";
 local effective_batch_size = 128;
 local gpu_batch_size = 32;
 local num_gpus = 0;
@@ -9,7 +9,7 @@ local datadir = "/net/s3/allennlp/akshitab/data/SNLI-VE/data/";
   "dataset_reader": {
     "type": "visual-entailment",
     "image_dir": datadir + "Flickr30K/flickr30k_images",
-    "feature_cache_dir": datadir + "/feature_cache",
+    "feature_cache_dir": datadir + "/feature_cache_torchvision",
     "image_loader": "torch",
     "image_featurizer": "resnet_backbone",
     "region_detector": "faster_rcnn",

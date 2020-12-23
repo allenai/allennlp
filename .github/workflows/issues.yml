@@ -4,7 +4,7 @@ on:
   # Uncomment this PR trigger for testing.
   # pull_request:
   #   branches:
-  #   - master
+  #   - main
   schedule:
     - cron: '5 16 * * 1,2,3,4,5'  # runs at 16:05 UTC Monday - Friday
 
