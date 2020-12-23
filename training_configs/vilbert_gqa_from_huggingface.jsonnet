@@ -82,7 +82,7 @@ local vocabulary = if construct_vocab then {
     "learning_rate_scheduler": {
       "type": "linear_with_warmup",
       "warmup_steps": 5000,
-      "num_steps_per_epoch": std.ceil(14305356 / $["data_loader"]["batch_size"] / $["trainer"]["num_gradient_accumulation_steps"])
+      "num_steps_per_epoch": std.ceil(14304359 / $["data_loader"]["batch_size"] / $["trainer"]["num_gradient_accumulation_steps"])
     },
     "validation_metric": "+fscore",
     "patience": 5,
