@@ -47,7 +47,8 @@ class Batch(Iterable):
             if len(type_counters) > 1:
                 raise ConfigurationError(
                     "You cannot construct a Batch with non-homogeneous Instances. "
-                    f"Field {field_name} has {len(type_counters)} different types: {', '.join(type_counters.keys())}"
+                    f"Field {field_name} has {len(type_counters)} different types: "
+                    f"{', '.join(type_counters.keys())}"
                 )
 
     def get_padding_lengths(self) -> Dict[str, Dict[str, int]]:
