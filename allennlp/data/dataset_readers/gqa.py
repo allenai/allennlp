@@ -180,11 +180,13 @@ class GQAReader(VisionReader):
         fields: Dict[str, Field] = {"question": TextField(tokenized_question, None)}
 
         if answer is not None:
+            labels_fields = []
+            weights = []
             if not self.answer_vocab or answer["answer"] in self.answer_vocab:
-                fields["labels"] = ListField(
-                    [LabelField(answer["answer"], label_namespace="answers")]
-                )
-                fields["label_weights"] = ArrayField(torch.tensor([1.0]))
+                labels_fields.append(LabelField(answer["answer"], label_namespace="answers"))
+                weights.append(1.0)
+            fields["label_weights"] = ArrayField(torch.tensor(weights))
+            fields["labels"] = ListField(labels_fields)
 
         if image is not None:
             if isinstance(image, str):
