@@ -44,15 +44,9 @@ def count_instances_from_args(args: argparse.Namespace):
 
     params = Params.from_file(args.param_path)
 
-    data_loaders = data_loaders_from_params(
-        params,
-        train=True,
-        validation=False,
-        test=False)
+    data_loaders = data_loaders_from_params(params, train=True, validation=False, test=False)
     instances = sum(
-        1
-        for data_loader in data_loaders.values()
-        for _ in data_loader.iter_instances()
+        1 for data_loader in data_loaders.values() for _ in data_loader.iter_instances()
     )
 
     print(f"Success! One epoch of training contains {instances} instances.")

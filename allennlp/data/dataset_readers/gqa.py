@@ -139,7 +139,9 @@ class GQAReader(VisionReader):
                 # that needs processing, and then processes them all.
                 filenames = [f"{question_dict['imageId']}.jpg" for question_dict in question_dicts]
                 try:
-                    processed_images = self._process_image_paths(self.images[filename] for filename in filenames)
+                    processed_images = self._process_image_paths(
+                        self.images[filename] for filename in filenames
+                    )
                 except KeyError as e:
                     missing_filename = e.args[0]
                     raise KeyError(
@@ -173,14 +175,14 @@ class GQAReader(VisionReader):
         tokenized_question = self._tokenizer.tokenize(question)
         fields = {"question": TextField(tokenized_question, None)}
 
-        if answer:
+        if answer is not None:
             if not self.answer_vocab or answer["answer"] in self.answer_vocab:
                 fields["labels"] = ListField(
                     [LabelField(answer["answer"], label_namespace="answers")]
                 )
                 fields["label_weights"] = ArrayField(torch.tensor([1.0]))
 
-        if image:
+        if image is not None:
             if isinstance(image, str):
                 features, coords = next(self._process_image_paths([image], use_cache=use_cache))
             else:
