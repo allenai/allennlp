@@ -3,10 +3,10 @@ name: CI
 on:
   pull_request:
     branches:
-    - master
+    - main
   push:
     branches:
-    - master
+    - main
   release:
     types: [published]
   schedule:
@@ -25,7 +25,7 @@ jobs:
       run: |
         # If this step fails, this means you haven't updated the CHANGELOG.md
         # file with notes on your contribution.
-        git diff --name-only $(git merge-base origin/master HEAD) | grep '^CHANGELOG.md$' && echo "Thanks for helping keep our CHANGELOG up-to-date!"
+        git diff --name-only $(git merge-base origin/main HEAD) | grep '^CHANGELOG.md$' && echo "Thanks for helping keep our CHANGELOG up-to-date!"
 
   gpu_checks:
     name: GPU Checks
@@ -258,7 +258,7 @@ jobs:
         pip install $(ls dist/*.whl)
         # TODO(epwalsh): In PyTorch 1.7, dataclasses is an unconditional dependency, when it should
         # only be a conditional dependency for Python < 3.7.
-        # This has been fixed on PyTorch master branch, so we should be able to
+        # This has been fixed on PyTorch main branch, so we should be able to
         # remove this check with the next PyTorch release.
         pip uninstall -y dataclasses
 
@@ -379,8 +379,8 @@ jobs:
             echo "DOCS_FOLDER=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV;
             echo "BASE_SOURCE_LINK=https://github.com/allenai/allennlp/blob/${GITHUB_REF#refs/tags/}/allennlp/" >> $GITHUB_ENV;
         else
-            echo "DOCS_FOLDER=master" >> $GITHUB_ENV;
-            echo "BASE_SOURCE_LINK=https://github.com/allenai/allennlp/blob/master/allennlp/" >> $GITHUB_ENV;
+            echo "DOCS_FOLDER=main" >> $GITHUB_ENV;
+            echo "BASE_SOURCE_LINK=https://github.com/allenai/allennlp/blob/main/allennlp/" >> $GITHUB_ENV;
         fi
 
     - name: Build docs

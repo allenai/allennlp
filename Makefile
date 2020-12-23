@@ -112,7 +112,7 @@ $(MD_DOCS_ROOT)README.md : README.md
 	# Alter the relative path of the README image for the docs.
 	$(SED) -i '1s/docs/./' $@
 	# Alter external doc links to relative links.
-	$(SED) -i 's|https://docs.allennlp.org/master/api/|api/|' $@
+	$(SED) -i 's|https://docs.allennlp.org/main/api/|api/|' $@
 
 $(MD_DOCS_ROOT)%.md : %.md
 	cp $< $@

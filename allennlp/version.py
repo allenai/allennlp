@@ -2,7 +2,7 @@ import os
 
 _MAJOR = "1"
 _MINOR = "3"
-# On master and in a nightly release the patch should be one ahead of the last
+# On main and in a nightly release the patch should be one ahead of the last
 # released build.
 _PATCH = "0"
 # This is mainly for nightly builds which have the suffix ".dev$DATE". See
