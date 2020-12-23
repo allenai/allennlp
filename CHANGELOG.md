@@ -34,6 +34,8 @@ dataset at every epoch) and a `MultiTaskScheduler` (for ordering the instances w
 - Transformer toolkit to plug and play with modular components of transformer architectures.
 - `VisionReader` and `VisionTextModel` base classes added. `VisualEntailment` and `VQA` inherit from these.
 - Added reader for the GQA dataset
+- Added a config to traing a GQA model
+- Added a command to count the number of instances we're going to be training with
 
 ### Changed
 
@@ -43,6 +45,15 @@ dataset at every epoch) and a `MultiTaskScheduler` (for ordering the instances w
   With the `PyTorchDataLoader` this is controlled with the `lazy` parameter, but with
   the `MultiProcessDataLoading` this is controlled by the `max_instances_in_memory` setting.
 - `ArrayField` is now called `TensorField`, and implemented in terms of torch tensors, not numpy.
+- If you are trying to create a heterogeneous batch, you now get a better error message.
+- Readers using the new vision features now explicitly log how they are featurizing images.
+
+### Fixed
+
+- The `build-vocab` command no longer crashes when the resulting vocab file is
+  in the current working directory.
+- VQA models now use the `vqa_score` metric for early stopping. This results in
+  much better scores.
 
 
 ## Unreleased (1.x branch)
