@@ -4,6 +4,7 @@ from typing import (
     Union,
     Optional,
     Tuple,
+    Iterable,
 )
 import json
 import os
@@ -133,6 +134,7 @@ class GQAReader(VisionReader):
                 )
             )
 
+            processed_images: Iterable[Optional[Tuple[Tensor, Tensor]]]
             if self.produce_featurized_images:
                 # It would be much easier to just process one image at a time, but it's faster to process
                 # them in batches. So this code gathers up instances until it has enough to fill up a batch
@@ -155,7 +157,7 @@ class GQAReader(VisionReader):
                         "finds the images wherever they are.",
                     )
             else:
-                processed_images = [None for _ in range(len(question_dicts))]
+                processed_images = [None] * len(question_dicts)
 
             for question_dict, processed_image in zip(question_dicts, processed_images):
                 answer = {
@@ -172,8 +174,10 @@ class GQAReader(VisionReader):
         *,
         use_cache: bool = True,
     ) -> Instance:
+        from allennlp.data import Field
+
         tokenized_question = self._tokenizer.tokenize(question)
-        fields = {"question": TextField(tokenized_question, None)}
+        fields: Dict[str, Field] = {"question": TextField(tokenized_question, None)}
 
         if answer is not None:
             if not self.answer_vocab or answer["answer"] in self.answer_vocab:
