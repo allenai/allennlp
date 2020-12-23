@@ -1,6 +1,6 @@
 <div align="center">
     <br>
-    <img src="https://raw.githubusercontent.com/allenai/allennlp/master/docs/img/allennlp-logo-dark.png" width="400"/>
+    <img src="https://raw.githubusercontent.com/allenai/allennlp/main/docs/img/allennlp-logo-dark.png" width="400"/>
     <p>
     An Apache 2.0 NLP research library, built on PyTorch, for developing state-of-the-art deep learning models on a wide variety of linguistic tasks.
     </p>
@@ -8,16 +8,16 @@
 </div>
 <p align="center">
     <a href="https://github.com/allenai/allennlp/actions">
-        <img alt="CI" src="https://github.com/allenai/allennlp/workflows/CI/badge.svg?event=push&branch=master">
+        <img alt="CI" src="https://github.com/allenai/allennlp/workflows/CI/badge.svg?event=push&branch=main">
     </a>
     <a href="https://pypi.org/project/allennlp/">
         <img alt="PyPI" src="https://img.shields.io/pypi/v/allennlp">
     </a>
-    <a href="https://github.com/allenai/allennlp/blob/master/LICENSE">
+    <a href="https://github.com/allenai/allennlp/blob/main/LICENSE">
         <img alt="License" src="https://img.shields.io/github/license/allenai/allennlp.svg?color=blue&cachedrop">
     </a>
     <a href="https://codecov.io/gh/allenai/allennlp">
-        <img alt="Codecov" src="https://codecov.io/gh/allenai/allennlp/branch/master/graph/badge.svg">
+        <img alt="Codecov" src="https://codecov.io/gh/allenai/allennlp/branch/main/graph/badge.svg">
     </a>
     <a href="https://optuna.org">
         <img alt="Optuna" src="https://img.shields.io/badge/Optuna-integrated-blue">
@@ -29,13 +29,13 @@
 
 - [Website](https://allennlp.org/)
 - [Guide](https://guide.allennlp.org/)
-- [Documentation](https://docs.allennlp.org/) ( [latest](https://docs.allennlp.org/latest/) | [stable](https://docs.allennlp.org/stable/) | [master](https://docs.allennlp.org/master/) )
+- [Documentation](https://docs.allennlp.org/) ( [latest](https://docs.allennlp.org/latest/) | [stable](https://docs.allennlp.org/stable/) | [commit](https://docs.allennlp.org/main/) )
 - [Forum](https://discourse.allennlp.org)
 - [Stack Overflow](https://stackoverflow.com/questions/tagged/allennlp)
 - [Contributing Guidelines](CONTRIBUTING.md)
 - [Officially Supported Models](https://github.com/allenai/allennlp-models)
-    - [Pretrained Models](https://github.com/allenai/allennlp-models/blob/master/allennlp_models/pretrained.py)
-    - [Documentation](https://docs.allennlp.org/models/) ( [latest](https://docs.allennlp.org/models/latest/) | [stable](https://docs.allennlp.org/models/stable/) | [master](https://docs.allennlp.org/models/master/) )
+    - [Pretrained Models](https://github.com/allenai/allennlp-models/blob/main/allennlp_models/pretrained.py)
+    - [Documentation](https://docs.allennlp.org/models/) ( [latest](https://docs.allennlp.org/models/latest/) | [stable](https://docs.allennlp.org/models/stable/) | [commit](https://docs.allennlp.org/models/main/) )
 - [Continuous Build](https://github.com/allenai/allennlp/actions)
 - [Nightly Releases](https://pypi.org/project/allennlp/#history)
 
@@ -110,8 +110,8 @@ The file should list the plugin modules that you want to be loaded, one per line
 To test that your plugins can be found and imported by AllenNLP, you can run the `allennlp test-install` command.
 Each discovered plugin will be logged to the terminal.
 
-For more information about plugins, see the [plugins API docs](https://docs.allennlp.org/master/api/common/plugins/). And for information on how to create a custom subcommand
-to distribute as a plugin, see the [subcommand API docs](https://docs.allennlp.org/master/api/commands/subcommand/).
+For more information about plugins, see the [plugins API docs](https://docs.allennlp.org/main/api/common/plugins/). And for information on how to create a custom subcommand
+to distribute as a plugin, see the [subcommand API docs](https://docs.allennlp.org/main/api/commands/subcommand/).
 
 ## Package Overview
 
