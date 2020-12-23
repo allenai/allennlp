@@ -50,6 +50,16 @@ dataset at every epoch) and a `MultiTaskScheduler` (for ordering the instances w
 ### Added
 
 - Added a new learning rate scheduler: `CombinedLearningRateScheduler`. This can be used to combine different LR schedulers, using one after the other.
+- Moving `ModelCard` and `TaskCard` abstractions into the main repository.
+
+### Changed
+
+- 'master' branch renamed to 'main'
+- Torch version bumped to 1.7.1 in Docker images.
+
+### Fixed
+
+- Fixed typo with `LabelField` string representation: removed trailing apostrophe.
 
 
 ## [v1.3.0](https://github.com/allenai/allennlp/releases/tag/v1.3.0) - 2020-12-15
