@@ -91,8 +91,8 @@ When you're ready to contribute code to address an open issue, please follow the
 
     Once you've added an "upstream" remote pointing to [https://github.com/allenai/allennlp.git](https://github.com/allenai/allennlp), keeping your fork up-to-date is easy:
     
-        git checkout master  # if not already on master
-        git pull --rebase upstream master
+        git checkout main  # if not already on main
+        git pull --rebase upstream main
         git push
 
     </details>
@@ -101,7 +101,7 @@ When you're ready to contribute code to address an open issue, please follow the
 
     <details><summary>Expand details 👇</summary><br/>
 
-    Commiting directly to the master branch of your fork is not recommended. It will be easier to keep your fork clean if you work on a seperate branch for each contribution you intend to make.
+    Commiting directly to the main branch of your fork is not recommended. It will be easier to keep your fork clean if you work on a seperate branch for each contribution you intend to make.
     
     You can create a new branch with
     
@@ -117,11 +117,11 @@ When you're ready to contribute code to address an open issue, please follow the
 
     Our continuous integration (CI) testing runs [a number of checks](https://github.com/allenai/allennlp/actions?query=workflow%3APR) for each pull request on [GitHub Actions](https://github.com/features/actions). You can run most of these tests locally, which is something you should do *before* opening a PR to help speed up the review process and make it easier for us.
     
-    First, you should run [`black`](https://github.com/psf/black) to make sure you code is formatted consistently. Many IDEs support code formatters as plugins, so you may be able to setup black to run automatically everytime you save. [`black.vim`](https://github.com/psf/black/tree/master/plugin) will give you this functionality in Vim, for example. But `black` is also easy to run directly from the command line. Just run this from the root of your clone:
+    First, you should run [`black`](https://github.com/psf/black) to make sure you code is formatted consistently. Many IDEs support code formatters as plugins, so you may be able to setup black to run automatically everytime you save. [`black.vim`](https://github.com/psf/black/tree/main/plugin) will give you this functionality in Vim, for example. But `black` is also easy to run directly from the command line. Just run this from the root of your clone:
     
         black .
 
-    Our CI also uses [`flake8`](https://github.com/allenai/allennlp/tree/master/tests) to lint the code base and [`mypy`](http://mypy-lang.org/) for type-checking. You should run both of these next with
+    Our CI also uses [`flake8`](https://github.com/allenai/allennlp/tree/main/tests) to lint the code base and [`mypy`](http://mypy-lang.org/) for type-checking. You should run both of these next with
 
         make lint
 
@@ -129,7 +129,7 @@ When you're ready to contribute code to address an open issue, please follow the
 
         make typecheck
 
-    We also strive to maintain high test coverage, so most contributions should include additions to [the unit tests](https://github.com/allenai/allennlp/tree/master/tests). These tests are run with [`pytest`](https://docs.pytest.org/en/latest/), which you can use to locally run any test modules that you've added or changed.
+    We also strive to maintain high test coverage, so most contributions should include additions to [the unit tests](https://github.com/allenai/allennlp/tree/main/tests). These tests are run with [`pytest`](https://docs.pytest.org/en/latest/), which you can use to locally run any test modules that you've added or changed.
 
     For example, if you've fixed a bug in `allennlp/nn/util.py`, you can run the tests specific to that module with
     
@@ -149,7 +149,7 @@ When you're ready to contribute code to address an open issue, please follow the
     
         make serve-docs
 
-    And finally, please update the [CHANGELOG](https://github.com/allenai/allennlp/blob/master/CHANGELOG.md) with notes on your contribution in the "Unreleased" section at the top.
+    And finally, please update the [CHANGELOG](https://github.com/allenai/allennlp/blob/main/CHANGELOG.md) with notes on your contribution in the "Unreleased" section at the top.
 
     After all of the above checks have passed, you can now open [a new GitHub pull request](https://github.com/allenai/allennlp/pulls).
     Make sure you have a clear description of the problem and the solution, and include a link to relevant issues.
