@@ -43,7 +43,7 @@
 
 If you're interested in using AllenNLP for model development, we recommend you check out the
 [AllenNLP Guide](https://guide.allennlp.org).  When you're ready to start your project, we've
-created a couple of template repositories that you can use as a starting place:
+created some template repositories that you can use as a starting place:
 
 * If you want to use `allennlp train` and config files to specify experiments, use [this
   template](https://github.com/allenai/allennlp-template-config-files). We recommend this approach.
