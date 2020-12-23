@@ -4,7 +4,7 @@ through a model.
 """
 
 import logging
-from collections import defaultdict
+from collections import defaultdict, Counter
 from typing import Dict, Iterable, Iterator, List, Union
 
 import numpy
@@ -39,12 +39,16 @@ class Batch(Iterable):
         """
         Check that all the instances have the same types.
         """
-        all_instance_fields_and_types: List[Dict[str, str]] = [
-            {k: v.__class__.__name__ for k, v in x.fields.items()} for x in self.instances
-        ]
-        # Check all the field names and Field types are the same for every instance.
-        if not all(all_instance_fields_and_types[0] == x for x in all_instance_fields_and_types):
-            raise ConfigurationError("You cannot construct a Batch with non-homogeneous Instances.")
+        field_name_to_type_counters: Dict[str, Counter] = defaultdict(lambda: Counter())
+        for instance in self.instances:
+            for field_name, value in instance.fields.items():
+                field_name_to_type_counters[field_name][value.__class__.__name__] += 1
+        for field_name, type_counters in field_name_to_type_counters.items():
+            if len(type_counters) > 1:
+                raise ConfigurationError(
+                    "You cannot construct a Batch with non-homogeneous Instances. "
+                    f"Field {field_name} has {len(type_counters)} different types: {', '.join(type_counters.keys())}"
+                )
 
     def get_padding_lengths(self) -> Dict[str, Dict[str, int]]:
         """
