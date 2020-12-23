@@ -163,7 +163,9 @@ class GQAReader(VisionReader):
                 answer = {
                     "answer": question_dict["answer"],
                 }
-                yield self.text_to_instance(question_dict["question"], processed_image, answer)
+                instance = self.text_to_instance(question_dict["question"], processed_image, answer)
+                if instance is not None:
+                    yield instance
 
     @overrides
     def text_to_instance(
@@ -173,7 +175,7 @@ class GQAReader(VisionReader):
         answer: Optional[Dict[str, str]] = None,
         *,
         use_cache: bool = True,
-    ) -> Instance:
+    ) -> Optional[Instance]:
         from allennlp.data import Field
 
         tokenized_question = self._tokenizer.tokenize(question)
@@ -185,6 +187,10 @@ class GQAReader(VisionReader):
             if not self.answer_vocab or answer["answer"] in self.answer_vocab:
                 labels_fields.append(LabelField(answer["answer"], label_namespace="answers"))
                 weights.append(1.0)
+
+            if len(labels_fields) <= 0:
+                return None
+
             fields["label_weights"] = ArrayField(torch.tensor(weights))
             fields["labels"] = ListField(labels_fields)
 
