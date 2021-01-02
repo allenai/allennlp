@@ -1548,7 +1548,6 @@ def add_sentence_boundary_token_ids(
         The new mask for the tensor, taking into account the appended tokens
         marking the beginning and end of the sentence.
     """
-    # TODO: matthewp, profile this transfer
     sequence_lengths = mask.sum(dim=1).detach().cpu().numpy()
     tensor_shape = list(tensor.data.shape)
     new_shape = list(tensor_shape)
@@ -1603,7 +1602,6 @@ def remove_sentence_boundaries(
     new_mask : `torch.BoolTensor`
         The new mask for the tensor of shape `(batch_size, timesteps - 2)`.
     """
-    # TODO: matthewp, profile this transfer
     sequence_lengths = mask.sum(dim=1).detach().cpu().numpy()
     tensor_shape = list(tensor.data.shape)
     new_shape = list(tensor_shape)
@@ -1769,10 +1767,10 @@ def find_embedding_layer(model: torch.nn.Module) -> torch.nn.Module:
     """
     # We'll look for a few special cases in a first pass, then fall back to just finding a
     # TextFieldEmbedder in a second pass if we didn't find a special case.
-    from transformers.modeling_gpt2 import GPT2Model
-    from transformers.modeling_bert import BertEmbeddings
-    from transformers.modeling_albert import AlbertEmbeddings
-    from transformers.modeling_roberta import RobertaEmbeddings
+    from transformers.models.gpt2.modeling_gpt2 import GPT2Model
+    from transformers.models.bert.modeling_bert import BertEmbeddings
+    from transformers.models.albert.modeling_albert import AlbertEmbeddings
+    from transformers.models.roberta.modeling_roberta import RobertaEmbeddings
     from allennlp.modules.text_field_embedders.text_field_embedder import TextFieldEmbedder
     from allennlp.modules.text_field_embedders.basic_text_field_embedder import (
         BasicTextFieldEmbedder,

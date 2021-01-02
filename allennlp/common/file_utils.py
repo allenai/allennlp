@@ -105,6 +105,48 @@ def filename_to_url(filename: str, cache_dir: Union[str, Path] = None) -> Tuple[
     return url, etag
 
 
+def check_tarfile(tar_file: tarfile.TarFile):
+    """Tar files can contain files outside of the extraction directory, or symlinks that point
+    outside the extraction directory. We also don't want any block devices fifos, or other
+    weird file types extracted. This checks for those issues and throws an exception if there
+    is a problem."""
+    base_path = os.path.join("tmp", "pathtest")
+    base_path = os.path.normpath(base_path)
+
+    def normalize_path(path: str) -> str:
+        path = path.rstrip("/")
+        path = path.replace("/", os.sep)
+        path = os.path.join(base_path, path)
+        path = os.path.normpath(path)
+        return path
+
+    for tarinfo in tar_file:
+        if not (
+            tarinfo.isreg()
+            or tarinfo.isdir()
+            or tarinfo.isfile()
+            or tarinfo.islnk()
+            or tarinfo.issym()
+        ):
+            raise ValueError(
+                f"Tar file {str(tar_file.name)} contains invalid member {tarinfo.name}."
+            )
+
+        target_path = normalize_path(tarinfo.name)
+        if os.path.commonprefix([base_path, target_path]) != base_path:
+            raise ValueError(
+                f"Tar file {str(tar_file.name)} is trying to create a file outside of its extraction directory."
+            )
+
+        if tarinfo.islnk() or tarinfo.issym():
+            target_path = normalize_path(tarinfo.linkname)
+            if os.path.commonprefix([base_path, target_path]) != base_path:
+                raise ValueError(
+                    f"Tar file {str(tar_file.name)} is trying to link to a file "
+                    "outside of its extraction directory."
+                )
+
+
 def cached_path(
     url_or_filename: Union[str, PathLike],
     cache_dir: Union[str, Path] = None,
@@ -226,6 +268,7 @@ def cached_path(
                         zip_file.close()
                 else:
                     tar_file = tarfile.open(file_path)
+                    check_tarfile(tar_file)
                     tar_file.extractall(tmp_extraction_dir)
                     tar_file.close()
                 # Extraction was successful, rename temp directory to final

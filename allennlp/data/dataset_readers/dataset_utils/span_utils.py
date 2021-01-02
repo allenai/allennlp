@@ -2,7 +2,7 @@ from typing import Callable, List, Set, Tuple, TypeVar, Optional
 import warnings
 
 from allennlp.common.checks import ConfigurationError
-from allennlp.data.tokenizers.token import Token
+from allennlp.data.tokenizers import Token
 
 
 TypedSpan = Tuple[int, Tuple[int, int]]

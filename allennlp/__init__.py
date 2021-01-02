@@ -15,7 +15,7 @@ warnings.filterwarnings("ignore", message="numpy.ufunc size changed")
 try:
     # On some systems this prevents the dreaded
     # ImportError: dlopen: cannot load any more object with static TLS
-    import spacy, torch, numpy  # noqa
+    import transformers, spacy, torch, numpy  # noqa
 
 except ModuleNotFoundError:
     print(
