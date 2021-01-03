@@ -9,10 +9,4 @@ from allennlp.training.trainer import (
     TrainerCallback,
     TrackEpochCallback,
 )
-from allennlp.training.deepspeed import DeepspeedTrainer
-
-# import warnings
-# try:
-#     from allennlp.training.deepspeed import DeepspeedTrainer
-# except ImportError:
-#     warnings.warn('Deepspeed plugin not installed. Ignoring.')
+from allennlp.training.deepspeed import DeepspeedTrainer # TODO: make this optional
