@@ -253,7 +253,7 @@ class Embedding(TokenEmbedder):
         vocab_namespace = vocab_namespace or self._vocab_namespace
         if not vocab_namespace:
             # It's not safe to default to "tokens" or any other namespace.
-            logging.info(
+            logger.info(
                 "Loading a model trained before embedding extension was implemented; "
                 "pass an explicit vocab namespace if you want to extend the vocabulary."
             )
@@ -285,19 +285,18 @@ class Embedding(TokenEmbedder):
         elif is_url_or_existing_file(self._pretrained_file):
             extension_pretrained_file = self._pretrained_file
         # Case 4: no file is available, hope that pretrained embeddings weren't used in the first place and warn
-        else:
-            extra_info = (
-                f"Originally pretrained_file was at " f"{self._pretrained_file}. "
-                if self._pretrained_file
-                else ""
-            )
-            # It's better to warn here and not give error because there is no way to distinguish between
-            # whether pretrained-file wasn't used during training or user forgot to pass / passed incorrect
-            # mapping. Raising an error would prevent fine-tuning in the former case.
-            logging.warning(
+        elif self._pretrained_file is not None:
+            # Warn here instead of an exception to allow a fine-tuning even without the original pretrained_file
+            logger.warning(
                 f"Embedding at model_path, {model_path} cannot locate the pretrained_file. "
-                f"{extra_info} If you are fine-tuning and want to use using pretrained_file for "
-                f"embedding extension, please pass the mapping by --embedding-sources argument."
+                f"Originally pretrained_file was at '{self._pretrained_file}'."
+            )
+        else:
+            # When loading a model from archive there is no way to distinguish between whether a pretrained-file
+            # was or wasn't used during the original training. So we leave an info here.
+            logger.info(
+                "If you are fine-tuning and want to use a pretrained_file for "
+                "embedding extension, please pass the mapping by --embedding-sources argument."
             )
 
         embedding_dim = self.weight.data.shape[-1]

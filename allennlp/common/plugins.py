@@ -86,8 +86,9 @@ def import_plugins() -> None:
             # For default plugins we recursively import everything.
             import_module_and_submodules(module_name)
             logger.info("Plugin %s available", module_name)
-        except ModuleNotFoundError:
-            pass
+        except ModuleNotFoundError as e:
+            if e.name != module_name:
+                logger.error(f"Plugin {module_name} could not be loaded: {e}")
     for module_name in discover_plugins():
         try:
             importlib.import_module(module_name)

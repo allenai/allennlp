@@ -127,8 +127,8 @@ class BLEU(Metric):
                 predictions, gold_targets, ngram_size
             )
             if is_distributed():
-                _precision_matches = torch.tensor(precision_matches).to(device)
-                _precision_totals = torch.tensor(precision_totals).to(device)
+                _precision_matches = torch.tensor(precision_matches, device=device)
+                _precision_totals = torch.tensor(precision_totals, device=device)
                 dist.all_reduce(_precision_matches, op=dist.ReduceOp.SUM)
                 dist.all_reduce(_precision_totals, op=dist.ReduceOp.SUM)
                 precision_matches = _precision_matches.item() / world_size
@@ -150,8 +150,8 @@ class BLEU(Metric):
             _reference_lengths = valid_gold_targets_mask.sum().item()
 
         if is_distributed():
-            prediction_lengths = torch.tensor(_prediction_lengths).to(device)
-            reference_lengths = torch.tensor(_reference_lengths).to(device)
+            prediction_lengths = torch.tensor(_prediction_lengths, device=device)
+            reference_lengths = torch.tensor(_reference_lengths, device=device)
             dist.all_reduce(prediction_lengths, op=dist.ReduceOp.SUM)
             dist.all_reduce(reference_lengths, op=dist.ReduceOp.SUM)
             _prediction_lengths = prediction_lengths.item()
