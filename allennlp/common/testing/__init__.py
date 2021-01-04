@@ -15,7 +15,7 @@ from allennlp.modules.transformer import TransformerModule
 from allennlp.training.metrics import Metric
 
 
-_available_devices = ["cpu"] + (["cuda"] if torch.cuda.is_available() else [])
+_available_devices = ["cpu"] + (["cuda:0"] if torch.cuda.is_available() else [])
 
 
 def multi_device(test_method):

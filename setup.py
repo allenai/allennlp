@@ -51,6 +51,7 @@ setup(
     ),
     install_requires=[
         "torch>=1.6.0,<1.8.0",
+        "torchvision>=0.8.1,<0.9.0",
         "jsonnet>=0.10.0 ; sys.platform != 'win32'",
         "overrides==3.1.0",
         "nltk",
@@ -72,11 +73,6 @@ setup(
         "lmdb",
         "more-itertools",
     ],
-    extras_require={
-        "vision": [
-            "torchvision>=0.7.0",
-        ],
-    },
     entry_points={"console_scripts": ["allennlp=allennlp.__main__:run"]},
     include_package_data=True,
     python_requires=">=3.6.1",

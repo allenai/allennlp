@@ -13,6 +13,7 @@ from allennlp.modules.transformer import (
     BiModalEncoder,
 )
 from allennlp.training.metrics import CategoricalAccuracy
+from allennlp.training.metrics import FBetaMeasure
 
 
 from allennlp.models.vision_text_model import VisionTextModel
@@ -50,6 +51,9 @@ class VisualEntailmentModel(VisionTextModel):
         fusion_method: str = "sum",
         dropout: float = 0.1,
         label_namespace: str = "labels",
+        *,
+        ignore_text: bool = False,
+        ignore_image: bool = False,
     ) -> None:
 
         super().__init__(
@@ -65,18 +69,25 @@ class VisualEntailmentModel(VisionTextModel):
         )
 
         self.accuracy = CategoricalAccuracy()
+        self.fbeta = FBetaMeasure(beta=1.0, average="macro")
 
     @overrides
     def forward(
         self,  # type: ignore
         box_features: torch.Tensor,
         box_coordinates: torch.Tensor,
+        box_mask: torch.Tensor,
         hypothesis: TextFieldTensors,
         label: Optional[torch.Tensor] = None,
     ) -> Dict[str, torch.Tensor]:
 
         return super().forward(
-            box_features, box_coordinates, text=hypothesis, label=label, label_weights=None
+            box_features,
+            box_coordinates,
+            box_mask,
+            text=hypothesis,
+            label=label,
+            label_weights=None,
         )
 
     @overrides
@@ -93,12 +104,15 @@ class VisualEntailmentModel(VisionTextModel):
                 torch.nn.functional.cross_entropy(outputs["logits"], label) / batch_size
             )
             self.accuracy(outputs["logits"], label)
+            self.fbeta(outputs["probs"], label)
         return outputs
 
     @overrides
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
-        result = self.accuracy.get_metric(reset)
-        return {"accuracy": result}
+        metrics = self.fbeta.get_metric(reset)
+        accuracy = self.accuracy.get_metric(reset)
+        metrics.update({"accuracy": accuracy})
+        return metrics
 
     @overrides
     def make_output_human_readable(

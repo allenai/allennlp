@@ -3,9 +3,12 @@ local model_name = "epwalsh/bert-xsmall-dummy";
   "dataset_reader": {
     "type": "visual-entailment",
     "image_dir": "test_fixtures/data/visual_entailment/images",
-    "image_loader": "detectron",
+    "image_loader": "torch",
     "image_featurizer": "null",
-    "region_detector": "random",
+    "region_detector": {
+      "type": "random",
+      "seed": 322
+    },
     "tokenizer": {
       "type": "pretrained_transformer",
       "model_name": model_name

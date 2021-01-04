@@ -1,18 +1,30 @@
-local model_name = "bert-large-uncased";
+local model_name = "bert-base-uncased";
 local effective_batch_size = 128;
 local gpu_batch_size = 32;
-local num_gpus = 0;
+local num_gpus = 1;
 
-local datadir = "/net/s3/allennlp/akshitab/data/SNLI-VE/data/";
+local construct_vocab = false;
+
+#local gqa_dir = "/Users/dirkg/Documents/data/vision/gqa/";
+local gqa_dir = "/mnt/tank/dirkg/data/vision/gqa/";
+
+local vocabulary = if construct_vocab then {
+      // read the files to construct the vocab
+      "min_count": {"answers": 9}
+    } else {
+      // read the constructed vocab
+      "type": "from_files",
+      "directory": "https://storage.googleapis.com/allennlp-public-data/gqa/vilbert_gqa.vocab.tar.gz"
+    };
 
 {
   "dataset_reader": {
-    "type": "visual-entailment",
-    "image_dir": datadir + "Flickr30K/flickr30k_images",
-    "feature_cache_dir": datadir + "/feature_cache_torchvision",
-    "image_loader": "torch",
-    "image_featurizer": "resnet_backbone",
-    "region_detector": "faster_rcnn",
+    "type": "gqa",
+    "image_dir": gqa_dir + "/images",
+    [if !construct_vocab then "feature_cache_dir"]: gqa_dir + "/feature_cache",
+    [if !construct_vocab then "image_loader"]: "torch",
+    [if !construct_vocab then "image_featurizer"]: "resnet_backbone",
+    [if !construct_vocab then "region_detector"]: "faster_rcnn",
     "tokenizer": {
       "type": "pretrained_transformer",
       "model_name": model_name
@@ -23,13 +35,19 @@ local datadir = "/net/s3/allennlp/akshitab/data/SNLI-VE/data/";
         "model_name": model_name
       }
     },
+    #"max_instances": 1000,
     "image_processing_batch_size": 16,
+    "answer_vocab": if construct_vocab then null else vocabulary,
+    "keep_unanswerable_questions": construct_vocab
   },
-  "train_data_path": "https://storage.googleapis.com/allennlp-public-data/snli-ve/snli_ve_train.jsonl.gz",
-  "validation_data_path": "https://storage.googleapis.com/allennlp-public-data/snli-ve/snli_ve_dev.jsonl.gz",
-  "test_data_path": "https://storage.googleapis.com/allennlp-public-data/snli-ve/snli_ve_test.jsonl.gz",
+  "validation_dataset_reader": self.dataset_reader {
+    "keep_unanswerable_questions": true
+  },
+  "vocabulary": vocabulary,
+  "train_data_path": "train_balanced",
+  "validation_data_path": "testdev_balanced",
   "model": {
-    "type": "ve_vilbert_from_huggingface",
+    "type": "vqa_vilbert_from_huggingface",
     "model_name": model_name,
     "image_feature_dim": 1024,
     "image_hidden_size": 1024,
@@ -50,7 +68,7 @@ local datadir = "/net/s3/allennlp/akshitab/data/SNLI-VE/data/";
   "data_loader": {
     "batch_size": gpu_batch_size,
     "shuffle": true,
-    "max_instances_in_memory": 1024
+    "max_instances_in_memory": 1024*16
   },
   [if num_gpus > 1 then "distributed"]: {
     "cuda_devices": std.range(0, num_gpus - 1)
@@ -59,15 +77,15 @@ local datadir = "/net/s3/allennlp/akshitab/data/SNLI-VE/data/";
   "trainer": {
     "optimizer": {
         "type": "huggingface_adamw",
-        "lr": 4e-5,
-        "weight_decay": 0.01
+        "lr": 4e-5
     },
     "learning_rate_scheduler": {
       "type": "linear_with_warmup",
-      "num_steps_per_epoch": std.ceil(529527 / $["data_loader"]["batch_size"] / $["trainer"]["num_gradient_accumulation_steps"]),
-      "warmup_steps": std.ceil(self.num_steps_per_epoch / 2),
+      "warmup_steps": 5000,
+      "num_steps_per_epoch": std.ceil(942255 / $["data_loader"]["batch_size"] / $["trainer"]["num_gradient_accumulation_steps"])
     },
     "validation_metric": "+fscore",
+    "patience": 5,
     "num_epochs": 20,
     "num_gradient_accumulation_steps": effective_batch_size / gpu_batch_size / std.max(1, num_gpus)
   },

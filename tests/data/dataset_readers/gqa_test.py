@@ -1,7 +1,8 @@
+from allennlp.common.lazy import Lazy
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Batch, Vocabulary
 from allennlp.data.dataset_readers import GQAReader
-from allennlp.data.image_loader import DetectronImageLoader
+from allennlp.data.image_loader import TorchImageLoader
 from allennlp.data.tokenizers import WhitespaceTokenizer
 from allennlp.data.token_indexers import SingleIdTokenIndexer
 from allennlp.modules.vision.grid_embedder import NullGridEmbedder
@@ -9,21 +10,23 @@ from allennlp.modules.vision.region_detector import RandomRegionDetector
 
 
 class TestGQAReader(AllenNlpTestCase):
-    def test_read(self):
-        reader = GQAReader(
+    def setup_method(self):
+        super().setup_method()
+        self.reader = GQAReader(
             image_dir=self.FIXTURES_ROOT / "data" / "gqa" / "images",
-            image_loader=DetectronImageLoader(),
-            image_featurizer=NullGridEmbedder(),
-            region_detector=RandomRegionDetector(),
+            image_loader=TorchImageLoader(),
+            image_featurizer=Lazy(NullGridEmbedder),
+            region_detector=Lazy(RandomRegionDetector),
             tokenizer=WhitespaceTokenizer(),
             token_indexers={"tokens": SingleIdTokenIndexer()},
         )
 
-        instances = list(reader.read("test_fixtures/data/gqa/questions.json"))
+    def test_read(self):
+        instances = list(self.reader.read("test_fixtures/data/gqa/questions.json"))
         assert len(instances) == 1
 
         instance = instances[0]
-        assert len(instance.fields) == 5
+        assert len(instance.fields) == 6
         assert len(instance["question"]) == 6
         question_tokens = [t.text for t in instance["question"]]
         assert question_tokens == ["What", "is", "hanging", "above", "the", "chalkboard?"]
@@ -39,21 +42,16 @@ class TestGQAReader(AllenNlpTestCase):
         # (batch size, num boxes (fake), 4 coords)
         assert tensors["box_coordinates"].size() == (1, 2, 4)
 
+        # (batch size, num boxes (fake),)
+        assert tensors["box_mask"].size() == (1, 2)
+
     def test_read_from_dir(self):
-        reader = GQAReader(
-            image_dir=self.FIXTURES_ROOT / "data" / "gqa" / "images",
-            image_loader=DetectronImageLoader(),
-            image_featurizer=NullGridEmbedder(),
-            region_detector=RandomRegionDetector(),
-            tokenizer=WhitespaceTokenizer(),
-            token_indexers={"tokens": SingleIdTokenIndexer()},
-        )
         # Test reading from multiple files in a directory
-        instances = list(reader.read("test_fixtures/data/gqa/question_dir/"))
+        instances = list(self.reader.read("test_fixtures/data/gqa/question_dir/"))
         assert len(instances) == 2
 
         instance = instances[1]
-        assert len(instance.fields) == 5
+        assert len(instance.fields) == 6
         assert len(instance["question"]) == 10
         question_tokens = [t.text for t in instance["question"]]
         assert question_tokens == [
@@ -79,3 +77,6 @@ class TestGQAReader(AllenNlpTestCase):
 
         # (batch size, num boxes (fake), 4 coords)
         assert tensors["box_coordinates"].size() == (2, 2, 4)
+
+        # (batch size, num boxes (fake),)
+        assert tensors["box_mask"].size() == (2, 2)
