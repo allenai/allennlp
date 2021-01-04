@@ -151,7 +151,7 @@ class GQAReader(VisionReader):
                         f"We could not find an image with the name {missing_filename}. "
                         "Because of the size of the image datasets, we don't download them automatically. "
                         "Please download the images from"
-                        "INSERT URL HERE, "
+                        "https://nlp.stanford.edu/data/gqa/images.zip, "
                         "extract them into a directory, and set the image_dir parameter to point to that "
                         "directory. This dataset reader does not care about the exact directory structure. It "
                         "finds the images wherever they are.",
