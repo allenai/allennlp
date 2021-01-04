@@ -86,7 +86,7 @@ class FileLock(_FileLock):
     def acquire(self, timeout=None, poll_interval=0.05):
         try:
             super().acquire(timeout=timeout, poll_intervall=poll_interval)
-        except PermissionError:
+        except (PermissionError, OSError):
             if os.path.isfile(self._lock_file) and self._read_only_ok:
                 warnings.warn(
                     f"Lacking permissions required to obtain lock '{self._lock_file}'. "
