@@ -86,12 +86,15 @@ class FileLock(_FileLock):
     def acquire(self, timeout=None, poll_interval=0.05):
         try:
             super().acquire(timeout=timeout, poll_intervall=poll_interval)
-        except (PermissionError, OSError) as err:
-            if isinstance(err, OSError):
-                # OSError could be a lot of different things, but what we're looking
-                # for in particular is Linux errno 30 - EROFS - "Read-only file system".
-                if err.errno != 30:
-                    raise
+        except OSError as err:
+            # OSError could be a lot of different things, but what we're looking
+            # for in particular are permission errors, such as:
+            #  - errno 1  - EPERM  - "Operation not permitted"
+            #  - errno 13 - EACCES - "Permission denied"
+            #  - errno 30 - EROFS  - "Read-only file system"
+            if err.errno not in (1, 13, 30):
+                raise
+
             if os.path.isfile(self._lock_file) and self._read_only_ok:
                 warnings.warn(
                     f"Lacking permissions required to obtain lock '{self._lock_file}'. "
