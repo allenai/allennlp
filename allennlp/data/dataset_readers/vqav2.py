@@ -455,7 +455,7 @@ class VQAv2Reader(VisionReader):
 
             processed_images = self._process_image_paths(image_paths)
         else:
-            processed_images = [None for i in range(len(question_dicts))]
+            processed_images = [None for _ in range(len(question_dicts))]
 
         attempted_instances_count = 0
         failed_instances_count = 0

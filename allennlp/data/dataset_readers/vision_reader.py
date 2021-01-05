@@ -130,6 +130,7 @@ class VisionReader(DatasetReader):
         self._coordinates_cache_instance: Optional[MutableMapping[str, Tensor]] = None
 
         # image processors
+        self.image_loader = None
         if image_loader and image_featurizer and region_detector:
             if cuda_device is None:
                 if torch.cuda.device_count() > 0:
@@ -152,9 +153,17 @@ class VisionReader(DatasetReader):
             self._region_detector = None
             self.image_processing_batch_size = image_processing_batch_size
 
-        self.produce_featurized_images = (
-            image_loader and image_featurizer and region_detector
-        ) or (self.feature_cache_dir and self.coordinates_cache_dir)
+        self.produce_featurized_images = False
+        if self.feature_cache_dir and self.coordinates_cache_dir:
+            logger.info(f"Featurizing images with a cache at {self.feature_cache_dir}")
+            self.produce_featurized_images = True
+        if image_loader and image_featurizer and region_detector:
+            if self.produce_featurized_images:
+                logger.info("Falling back to a full image featurization pipeline")
+            else:
+                logger.info("Featurizing images with a full image featurization pipeline")
+                self.produce_featurized_images = True
+
         if self.produce_featurized_images:
             if image_dir is None:
                 if image_loader and image_featurizer and region_detector:

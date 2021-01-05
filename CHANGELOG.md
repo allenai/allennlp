@@ -34,6 +34,8 @@ dataset at every epoch) and a `MultiTaskScheduler` (for ordering the instances w
 - Transformer toolkit to plug and play with modular components of transformer architectures.
 - `VisionReader` and `VisionTextModel` base classes added. `VisualEntailment` and `VQA` inherit from these.
 - Added reader for the GQA dataset
+- Added a config to traing a GQA model
+- Added a command to count the number of instances we're going to be training with
 
 ### Changed
 
@@ -45,10 +47,19 @@ dataset at every epoch) and a `MultiTaskScheduler` (for ordering the instances w
 - `ArrayField` is now called `TensorField`, and implemented in terms of torch tensors, not numpy.
 - Improved `nn.util.move_to_device` function by avoiding an unnecessary recursive check for tensors and
   adding a `non_blocking` optional argument, which is the same argument as in `torch.Tensor.to()`.
+- If you are trying to create a heterogeneous batch, you now get a better error message.
+- Readers using the new vision features now explicitly log how they are featurizing images.
 
 ### Removed
 
 - Removed `nn.util.has_tensor`.
+
+### Fixed
+
+- The `build-vocab` command no longer crashes when the resulting vocab file is
+  in the current working directory.
+- VQA models now use the `vqa_score` metric for early stopping. This results in
+  much better scores.
 
 
 ## Unreleased (1.x branch)
@@ -56,6 +67,16 @@ dataset at every epoch) and a `MultiTaskScheduler` (for ordering the instances w
 ### Added
 
 - Added a new learning rate scheduler: `CombinedLearningRateScheduler`. This can be used to combine different LR schedulers, using one after the other.
+- Moving `ModelCard` and `TaskCard` abstractions into the main repository.
+
+### Changed
+
+- 'master' branch renamed to 'main'
+- Torch version bumped to 1.7.1 in Docker images.
+
+### Fixed
+
+- Fixed typo with `LabelField` string representation: removed trailing apostrophe.
 
 
 ## [v1.3.0](https://github.com/allenai/allennlp/releases/tag/v1.3.0) - 2020-12-15
