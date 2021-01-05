@@ -44,6 +44,12 @@ class MultiProcessDataLoader(DataLoader):
     data_path: `str`, required
         Passed to `DatasetReader.read()`.
 
+        !!! Note
+            In a typical AllenNLP configuration file, the `reader` and `data_path` parameters don't
+            get an entry under the `data_loader`. The `reader` is constructed separately from
+            the corresponding `dataset_reader` params, and the `data_path` is taken from the
+            `train_data_path`, `validation_data_path`, or `test_data_path`.
+
     batch_size: `int`, optional (default = `None`)
         When `batch_sampler` is unspecified, this option can be combined with `drop_last`
         and `shuffle` to control automatic batch sampling.
@@ -84,10 +90,11 @@ class MultiProcessDataLoader(DataLoader):
         will turn on lazy loading, where only `max_instances_in_memory` instances are processed
         at a time.
 
-        Note that this setting will affect how a `batch_sampler` is applied. If
-        `max_instances_in_memory` is `None`, the sampler will be applied to all `Instance`s.
-        Otherwise the sampler will be applied to only `max_instances_in_memory` `Instance`s
-        at a time.
+        !!! Note
+            This setting will affect how a `batch_sampler` is applied. If
+            `max_instances_in_memory` is `None`, the sampler will be applied to all `Instance`s.
+            Otherwise the sampler will be applied to only `max_instances_in_memory` `Instance`s
+            at a time.
 
     start_method: `str`, optional (default = `"fork"`)
         The [start method](https://docs.python.org/3.7/library/multiprocessing.html#contexts-and-start-methods)
@@ -101,14 +108,14 @@ class MultiProcessDataLoader(DataLoader):
         See [the PyTorch docs](https://pytorch.org/docs/stable/notes/cuda.html#use-pinned-memory-buffers)
         for more info.
 
+        !!! Note
+            If `num_workers > 0` and `pin_memory = True`, you must set `start_method` to "spawn".
+
     device: `Optional[Union[int, str, torch.device]]`, optional (default = `None`)
         If given, batches will automatically be put on this device.
 
-    !!! Note
-        In a typical AllenNLP configuration file, the `reader` and `data_path` parameters don't
-        get an entry under the "data_loader". The `reader` is constructed separately from
-        the corresponding `dataset_reader` params, and the `data_path` is taken from the
-        `train_data_path`, `validation_data_path`, or `test_data_path`.
+        !!! Note
+            If `num_workers > 0` and `device` is set to a CUDA device, you must set `start_method` to "spawn".
 
     !!! Warning
         Multiprocessing code in Python is complicated! Especially code that involves lower-level libraries
