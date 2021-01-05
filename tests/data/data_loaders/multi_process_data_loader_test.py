@@ -217,7 +217,7 @@ def test_load_to_cuda(options):
     loader = MultiProcessDataLoader(
         reader=reader,
         data_path="this doens't matter",
-        device=0,
+        cuda_device=0,
         start_method="spawn",
         **options,
     )

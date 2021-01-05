@@ -111,11 +111,12 @@ class MultiProcessDataLoader(DataLoader):
         !!! Note
             If `num_workers > 0` and `pin_memory = True`, you must set `start_method` to "spawn".
 
-    device: `Optional[Union[int, str, torch.device]]`, optional (default = `None`)
+    cuda_device: `Optional[Union[int, str, torch.device]]`, optional (default = `None`)
         If given, batches will automatically be put on this device.
 
         !!! Note
-            If `num_workers > 0` and `device` is set to a CUDA device, you must set `start_method` to "spawn".
+            If `num_workers > 0` and `device` is set to an actual CUDA device (as oppossed to CPU),
+            you must set `start_method` to "spawn".
 
     !!! Warning
         Multiprocessing code in Python is complicated! Especially code that involves lower-level libraries
@@ -158,7 +159,7 @@ class MultiProcessDataLoader(DataLoader):
         max_instances_in_memory: int = None,
         start_method: str = "fork",
         pin_memory: bool = False,
-        device: Optional[Union[int, str, torch.device]] = None,
+        cuda_device: Optional[Union[int, str, torch.device]] = None,
     ) -> None:
         # Do some parameter validation.
         if num_workers is not None and num_workers < 0:
@@ -203,16 +204,16 @@ class MultiProcessDataLoader(DataLoader):
         self.max_instances_in_memory = max_instances_in_memory
         self.start_method = start_method
         self.pin_memory = pin_memory
-        self.device: Optional[torch.device] = None
-        if device is not None:
-            if not isinstance(device, torch.device):
-                self.device = torch.device(device)
+        self.cuda_device: Optional[torch.device] = None
+        if cuda_device is not None:
+            if not isinstance(cuda_device, torch.device):
+                self.cuda_device = torch.device(cuda_device)
             else:
-                self.device = device
+                self.cuda_device = cuda_device
 
         if (
-            self.device is not None
-            and self.device != torch.device("cpu")
+            self.cuda_device is not None
+            and self.cuda_device != torch.device("cpu")
             and num_workers
             and start_method != "spawn"
         ):
@@ -520,8 +521,8 @@ class MultiProcessDataLoader(DataLoader):
                 ):
                     break
                 tensor_dict = self.collate_fn(batch, pin_memory=self.pin_memory)
-                if self.device is not None:
-                    tensor_dict = move_to_device(tensor_dict, self.device)
+                if self.cuda_device is not None:
+                    tensor_dict = move_to_device(tensor_dict, self.cuda_device)
                 yield tensor_dict
 
 
