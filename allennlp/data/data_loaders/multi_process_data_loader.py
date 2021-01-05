@@ -4,8 +4,9 @@ from multiprocessing.process import BaseProcess
 import random
 import sys
 import traceback
-from typing import List, Iterator, Optional, Iterable
+from typing import List, Iterator, Optional, Iterable, Union
 
+import torch
 import torch.multiprocessing as mp
 
 from allennlp.common.util import lazy_groups_of, shuffle_iterable
@@ -16,6 +17,7 @@ from allennlp.data.dataset_readers import DatasetReader, WorkerInfo
 from allennlp.data.fields import TextField
 from allennlp.data.samplers import BatchSampler
 from allennlp.data.vocabulary import Vocabulary
+from allennlp.nn.util import move_to_device
 
 
 logger = logging.getLogger(__name__)
@@ -99,6 +101,9 @@ class MultiProcessDataLoader(DataLoader):
         See [the PyTorch docs](https://pytorch.org/docs/stable/notes/cuda.html#use-pinned-memory-buffers)
         for more info.
 
+    device: `Optional[Union[int, str, torch.device]]`, optional (default = `None`)
+        If given, batches will automatically be put on this device.
+
     !!! Note
         In a typical AllenNLP configuration file, the `reader` and `data_path` parameters don't
         get an entry under the "data_loader". The `reader` is constructed separately from
@@ -146,6 +151,7 @@ class MultiProcessDataLoader(DataLoader):
         max_instances_in_memory: int = None,
         start_method: str = "fork",
         pin_memory: bool = False,
+        device: Optional[Union[int, str, torch.device]] = None,
     ) -> None:
         # Do some parameter validation.
         if num_workers is not None and num_workers < 0:
@@ -190,6 +196,22 @@ class MultiProcessDataLoader(DataLoader):
         self.max_instances_in_memory = max_instances_in_memory
         self.start_method = start_method
         self.pin_memory = pin_memory
+        self.device: Optional[torch.device] = None
+        if device is not None:
+            if not isinstance(device, torch.device):
+                self.device = torch.device(device)
+            else:
+                self.device = device
+
+        if (
+            self.device is not None
+            and self.device != torch.device("cpu")
+            and num_workers
+            and start_method != "spawn"
+        ):
+            raise ValueError(
+                "start_method must be set to 'spawn' for data loader to put tensors onto a CUDA device"
+            )
 
         # To make sure we have some backpressure in the worker queues we try to set
         # reasonable defaults for the maximum size of these queues.
@@ -490,7 +512,10 @@ class MultiProcessDataLoader(DataLoader):
                     and len(batch) < self.batch_size  # type: ignore[operator]
                 ):
                     break
-                yield self.collate_fn(batch, pin_memory=self.pin_memory)
+                tensor_dict = self.collate_fn(batch, pin_memory=self.pin_memory)
+                if self.device is not None:
+                    tensor_dict = move_to_device(tensor_dict, self.device)
+                yield tensor_dict
 
 
 class WorkerError(Exception):

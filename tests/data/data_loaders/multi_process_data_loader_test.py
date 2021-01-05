@@ -201,3 +201,26 @@ def test_pin_memory(options):
     loader.index_with(vocab)
     for batch in loader:
         batch = move_to_device(batch, 0, non_blocking=True)
+
+
+@pytest.mark.parametrize(
+    "options",
+    [
+        dict(num_workers=0, batch_size=2),
+        dict(num_workers=1, batch_size=2),
+    ],
+    ids=str,
+)
+@requires_gpu
+def test_load_to_cuda(options):
+    reader = MockDatasetReader()
+    loader = MultiProcessDataLoader(
+        reader=reader,
+        data_path="this doens't matter",
+        device=0,
+        start_method="spawn",
+        **options,
+    )
+    vocab = Vocabulary.from_instances(loader.iter_instances())
+    loader.index_with(vocab)
+    list(loader)
