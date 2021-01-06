@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Fixed typo with `LabelField` string representation: removed trailing apostrophe.
+- `TrackEpochCallback` is now a `EpochCallback`.
 
 
 ## [v1.3.0](https://github.com/allenai/allennlp/releases/tag/v1.3.0) - 2020-12-15
@@ -52,7 +53,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   by adding a `transformers` import.
 - Added safety checks for extracting tar files
 - Turned superfluous warning to info when extending the vocab in the embedding matrix, if no pretrained file was provided
-- `TrackEpochCallback` is now a `EpochCallback`.
 
 ## [v1.2.2](https://github.com/allenai/allennlp/releases/tag/v1.2.2) - 2020-11-17
 
