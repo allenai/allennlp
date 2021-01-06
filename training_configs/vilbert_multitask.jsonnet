@@ -9,7 +9,7 @@ local vqa_vocabulary = {
 };
 
 local reader_common = {
-    "image_loader": "detectron",
+    "image_loader": "torch",
     "image_featurizer": "resnet_backbone",
     "region_detector": "faster_rcnn",
     "tokenizer": {
