@@ -179,7 +179,7 @@ class MultiTaskDataLoader(DataLoader):
                 # for the loader variable, so a _different_ loader gets saved for every iterator.
                 # Dictionary comprehensions don't create new scopes in python.  If you don't have
                 # this loader, you end up with `loader` always referring to the last loader in the
-                # iteration...  mypy also doesn't know what to do with this, for some reason I can't
+                # iteration... mypy also doesn't know what to do with this, for some reason I can't
                 # figure out.
                 lambda l=loader: maybe_shuffle_instances(l, self._shuffle)  # type: ignore
             )
@@ -206,9 +206,9 @@ class MultiTaskDataLoader(DataLoader):
 
     def __iter__(self) -> Iterator[TensorDict]:
         # Basic outline: first we _sample_ the instances that we're going to be using for this
-        # epoch, which relies on the scheduler if `self._instances_per_epoch` is not None.  This is
+        # epoch, which relies on the scheduler if `self._instances_per_epoch` is not None. This is
         # basically just saying how many instances we should use this epoch for each dataset, and we
-        # grab bounded-length iterators over that many instances for each dataset.  Second, we
+        # grab bounded-length iterators over that many instances for each dataset. Second, we
         # _schedule_ the epoch's instances into a single list, again relying on the scheduler.
         # Finally, we take that combined list and yield `batch_size` batches from it.
         epoch_instances = self._get_instances_for_epoch()
@@ -244,7 +244,7 @@ class MultiTaskDataLoader(DataLoader):
         # complex, configurable scheduling.
         #
         # The underlying data loaders here could be using multiprocessing; we don't need to worry
-        # about that in this class.  Caching is also handled by the underlying data loaders.
+        # about that in this class. Caching is also handled by the underlying data loaders.
         for loader in self._loaders.values():
             yield from loader.iter_instances()
 
