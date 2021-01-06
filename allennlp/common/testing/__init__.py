@@ -118,6 +118,7 @@ def assert_equal_parameters(
     mapping = mapping or {}
 
     old_parameters = dict(old_module.named_parameters())
+    present_only_in_old = set(old_parameters.keys())
 
     for name, parameter in new_module.named_parameters():
         for key, val in mapping.items():
@@ -125,4 +126,6 @@ def assert_equal_parameters(
         if ignore_missing:
             if name not in old_parameters:
                 continue
+        present_only_in_old.remove(name)
         assert torch.allclose(old_parameters[name], parameter)
+    return present_only_in_old

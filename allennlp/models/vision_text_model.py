@@ -11,7 +11,7 @@ from allennlp.data.fields.text_field import TextFieldTensors
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules.transformer import (
-    TextEmbeddings,
+    TransformerEmbeddings,
     ImageFeatureEmbeddings,
     BiModalEncoder,
     TransformerPooler,
@@ -30,7 +30,7 @@ class VisionTextModel(Model):
     # Parameters
 
     vocab : `Vocabulary`
-    text_embeddings : `TextEmbeddings`
+    text_embeddings : `TransformerEmbeddings`
     image_embeddings : `ImageFeatureEmbeddings`
     encoder : `BiModalEncoder`
     pooled_output_dim : `int`
@@ -45,7 +45,7 @@ class VisionTextModel(Model):
     def __init__(
         self,
         vocab: Vocabulary,
-        text_embeddings: TextEmbeddings,
+        text_embeddings: TransformerEmbeddings,
         image_embeddings: ImageFeatureEmbeddings,
         encoder: BiModalEncoder,
         pooled_output_dim: int,
@@ -106,38 +106,29 @@ class VisionTextModel(Model):
     ):
         transformer = AutoModel.from_pretrained(model_name)
 
-        text_embeddings = deepcopy(transformer.embeddings)
-
         # Albert (and maybe others?) has this "embedding_size", that's different from "hidden_size".
         # To get them to the same dimensionality, it uses a linear transform after the embedding
         # layer, which we need to pull out and copy here.
         if hasattr(transformer.config, "embedding_size"):
             config = transformer.config
 
+            text_embeddings = TransformerEmbeddings.from_pretrained_module(
+                transformer.embeddings, output_size=config.hidden_dim
+            )
+
             from transformers.models.albert.modeling_albert import AlbertModel
 
             if isinstance(transformer, AlbertModel):
-                linear_transform = deepcopy(transformer.encoder.embedding_hidden_mapping_in)
+                text_embeddings.linear_transform = deepcopy(
+                    transformer.encoder.embedding_hidden_mapping_in
+                )
             else:
                 logger.warning(
                     "Unknown model that uses separate embedding size; weights of the linear "
                     f"transform will not be initialized.  Model type is: {transformer.__class__}"
                 )
-                linear_transform = torch.nn.Linear(config.embedding_dim, config.hidden_dim)
-
-            # We can't just use torch.nn.Sequential here, even though that's basically all this is,
-            # because Sequential doesn't accept *inputs, only a single argument.
-
-            class EmbeddingsShim(torch.nn.Module):
-                def __init__(self, embeddings: torch.nn.Module, linear_transform: torch.nn.Module):
-                    super().__init__()
-                    self.linear_transform = linear_transform
-                    self.embeddings = embeddings
-
-                def forward(self, *inputs, **kwargs):
-                    return self.linear_transform(self.embeddings(*inputs, **kwargs))
-
-            text_embeddings = EmbeddingsShim(text_embeddings, linear_transform)
+        else:
+            text_embeddings = TransformerEmbeddings.from_pretrained_module(transformer.embeddings)
 
         image_embeddings = ImageFeatureEmbeddings(
             feature_dim=image_feature_dim,

@@ -29,7 +29,7 @@ local model_name = "epwalsh/bert-xsmall-dummy";
     "type": "ve_vilbert",
     "text_embeddings": {
       "vocab_size": 250,
-      "hidden_size": 20,
+      "embedding_size": 20,
       "pad_token_id": 0,
       "max_position_embeddings": 512,
       "type_vocab_size": 2,

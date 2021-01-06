@@ -8,7 +8,7 @@ import torch
 from allennlp.data import TextFieldTensors, Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules.transformer import (
-    TextEmbeddings,
+    TransformerEmbeddings,
     ImageFeatureEmbeddings,
     BiModalEncoder,
 )
@@ -32,7 +32,7 @@ class VisualEntailmentModel(VisionTextModel):
     # Parameters
 
     vocab : `Vocabulary`
-    text_embeddings : `TextEmbeddings`
+    text_embeddings : `TransformerEmbeddings`
     image_embeddings : `ImageFeatureEmbeddings`
     encoder : `BiModalEncoder`
     pooled_output_dim : `int`
@@ -44,7 +44,7 @@ class VisualEntailmentModel(VisionTextModel):
     def __init__(
         self,
         vocab: Vocabulary,
-        text_embeddings: TextEmbeddings,
+        text_embeddings: TransformerEmbeddings,
         image_embeddings: ImageFeatureEmbeddings,
         encoder: BiModalEncoder,
         pooled_output_dim: int,
