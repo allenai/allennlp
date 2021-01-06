@@ -9,11 +9,11 @@ from allennlp.modules.attention.scaled_dot_product_attention import ScaledDotPro
 
 
 class TestScaledDotProductAttention(AllenNlpTestCase):
-    def test_can_init_dot(self):
+    def test_can_init_scaled_dot(self):
         legacy_attention = Attention.from_params(Params({"type": "dot_product"}))
         isinstance(legacy_attention, ScaledDotProductAttention)
 
-    def test_dot_product_similarity(self):
+    def test_scaled_dot_product_similarity(self):
         linear = ScaledDotProductAttention(normalize=False)
         output = linear(
             torch.FloatTensor([[0, 0, 0], [1, 1, 1]]),
