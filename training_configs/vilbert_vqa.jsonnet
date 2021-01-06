@@ -23,9 +23,9 @@ local vocabulary = if construct_vocab then {
   "dataset_reader": {
     "type": "vqav2",
     "image_dir": std.format("/mnt/tank/dirkg/data/vision/vqa/%s", dataset),
-    "feature_cache_dir": std.format("/mnt/tank/dirkg/data/vision/vqa/%s/feature_cache", dataset),
+    [if !construct_vocab then "feature_cache_dir"]: std.format("/mnt/tank/dirkg/data/vision/vqa/%s/feature_cache", dataset),
     #"image_dir": std.format("/Users/dirkg/Documents/data/vision/vqa/%s", dataset),
-    #"feature_cache_dir": std.format("/Users/dirkg/Documents/data/vision/vqa/%s/feature_cache", dataset),
+    #[if !construct_vocab then "feature_cache_dir"]: std.format("/Users/dirkg/Documents/data/vision/vqa/%s/feature_cache", dataset),
     [if !construct_vocab then "image_loader"]: "torch",
     [if !construct_vocab then "image_featurizer"]: "resnet_backbone",
     [if !construct_vocab then "region_detector"]: "faster_rcnn",
@@ -112,7 +112,7 @@ local vocabulary = if construct_vocab then {
       //"num_steps_per_epoch": std.ceil(0 / $["data_loader"]["batch_size"] / $["trainer"]["num_gradient_accumulation_steps"]),
       "warmup_steps": 5000,
     },
-    "validation_metric": "+fscore",
+    "validation_metric": "+vqa_score",
     "num_epochs": 50,
     "num_gradient_accumulation_steps": effective_batch_size / gpu_batch_size / std.max(1, num_gpus)
   },
