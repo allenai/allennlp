@@ -36,8 +36,8 @@ local model_name = "epwalsh/bert-xsmall-dummy";
       "dropout": 0.0
     },
     "image_embeddings": {
-      "feature_dim": 10,
-      "hidden_dim": 200
+      "feature_size": 10,
+      "embedding_size": 200
     },
     "encoder": {
       # text

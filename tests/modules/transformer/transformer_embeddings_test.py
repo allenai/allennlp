@@ -12,7 +12,11 @@ from transformers.models.albert.configuration_albert import AlbertConfig
 from transformers.models.albert.modeling_albert import AlbertEmbeddings
 
 from allennlp.common.testing import assert_equal_parameters
-from allennlp.modules.transformer import TransformerEmbeddings, TransformerModule
+from allennlp.modules.transformer import (
+    TransformerEmbeddings,
+    ImageFeatureEmbeddings,
+    TransformerModule,
+)
 from allennlp.common.testing import AllenNlpTestCase
 
 PARAMS_DICT = {
@@ -60,7 +64,7 @@ class TestTransformerEmbeddings(AllenNlpTestCase):
 
     def test_can_construct_from_params(self):
 
-        transformer_embeddings = self.transformer_embeddings.embeddings.embeddings
+        transformer_embeddings = self.transformer_embeddings.embeddings
 
         assert (
             transformer_embeddings.word_embeddings.num_embeddings == self.params_dict["vocab_size"]
@@ -92,11 +96,11 @@ class TestTransformerEmbeddings(AllenNlpTestCase):
         )
 
         assert (
-            self.transformer_embeddings.embeddings.layer_norm.normalized_shape[0]
+            self.transformer_embeddings.layer_norm.normalized_shape[0]
             == self.params_dict["embedding_size"]
         )
 
-        assert self.transformer_embeddings.embeddings.dropout.p == self.params_dict["dropout"]
+        assert self.transformer_embeddings.dropout.p == self.params_dict["dropout"]
 
     def test_sanity(self):
         class TextEmbeddings(TransformerModule, FromParams):
@@ -222,3 +226,75 @@ class TestTransformerEmbeddings(AllenNlpTestCase):
         )
 
         assert torch.allclose(output, hf_output)
+
+
+class TestImageFeatureEmbeddings(AllenNlpTestCase):
+    def setup_method(self):
+        super().setup_method()
+
+        self.params_dict = {"feature_size": 3, "embedding_size": 5, "dropout": 0.1}
+
+        params = Params(copy.deepcopy(self.params_dict))
+
+        self.img_embeddings = ImageFeatureEmbeddings.from_params(params)
+
+    def test_can_construct_from_params(self):
+        assert (
+            self.img_embeddings.embeddings.image_embeddings.in_features
+            == self.params_dict["feature_size"]
+        )
+        assert (
+            self.img_embeddings.embeddings.image_embeddings.out_features
+            == self.params_dict["embedding_size"]
+        )
+        assert (
+            self.img_embeddings.embeddings.location_embeddings.out_features
+            == self.params_dict["embedding_size"]
+        )
+        assert self.img_embeddings.dropout.p == self.params_dict["dropout"]
+
+    def test_forward_runs_with_inputs(self):
+        batch_size = 2
+        feature_dim = self.params_dict["feature_size"]
+        image_feature = torch.randn(batch_size, feature_dim)
+        image_location = torch.randn(batch_size, 4)
+        self.img_embeddings.forward(image_feature, image_location)
+
+    def test_sanity(self):
+        class OldImageFeatureEmbeddings(TransformerModule, FromParams):
+            """Construct the embeddings from image, spatial location (omit now) and
+            token_type embeddings.
+            """
+
+            def __init__(self, feature_size: int, embedding_size: int, dropout: float = 0.0):
+                super().__init__()
+
+                self.image_embeddings = torch.nn.Linear(feature_size, embedding_size)
+                self.image_location_embeddings = torch.nn.Linear(4, embedding_size)
+                self.layer_norm = torch.nn.LayerNorm(embedding_size, eps=1e-12)
+                self.dropout = torch.nn.Dropout(dropout)
+
+            def forward(self, image_feature: torch.Tensor, image_location: torch.Tensor):
+                img_embeddings = self.image_embeddings(image_feature)
+                loc_embeddings = self.image_location_embeddings(image_location)
+                embeddings = self.layer_norm(img_embeddings + loc_embeddings)
+                embeddings = self.dropout(embeddings)
+
+                return embeddings
+
+        torch.manual_seed(23)
+        old = OldImageFeatureEmbeddings(**self.params_dict)
+        torch.manual_seed(23)
+        now = ImageFeatureEmbeddings(**self.params_dict)
+
+        batch_size = 2
+
+        image_feature = torch.randn(batch_size, self.params_dict["feature_size"])
+        image_location = torch.randn(batch_size, 4)
+
+        torch.manual_seed(23)
+        old_output = old.forward(image_feature, image_location)
+        torch.manual_seed(23)
+        now_output = now.forward(image_feature, image_location)
+
+        assert_allclose(old_output, now_output)

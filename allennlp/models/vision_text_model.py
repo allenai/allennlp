@@ -131,8 +131,8 @@ class VisionTextModel(Model):
             text_embeddings = TransformerEmbeddings.from_pretrained_module(transformer.embeddings)
 
         image_embeddings = ImageFeatureEmbeddings(
-            feature_dim=image_feature_dim,
-            hidden_dim=image_hidden_size,
+            feature_size=image_feature_dim,
+            embedding_size=image_hidden_size,
             dropout=image_hidden_dropout,
         )
 

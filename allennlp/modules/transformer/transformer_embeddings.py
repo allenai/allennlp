@@ -1,4 +1,4 @@
-from typing import List, Optional, Dict
+from typing import Optional, Dict
 
 import torch
 
@@ -7,40 +7,41 @@ from allennlp.common import FromParams
 from allennlp.modules.transformer.transformer_module import TransformerModule
 
 
-class ImageFeatureEmbeddings(TransformerModule, FromParams):
-    """Construct the embeddings from image, spatial location (omit now) and
-    token_type embeddings.
-    """
-
-    def __init__(self, feature_dim: int, hidden_dim: int, dropout: float = 0.0):
-        super().__init__()
-
-        self.image_embeddings = torch.nn.Linear(feature_dim, hidden_dim)
-        self.image_location_embeddings = torch.nn.Linear(4, hidden_dim)
-        self.layer_norm = torch.nn.LayerNorm(hidden_dim, eps=1e-12)
-        self.dropout = torch.nn.Dropout(dropout)
-
-    def forward(self, image_feature: torch.Tensor, image_location: torch.Tensor):
-        img_embeddings = self.image_embeddings(image_feature)
-        loc_embeddings = self.image_location_embeddings(image_location)
-        embeddings = self.layer_norm(img_embeddings + loc_embeddings)
-        embeddings = self.dropout(embeddings)
-
-        return embeddings
-
-
 class Embeddings(TransformerModule, FromParams):
     """
     General class for embeddings for any modality.
+
+    # Parameters
+
+    embeddings : `torch.nn.ModuleDict`
+        Named embedding layers. Eg. `"word_embeddings"`, `"position_embeddings"`, etc.
+        All the embedding layers are expected to have different inputs; the output
+        of one will not be passed to the other. All the layers should have the same
+        `embedding_dim`/`out_features`.
+    embedding_size : `int`
+        The `embedding_dim` of all the embedding layers.
+    dropout : `float`
+        The probability of an element to be zeroed.
     """
 
-    def __init__(self, embeddings: torch.nn.ModuleDict, hidden_size: int, dropout: float):
+    def __init__(self, embeddings: torch.nn.ModuleDict, embedding_size: int, dropout: float):
         super().__init__()
+        for name, embedding_layer in embeddings.named_children():
+            if isinstance(embedding_layer, torch.nn.Embedding):
+                assert embedding_layer.embedding_dim == embedding_size
+            elif isinstance(embedding_layer, torch.nn.Linear):
+                assert embedding_layer.out_features == embedding_size
+            else:
+                raise TypeError(
+                    'Layer "{}" must be of type `torch.nn.Embedding` or `torch.nn.Linear`.'.format(
+                        name
+                    )
+                )
         self.embeddings = embeddings
-        self.layer_norm = torch.nn.LayerNorm(hidden_size, eps=1e-12)
+        self.layer_norm = torch.nn.LayerNorm(embedding_size, eps=1e-12)
         self.dropout = torch.nn.Dropout(dropout)
 
-    def forward(self, inputs: List[torch.Tensor]) -> torch.Tensor:
+    def forward(self, *inputs) -> torch.Tensor:
         assert len(inputs) == len(self.embeddings)
         outputs = []
         for i, layer in enumerate(self.embeddings.children()):
@@ -52,21 +53,60 @@ class Embeddings(TransformerModule, FromParams):
         return outputs
 
 
-class TransformerEmbeddings(TransformerModule, FromParams):
+class ImageFeatureEmbeddings(Embeddings):
+    """
+    Embedding module for image features.
+
+    # Parameters
+
+    feature_size : `int`
+        Number of image features.
+    embedding_size : `int`
+        The `embedding_dim` of all the embedding layers.
+    dropout : `float` (default = `0.0`)
+        The probability of an element to be zeroed.
+    """
+
+    def __init__(self, feature_size: int, embedding_size: int, dropout: float = 0.0):
+        image_embeddings = torch.nn.Linear(feature_size, embedding_size)
+        location_embeddings = torch.nn.Linear(4, embedding_size)
+        embeddings = torch.nn.ModuleDict(
+            {"image_embeddings": image_embeddings, "location_embeddings": location_embeddings}
+        )
+        super().__init__(embeddings, embedding_size, dropout)
+
+
+class TransformerEmbeddings(Embeddings):
     """
     Construct the embeddings from word, position and token_type embeddings.
     Details in the paper:
     [BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding, Devlin et al, 2019]
     (https://api.semanticscholar.org/CorpusID:52967399)
+
+    # Parameters
+
+    vocab_size : `int`
+        The size of the input vocab.
+    embedding_size : `int`
+        The `embedding_dim` of all the embedding layers.
+    pad_token_id : `int` (default = `0`)
+        The token id of the `<pad>` token.
+    max_position_embeddings : `int` (default = `512`)
+        The maximum number of positions.
+    type_vocab_size : `int` (default = `2`)
+        The size of the input token_type vocab.
+    dropout : `int` (default = `0.1`)
+        The probability of an element to be zeroed.
+    output_size : `int`, optional (default = `None`)
+        Optionally apply a linear transform after the dropout, projecting to `output_size`.
     """
 
     _relevant_module = "embeddings"
     _huggingface_mapping = {
-        "LayerNorm": "embeddings.layer_norm",
-        "dropout": "embeddings.dropout",
-        "word_embeddings": "embeddings.embeddings.word_embeddings",
-        "position_embeddings": "embeddings.embeddings.position_embeddings",
-        "token_type_embeddings": "embeddings.embeddings.token_type_embeddings",
+        "LayerNorm": "layer_norm",
+        "word_embeddings": "embeddings.word_embeddings",
+        "position_embeddings": "embeddings.position_embeddings",
+        "token_type_embeddings": "embeddings.token_type_embeddings",
     }
 
     def __init__(
@@ -79,7 +119,6 @@ class TransformerEmbeddings(TransformerModule, FromParams):
         dropout: float = 0.1,
         output_size: Optional[int] = None,
     ):
-        super().__init__()
         word_embeddings = torch.nn.Embedding(vocab_size, embedding_size, padding_idx=pad_token_id)
         position_embeddings = torch.nn.Embedding(max_position_embeddings, embedding_size)
         token_type_embeddings = torch.nn.Embedding(type_vocab_size, embedding_size)
@@ -92,19 +131,28 @@ class TransformerEmbeddings(TransformerModule, FromParams):
             }
         )
 
-        self.embeddings = Embeddings(embeddings, embedding_size, dropout)
+        super().__init__(embeddings, embedding_size, dropout)
 
         # For Albert, the embedding size is different than the hidden size used
         # in the model, so a linear transform is applied.
         if output_size:
             self.linear_transform = torch.nn.Linear(embedding_size, output_size)
 
-    def forward(
+    def forward(  # type: ignore
         self,
         input_ids: torch.Tensor,
         token_type_ids: Optional[torch.Tensor] = None,
         position_ids: Optional[torch.Tensor] = None,
     ) -> torch.Tensor:
+
+        """
+        input_ids : `torch.Tensor`
+            Shape `batch_size x seq_len`
+        token_type_ids : `torch.Tensor`, optional
+            Shape `batch_size x seq_len`
+        position_ids : `torch.Tensor`, optional
+            Shape `batch_size x seq_len`
+        """
 
         input_shape = input_ids.size()
         device = input_ids.device
@@ -117,7 +165,7 @@ class TransformerEmbeddings(TransformerModule, FromParams):
         if token_type_ids is None:
             token_type_ids = torch.zeros(input_shape, dtype=torch.long, device=device)
 
-        embeddings = self.embeddings([input_ids, position_ids, token_type_ids])
+        embeddings = super().forward(input_ids, position_ids, token_type_ids)
 
         if hasattr(self, "linear_transform"):
             embeddings = self.linear_transform(embeddings)
@@ -136,20 +184,14 @@ class TransformerEmbeddings(TransformerModule, FromParams):
 
         final_kwargs = {}
 
-        final_kwargs["vocab_size"] = submodules[
-            "embeddings.embeddings.word_embeddings"
-        ].num_embeddings
-        final_kwargs["embedding_size"] = submodules[
-            "embeddings.embeddings.word_embeddings"
-        ].embedding_dim
-        final_kwargs["pad_token_id"] = submodules[
-            "embeddings.embeddings.word_embeddings"
-        ].padding_idx
+        final_kwargs["vocab_size"] = submodules["embeddings.word_embeddings"].num_embeddings
+        final_kwargs["embedding_size"] = submodules["embeddings.word_embeddings"].embedding_dim
+        final_kwargs["pad_token_id"] = submodules["embeddings.word_embeddings"].padding_idx
         final_kwargs["max_position_embeddings"] = submodules[
-            "embeddings.embeddings.position_embeddings"
+            "embeddings.position_embeddings"
         ].num_embeddings
         final_kwargs["type_vocab_size"] = submodules[
-            "embeddings.embeddings.token_type_embeddings"
+            "embeddings.token_type_embeddings"
         ].num_embeddings
 
         final_kwargs.update(**kwargs)
