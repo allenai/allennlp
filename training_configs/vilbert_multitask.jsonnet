@@ -48,9 +48,9 @@ local reader_common = {
       "ve": reader_common {
         "type": "visual-entailment",
         #"image_dir": "/mnt/tank/dirkg/data/vision/SNLI-VE/data/Flickr30K/flickr30k_images",
-        #"feature_cache_dir": "/mnt/tank/dirkg/data/vision/SNLI-VE/feature_cache",
+        #"feature_cache_dir": "/mnt/tank/dirkg/data/vision/SNLI-VE/data/feature_cache",
         "image_dir": "/Users/dirkg/Documents/data/vision/SNLI-VE/data/Flickr30K/flickr30k_images",
-        "feature_cache_dir": "/Users/dirkg/Documents/data/vision/SNLI-VE/feature_cache",
+        "feature_cache_dir": "/Users/dirkg/Documents/data/vision/SNLI-VE/data/feature_cache",
       }
     }
   },
