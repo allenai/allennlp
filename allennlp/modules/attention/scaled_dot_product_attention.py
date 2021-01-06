@@ -17,4 +17,4 @@ class ScaledDotProductAttention(Attention):
 
     @overrides
     def _forward_internal(self, vector: torch.Tensor, matrix: torch.Tensor) -> torch.Tensor:
-        return matrix.bmm(vector.unsqueeze(-1)).squeeze(-1) / math.sqrt(vector.size(-1))
+        return matrix.bmm(vector.unsqueeze(-1)).squeeze(-1) / math.sqrt(matrix.size(-1))
