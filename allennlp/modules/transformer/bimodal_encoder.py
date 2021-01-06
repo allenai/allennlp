@@ -128,7 +128,6 @@ class BiModalEncoder(TransformerModule, FromParams):
         co_attention_mask=None,
         output_all_encoded_layers=True,
     ):
-
         start1 = 0
         start2 = 0
         count = 0
