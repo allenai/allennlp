@@ -168,13 +168,14 @@ class MultiTaskDataLoader(DataLoader):
         # from here each epoch, and refresh it when it runs out.  We only use this in the case that
         # instances_per_epoch is not None, but these iterators are lazy, so always creating them
         # doesn't hurt anything.
+        from allennlp.common.util import threaded_generator
         self._iterators: Dict[str, Iterator[Instance]] = {
             # NOTE: The order in which we're calling these iterator functions is important.  We want
             # an infinite iterator over the data, but we want the order in which we iterate over the
             # data to be different at every epoch.  The cycle function will give us an infinite
             # iterator, and it will call the lambda function each time it runs out of instances,
             # which will produce a new shuffling of the dataset.
-            key: util.cycle_iterator_function(
+            key: threaded_generator(util.cycle_iterator_function(
                 # This default argument to the lambda function is necessary to create a new scope
                 # for the loader variable, so a _different_ loader gets saved for every iterator.
                 # Dictionary comprehensions don't create new scopes in python.  If you don't have
@@ -182,7 +183,7 @@ class MultiTaskDataLoader(DataLoader):
                 # iteration... mypy also doesn't know what to do with this, for some reason I can't
                 # figure out.
                 lambda l=loader: maybe_shuffle_instances(l, self._shuffle)  # type: ignore
-            )
+            ), maxsize=1024)
             for key, loader in self._loaders.items()
         }
 
@@ -254,8 +255,9 @@ class MultiTaskDataLoader(DataLoader):
 
     def _get_instances_for_epoch(self) -> Dict[str, Iterable[Instance]]:
         if self._instances_per_epoch is None:
+            from allennlp.common.util import threaded_generator
             return {
-                key: maybe_shuffle_instances(loader, self._shuffle)
+                key: threaded_generator(maybe_shuffle_instances(loader, self._shuffle), maxsize=1024)
                 for key, loader in self._loaders.items()
             }
         if self.sampler is None:

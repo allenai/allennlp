@@ -15,6 +15,8 @@ import sys
 from contextlib import contextmanager
 from itertools import islice, zip_longest
 from pathlib import Path
+from queue import Queue
+from threading import Thread
 from typing import (
     Any,
     Callable,
@@ -708,3 +710,30 @@ def hash_object(o: Any) -> str:
         pickle.dump(o, buffer)
         m.update(buffer.getbuffer())
         return m.hexdigest()
+
+
+def threaded_generator(g, maxsize=16):
+    q = Queue(maxsize=maxsize)
+
+    sentinel = object()
+
+    def fill_queue():
+        try:
+            for value in g:
+                q.put((value, None))
+            q.put(sentinel)
+        except Exception as e:
+            q.put((None, e))
+
+    thread = Thread(name=repr(g), target=fill_queue, daemon=True)
+    thread.start()
+
+    for value, error in iter(q.get, sentinel):
+        if error is not None:
+            raise error
+        yield value
+
+
+def fake_threaded_generator(g, maxsize=16):
+    """Just for debugging"""
+    return g
