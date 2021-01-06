@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   This makes it possible to use the `FileLock` class on a read-only file system.
 - Added a new learning rate scheduler: `CombinedLearningRateScheduler`. This can be used to combine different LR schedulers, using one after the other.
 - Moving `ModelCard` and `TaskCard` abstractions into the main repository.
+- Added a new `Attention`: `ScaledDotProductAttention`. This is the "Scaled Dot-Product Attention" introduced in https://arxiv.org/abs/1706.03762.
 
 ### Changed
 
