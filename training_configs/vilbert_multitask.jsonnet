@@ -32,10 +32,10 @@ local reader_common = {
     "readers": {
       "vqa": reader_common {
         "type": "vqav2",
-        #"image_dir": "/mnt/tank/dirkg/data/vision/vqa",
-        #"feature_cache_dir": "/mnt/tank/dirkg/data/vision/vqa/feature_cache",
-        "image_dir": "/Users/dirkg/Documents/data/vision/vqa",
-        "feature_cache_dir": "/Users/dirkg/Documents/data/vision/vqa/feature_cache",
+        #"image_dir": "/mnt/tank/dirkg/data/vision/vqa/balanced_real",
+        #"feature_cache_dir": "/mnt/tank/dirkg/data/vision/vqa/balanced_real/feature_cache",
+        "image_dir": "/Users/dirkg/Documents/data/vision/vqa/balanced_real",
+        "feature_cache_dir": "/Users/dirkg/Documents/data/vision/vqa/balanced_real/feature_cache",
         "answer_vocab": vqa_vocabulary,
       },
       "gqa": reader_common {
