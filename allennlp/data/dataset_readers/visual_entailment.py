@@ -37,8 +37,6 @@ class VisualEntailmentReader(VisionReader):
             "train": split_prefix + "snli_ve_train.jsonl.gz",
         }
         file_path = splits.get(file_path, file_path)
-        file_path = cached_path(file_path)
-
         lines = json_lines_from_file(file_path)
         info_dicts: List[Dict] = list(self.shard_iterable(lines))  # type: ignore
 
