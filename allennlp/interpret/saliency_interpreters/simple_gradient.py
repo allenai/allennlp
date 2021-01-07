@@ -42,9 +42,7 @@ class SimpleGradient(SaliencyInterpreter):
             # TODO: 1. understand the use of embeddings_list and token_offsets and how they were filled in hooks
             embeddings_list.reverse()
             token_offsets.reverse()
-            embeddings_list = self._aggregate_token_embeddings(
-                embeddings_list, token_offsets
-            )
+            embeddings_list = self._aggregate_token_embeddings(embeddings_list, token_offsets)
 
             for key, grad in grads.items():
                 # Get number at the end of every gradient key (they look like grad_input_[int],
