@@ -5,7 +5,9 @@ import numpy
 import torch
 
 from allennlp.common.util import JsonDict, sanitize
-from allennlp.interpret.saliency_interpreters.saliency_interpreter import SaliencyInterpreter
+from allennlp.interpret.saliency_interpreters.saliency_interpreter import (
+    SaliencyInterpreter,
+)
 from allennlp.nn import util
 
 
@@ -37,9 +39,12 @@ class SimpleGradient(SaliencyInterpreter):
                     handle.remove()
 
             # Gradients come back in the reverse order that they were sent into the network
+            # TODO: 1. understand the use of embeddings_list and token_offsets and how they were filled in hooks
             embeddings_list.reverse()
             token_offsets.reverse()
-            embeddings_list = self._aggregate_token_embeddings(embeddings_list, token_offsets)
+            embeddings_list = self._aggregate_token_embeddings(
+                embeddings_list, token_offsets
+            )
 
             for key, grad in grads.items():
                 # Get number at the end of every gradient key (they look like grad_input_[int],
@@ -48,6 +53,7 @@ class SimpleGradient(SaliencyInterpreter):
                 # gradient and its respective embedding.
                 input_idx = int(key[-1]) - 1
                 # The [0] here is undo-ing the batching that happens in get_gradients.
+                # TODO: 2. fix dimension mismatch here for more than one input
                 emb_grad = numpy.sum(grad[0] * embeddings_list[input_idx][0], axis=1)
                 norm = numpy.linalg.norm(emb_grad, ord=1)
                 normalized_grad = [math.fabs(e) / norm for e in emb_grad]
