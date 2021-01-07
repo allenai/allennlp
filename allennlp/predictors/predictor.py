@@ -28,9 +28,7 @@ class Predictor(Registrable):
     that can be used for serving models through the web API or making predictions in bulk.
     """
 
-    def __init__(
-        self, model: Model, dataset_reader: DatasetReader, frozen: bool = True
-    ) -> None:
+    def __init__(self, model: Model, dataset_reader: DatasetReader, frozen: bool = True) -> None:
         if frozen:
             model.eval()
         self._model = model
@@ -73,9 +71,7 @@ class Predictor(Registrable):
         new_instances = self.predictions_to_labeled_instances(instance, outputs)
         return new_instances
 
-    def get_gradients(
-        self, instances: List[Instance]
-    ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+    def get_gradients(self, instances: List[Instance]) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         """
         Gets the gradients of the loss with respect to the model inputs.
 
@@ -106,15 +102,11 @@ class Predictor(Registrable):
             param.requires_grad = True
 
         embedding_gradients: List[Tensor] = []
-        hooks: List[RemovableHandle] = self._register_embedding_gradient_hooks(
-            embedding_gradients
-        )
+        hooks: List[RemovableHandle] = self._register_embedding_gradient_hooks(embedding_gradients)
 
         dataset = Batch(instances)
         dataset.index_instances(self._model.vocab)
-        dataset_tensor_dict = util.move_to_device(
-            dataset.as_tensor_dict(), self.cuda_device
-        )
+        dataset_tensor_dict = util.move_to_device(dataset.as_tensor_dict(), self.cuda_device)
         # To bypass "RuntimeError: cudnn RNN backward can only be called in training mode"
         with backends.cudnn.flags(enabled=False):
             outputs = self._model.make_output_human_readable(
@@ -200,9 +192,7 @@ class Predictor(Registrable):
                 # multiple TextFields and mismatched indexers is pretty small (currently empty, that
                 # I know of), so we'll ignore this corner case until it's needed.
                 offsets = self._token_offsets.pop(0)
-                span_grads, span_mask = util.batched_span_select(
-                    grads.contiguous(), offsets
-                )
+                span_grads, span_mask = util.batched_span_select(grads.contiguous(), offsets)
                 span_mask = span_mask.unsqueeze(-1)
                 span_grads *= span_mask  # zero out paddings
 
