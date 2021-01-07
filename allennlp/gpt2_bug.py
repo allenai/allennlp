@@ -18,4 +18,4 @@ predictor = load_predictor(
 )
 # bp()
 interpreter = SimpleGradient(predictor)
-interpreter.saliency_interpret_from_json({"sentence": "Hi there"})
+print(interpreter.saliency_interpret_from_json({"sentence": "Hi there"}))
