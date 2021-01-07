@@ -27,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed typo with `LabelField` string representation: removed trailing apostrophe.
 - `Vocabulary.from_files` and `cached_path` will issue a warning, instead of failing, when a lock on an existing resource
   can't be acquired because the file system is read-only.
+- `TrackEpochCallback` is now a `EpochCallback`.
 
 
 ## [v1.3.0](https://github.com/allenai/allennlp/releases/tag/v1.3.0) - 2020-12-15
