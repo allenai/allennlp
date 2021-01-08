@@ -29,6 +29,7 @@ class DeepspeedCheckpointer(Checkpointer):
         if self._serialization_dir is None:
             return
 
+        # logger.info("Getting checkpoint state")
         with trainer.get_checkpoint_state() as state:
             model_state, training_states = state
             model_engine = trainer.model_engine
@@ -42,6 +43,7 @@ class DeepspeedCheckpointer(Checkpointer):
             # not sure if ZeRO stage 2 will mess this up
             if not os.path.isfile(model_path):
                 torch.save(model_state, model_path)
+            # logger.info("Saved model state")
             if save_model_only:
                 return
 
