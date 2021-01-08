@@ -95,6 +95,7 @@ class DeepspeedTrainer(GradientDescentTrainer):
         self.model_engine = deepspeed_engine
         self._distributed = True
 
+        serialization_dir = None
         if checkpointer is None and serialization_dir is not None:
             self._checkpointer = DeepspeedCheckpointer(serialization_dir)
 
@@ -129,6 +130,7 @@ class DeepspeedTrainer(GradientDescentTrainer):
         Trains one epoch and returns metrics.
         """
         logger.info("Epoch %d/%d", epoch, self._num_epochs - 1)
+        logger.info(f"logging mem usg")
         cpu_memory_usage = []
         for worker, memory in common_util.peak_cpu_memory().items():
             cpu_memory_usage.append((worker, memory))
@@ -137,6 +139,7 @@ class DeepspeedTrainer(GradientDescentTrainer):
         for gpu, memory in common_util.peak_gpu_memory().items():
             gpu_memory_usage.append((gpu, memory))
             logger.info(f"GPU {gpu} memory usage: {common_util.format_size(memory)}")
+        logger.info(f"done logging mem usg")
 
         regularization_penalty = self.model.get_regularization_penalty()
 
@@ -268,9 +271,6 @@ class DeepspeedTrainer(GradientDescentTrainer):
         return metrics
 
     def _try_train(self) -> Dict[str, Any]:
-        """
-        Trains the supplied model with the supplied parameters.
-        """
         try:
             epoch_counter = self._restore_checkpoint()
         except RuntimeError:
@@ -280,6 +280,8 @@ class DeepspeedTrainer(GradientDescentTrainer):
                 "a different serialization directory or delete the existing serialization "
                 "directory?"
             )
+
+        training_util.enable_gradient_clipping(self.model, self._grad_clipping)
 
         logger.info("Beginning training.")
 
@@ -298,7 +300,17 @@ class DeepspeedTrainer(GradientDescentTrainer):
 
         for epoch in range(epoch_counter, self._num_epochs):
             epoch_start_time = time.time()
+            logger.info("Training epoch.")
             train_metrics = self._train_epoch(epoch)
+
+            # if self._master and self._checkpointer is not None:
+            #     self._checkpointer.save_checkpoint(epoch, self, save_model_only=True)
+
+            # # Wait for the master to finish saving the model checkpoint
+            # if self._distributed:
+            #     dist.barrier()
+            
+            logger.info("Passed start of epoch checkpoint barrier.")
 
             # get peak of memory usage
             for key, value in train_metrics.items():
@@ -316,6 +328,8 @@ class DeepspeedTrainer(GradientDescentTrainer):
                     # important to get the metrics right.
                     if self._distributed:
                         dist.barrier()
+
+                    logger.info("Passed validation metrics barrier.")
 
                     val_metrics = training_util.get_metrics(
                         self.model,
@@ -365,14 +379,28 @@ class DeepspeedTrainer(GradientDescentTrainer):
 
             if self._serialization_dir and self._master:
                 common_util.dump_metrics(
-                    os.path.join(self._serialization_dir, f"metrics_epoch_{epoch}.json"), metrics
+                    os.path.join(self._serialization_dir, f"metrics_epoch_{epoch}.json"),
+                    metrics,
                 )
 
-            # deepspeed checkpointing handles master / dist.barrier calls
-            if self._checkpointer is not None:
+            # The Scheduler API is agnostic to whether your schedule requires a validation metric -
+            # if it doesn't, the validation metric passed here is ignored.
+            if self._learning_rate_scheduler:
+                self._learning_rate_scheduler.step(this_epoch_val_metric)
+            if self._momentum_scheduler:
+                self._momentum_scheduler.step(this_epoch_val_metric)
+
+            if self._master and self._checkpointer is not None:
                 self._checkpointer.save_checkpoint(
                     epoch, self, is_best_so_far=self._metric_tracker.is_best_so_far()
                 )
+
+            logger.info("Starting end of epoch checkpoint barrier...")
+            # Wait for the master to finish saving the checkpoint
+            # if self._distributed:
+            #     dist.barrier()
+            
+            logger.info("Passed end of epoch checkpoint barrier.")
 
             for callback in self._epoch_callbacks:
                 callback(self, metrics=metrics, epoch=epoch, is_master=self._master)
@@ -390,8 +418,8 @@ class DeepspeedTrainer(GradientDescentTrainer):
 
             epochs_trained += 1
 
-        # make sure pending events are flushed to disk and files are closed properly
-        self._tensorboard.close()
+        for callback in self._end_callbacks:
+            callback(self, metrics=metrics, epoch=epoch, is_master=self._master)
 
         # Load the best model state before returning
         best_model_state = (
@@ -510,7 +538,7 @@ class DeepspeedTrainer(GradientDescentTrainer):
         if not hasattr(data_loader, 'batch_size'):
             raise ConfigurationError("Please specify your batch size in Deepspeed config if not using AllennlpDataLoader.")
 
-        model_engine, ds_optimizer = _launch_deepspeed(
+        model_engine = DeepspeedTrainer._build_engine(
             model,
             optim_,
             deepspeed_config,
@@ -542,37 +570,36 @@ class DeepspeedTrainer(GradientDescentTrainer):
             num_gradient_accumulation_steps=num_gradient_accumulation_steps,
         )
 
+    @staticmethod
+    def _build_engine(
+        model: Model,
+        optimizer: torch.optim.Optimizer,
+        deepspeed_config: DeepspeedConfig,
+        args: DeepspeedArgs,
+        batch_size: int,
+        num_gradient_accumulation_steps: int,
+    ):
+        if not (optimizer is None or deepspeed_config.optimizer is None):
+            raise ConfigurationError(
+                f"Cannot provide both optimizer and deepspeed_optimizer. {optimizer, deepspeed_config.to_dict()}"
+            )
 
-def _launch_deepspeed(
-    model: Model,
-    optimizer: torch.optim.Optimizer,
-    deepspeed_config: DeepspeedConfig,
-    args: DeepspeedArgs,
-    batch_size: int,
-    gradient_accumulation_steps: int,
-):
-    if not (optimizer is None or deepspeed_config.optimizer is None):
-        raise ConfigurationError(
-            f"Cannot provide both optimizer and deepspeed_optimizer. {optimizer, deepspeed_config.to_dict()}"
+        config: Dict[str, Any] = dict(
+            **{k: v for k, v in deepspeed_config.to_dict().items() if v is not None},
+            train_batch_size=batch_size,
+            gradient_accumulation_steps=num_gradient_accumulation_steps,
         )
+        ds = DeepSpeedEngine(
+            args=args,
+            model=model,
+            optimizer=optimizer,
+            model_parameters=model.parameters(),
+            dist_init_required=False,
+            config_params=config,
+        )
+        if hasattr(ds, "timers"):
+            def mute_log(*args, **kwargs):
+                pass
 
-    config: Dict[str, Any] = dict(
-        **{k: v for k, v in deepspeed_config.to_dict().items() if v is not None},
-        train_batch_size=batch_size,
-        gradient_accumulation_steps=gradient_accumulation_steps,
-    )
-    ds = DeepSpeedEngine(
-        args=args,
-        model=model,
-        optimizer=optimizer,
-        model_parameters=model.parameters(),
-        dist_init_required=False,
-        config_params=config,
-    )
-    if hasattr(ds, "timers"):
-
-        def mute_log(*args, **kwargs):
-            pass
-
-        ds.timers.log = mute_log
-    return ds, ds.optimizer
+            ds.timers.log = mute_log
+        return ds

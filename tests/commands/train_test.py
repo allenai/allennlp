@@ -235,6 +235,61 @@ class TestTrain(AllenNlpTestCase):
         # Check we can load the serialized model
         assert load_archive(out_dir).model
 
+    def test_train_model_deepspeed(self):
+        if torch.cuda.device_count() >= 2:
+            devices = [0, 1]
+        else:
+            devices = [-1, -1]
+
+        params = lambda: Params(
+            {
+                "model": {
+                    "type": "simple_tagger",
+                    "text_field_embedder": {
+                        "token_embedders": {"tokens": {"type": "embedding", "embedding_dim": 5}}
+                    },
+                    "encoder": {"type": "lstm", "input_size": 5, "hidden_size": 7, "num_layers": 2},
+                },
+                "dataset_reader": {"type": "sequence_tagging"},
+                "train_data_path": SEQUENCE_TAGGING_DATA_PATH,
+                "validation_data_path": SEQUENCE_TAGGING_DATA_PATH,
+                "data_loader": {"batch_size": 2},
+                "trainer": {
+                    "type": "deepspeed",
+                    "deepspeed_config": {
+                        "zero_optimization": { "stage": 2 },
+                        "fp16": {  "enabled": True, },
+                    },
+                    "num_epochs": 2, 
+                    "optimizer": "adam"
+                },
+                "distributed": {"cuda_devices": devices},
+            }
+        )
+
+        out_dir = os.path.join(self.TEST_DIR, "test_distributed_train")
+        train_model(params(), serialization_dir=out_dir)
+
+        # Check that some logs specific to distributed
+        # training are where we expect.
+        serialized_files = os.listdir(out_dir)
+        assert "out_worker0.log" in serialized_files
+        assert "out_worker1.log" in serialized_files
+        assert "model.tar.gz" in serialized_files
+        assert "metrics.json" in serialized_files
+
+        # Make sure the metrics look right.
+        with open(os.path.join(out_dir, "metrics.json")) as f:
+            metrics = json.load(f)
+            assert metrics["peak_worker_0_memory_MB"] > 0
+            assert metrics["peak_worker_1_memory_MB"] > 0
+            if torch.cuda.device_count() >= 2:
+                assert metrics["peak_gpu_0_memory_MB"] > 0
+                assert metrics["peak_gpu_1_memory_MB"] > 0
+
+        # Check we can load the serialized model
+        assert load_archive(out_dir).model
+
     @cpu_or_gpu
     @pytest.mark.parametrize("lazy", [True, False])
     def test_train_model_distributed_with_sharded_reader(self, lazy):
