@@ -12,3 +12,7 @@ coverage:
 comment: false
 ignore:
   - "tests/"
+github_checks:
+  # TODO(epwalsh): re-enable if there is a way to only enable annotations
+  # on diff lines for a PR.
+  annotations: false
