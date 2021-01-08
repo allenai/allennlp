@@ -61,7 +61,7 @@ local reader_common = {
       }
     }
   },
-  "vocabulary": vqa_vocabulary,
+  #"vocabulary": vqa_vocabulary,   # We'll have to discover the vocab until this config is ready to pre-create it.
   "train_data_path": {
     "vqa": ["balanced_real_train", "balanced_real_val[1000:]"],
     "gqa": "train_balanced",
@@ -95,13 +95,16 @@ local reader_common = {
     },
     "heads": {
       "vqa": {
-        "type": "vqa_vilbert_head"
+        "type": "vqa",
+        "embedding_dim": 1024
       },
       "gqa": {
-        "type": "vqa_vilbert_head"
+        "type": "vqa",
+        "embedding_dim": 1024
       },
       "ve": {
-        "type": "ve_vilbert_head"
+        "type": "visual_entailment",
+        "embedding_dim": 1024
       }
     }
   },
