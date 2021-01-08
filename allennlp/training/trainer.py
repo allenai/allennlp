@@ -177,7 +177,7 @@ EpochCallback.register("null")(EpochCallback)
 
 
 @EpochCallback.register("track_epoch_callback")
-class TrackEpochCallback:
+class TrackEpochCallback(EpochCallback):
     """
     A callback that you can pass to the `GradientDescentTrainer` to access the current epoch number
     in your model during training. This callback sets `model.epoch`, which can be read inside of

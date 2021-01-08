@@ -5,6 +5,7 @@ import json
 import time
 import shutil
 
+from filelock import Timeout
 import pytest
 import responses
 import torch
@@ -12,6 +13,7 @@ from requests.exceptions import ConnectionError
 
 from allennlp.common import file_utils
 from allennlp.common.file_utils import (
+    FileLock,
     _resource_to_filename,
     filename_to_url,
     get_from_cache,
@@ -60,6 +62,42 @@ def set_up_glove(url: str, byt: bytes, change_etag_every: int = 1000):
         return (200, headers, "")
 
     responses.add_callback(responses.HEAD, url, callback=head_callback)
+
+
+class TestFileLock(AllenNlpTestCase):
+    def setup_method(self):
+        super().setup_method()
+
+        # Set up a regular lock and a read-only lock.
+        open(self.TEST_DIR / "lock", "a").close()
+        open(self.TEST_DIR / "read_only_lock", "a").close()
+        os.chmod(self.TEST_DIR / "read_only_lock", 0o555)
+
+        # Also set up a read-only directory.
+        os.mkdir(self.TEST_DIR / "read_only_dir", 0o555)
+
+    def test_locking(self):
+        with FileLock(self.TEST_DIR / "lock"):
+            # Trying to acquire the lock again should fail.
+            with pytest.raises(Timeout):
+                with FileLock(self.TEST_DIR / "lock", timeout=0.1):
+                    pass
+
+        # Trying to acquire a lock when lacking write permissions on the file should fail.
+        with pytest.raises(PermissionError):
+            with FileLock(self.TEST_DIR / "read_only_lock"):
+                pass
+
+        # But this should only issue a warning if we set the `read_only_ok` flag to `True`.
+        with pytest.warns(UserWarning, match="Lacking permissions"):
+            with FileLock(self.TEST_DIR / "read_only_lock", read_only_ok=True):
+                pass
+
+        # However this should always fail when we lack write permissions and the file lock
+        # doesn't exist yet.
+        with pytest.raises(PermissionError):
+            with FileLock(self.TEST_DIR / "read_only_dir" / "lock", read_only_ok=True):
+                pass
 
 
 class TestFileUtils(AllenNlpTestCase):
