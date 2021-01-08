@@ -11,10 +11,8 @@ import re
 from collections import defaultdict
 from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Union, TYPE_CHECKING
 
-from filelock import FileLock
-
 from allennlp.common import Registrable
-from allennlp.common.file_utils import cached_path
+from allennlp.common.file_utils import cached_path, FileLock
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.tqdm import Tqdm
 from allennlp.common.util import namespace_match
@@ -338,7 +336,7 @@ class Vocabulary(Registrable):
 
         # We use a lock file to avoid race conditions where multiple processes
         # might be reading/writing from/to the same vocab files at once.
-        with FileLock(os.path.join(directory, ".lock")):
+        with FileLock(os.path.join(directory, ".lock"), read_only_ok=True):
             with codecs.open(
                 os.path.join(directory, NAMESPACE_PADDING_FILE), "r", "utf-8"
             ) as namespace_file:

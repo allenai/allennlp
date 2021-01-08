@@ -8,6 +8,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+
+- Added a `FileLock` class to `common.file_utils`. This is just like the `FileLock` from the `filelock` library, except that
+  it adds an optional flag `read_only_ok: bool`, which when set to `True` changes the behavior so that a warning will be emitted
+  instead of an exception when lacking write permissions on an existing file lock.
+  This makes it possible to use the `FileLock` class on a read-only file system.
+- Added a new learning rate scheduler: `CombinedLearningRateScheduler`. This can be used to combine different LR schedulers, using one after the other.
+- Moving `ModelCard` and `TaskCard` abstractions into the main repository.
+
+### Changed
+
+- 'master' branch renamed to 'main'
+- Torch version bumped to 1.7.1 in Docker images.
+
+### Fixed
+
+- Fixed typo with `LabelField` string representation: removed trailing apostrophe.
+- `Vocabulary.from_files` and `cached_path` will issue a warning, instead of failing, when a lock on an existing resource
+  can't be acquired because the file system is read-only.
+- `TrackEpochCallback` is now a `EpochCallback`.
+
 
 ## [v1.3.0](https://github.com/allenai/allennlp/releases/tag/v1.3.0) - 2020-12-15
 

@@ -1,6 +1,6 @@
 <div>
  <p class="alignleft"><i>scripts</i><i>.tests</i><i>.py2md</i><strong>.basic_example</strong></p>
- <p class="alignright"><a class="sourcelink" href="https://github.com/allenai/allennlp/blob/master/allennlp/tests/py2md/basic_example.py">[SOURCE]</a></p>
+ <p class="alignright"><a class="sourcelink" href="https://github.com/allenai/allennlp/blob/main/allennlp/tests/py2md/basic_example.py">[SOURCE]</a></p>
 </div>
 <div style="clear: both;"></div>
 
