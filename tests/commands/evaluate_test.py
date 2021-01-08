@@ -23,6 +23,9 @@ class DummyDataLoader:
     def __len__(self):
         return len(self._outputs)
 
+    def set_target_device(self, _):
+        pass
+
 
 class DummyModel(Model):
     def __init__(self) -> None:
