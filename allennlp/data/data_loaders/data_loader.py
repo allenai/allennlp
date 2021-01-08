@@ -14,13 +14,13 @@ TensorDict = Dict[str, Union[torch.Tensor, Dict[str, torch.Tensor]]]
 """
 
 
-def allennlp_collate(instances: List[Instance], *, pin_memory: bool = False) -> TensorDict:
+def allennlp_collate(instances: List[Instance]) -> TensorDict:
     """
     This is the default function used to turn a list of `Instance`s into a `TensorDict`
     batch.
     """
     batch = Batch(instances)
-    return batch.as_tensor_dict(pin_memory=pin_memory)
+    return batch.as_tensor_dict()
 
 
 class DataLoader(Registrable):

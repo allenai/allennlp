@@ -86,7 +86,6 @@ class Batch(Iterable):
         self,
         padding_lengths: Dict[str, Dict[str, int]] = None,
         verbose: bool = False,
-        pin_memory: bool = False,
     ) -> Dict[str, Union[torch.Tensor, Dict[str, torch.Tensor]]]:
         # This complex return type is actually predefined elsewhere as a DataArray,
         # but we can't use it because mypy doesn't like it.
@@ -112,10 +111,6 @@ class Batch(Iterable):
             large, this is nice to have, because padding a large batch could take a long time.
             But if you're doing this inside of a data generator, having all of this output per
             batch is a bit obnoxious (and really slow).
-
-        pin_memory : `bool`, optional (default = `False`)
-            When `True`, tensors will be put into pinned (page-locked) memory, allowing for faster
-            (and potentially asyncronous) transfer to GPU.
 
         # Returns
 
@@ -165,27 +160,10 @@ class Batch(Iterable):
         # tensors together, so we grab a dictionary of field_name -> field class from the first
         # instance in the batch.
         field_classes = self.instances[0].fields
-
-        if pin_memory:
-            return {
-                field_name: self.maybe_pin(
-                    field_classes[field_name].batch_tensors(field_tensor_list)
-                )
-                for field_name, field_tensor_list in field_tensors.items()
-            }
-        else:
-            return {
-                field_name: field_classes[field_name].batch_tensors(field_tensor_list)
-                for field_name, field_tensor_list in field_tensors.items()
-            }
-
-    def maybe_pin(self, maybe_tensor):
-        if isinstance(maybe_tensor, torch.Tensor):
-            return maybe_tensor.pin_memory()
-        elif isinstance(maybe_tensor, dict):
-            return {k: self.maybe_pin(v) for k, v in maybe_tensor.items()}
-        else:
-            return maybe_tensor
+        return {
+            field_name: field_classes[field_name].batch_tensors(field_tensor_list)
+            for field_name, field_tensor_list in field_tensors.items()
+        }
 
     def __iter__(self) -> Iterator[Instance]:
         return iter(self.instances)

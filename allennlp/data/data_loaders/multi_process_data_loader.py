@@ -100,17 +100,6 @@ class MultiProcessDataLoader(DataLoader):
         The [start method](https://docs.python.org/3.7/library/multiprocessing.html#contexts-and-start-methods)
         used to spin up workers.
 
-    pin_memory: `bool`, optional (default = `False`)
-        When `True`, CPU tensors will be put into pinned (page-locked) memory, which results in faster copies to GPU.
-        It also lets you make asyncronous copies to GPU by passing the `non_blocking=True` argument to
-        `.to()` or `.cuda()`.
-
-        See [the PyTorch docs](https://pytorch.org/docs/stable/notes/cuda.html#use-pinned-memory-buffers)
-        for more info.
-
-        !!! Note
-            If `num_workers > 0` and `pin_memory = True`, you must set `start_method` to "spawn".
-
     cuda_device: `Optional[Union[int, str, torch.device]]`, optional (default = `None`)
         If given, batches will automatically be put on this device.
 
@@ -158,7 +147,6 @@ class MultiProcessDataLoader(DataLoader):
         num_workers: int = 0,
         max_instances_in_memory: int = None,
         start_method: str = "fork",
-        pin_memory: bool = False,
         cuda_device: Optional[Union[int, str, torch.device]] = None,
     ) -> None:
         # Do some parameter validation.
@@ -189,9 +177,6 @@ class MultiProcessDataLoader(DataLoader):
             elif max_instances_in_memory < 1:
                 raise ValueError("max_instances_in_memory must be at least 1")
 
-        if pin_memory and num_workers > 0 and start_method != "spawn":
-            raise ValueError("start_method must be set to 'spawn' when using memory pinning")
-
         self.reader = reader
         self.data_path = data_path
         self.batch_size = batch_size
@@ -203,7 +188,6 @@ class MultiProcessDataLoader(DataLoader):
         self.collate_fn = allennlp_collate
         self.max_instances_in_memory = max_instances_in_memory
         self.start_method = start_method
-        self.pin_memory = pin_memory
         self.cuda_device: Optional[torch.device] = None
         if cuda_device is not None:
             if not isinstance(cuda_device, torch.device):
@@ -520,7 +504,7 @@ class MultiProcessDataLoader(DataLoader):
                     and len(batch) < self.batch_size  # type: ignore[operator]
                 ):
                     break
-                tensor_dict = self.collate_fn(batch, pin_memory=self.pin_memory)
+                tensor_dict = self.collate_fn(batch)
                 if self.cuda_device is not None:
                     tensor_dict = move_to_device(tensor_dict, self.cuda_device)
                 yield tensor_dict
