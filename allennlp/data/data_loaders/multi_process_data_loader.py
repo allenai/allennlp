@@ -6,6 +6,7 @@ import sys
 import traceback
 from typing import List, Iterator, Optional, Iterable, Union
 
+from overrides import overrides
 import torch
 import torch.multiprocessing as mp
 
@@ -17,7 +18,7 @@ from allennlp.data.dataset_readers import DatasetReader, WorkerInfo
 from allennlp.data.fields import TextField
 from allennlp.data.samplers import BatchSampler
 from allennlp.data.vocabulary import Vocabulary
-from allennlp.nn.util import move_to_device
+import allennlp.nn.util as nn_util
 
 
 logger = logging.getLogger(__name__)
@@ -104,8 +105,9 @@ class MultiProcessDataLoader(DataLoader):
         If given, batches will automatically be put on this device.
 
         !!! Note
-            If `num_workers > 0` and `device` is set to an actual CUDA device (as oppossed to CPU),
-            you must set `start_method` to "spawn".
+            This should typically not be set in an AllenNLP configuration file. The `Trainer`
+            will automatically call [`set_target_device()`](#set_target_device) before iterating
+            over batches.
 
     !!! Warning
         Multiprocessing code in Python is complicated! Especially code that involves lower-level libraries
@@ -195,15 +197,8 @@ class MultiProcessDataLoader(DataLoader):
             else:
                 self.cuda_device = cuda_device
 
-        if (
-            self.cuda_device is not None
-            and self.cuda_device != torch.device("cpu")
-            and num_workers
-            and start_method != "spawn"
-        ):
-            raise ValueError(
-                "start_method must be set to 'spawn' for data loader to put tensors onto a CUDA device"
-            )
+        # Can only initialize CUDA in workers when these `start_methods` are used.
+        self._worker_cuda_safe = self.start_method in {"spawn", "forkserver"}
 
         # To make sure we have some backpressure in the worker queues we try to set
         # reasonable defaults for the maximum size of these queues.
@@ -230,12 +225,14 @@ class MultiProcessDataLoader(DataLoader):
             # Load all instances right away.
             deque(self.iter_instances(), maxlen=0)
 
+    @overrides
     def index_with(self, vocab: Vocabulary) -> None:
         self._vocab = vocab
         if self._instances:
             for instance in self._instances:
                 instance.index_fields(vocab)
 
+    @overrides
     def __len__(self) -> int:
         if self.batches_per_epoch is not None:
             return self.batches_per_epoch
@@ -259,6 +256,7 @@ class MultiProcessDataLoader(DataLoader):
             # is not specified.
             raise TypeError
 
+    @overrides
     def __iter__(self) -> Iterator[TensorDict]:
         if self._vocab is None:
             raise ValueError(
@@ -278,6 +276,7 @@ class MultiProcessDataLoader(DataLoader):
                     self._batch_generator = self._iter_batches()  # so refresh it
                     yield next(self._batch_generator)
 
+    @overrides
     def iter_instances(self) -> Iterator[Instance]:
         if self._instances:
             yield from self._instances
@@ -317,9 +316,13 @@ class MultiProcessDataLoader(DataLoader):
                         queue.close()  # type: ignore[attr-defined]
                     self._join_workers(workers, queue)
 
+    @overrides
+    def set_target_device(self, device: torch.device) -> None:
+        self.cuda_device = device
+
     def _iter_batches(self) -> Iterator[TensorDict]:
         if self._instances is not None or self.num_workers <= 0:
-            for batch in self._instances_to_batches(self.iter_instances()):
+            for batch in self._instances_to_batches(self.iter_instances(), move_to_device=True):
                 yield batch
         else:
             ctx = mp.get_context(self.start_method)
@@ -342,6 +345,9 @@ class MultiProcessDataLoader(DataLoader):
                             sys.stderr.write("".join(tb))
                             raise WorkerError(e)
 
+                        if not self._worker_cuda_safe and self.cuda_device is not None:
+                            # Need to move batch to target device now.
+                            batch = nn_util.move_to_device(batch, self.cuda_device)
                         yield batch
                         queue.task_done()
                     done_count += 1
@@ -422,7 +428,9 @@ class MultiProcessDataLoader(DataLoader):
         try:
             self.reader._set_worker_info(WorkerInfo(self.num_workers, worker_id))
             instances = self.reader.read(self.data_path)
-            for batch in self._instances_to_batches(instances):
+            for batch in self._instances_to_batches(
+                instances, move_to_device=self._worker_cuda_safe
+            ):
                 queue.put((batch, None))
         except Exception as e:
             queue.put((None, (str(e), traceback.format_exc())))
@@ -455,7 +463,9 @@ class MultiProcessDataLoader(DataLoader):
         instance.index_fields(self._vocab)
         return instance
 
-    def _instances_to_batches(self, instance_iterator: Iterable[Instance]) -> Iterator[TensorDict]:
+    def _instances_to_batches(
+        self, instance_iterator: Iterable[Instance], move_to_device
+    ) -> Iterator[TensorDict]:
         instance_iterator = (self._index_instance(instance) for instance in instance_iterator)
 
         if self.max_instances_in_memory is not None:
@@ -505,8 +515,8 @@ class MultiProcessDataLoader(DataLoader):
                 ):
                     break
                 tensor_dict = self.collate_fn(batch)
-                if self.cuda_device is not None:
-                    tensor_dict = move_to_device(tensor_dict, self.cuda_device)
+                if move_to_device and self.cuda_device is not None:
+                    tensor_dict = nn_util.move_to_device(tensor_dict, self.cuda_device)
                 yield tensor_dict
 
 

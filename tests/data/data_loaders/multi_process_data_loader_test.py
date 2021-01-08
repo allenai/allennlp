@@ -182,6 +182,7 @@ def test_batches_per_epoch():
     [
         dict(num_workers=0, batch_size=2),
         dict(num_workers=1, batch_size=2),
+        dict(num_workers=1, batch_size=2, start_method="spawn"),
     ],
     ids=str,
 )
@@ -192,9 +193,9 @@ def test_load_to_cuda(options):
         reader=reader,
         data_path="this doens't matter",
         cuda_device=0,
-        start_method="spawn",
         **options,
     )
     vocab = Vocabulary.from_instances(loader.iter_instances())
     loader.index_with(vocab)
-    list(loader)
+    for batch in loader:
+        assert batch["tensor"].device == torch.device("cuda:0")

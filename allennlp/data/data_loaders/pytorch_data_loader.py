@@ -1,5 +1,7 @@
-from typing import List, Iterator, Optional
+from typing import List, Iterator, Optional, Union
 
+from overrides import overrides
+import torch
 from torch.utils import data
 
 from allennlp.common.lazy import Lazy
@@ -9,6 +11,7 @@ from allennlp.data.dataset_readers import DatasetReader, WorkerInfo
 from allennlp.data.samplers import PyTorchSampler, PyTorchBatchSampler
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.data.data_loaders.data_loader import DataLoader, allennlp_collate
+import allennlp.nn.util as nn_util
 
 
 class AllennlpDataset(data.Dataset):
@@ -162,6 +165,7 @@ class PyTorchDataLoader(data.DataLoader, DataLoader):
         timeout: int = 0,
         multiprocessing_context: str = None,
         batches_per_epoch: int = None,
+        cuda_device: Optional[Union[int, str, torch.device]] = None,
     ):
         super().__init__(
             dataset,
@@ -179,31 +183,51 @@ class PyTorchDataLoader(data.DataLoader, DataLoader):
         )
         self._data_generator = super().__iter__()
         self._batches_per_epoch = batches_per_epoch
+        self.cuda_device: Optional[torch.device] = None
+        if cuda_device is not None:
+            if not isinstance(cuda_device, torch.device):
+                self.cuda_device = torch.device(cuda_device)
+            else:
+                self.cuda_device = cuda_device
 
+    @overrides
     def __len__(self):
         if self._batches_per_epoch is not None:
             return self._batches_per_epoch
         return super().__len__()
 
+    @overrides
     def __iter__(self):
         if self._batches_per_epoch is None:
             # NOTE: since torch's DataLoader is listed as the first super class of this class,
             # super().__iter__() will resolve to the __iter__ method from torch's DataLoader,
             # which is what we want.
-            yield from super().__iter__()
+            for tensor_dict in super().__iter__():
+                if self.cuda_device is not None:
+                    tensor_dict = nn_util.move_to_device(tensor_dict, self.cuda_device)
+                yield tensor_dict
         else:
             for i in range(self._batches_per_epoch):
                 try:
-                    yield next(self._data_generator)
+                    tensor_dict = next(self._data_generator)
                 except StopIteration:  # data_generator is exhausted
                     self._data_generator = super().__iter__()  # so refresh it
-                    yield next(self._data_generator)  # and yield required instance
+                    tensor_dict = next(self._data_generator)  # and yield required instance
+                if self.cuda_device is not None:
+                    tensor_dict = nn_util.move_to_device(tensor_dict, self.cuda_device)
+                yield tensor_dict
 
+    @overrides
     def iter_instances(self) -> Iterator[Instance]:
         yield from self.dataset
 
+    @overrides
     def index_with(self, vocab: Vocabulary):
         self.dataset.index_with(vocab)  # type: ignore
+
+    @overrides
+    def set_target_device(self, device: torch.device) -> None:
+        self.cuda_device = device
 
     @classmethod
     def from_partial_objects(

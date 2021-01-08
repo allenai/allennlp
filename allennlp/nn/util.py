@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 T = TypeVar("T")
 
 
-def move_to_device(obj, device: Union[torch.device, int], *, non_blocking: bool = False):
+def move_to_device(obj, device: Union[torch.device, int]):
     """
     Given a structure (possibly) containing Tensors,
     move all the Tensors to the specified device (or do nothing, if they are already on
@@ -34,22 +34,20 @@ def move_to_device(obj, device: Union[torch.device, int], *, non_blocking: bool 
         # be a no-op anyway if `obj` is already on `device`. Well that works fine except
         # when PyTorch is not compiled with CUDA support, in which case even calling
         # `obj.to(torch.device("cpu"))` would result in an error.
-        return obj if obj.device == device else obj.to(device=device, non_blocking=non_blocking)
+        return obj if obj.device == device else obj.to(device=device)
     elif isinstance(obj, dict):
         for key, value in obj.items():
-            obj[key] = move_to_device(value, device, non_blocking=non_blocking)
+            obj[key] = move_to_device(value, device)
         return obj
     elif isinstance(obj, list):
         for i, item in enumerate(obj):
-            obj[i] = move_to_device(item, device, non_blocking=non_blocking)
+            obj[i] = move_to_device(item, device)
         return obj
     elif isinstance(obj, tuple) and hasattr(obj, "_fields"):
         # This is the best way to detect a NamedTuple, it turns out.
-        return obj.__class__(
-            *(move_to_device(item, device, non_blocking=non_blocking) for item in obj)
-        )
+        return obj.__class__(*(move_to_device(item, device) for item in obj))
     elif isinstance(obj, tuple):
-        return tuple(move_to_device(item, device, non_blocking=non_blocking) for item in obj)
+        return tuple(move_to_device(item, device) for item in obj)
     else:
         return obj
 
