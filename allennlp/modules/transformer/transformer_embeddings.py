@@ -200,9 +200,14 @@ class TransformerEmbeddings(Embeddings):
         final_kwargs["max_position_embeddings"] = submodules[
             "embeddings.position_embeddings"
         ].num_embeddings
-        final_kwargs["type_vocab_size"] = submodules[
-            "embeddings.token_type_embeddings"
-        ].num_embeddings
+
+        if "embeddings.token_type_embeddings" in submodules:
+            final_kwargs["type_vocab_size"] = submodules[
+                "embeddings.token_type_embeddings"
+            ].num_embeddings
+
+        else:
+            final_kwargs["type_vocab_size"] = 0
 
         final_kwargs.update(**kwargs)
 
