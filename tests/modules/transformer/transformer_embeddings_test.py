@@ -185,6 +185,14 @@ class TestTransformerEmbeddings(AllenNlpTestCase):
 
         assert output.shape[-1] == 7
 
+    def test_no_token_type_layer(self):
+        params = copy.deepcopy(self.params_dict)
+        params["type_vocab_size"] = 0
+        params = Params(params)
+        module = TransformerEmbeddings.from_params(params)
+
+        assert len(module.embeddings) == 2
+
     @pytest.mark.parametrize(
         "pretrained_name",
         [

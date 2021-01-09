@@ -119,17 +119,20 @@ class TransformerEmbeddings(Embeddings):
         dropout: float = 0.1,
         output_size: Optional[int] = None,
     ):
-        word_embeddings = torch.nn.Embedding(vocab_size, embedding_size, padding_idx=pad_token_id)
-        position_embeddings = torch.nn.Embedding(max_position_embeddings, embedding_size)
-        token_type_embeddings = torch.nn.Embedding(type_vocab_size, embedding_size)
 
-        embeddings = torch.nn.ModuleDict(
-            {
-                "word_embeddings": word_embeddings,
-                "position_embeddings": position_embeddings,
-                "token_type_embeddings": token_type_embeddings,
-            }
-        )
+        embedding_dict = {}
+
+        word_embeddings = torch.nn.Embedding(vocab_size, embedding_size, padding_idx=pad_token_id)
+        embedding_dict["word_embeddings"] = word_embeddings
+
+        position_embeddings = torch.nn.Embedding(max_position_embeddings, embedding_size)
+        embedding_dict["position_embeddings"] = position_embeddings
+
+        if type_vocab_size > 0:
+            token_type_embeddings = torch.nn.Embedding(type_vocab_size, embedding_size)
+            embedding_dict["token_type_embeddings"] = token_type_embeddings
+
+        embeddings = torch.nn.ModuleDict(embedding_dict)
 
         super().__init__(embeddings, embedding_size, dropout)
 
@@ -158,14 +161,21 @@ class TransformerEmbeddings(Embeddings):
         device = input_ids.device
         seq_length = input_shape[1]
 
+        embedding_inputs = [input_ids]
+
         if position_ids is None:
             position_ids = torch.arange(seq_length, dtype=torch.long, device=device)
             position_ids = position_ids.unsqueeze(0).expand(input_shape)
 
+        embedding_inputs.append(position_ids)
+
         if token_type_ids is None:
             token_type_ids = torch.zeros(input_shape, dtype=torch.long, device=device)
 
-        embeddings = super().forward(input_ids, position_ids, token_type_ids)
+        if len(self.embeddings) == 3:
+            embedding_inputs.append(token_type_ids)
+
+        embeddings = super().forward(*embedding_inputs)
 
         if hasattr(self, "linear_transform"):
             embeddings = self.linear_transform(embeddings)
