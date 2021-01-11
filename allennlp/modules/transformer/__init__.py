@@ -128,7 +128,6 @@ from allennlp.modules.transformer.positional_encoding import SinusoidalPositiona
 from allennlp.modules.transformer.transformer_module import TransformerModule
 from allennlp.modules.transformer.transformer_embeddings import (
     Embeddings,
-    TextEmbeddings,
     TransformerEmbeddings,
     ImageFeatureEmbeddings,
 )

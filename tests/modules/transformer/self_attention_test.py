@@ -145,21 +145,23 @@ class TestSelfAttention(AllenNlpTestCase):
         seq_len = 3
         dim = module.query.in_features
         hidden_states = torch.randn(batch_size, seq_len, dim)
-        attention_mask = torch.randn(batch_size, 1, 1, seq_len)
+        attention_mask = torch.randint(0, 2, (batch_size, 1, 1, seq_len))
+
+        # setting to eval mode to avoid non-deterministic dropout.
+        module = module.eval()
+        pretrained_module = pretrained_module.eval()
 
         torch.manual_seed(1234)
         output = module.forward(hidden_states, attention_mask=attention_mask.squeeze())[0]
-        torch.manual_seed(1234)
         if "distilbert" in pretrained_name:
+            torch.manual_seed(1234)
             hf_output = pretrained_module.forward(
                 hidden_states, hidden_states, hidden_states, mask=attention_mask
             )[0]
         else:
+            # The attn_mask is processed outside the self attention module in HF bert models.
+            attention_mask = (~(attention_mask == 1)) * -10e5
+            torch.manual_seed(1234)
             hf_output = pretrained_module.forward(hidden_states, attention_mask=attention_mask)[0]
 
-        # FIX: look into the reason for mismatch.
-        # Update: The discrepancy comes from torch.nn.Dropout layer, despite setting random seeds.
-        # Have also tried setting random seeds right before the actual call to dropout in both modules.
-        # assert torch.allclose(output, hf_output)
-        print(output)
-        print(hf_output)
+        assert torch.allclose(output, hf_output)
