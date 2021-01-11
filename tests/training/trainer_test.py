@@ -669,6 +669,9 @@ class TestTrainer(TrainerTestBase):
             def __len__(self):
                 return len(self.data_loader)
 
+            def set_target_device(self, _):
+                pass
+
         trainer = GradientDescentTrainer(
             self.model,
             self.optimizer,

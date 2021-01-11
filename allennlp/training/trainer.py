@@ -22,7 +22,6 @@ from allennlp.common import util as common_util
 from allennlp.common.checks import ConfigurationError, check_for_gpu
 from allennlp.data import DataLoader, TensorDict
 from allennlp.models.model import Model
-from allennlp.nn import util as nn_util
 from allennlp.training import util as training_util
 from allennlp.training.checkpointer import Checkpointer
 from allennlp.training.learning_rate_schedulers import LearningRateScheduler
@@ -499,7 +498,10 @@ class GradientDescentTrainer(Trainer):
         self.model = model
 
         self.data_loader = data_loader
+        self.data_loader.set_target_device(self.cuda_device)
         self._validation_data_loader = validation_data_loader
+        if self._validation_data_loader is not None:
+            self._validation_data_loader.set_target_device(self.cuda_device)
         self.optimizer = optimizer
 
         if patience is None:  # no early stopping
@@ -599,7 +601,6 @@ class GradientDescentTrainer(Trainer):
         Does a forward pass on the given batch and returns the output dictionary that the model
         returns, after adding any specified regularization penalty to the loss (if training).
         """
-        batch = nn_util.move_to_device(batch, self.cuda_device)
         output_dict = self._pytorch_model(**batch)
 
         if for_training:

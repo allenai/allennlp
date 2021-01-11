@@ -16,7 +16,7 @@ from torch.nn.utils import clip_grad_norm_
 from allennlp.common.checks import check_for_gpu, ConfigurationError
 from allennlp.common.params import Params
 from allennlp.common.tqdm import Tqdm
-from allennlp.common.util import dump_metrics, sanitize
+from allennlp.common.util import dump_metrics, sanitize, int_to_device
 from allennlp.data import Instance, Vocabulary, Batch, DataLoader
 from allennlp.data.dataset_readers import DatasetReader
 from allennlp.models.archival import CONFIG_NAME
@@ -315,6 +315,7 @@ def evaluate(
         The final metrics.
     """
     check_for_gpu(cuda_device)
+    data_loader.set_target_device(int_to_device(cuda_device))
     predictions_file = (
         None if predictions_output_file is None else open(predictions_output_file, "w")
     )

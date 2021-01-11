@@ -1,6 +1,9 @@
-from typing import Any, Dict, Iterable, Iterator, List
+from typing import Any, Dict, Iterable, Iterator, List, Union, Optional
 import itertools
 import math
+
+import torch
+from overrides import overrides
 
 from allennlp.common import util
 from allennlp.data.batch import Batch
@@ -14,6 +17,7 @@ from allennlp.data.data_loaders.multitask_epoch_sampler import MultiTaskEpochSam
 from allennlp.data.dataset_readers.multitask import MultiTaskDatasetReader
 from allennlp.data.instance import Instance
 from allennlp.data.vocabulary import Vocabulary
+import allennlp.nn.util as nn_util
 
 
 def maybe_shuffle_instances(loader: DataLoader, shuffle: bool) -> Iterable[Instance]:
@@ -109,6 +113,13 @@ class MultiTaskDataLoader(DataLoader):
     shuffle: `bool`, optional (default = `True`)
         If `False`, we will not shuffle the instances that come from each underlying data loader.
         You almost certainly never want to use this except when debugging.
+    cuda_device: `Optional[Union[int, str, torch.device]]`, optional (default = `None`)
+        If given, batches will automatically be put on this device.
+
+        !!! Note
+            This should typically not be set in an AllenNLP configuration file. The `Trainer`
+            will automatically call [`set_target_device()`](#set_target_device) before iterating
+            over batches.
     """
 
     def __init__(
@@ -128,11 +139,18 @@ class MultiTaskDataLoader(DataLoader):
         instance_queue_size: Dict[str, int] = None,
         instance_chunk_size: Dict[str, int] = None,
         shuffle: bool = True,
+        cuda_device: Optional[Union[int, str, torch.device]] = None,
     ) -> None:
         self.readers = reader.readers
         self.data_paths = data_path
         self.scheduler = scheduler or HomogeneousRoundRobinScheduler(batch_size=batch_size)
         self.sampler = sampler
+        self.cuda_device: Optional[torch.device] = None
+        if cuda_device is not None:
+            if not isinstance(cuda_device, torch.device):
+                self.cuda_device = torch.device(cuda_device)
+            else:
+                self.cuda_device = cuda_device
 
         self._batch_size = batch_size
         self._instances_per_epoch = instances_per_epoch
@@ -186,6 +204,7 @@ class MultiTaskDataLoader(DataLoader):
             for key, loader in self._loaders.items()
         }
 
+    @overrides
     def __len__(self) -> int:
         if self._instances_per_epoch is not None:
             return self._instances_per_epoch
@@ -204,6 +223,7 @@ class MultiTaskDataLoader(DataLoader):
         else:
             return int(1 + total_instances) // self._batch_size
 
+    @overrides
     def __iter__(self) -> Iterator[TensorDict]:
         # Basic outline: first we _sample_ the instances that we're going to be using for this
         # epoch, which relies on the scheduler if `self._instances_per_epoch` is not None.  This is
@@ -219,7 +239,10 @@ class MultiTaskDataLoader(DataLoader):
             current_batch_size += self._batch_size_multiplier.get(dataset, 1.0)
             if current_batch_size > self._batch_size:
                 batch = Batch(batch_instances)
-                yield batch.as_tensor_dict()
+                tensor_dict = batch.as_tensor_dict()
+                if self.cuda_device is not None:
+                    tensor_dict == nn_util.move_to_device(tensor_dict, self.cuda_device)
+                yield tensor_dict
                 batch_instances = [instance]
                 current_batch_size = self._batch_size_multiplier.get(dataset, 1.0)
             else:
@@ -229,8 +252,12 @@ class MultiTaskDataLoader(DataLoader):
         # so we don't need a check for that here.
         if not self._drop_last or current_batch_size == self._batch_size:
             batch = Batch(batch_instances)
-            yield batch.as_tensor_dict()
+            tensor_dict = batch.as_tensor_dict()
+            if self.cuda_device is not None:
+                tensor_dict == nn_util.move_to_device(tensor_dict, self.cuda_device)
+            yield tensor_dict
 
+    @overrides
     def iter_instances(self) -> Iterator[Instance]:
         # The only external contract for this method is that it iterates over instances
         # individually; it doesn't actually specify anything about batching or anything else.  The
@@ -248,9 +275,14 @@ class MultiTaskDataLoader(DataLoader):
         for loader in self._loaders.values():
             yield from loader.iter_instances()
 
+    @overrides
     def index_with(self, vocab: Vocabulary) -> None:
         for loader in self._loaders.values():
             loader.index_with(vocab)
+
+    @overrides
+    def set_target_device(self, device: torch.device) -> None:
+        self.cuda_device = device
 
     def _get_instances_for_epoch(self) -> Dict[str, Iterable[Instance]]:
         if self._instances_per_epoch is None:
