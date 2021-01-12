@@ -29,7 +29,7 @@ class MockDatasetReader(DatasetReader):
 
     def __init__(self, model: str = "epwalsh/bert-xsmall-dummy", **kwargs) -> None:
         super().__init__(
-            manual_distributed_sharding=True, manual_multi_process_sharding=True, **kwargs
+            manual_distributed_sharding=True, manual_multiprocess_sharding=True, **kwargs
         )
         self.tokenizer = PretrainedTransformerTokenizer(model)
         self.token_indexers = {"tokens": PretrainedTransformerIndexer(model)}
@@ -111,7 +111,7 @@ def test_error_raised_when_text_fields_contain_token_indexers(max_instances_in_m
     ],
     ids=str,
 )
-def test_multi_process_data_loader(options):
+def test_multiprocess_data_loader(options):
     reader = MockDatasetReader()
     data_path = "this doesn't matter"
 

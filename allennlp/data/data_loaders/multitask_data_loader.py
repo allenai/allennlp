@@ -8,7 +8,7 @@ from overrides import overrides
 from allennlp.common import util
 from allennlp.data.batch import Batch
 from allennlp.data.data_loaders.data_loader import DataLoader, TensorDict
-from allennlp.data.data_loaders.multi_process_data_loader import MultiProcessDataLoader
+from allennlp.data.data_loaders.multiprocess_data_loader import MultiProcessDataLoader
 from allennlp.data.data_loaders.multitask_scheduler import (
     MultiTaskScheduler,
     HomogeneousRoundRobinScheduler,
