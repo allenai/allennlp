@@ -1,3 +1,4 @@
+import math
 import random
 from typing import Optional, List, Iterator
 
@@ -36,7 +37,7 @@ class SimpleDataLoader(DataLoader):
         self._batch_generator: Optional[Iterator[TensorDict]] = None
 
     def __len__(self) -> int:
-        return len(list(lazy_groups_of(self.instances, self.batch_size)))
+        return math.ceil(len(self.instances) / self.batch_size)
 
     @overrides
     def __iter__(self) -> Iterator[TensorDict]:
