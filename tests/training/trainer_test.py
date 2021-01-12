@@ -935,7 +935,7 @@ class TestTrainer(TrainerTestBase):
                 epoch: int,
                 batch_number: int,
                 is_training: bool,
-                is_master: bool,
+                is_primary: bool,
             ) -> None:
                 if not hasattr(trainer, "batch_callback_calls"):
                     trainer.batch_callback_calls = []  # type: ignore
@@ -965,7 +965,7 @@ class TestTrainer(TrainerTestBase):
                 trainer: "GradientDescentTrainer",
                 metrics: Dict[str, Any],
                 epoch: int,
-                is_master: bool,
+                is_primary: bool,
             ) -> None:
                 if not hasattr(trainer, "epoch_callback_calls"):
                     trainer.epoch_callback_calls = []  # type: ignore
@@ -1003,7 +1003,7 @@ class TestTrainer(TrainerTestBase):
                 trainer: "GradientDescentTrainer",
                 metrics: Dict[str, Any],
                 epoch: int,
-                is_master: bool,
+                is_primary: bool,
             ) -> None:
                 if not hasattr(trainer, "end_callback_calls"):
                     trainer.end_callback_calls = []  # type: ignore
@@ -1032,7 +1032,7 @@ class TestTrainer(TrainerTestBase):
                 epoch: int,
                 batch_number: int,
                 is_training: bool,
-                is_master: bool,
+                is_primary: bool,
             ) -> None:
                 if not hasattr(trainer, "batch_callback_calls"):
                     trainer.batch_callback_calls = []  # type: ignore
@@ -1043,7 +1043,7 @@ class TestTrainer(TrainerTestBase):
                 trainer: "GradientDescentTrainer",
                 metrics: Dict[str, Any],
                 epoch: int,
-                is_master: bool,
+                is_primary: bool,
             ) -> None:
                 if not hasattr(trainer, "epoch_callback_calls"):
                     trainer.epoch_callback_calls = []  # type: ignore
@@ -1054,7 +1054,7 @@ class TestTrainer(TrainerTestBase):
                 trainer: "GradientDescentTrainer",
                 metrics: Dict[str, Any],
                 epoch: int,
-                is_master: bool,
+                is_primary: bool,
             ) -> None:
                 if not hasattr(trainer, "end_callback_calls"):
                     trainer.end_callback_calls = []  # type: ignore
@@ -1097,7 +1097,7 @@ class TestTrainer(TrainerTestBase):
                 epoch: int,
                 batch_number: int,
                 is_training: bool,
-                is_master: bool,
+                is_primary: bool,
             ) -> None:
                 if not hasattr(trainer, "batch_losses"):
                     trainer.batch_losses = []  # type: ignore
