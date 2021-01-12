@@ -408,8 +408,8 @@ class MultiProcessDataLoader(DataLoader):
                                 f"Found a TextField ({field_name}) with token_indexers already "
                                 "applied, but you're using num_workers > 0 in your data loader. "
                                 "Make sure your dataset reader's text_to_instance() method doesn't "
-                                "add any token_indexers to the TextFields it creates. The token_indexers "
-                                "should be added to the instances in apply_token_indexers() method of your "
+                                "add any token_indexers to the TextFields it creates. Instead, the token_indexers "
+                                "should be added to the instances in the apply_token_indexers() method of your "
                                 "dataset reader (which you'll have to implement if you haven't done "
                                 "so already)."
                             )
