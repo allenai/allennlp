@@ -651,7 +651,7 @@ class TestTrainer(TrainerTestBase):
 
     def test_trainer_respects_keep_serialized_model_every_num_seconds(self):
         # To test:
-        #   Create an fake data loader that sleeps just over 2.5 second per epoch, so the total
+        #   Create an fake data loader that sleeps for 2.5 second per epoch, so the total
         #   training time for one epoch is slightly greater then 2.5 seconds.
         #   Run for 6 epochs, keeping the last 2 models, models also kept every 5 seconds.
         #   Check the resulting checkpoints.  Should then have models at epochs
@@ -663,7 +663,7 @@ class TestTrainer(TrainerTestBase):
             )
 
             def __iter__(self):
-                time.sleep(2.6)
+                time.sleep(2.5)
                 return iter(self.data_loader)
 
             def __len__(self):
