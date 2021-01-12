@@ -1,6 +1,7 @@
 from typing import Dict, Optional
 
 import torch
+from overrides import overrides
 
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.models.heads.head import Head
@@ -12,7 +13,7 @@ class VqaHead(Head):
         self,
         vocab: Vocabulary,
         embedding_dim: int,
-        label_namespace: str = "labels"
+        label_namespace: str = "answers"
     ):
         super().__init__(vocab)
 
@@ -73,3 +74,9 @@ class VqaHead(Head):
             self.vqa_metric(logits, labels, label_weights)
 
         return output
+
+    @overrides
+    def get_metrics(self, reset: bool = False) -> Dict[str, float]:
+        result = self.f1_metric.get_metric(reset)
+        result["vqa"] = self.vqa_metric.get_metric(reset)["score"]
+        return result

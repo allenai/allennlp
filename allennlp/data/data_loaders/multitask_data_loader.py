@@ -3,6 +3,7 @@ import itertools
 import math
 
 from allennlp.common import util
+from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.batch import Batch
 from allennlp.data.data_loaders.data_loader import DataLoader, TensorDict
 from allennlp.data.data_loaders.multi_process_data_loader import MultiProcessDataLoader
@@ -277,7 +278,7 @@ class MultiTaskDataLoader(DataLoader):
 
     def _make_data_loader(self, key: str) -> MultiProcessDataLoader:
         kwargs: Dict[str, Any] = {}
-        kwargs["reader"] = self.readers[key]
+        kwargs["reader"] = _MultitaskDatasetReaderShim(self.readers[key], key)
         kwargs["data_path"] = self.data_paths[key]
         kwargs["batch_size"] = 1
         if key in self._num_workers:
@@ -291,3 +292,28 @@ class MultiTaskDataLoader(DataLoader):
         if key in self._instance_chunk_size:
             kwargs["instance_chunk_size"] = self._instance_chunk_size[key]
         return MultiProcessDataLoader(**kwargs)
+
+
+@DatasetReader.register("multitask_shim")
+class _MultitaskDatasetReaderShim(DatasetReader):
+    """This dataset reader wraps another dataset reader and adds the name of the "task" into each instance as a metadata field. This exists only
+    to support `MultitaskDataLoader`. You should not have to use this yourself."""
+    def __init__(self, inner: DatasetReader, head: str, **kwargs):
+        super().__init__(**kwargs)
+        self.inner = inner
+        self.head = head
+
+    def read(self, file_path: str) -> Iterable[Instance]:
+        from allennlp.data.fields import MetadataField
+        for instance in self.inner.read(file_path):
+            instance.add_field("task", MetadataField(self.head))
+            yield instance
+
+    def text_to_instance(self, *inputs) -> Instance:
+        from allennlp.data.fields import MetadataField
+        instance = self.inner.text_to_instance(*inputs)
+        instance.add_field("task", MetadataField(self.head))
+        return instance
+
+    def apply_token_indexers(self, instance: Instance) -> None:
+        self.inner.apply_token_indexers(instance)

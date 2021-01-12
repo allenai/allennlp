@@ -102,7 +102,7 @@ class VisualEntailmentReader(VisionReader):
             )
 
         if label:
-            fields["label"] = LabelField(label)
+            fields["labels"] = LabelField(label)
 
         return Instance(fields)
 

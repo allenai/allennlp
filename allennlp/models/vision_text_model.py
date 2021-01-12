@@ -179,7 +179,7 @@ class VisionTextModel(Model):
         box_coordinates: torch.Tensor,
         box_mask: torch.Tensor,
         text: TextFieldTensors,
-        label: Optional[torch.Tensor] = None,
+        labels: Optional[torch.Tensor] = None,
         label_weights: Optional[torch.Tensor] = None,
     ) -> Dict[str, torch.Tensor]:
         """
@@ -297,7 +297,7 @@ class VisionTextModel(Model):
             probs = torch.softmax(logits, dim=-1)
 
         outputs = {"logits": logits, "probs": probs}
-        outputs = self._compute_loss_and_metrics(batch_size, outputs, label, label_weights)
+        outputs = self._compute_loss_and_metrics(batch_size, outputs, labels, label_weights)
 
         return outputs
 

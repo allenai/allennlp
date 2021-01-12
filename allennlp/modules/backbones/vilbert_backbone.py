@@ -29,6 +29,7 @@ class VilbertBackbone(Backbone):
         encoder: BiModalEncoder,
         pooled_output_dim: int,
         fusion_method: str = "sum",
+        dropout: float = 0.1,
         vocab_namespace: str = "tokens"
     ) -> None:
         super().__init__()
@@ -39,6 +40,7 @@ class VilbertBackbone(Backbone):
         from allennlp.modules.transformer import TransformerPooler
         self.t_pooler = TransformerPooler(encoder.hidden_size1, pooled_output_dim)
         self.v_pooler = TransformerPooler(encoder.hidden_size2, pooled_output_dim)
+        self.dropout = torch.nn.Dropout(dropout)
 
         self._vocab = vocab
         self._namespace = vocab_namespace
@@ -153,7 +155,7 @@ class VilbertBackbone(Backbone):
         attention_mask = text["tokens"].get("mask")
 
         # Shape: (batch_size, num_tokens, embedding_dim)
-        embedding_output = self.embeddings(token_ids, token_type_ids)
+        embedding_output = self.text_embeddings(token_ids, token_type_ids)
         num_tokens = embedding_output.size(1)
 
         # this attention mask is more simple than the triangular masking of

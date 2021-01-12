@@ -74,6 +74,9 @@ local reader_common = {
   },
   "model": {
     "type": "multitask",
+    "arg_name_mapping": {
+      "backbone": {"question": "text", "hypothesis": "text"}
+    },
     "backbone": {
       "type": "vilbert_from_huggingface",
       "model_name": model_name,
@@ -84,8 +87,8 @@ local reader_common = {
       "image_intermediate_size": 1024,
       "image_attention_dropout": 0.1,
       "image_hidden_dropout": 0.1,
-      "image_biattention_id": [6, 7, 8, 9, 10, 11],
-      "text_biattention_id": [0, 1, 2, 3, 4, 5],
+      "image_biattention_id": [0, 1, 2, 3, 4, 5],
+      "text_biattention_id": [6, 7, 8, 9, 10, 11],
       "text_fixed_layer": 0,
       "image_fixed_layer": 0,
       "combined_hidden_size": 1024,

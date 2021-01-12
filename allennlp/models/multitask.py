@@ -1,6 +1,6 @@
 from collections import defaultdict
 import inspect
-from typing import Any, Dict, List, Set, Optional
+from typing import Any, Dict, List, Set, Optional, Union
 
 from overrides import overrides
 import torch
@@ -84,6 +84,7 @@ class MultiTaskModel(Model):
         super().__init__(vocab, **kwargs)
         self._backbone = backbone
         self._heads = torch.nn.ModuleDict(heads)
+        self._heads_called = set()
         self._arg_name_mapping = arg_name_mapping or defaultdict(dict)
 
         self._allowed_arguments = allowed_arguments or {
@@ -91,47 +92,39 @@ class MultiTaskModel(Model):
             **{key: get_forward_arguments(heads[key]) for key in heads},
         }
         self._loss_weights = loss_weights or defaultdict(lambda: 1.0)
-        self._active_heads: Optional[List[str]] = None
         initializer(self)
 
-    def set_active_heads(self, active_heads: List[str]) -> None:
-        """
-        By default, the `MultiTaskModel` will try to infer which heads to run from the arguments
-        passed to `forward`.  During training, we will only run a head if we have all of its
-        arguments, including optional arguments, which typically means the argument is the
-        prediction target; if we don't have it, we typically can't compute a loss, so running during
-        training is pointless.  During evaluation, we will run all heads.
-
-        If you want to limit which heads are run during evaluation, or if the inference for which
-        task to run during training is incorrect (e.g., if your head has multiple optional
-        arguments, and only some are actually required to compute a loss), then you can use this
-        method to override our inference and force the use of whatever set of heads you want.
-
-        To get back to the default mode of operation, call this method with `None` as an argument.
-        """
-        self._active_heads = active_heads
-
     def forward(self, **kwargs) -> Dict[str, torch.Tensor]:  # type: ignore
+        task_indices = defaultdict(lambda: [])
+        for i, task in enumerate(kwargs['task']):
+            task_indices[task].append(i)
+        task_indices = {task: torch.LongTensor(indices) for task, indices in task_indices.items()}
+
+        def make_inputs_for_task(task: str, whole_batch_input: Union[torch.Tensor, List]):
+            if isinstance(whole_batch_input, torch.Tensor):
+                task_indices[task] = task_indices[task].to(whole_batch_input.device)
+                return torch.index_select(whole_batch_input, 0, task_indices[task])
+            else:
+                return [whole_batch_input[i] for i in task_indices[task]]
+
         backbone_arguments = self._get_arguments(kwargs, "backbone")
         backbone_outputs = self._backbone(**backbone_arguments)
+        combined_arguments = {**backbone_outputs, **kwargs}
 
         outputs = {**backbone_outputs}
         loss = None
         for head_name in self._heads:
-            if self._active_heads is not None and head_name not in self._active_heads:
+            if head_name not in task_indices:
                 continue
 
-            combined_arguments = {**backbone_outputs, **kwargs}
             head_arguments = self._get_arguments(combined_arguments, head_name)
-
-            if (
-                self._active_heads is None
-                and self.training
-                and head_arguments.keys() != self._allowed_arguments[head_name]
-            ):
-                continue
+            head_arguments = {
+                key: make_inputs_for_task(head_name, value)
+                for key, value in head_arguments.items()
+            }
 
             head_outputs = self._heads[head_name](**head_arguments)
+            self._heads_called.add(head_name)
             for key in head_outputs:
                 outputs[f"{head_name}_{key}"] = head_outputs[key]
 
@@ -154,7 +147,7 @@ class MultiTaskModel(Model):
         mapping names and looking at allowed arguments.
         """
         allowed_args = self._allowed_arguments[component]
-        name_mapping = self._arg_name_mapping[component]
+        name_mapping = self._arg_name_mapping.get(component, {})
         kept_arguments = {}
         for key, value in available_args.items():
             new_key = name_mapping.get(key, key)
@@ -173,9 +166,7 @@ class MultiTaskModel(Model):
     @overrides
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
         metrics = {}
-        for head_name in self._heads:
-            if self._active_heads is not None and head_name not in self._active_heads:
-                continue
+        for head_name in self._heads_called:
             for key, value in self._heads[head_name].get_metrics(reset).items():
                 metrics[f"{head_name}_{key}"] = value
         return metrics
@@ -185,14 +176,12 @@ class MultiTaskModel(Model):
         self, output_dict: Dict[str, torch.Tensor]
     ) -> Dict[str, torch.Tensor]:
         output_dict = self._backbone.make_output_human_readable(output_dict)
-        for head_name in self._heads:
-            if self._active_heads is not None and head_name not in self._active_heads:
-                continue
+        for head_name, head in self._heads.items():
             head_outputs = {}
             for key, value in output_dict.items():
                 if key.startswith(head_name):
                     head_outputs[key.replace(f"{head_name}_", "")] = value
-            readable_head_outputs = self._heads[head_name].make_output_human_readable(head_outputs)
+            readable_head_outputs = head.make_output_human_readable(head_outputs)
             for key, value in readable_head_outputs.items():
                 output_dict[f"{head_name}_{key}"] = value
         return output_dict

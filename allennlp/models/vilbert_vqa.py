@@ -88,7 +88,7 @@ class VqaVilbert(VisionTextModel):
             box_coordinates,
             box_mask,
             text=question,
-            label=labels,
+            labels=labels,
             label_weights=label_weights,
         )
 

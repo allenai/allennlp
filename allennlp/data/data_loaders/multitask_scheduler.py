@@ -88,8 +88,9 @@ class HomogeneousRoundRobinScheduler(MultiTaskScheduler):
 
     def __init__(self, batch_size: Union[int, Dict[str, int]]):
         if isinstance(batch_size, int):
-            batch_size = defaultdict(lambda: batch_size)  # type: ignore
-        self.batch_size = batch_size
+            self.batch_size = defaultdict(lambda: batch_size)  # type: ignore
+        else:
+            self.batch_size = batch_size
 
     def order_epoch_instances(
         self, epoch_instances: Dict[str, Iterable[Instance]]
