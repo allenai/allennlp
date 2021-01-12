@@ -96,13 +96,14 @@ class MultiProcessDataLoader(DataLoader):
         will turn on lazy loading, where only `max_instances_in_memory` instances are processed
         at a time.
 
-        When using this option you should generally set it to a multiple of `batch_size`.
-
         !!! Note
             This setting will affect how a `batch_sampler` is applied. If
-            `max_instances_in_memory` is `None`, the sampler will be applied to all `Instance`s.
-            Otherwise the sampler will be applied to only `max_instances_in_memory` `Instance`s
+            `max_instances_in_memory` is `None`, the sampler will be applied to all `Instances`.
+            Otherwise the sampler will be applied to only `max_instances_in_memory` `Instances`
             at a time.
+
+            Therefore when using this option with a sampler, you should generally set it to a multiple of
+            the sampler's `batch_size` (if it has one).
 
     start_method: `str`, optional (default = `"fork"`)
         The [start method](https://docs.python.org/3.7/library/multiprocessing.html#contexts-and-start-methods)
@@ -126,16 +127,15 @@ class MultiProcessDataLoader(DataLoader):
     - **Large datasets**
 
         If your dataset is too big to fit into memory (a common problem), you'll need to load it lazily.
-        This is done by simply setting the `max_instances_in_memory` parameter to a non-zero integer, ideally
-        a multiple of your batch size. But the optimal value depends on your use case.
+        This is done by simply setting the `max_instances_in_memory` parameter to a non-zero integer.
+        The optimal value depends on your use case.
 
         If you're using a `batch_sampler`, you will generally get better samples by setting
         `max_instances_in_memory` to a higher number - such as 10 to 100 times your batch size -
         since this determines how many `Instances` your `batch_sampler` gets to sample from at a time.
 
-        But if you're not using a `batch_sampler` then this number is much less important. You might
-        see slightly better performance by keeping `max_instances_in_memory` smaller, such as
-        2 to 10 times your batch size.
+        If you're not using a `batch_sampler` then this number is much less important. Setting it to
+        2 to 10 times your batch size is a reasonable value.
 
         Keep in mind that using `max_instances_in_memory` generally results in a slower
         training loop unless you load data in worker processes by setting the `num_workers` option to a
@@ -263,10 +263,14 @@ class MultiProcessDataLoader(DataLoader):
             self.batch_size if self.batch_sampler is None else self.batch_sampler.get_batch_size()
         )
         self._max_instance_queue_size = (
-            None if max_instances_in_memory is None else max_instances_in_memory * 4
+            None
+            if max_instances_in_memory is None
+            else 2 * self.num_workers * max_instances_in_memory
         )
         self._max_batch_queue_size = (
-            None if max_instances_in_memory is None else (effective_batch_size or 1)
+            None
+            if max_instances_in_memory is None
+            else 2 * self.num_workers * max_instances_in_memory // (effective_batch_size or 1)
         )
 
         # If max_instances_in_memory is not given, we'll keep a cache of all instances in this list.
@@ -523,56 +527,48 @@ class MultiProcessDataLoader(DataLoader):
     ) -> Iterator[TensorDict]:
         instance_iterator = (self._index_instance(instance) for instance in instance_iterator)
 
-        if self.max_instances_in_memory is not None:
-            max_instances_in_memory = max(
-                1, self.max_instances_in_memory // max(self.num_workers, 1)
-            )
-
-            if max_instances_in_memory > 1 and self.batch_size is not None and self.batch_size > 1:
-                # Make sure max_instances_in_memory is a multiple of `batch_size`.
-                max_instances_in_memory = (
-                    (max_instances_in_memory + self.batch_size - 1) // self.batch_size
-                ) * self.batch_size
-
-            if self.shuffle:
-                instance_iterator = shuffle_iterable(
-                    instance_iterator,
-                    max_instances_in_memory,
-                )
-
-            instance_chunks: Iterable[List[Instance]] = lazy_groups_of(
-                instance_iterator, max_instances_in_memory
+        if move_to_device and self.cuda_device is not None:
+            tensorize = lambda batch: nn_util.move_to_device(  # noqa: E731
+                self.collate_fn(batch), self.cuda_device
             )
         else:
-            # At this point we've already loaded the instances in memory and indexed them,
-            # so this won't take long.
-            instance_chunks = [list(instance_iterator)]
-            if self.shuffle:
-                random.shuffle(instance_chunks[0])
+            tensorize = self.collate_fn
 
-        for instances in instance_chunks:
-            batches: Iterator[List[Instance]]
-            if self.batch_sampler:
+        if self.batch_sampler is not None:
+            instance_chunks: Iterable[List[Instance]]
+
+            if self.max_instances_in_memory is not None:
+                instance_chunks = lazy_groups_of(instance_iterator, self.max_instances_in_memory)
+            else:
+                instance_chunks = [list(instance_iterator)]
+
+            for instances in instance_chunks:
                 batches = (
                     [instances[i] for i in batch_indices]
                     for batch_indices in self.batch_sampler.get_batch_indices(instances)
                 )
-            else:
-                # NOTE: it's safe to assume `batch_size` is not `None` when `batch_sampler` is `None`.
-                # Hence the `type: ignore` comment.
-                batches = lazy_groups_of(instances, self.batch_size)  # type: ignore[arg-type]
+                for batch in batches:
+                    yield tensorize(batch)
+        else:
+            # Safe to assume this is not `None` when `self.batch_sampler` is `None`.
+            assert self.batch_size is not None
 
-            for batch in batches:
-                if (
-                    self.batch_sampler is None
-                    and self.drop_last
-                    and len(batch) < self.batch_size  # type: ignore[operator]
-                ):
+            if self.shuffle:
+                if self.max_instances_in_memory is not None:
+                    instance_iterator = shuffle_iterable(
+                        instance_iterator,
+                        self.max_instances_in_memory,
+                    )
+                else:
+                    # At this point we've already loaded the instances in memory and indexed them,
+                    # so this won't take long.
+                    instance_iterator = list(instance_iterator)
+                    random.shuffle(instance_iterator)
+
+            for batch in lazy_groups_of(instance_iterator, self.batch_size):
+                if self.drop_last and len(batch) < self.batch_size:
                     break
-                tensor_dict = self.collate_fn(batch)
-                if move_to_device and self.cuda_device is not None:
-                    tensor_dict = nn_util.move_to_device(tensor_dict, self.cuda_device)
-                yield tensor_dict
+                yield tensorize(batch)
 
 
 class WorkerError(Exception):
