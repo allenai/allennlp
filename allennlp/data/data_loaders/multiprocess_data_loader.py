@@ -24,7 +24,7 @@ import allennlp.nn.util as nn_util
 logger = logging.getLogger(__name__)
 
 
-@DataLoader.register("multi_process")
+@DataLoader.register("multiprocess")
 class MultiProcessDataLoader(DataLoader):
     """
     The `MultiProcessDataLoader` is a [`DataLoader`](../data_loader/#dataloader)
@@ -82,7 +82,7 @@ class MultiProcessDataLoader(DataLoader):
 
         This means that in order for multi-process loading to be efficient when `num_workers > 1`,
         the `reader` needs to implement
-        [`manual_multi_process_sharding`](/api/data/dataset_readers/dataset_reader/#datasetreader).
+        [`manual_multiprocess_sharding`](/api/data/dataset_readers/dataset_reader/#datasetreader).
 
     max_instances_in_memory: `int`, optional (default = `None`)
         If not specified, all instances will be read and cached in memory for the duration
