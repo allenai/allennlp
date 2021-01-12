@@ -8,7 +8,7 @@ import pytest
 from allennlp.common import Lazy, Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.data import PyTorchDataLoader, AllennlpDataset
+from allennlp.data.data_loaders import SimpleDataLoader
 from allennlp.training import Trainer
 from allennlp.training.learning_rate_schedulers import LearningRateScheduler, SlantedTriangular
 from allennlp.training.optimizers import Optimizer
@@ -113,14 +113,14 @@ class SlantedTriangularTest(AllenNlpTestCase):
         )
         # The method called in the logic below only checks the length of this list, not its
         # contents, so this should be safe.
-        instances = AllennlpDataset([1] * 40)
+        instances = [1] * 40
         optim = self._get_optimizer()
         trainer = Trainer.from_params(
             model=self.model,
             optimizer=Lazy(lambda **kwargs: optim),
             serialization_dir=self.TEST_DIR,
             params=params,
-            data_loader=PyTorchDataLoader(instances, batch_size=10),
+            data_loader=SimpleDataLoader(instances, batch_size=10),
         )
         assert isinstance(trainer._learning_rate_scheduler, SlantedTriangular)
 
@@ -150,7 +150,7 @@ class SlantedTriangularTest(AllenNlpTestCase):
             optimizer=Lazy(lambda **kwargs: optim),
             serialization_dir=self.TEST_DIR,
             params=params,
-            data_loader=PyTorchDataLoader(instances, batch_size=10),
+            data_loader=SimpleDataLoader(instances, batch_size=10),
         )
         assert trainer._learning_rate_scheduler.num_epochs == 3
 
