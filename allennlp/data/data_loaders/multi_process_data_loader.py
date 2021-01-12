@@ -35,7 +35,7 @@ class MultiProcessDataLoader(DataLoader):
 
     See
     [Using your reader with multi-process or distributed data loading](/api/data/dataset_readers/dataset_reader/#datasetreader.using_your_reader_with_multi-process_or_distributed_data_loading)
-    for more information on how to optimize your `DatasetReader`.
+    for more information on how to optimize your `DatasetReader` for use with this `DataLoader`.
 
     # Parameters
 
@@ -75,7 +75,7 @@ class MultiProcessDataLoader(DataLoader):
         to `__iter__()`.
 
     num_workers: `int`, optional (default = `0`)
-        The number of workers to use to read `Instance`s in parallel.
+        The number of workers to use to read `Instances` in parallel.
         If `num_workers = 0`, everything is done in the main process. Otherwise `num_workers`
         workers are forked or spawned (depending on the value of `start_method`), each of which
         calls `read()` on their copy of the `reader`.
@@ -84,12 +84,19 @@ class MultiProcessDataLoader(DataLoader):
         the `reader` needs to implement
         [`manual_multi_process_sharding`](/api/data/dataset_readers/dataset_reader/#datasetreader).
 
+        !!! Warning
+            Multi-processing code in Python is complicated! We highly recommend you read the short
+            [Best practices](#multiprocessdataloader.best_practices) and
+            [Common issues](#multiprocessdataloader.common_issues) sections below before using this option.
+
     max_instances_in_memory: `int`, optional (default = `None`)
         If not specified, all instances will be read and cached in memory for the duration
         of the data loader's life. This is generally ideal when your data can fit in memory
         during training. However, when your datasets are too big, using this option
         will turn on lazy loading, where only `max_instances_in_memory` instances are processed
         at a time.
+
+        When using this option you should generally set it to a multiple of `batch_size`.
 
         !!! Note
             This setting will affect how a `batch_sampler` is applied. If
@@ -101,6 +108,11 @@ class MultiProcessDataLoader(DataLoader):
         The [start method](https://docs.python.org/3.7/library/multiprocessing.html#contexts-and-start-methods)
         used to spin up workers.
 
+        On Linux or OS X, "fork" usually has the lowest overhead for starting workers
+        but could potentially lead to dead-locks if you're using lower-level libraries that are not fork-safe.
+
+        If you run into these issues, try using "spawn" instead.
+
     cuda_device: `Optional[Union[int, str, torch.device]]`, optional (default = `None`)
         If given, batches will automatically be put on this device.
 
@@ -109,9 +121,42 @@ class MultiProcessDataLoader(DataLoader):
             will automatically call [`set_target_device()`](#set_target_device) before iterating
             over batches.
 
-    !!! Warning
+    # Best practices
+
+    - **Large datasets**
+
+        If your dataset is too big to fit into memory (a common problem), you'll need to load it lazily.
+        This is done by simply setting the `max_instances_in_memory` parameter to a non-zero integer, ideally
+        a multiple of your batch size. But the optimal value depends on your use case.
+
+        If you're using a `batch_sampler`, you will generally get better samples by setting
+        `max_instances_in_memory` to a higher number - such as 10 to 100 times your batch size -
+        since this determines how many `Instances` your `batch_sampler` gets to sample from at a time.
+
+        But if you're not using a `batch_sampler` then this number is much less important. You might
+        see slightly better performance by keeping `max_instances_in_memory` smaller, such as
+        2 to 10 times your batch size.
+
+        Keep in mind that using `max_instances_in_memory` generally results in a slower
+        training loop unless you load data in worker processes by setting the `num_workers` option to a
+        non-zero integer (see below). That way data loading won't block the main process.
+
+    - **Performance**
+
+        The quickest way to increase the performance of data loading is adjust the `num_workers` parameter.
+        `num_workers` determines how many workers are used to read `Instances` from your
+        `DatasetReader`. By default, this is set to `0`, which means everything is done in the main process.
+
+        Before trying to set `num_workers` to a non-zero number, you should make sure your `DatasetReader`
+        is [optimized for use with multi-process data loading]
+        (/api/data/dataset_readers/dataset_reader/#datasetreader.using_your_reader_with_multi-process_or_distributed_data_loading).
+
+    # Common issues
+
+    - **Dead-locks**
+
         Multiprocessing code in Python is complicated! Especially code that involves lower-level libraries
-        which may be spawning their own threads / processes. If you run into dead-locks while
+        which may be spawning their own threads. If you run into dead-locks while
         using `num_workers > 0`, luckily there are two simple work-arounds which usually fix the issue.
 
         The first work-around is to disable parallelism for these low-level libraries.
@@ -123,14 +168,23 @@ class MultiProcessDataLoader(DataLoader):
 
         See [issue #4848](https://github.com/allenai/allennlp/issues/4848) for more info.
 
-    !!! Warning
-        Another issue besides dead-locks that you could run into when using `num_workers > 0`
-        is running out of shared memory, since tensors are passed between processes
-        using shared memory, and some systems impose strict limits on the allowed size of shared
-        memory.
+        Dead-locks could also be caused by running out of shared memory (see below).
 
-        Luckily there is also a simple work-around for this. Either decrease `max_instances_in_memory`
-        or increase your system's `ulimit`.
+    - **Shared memory restrictions**
+
+        Tensors are passed between processes using shared memory, and some systems impose strict
+        limits on the allowed size of shared memory.
+
+        Luckily this is simple to debug and simple to fix.
+
+        First, to verify that this is your issue just watch your shared memory as your data loader runs.
+        For example, run `watch -n 0.3 'df -h | grep shm'`.
+
+        If you're seeing your shared memory blow up until it maxes-out, then you either need to decrease
+        `max_instances_in_memory` or increase your system's `ulimit`.
+
+        If you're using Docker, you can increase the shared memory available on a container by running
+        it with the option `--ipc=host` or by setting `--shm-size`.
 
         See [issue #4847](https://github.com/allenai/allennlp/issues/4847) for more info.
 
@@ -205,13 +259,14 @@ class MultiProcessDataLoader(DataLoader):
         # They have to be big enough that is doesn't hurt performance, but small enough
         # that they don't take up too many resources when there is a bottleneck on the
         # consuming end of a queue.
+        effective_batch_size = (
+            self.batch_size if self.batch_sampler is None else self.batch_sampler.get_batch_size()
+        )
         self._max_instance_queue_size = (
             None if max_instances_in_memory is None else max_instances_in_memory * 4
         )
         self._max_batch_queue_size = (
-            None
-            if max_instances_in_memory is None
-            else 4 * max_instances_in_memory // (batch_size or 1)
+            None if max_instances_in_memory is None else (effective_batch_size or 1)
         )
 
         # If max_instances_in_memory is not given, we'll keep a cache of all instances in this list.
