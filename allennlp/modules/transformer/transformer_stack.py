@@ -9,9 +9,9 @@ from allennlp.modules.transformer.transformer_layer import TransformerLayer
 from allennlp.modules.transformer.transformer_module import TransformerModule
 
 
-class TransformerBlock(TransformerModule, FromParams):
+class TransformerStack(TransformerModule, FromParams):
     """
-    This module is the basic transformer block, which acts as an encoder.
+    This module is the basic transformer stack.
     Details in the paper:
     [BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding, Devlin et al, 2019]
     (https://api.semanticscholar.org/CorpusID:52967399)
@@ -27,6 +27,9 @@ class TransformerBlock(TransformerModule, FromParams):
     hidden_dropout : `float` (default = `0.0`)
         Dropout probability for the `OutputLayer`.
     activation : `Union[str, torch.nn.Module]` (default = `"relu"`)
+    add_cross_attention: `bool` (default = `False`)
+        If True, the `TransformerLayer` modules will have cross attention modules as well.
+        This is helpful when using the `TransformerStack` as a decoder.
     """
 
     _huggingface_mapping = {"layer": "layers"}
@@ -41,9 +44,11 @@ class TransformerBlock(TransformerModule, FromParams):
         attention_dropout: float = 0.1,
         hidden_dropout: float = 0.1,
         activation: Union[str, torch.nn.Module] = "relu",
+        add_cross_attention: bool = False,
     ):
         super().__init__()
         self._hidden_size = hidden_size
+        self._add_cross_attention = add_cross_attention
         layer = TransformerLayer(
             hidden_size,
             intermediate_size,
@@ -51,6 +56,7 @@ class TransformerBlock(TransformerModule, FromParams):
             attention_dropout,
             hidden_dropout,
             activation,
+            add_cross_attention,
         )
         self.layers = replicate_layers(layer, num_hidden_layers)
 
@@ -60,6 +66,7 @@ class TransformerBlock(TransformerModule, FromParams):
         attention_mask: Optional[torch.Tensor] = None,
         head_mask: Optional[torch.Tensor] = None,
         encoder_hidden_states: Optional[torch.Tensor] = None,
+        encoder_attention_mask: Optional[torch.Tensor] = None,
         output_attentions: bool = False,
         output_hidden_states: bool = False,
     ):
@@ -76,6 +83,7 @@ class TransformerBlock(TransformerModule, FromParams):
         """
         all_hidden_states = () if output_hidden_states else None
         all_attentions = () if output_attentions else None
+        all_cross_attentions = () if output_attentions and self._add_cross_attention else None
         for i, layer_module in enumerate(self.layers):
             if output_hidden_states:
                 all_hidden_states = all_hidden_states + (hidden_states,)  # type: ignore
@@ -87,16 +95,23 @@ class TransformerBlock(TransformerModule, FromParams):
                 attention_mask,
                 layer_head_mask,
                 encoder_hidden_states,
+                encoder_attention_mask,
                 output_attentions,
             )
             hidden_states = layer_outputs[0]
             if output_attentions:
                 all_attentions = all_attentions + (layer_outputs[1],)  # type: ignore
+                if self._add_cross_attention:
+                    all_cross_attentions = all_cross_attentions + (layer_outputs[2],)  # type: ignore
 
         if output_hidden_states:
             all_hidden_states = all_hidden_states + (hidden_states,)  # type: ignore
 
-        return tuple(v for v in [hidden_states, all_hidden_states, all_attentions] if v is not None)
+        return tuple(
+            v
+            for v in [hidden_states, all_hidden_states, all_attentions, all_cross_attentions]
+            if v is not None
+        )
 
     @classmethod
     def _get_input_arguments(
@@ -119,7 +134,17 @@ class TransformerBlock(TransformerModule, FromParams):
         final_kwargs["attention_dropout"] = submodules["layers.0.attention.self.dropout"].p
         final_kwargs["hidden_dropout"] = submodules["layers.0.attention.output.dropout"].p
         final_kwargs["intermediate_size"] = submodules["layers.0.intermediate.dense"].out_features
-        final_kwargs["activation"] = submodules["layers.0.intermediate"].intermediate_act_fn
+
+        # We require the if block as `act_fn` is a function rather than a module,
+        # so `_get_mapped_submodules` does not automatically fix this.
+        if source == "huggingface":
+            final_kwargs["activation"] = getattr(
+                submodules["layers.0.intermediate"], "intermediate_act_fn"
+            )
+        else:
+            final_kwargs["activation"] = getattr(submodules["layers.0.intermediate"], "act_fn")
+
+        final_kwargs["add_cross_attention"] = "layers.0.cross_attention" in submodules
 
         final_kwargs.update(**kwargs)
 
