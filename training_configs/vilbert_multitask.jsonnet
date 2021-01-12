@@ -1,17 +1,25 @@
-local model_name = "bert-base-uncased";
+local model_name = "bert-base-cased";
 local effective_batch_size = 128;
 local gpu_batch_size = 128;
 local num_gpus = 1;
 
-local vqa_vocabulary = {
-  "type": "from_files",
-  "directory": "https://storage.googleapis.com/allennlp-public-data/vqav2/vilbert_vqa_balanced_real.vocab.tar.gz"
-};
+local construct_vocab = false;
+
+local vocabulary = if construct_vocab then {
+      // read the files to construct the vocab
+      "min_count": {"answers": 9}
+    } else {
+      // read the constructed vocab
+      "type": "from_files",
+      "directory": std.format(
+        "https://storage.googleapis.com/allennlp-public-data/vilbert/vilbert_multitask.%s.vocab.tar.gz",
+        model_name)
+    };
 
 local reader_common = {
-    "image_loader": "torch",
-    "image_featurizer": "resnet_backbone",
-    "region_detector": "faster_rcnn",
+    [if !construct_vocab then "image_loader"]: "torch",
+    [if !construct_vocab then "image_featurizer"]: "resnet_backbone",
+    [if !construct_vocab then "region_detector"]: "faster_rcnn",
     "tokenizer": {
       "type": "pretrained_transformer",
       "model_name": model_name
@@ -22,7 +30,7 @@ local reader_common = {
         "model_name": model_name
       }
     },
-    #"max_instances": 1000,
+    #"max_instances": 1000, # DEBUG
     "image_processing_batch_size": 32,
 };
 
@@ -33,24 +41,26 @@ local reader_common = {
       "vqa": reader_common {
         "type": "vqav2",
         #"image_dir": "/mnt/tank/dirkg/data/vision/vqa/balanced_real",
-        #"feature_cache_dir": "/mnt/tank/dirkg/data/vision/vqa/balanced_real/feature_cache",
+        #[if !construct_vocab then "feature_cache_dir"]: "/mnt/tank/dirkg/data/vision/vqa/balanced_real/feature_cache",
         "image_dir": "/Users/dirkg/Documents/data/vision/vqa/balanced_real",
-        "feature_cache_dir": "/Users/dirkg/Documents/data/vision/vqa/balanced_real/feature_cache",
-        "answer_vocab": vqa_vocabulary,
+        [if !construct_vocab then "feature_cache_dir"]: "/Users/dirkg/Documents/data/vision/vqa/balanced_real/feature_cache",
+        "answer_vocab": if construct_vocab then null else vocabulary,
+        "multiple_answers_per_question": !construct_vocab
       },
       "gqa": reader_common {
         "type": "gqa",
         #"image_dir": "/mnt/tank/dirkg/data/vision/gqa",
-        #"feature_cache_dir": "/mnt/tank/dirkg/data/vision/gqa/feature_cache",
+        #[if !construct_vocab then "feature_cache_dir"]: "/mnt/tank/dirkg/data/vision/gqa/feature_cache",
         "image_dir": "/Users/dirkg/Documents/data/vision/gqa",
-        "feature_cache_dir": "/Users/dirkg/Documents/data/vision/gqa/feature_cache",
+        [if !construct_vocab then "feature_cache_dir"]: "/Users/dirkg/Documents/data/vision/gqa/feature_cache",
+        "answer_vocab": if construct_vocab then null else vocabulary
       },
       "ve": reader_common {
         "type": "visual-entailment",
         #"image_dir": "/mnt/tank/dirkg/data/vision/SNLI-VE/data/Flickr30K/flickr30k_images",
-        #"feature_cache_dir": "/mnt/tank/dirkg/data/vision/SNLI-VE/data/feature_cache",
+        #[if !construct_vocab then "feature_cache_dir"]: "/mnt/tank/dirkg/data/vision/SNLI-VE/data/feature_cache",
         "image_dir": "/Users/dirkg/Documents/data/vision/SNLI-VE/data/Flickr30K/flickr30k_images",
-        "feature_cache_dir": "/Users/dirkg/Documents/data/vision/SNLI-VE/data/feature_cache",
+        [if !construct_vocab then "feature_cache_dir"]: "/Users/dirkg/Documents/data/vision/SNLI-VE/data/feature_cache",
       }
     }
   },
@@ -61,7 +71,7 @@ local reader_common = {
       }
     }
   },
-  #"vocabulary": vqa_vocabulary,   # We'll have to discover the vocab until this config is ready to pre-create it.
+  "vocabulary": vocabulary,
   "train_data_path": {
     "vqa": ["balanced_real_train", "balanced_real_val[1000:]"],
     "gqa": "train_balanced",
@@ -114,8 +124,15 @@ local reader_common = {
   "data_loader": {
     "type": "multitask",
     "batch_size": gpu_batch_size,
+    "shuffle": true,
+    //[if !construct_vocab then "max_instances_in_memory"]: 1024*16
   },
-  "trainer": {
+  [if num_gpus > 1 then "distributed"]: {
+    "cuda_devices": std.range(0, num_gpus - 1)
+    //"cuda_devices": std.repeat([-1], num_gpus)  # Use this for debugging on CPU
+  },
+  // Don't train if we're just constructing vocab. The results would be confusing.
+  [if !construct_vocab then "trainer"]: {
     "optimizer": {
       "type": "huggingface_adamw",
       "lr": 4e-5,
@@ -132,4 +149,7 @@ local reader_common = {
     "num_epochs": 30,
     "num_gradient_accumulation_steps": effective_batch_size / gpu_batch_size / std.max(1, num_gpus),
   },
+  "random_seed": 876170670,
+  "numpy_seed": 876170670,
+  "pytorch_seed": 876170670,
 }
