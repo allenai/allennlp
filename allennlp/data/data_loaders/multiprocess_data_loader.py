@@ -1,6 +1,7 @@
 from collections import deque
 import logging
 from multiprocessing.process import BaseProcess
+from os import PathLike
 import random
 import sys
 import traceback
@@ -24,14 +25,11 @@ import allennlp.nn.util as nn_util
 logger = logging.getLogger(__name__)
 
 
-@DataLoader.register("multi_process")
+@DataLoader.register("multiprocess")
 class MultiProcessDataLoader(DataLoader):
     """
     The `MultiProcessDataLoader` is a [`DataLoader`](../data_loader/#dataloader)
     that's optimized for AllenNLP experiments.
-    Unlike the [`PyTorchDataLoader`](../pytorch_data_loader/#pytorchdataloader),
-    it can efficiently utilize multiple workers and always allows you to use a
-    [`BatchSampler`](../../samplers/batch_sampler/#batchsampler).
 
     See
     [Using your reader with multi-process or distributed data loading](/api/data/dataset_readers/dataset_reader/#datasetreader.using_your_reader_with_multi-process_or_distributed_data_loading)
@@ -42,7 +40,7 @@ class MultiProcessDataLoader(DataLoader):
     reader: `DatasetReader`, required
         A `DatasetReader` used to load instances from the `data_path`.
 
-    data_path: `str`, required
+    data_path: `Union[str, PathLike]`, required
         Passed to `DatasetReader.read()`.
 
         !!! Note
@@ -82,7 +80,7 @@ class MultiProcessDataLoader(DataLoader):
 
         This means that in order for multi-process loading to be efficient when `num_workers > 1`,
         the `reader` needs to implement
-        [`manual_multi_process_sharding`](/api/data/dataset_readers/dataset_reader/#datasetreader).
+        [`manual_multiprocess_sharding`](/api/data/dataset_readers/dataset_reader/#datasetreader).
 
         !!! Warning
             Multi-processing code in Python is complicated! We highly recommend you read the short
@@ -193,7 +191,7 @@ class MultiProcessDataLoader(DataLoader):
     def __init__(
         self,
         reader: DatasetReader,
-        data_path: str,
+        data_path: Union[str, PathLike],
         *,
         batch_size: int = None,
         drop_last: bool = False,
@@ -234,7 +232,7 @@ class MultiProcessDataLoader(DataLoader):
                 raise ValueError("max_instances_in_memory must be at least 1")
 
         self.reader = reader
-        self.data_path = data_path
+        self.data_path = str(data_path)
         self.batch_size = batch_size
         self.drop_last = drop_last
         self.shuffle = shuffle

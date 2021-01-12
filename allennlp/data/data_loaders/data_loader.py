@@ -41,10 +41,10 @@ class DataLoader(Registrable):
     Additionally, this class should also implement `__len__()` when possible.
 
     The default implementation is
-    [`MultiProcessDataLoader`](../multi_process_data_loader/#multiprocessdataloader).
+    [`MultiProcessDataLoader`](../multiprocess_data_loader/#multiprocessdataloader).
     """
 
-    default_implementation = "multi_process"
+    default_implementation = "multiprocess"
 
     def __len__(self) -> int:
         raise TypeError
