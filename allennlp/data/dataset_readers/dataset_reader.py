@@ -115,6 +115,10 @@ class DatasetReader(Registrable):
     serialization_dir: `str`, optional (default=`None`)
         The directory in which the training output is saved to, or the directory the model is loaded from.
 
+        !!! Note
+            This is typically not given an entry in a configuration file. It will be set automatically
+            when using the built-in `allennp` commands.
+
     # Using your reader with multi-process or distributed data loading
 
     There are two things you may need to update in your `DatasetReader` in order for

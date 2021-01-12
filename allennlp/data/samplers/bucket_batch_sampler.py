@@ -158,3 +158,6 @@ class BucketBatchSampler(BatchSampler):
             return math.floor(batch_count_float)
         else:
             return math.ceil(batch_count_float)
+
+    def get_batch_size(self) -> Optional[int]:
+        return self.batch_size
