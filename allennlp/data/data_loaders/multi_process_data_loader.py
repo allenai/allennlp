@@ -1,6 +1,7 @@
 from collections import deque
 import logging
 from multiprocessing.process import BaseProcess
+from os import PathLike
 import random
 import sys
 import traceback
@@ -42,7 +43,7 @@ class MultiProcessDataLoader(DataLoader):
     reader: `DatasetReader`, required
         A `DatasetReader` used to load instances from the `data_path`.
 
-    data_path: `str`, required
+    data_path: `Union[str, PathLike]`, required
         Passed to `DatasetReader.read()`.
 
         !!! Note
@@ -139,7 +140,7 @@ class MultiProcessDataLoader(DataLoader):
     def __init__(
         self,
         reader: DatasetReader,
-        data_path: str,
+        data_path: Union[str, PathLike],
         *,
         batch_size: int = None,
         drop_last: bool = False,
@@ -180,7 +181,7 @@ class MultiProcessDataLoader(DataLoader):
                 raise ValueError("max_instances_in_memory must be at least 1")
 
         self.reader = reader
-        self.data_path = data_path
+        self.data_path = str(data_path)
         self.batch_size = batch_size
         self.drop_last = drop_last
         self.shuffle = shuffle
