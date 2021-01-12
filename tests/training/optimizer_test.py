@@ -102,5 +102,6 @@ class TestDenseSparseAdam(AllenNlpTestCase):
         optimizer_params = Params({"type": "dense_sparse_adam"})
         parameters = [[n, p] for n, p in self.model.named_parameters() if p.requires_grad]
         optimizer = Optimizer.from_params(model_parameters=parameters, params=optimizer_params)
-        self.instances.index_with(self.vocab)
+        for instance in self.instances:
+            instance.index_fields(self.vocab)
         GradientDescentTrainer(self.model, optimizer, SimpleDataLoader(self.instances, 2)).train()
