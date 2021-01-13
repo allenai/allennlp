@@ -188,7 +188,7 @@ class MultiTaskDataLoader(DataLoader):
         return (
             nn_util.move_to_device(
                 Batch(instances).as_tensor_dict(),
-                "cpu" if self.cuda_device is None else self.cuda_device)
+                -1 if self.cuda_device is None else self.cuda_device)
             for instances in self.scheduler.batch_instances(epoch_instances)
         )
 
