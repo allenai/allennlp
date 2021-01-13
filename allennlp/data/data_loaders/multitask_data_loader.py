@@ -4,17 +4,13 @@ import math
 
 import torch
 from overrides import overrides
-from torch import Tensor
 
 from allennlp.common import util
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader, DatasetReaderInput
 from allennlp.data.batch import Batch
 from allennlp.data.data_loaders.data_loader import DataLoader, TensorDict
 from allennlp.data.data_loaders.multiprocess_data_loader import MultiProcessDataLoader
-from allennlp.data.data_loaders.multitask_scheduler import (
-    MultiTaskScheduler,
-    HomogeneousRoundRobinScheduler,
-)
+from allennlp.data.data_loaders.multitask_scheduler import MultiTaskScheduler
 from allennlp.data.data_loaders.multitask_epoch_sampler import MultiTaskEpochSampler
 from allennlp.data.dataset_readers.multitask import MultiTaskDatasetReader
 from allennlp.data.instance import Instance
