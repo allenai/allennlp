@@ -91,14 +91,18 @@ class TestBucketSampler(SamplerTest):
             sorting_keys=["text"],
             drop_last=True,
         )
+
         # We use a custom collate_fn for testing, which doesn't actually create tensors,
         # just the allennlp Batches.
+        def collate_fn(x, **kwargs):
+            return Batch(x)
+
         data_loader = MultiProcessDataLoader(
             self.get_mock_reader(),
             "fake_path",
             batch_sampler=sampler,
-            collate_fn=lambda x: Batch(x),
         )
+        data_loader.collate_fn = collate_fn
         data_loader.index_with(self.vocab)
         batches = [batch for batch in iter(data_loader)]
         stats = self.get_batches_stats(batches)

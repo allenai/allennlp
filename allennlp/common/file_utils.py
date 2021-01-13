@@ -38,9 +38,6 @@ from zipfile import ZipFile, is_zipfile
 import tarfile
 import shutil
 import pickle
-import warnings
-
-import numpy as np
 import time
 import warnings
 
@@ -49,6 +46,7 @@ import botocore
 import torch
 from botocore.exceptions import ClientError, EndpointConnectionError
 from filelock import FileLock as _FileLock
+import numpy as np
 from overrides import overrides
 import requests
 from requests.adapters import HTTPAdapter

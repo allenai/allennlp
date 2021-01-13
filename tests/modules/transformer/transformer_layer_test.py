@@ -142,23 +142,22 @@ class TestAttentionLayer(AllenNlpTestCase):
         seq_len = 768
         dim = module.self.query.in_features
         hidden_states = torch.randn(batch_size, seq_len, dim)
-        attention_mask = torch.randn(batch_size, seq_len)
+        attention_mask = torch.randint(0, 2, (batch_size, seq_len))
         mask_reshp = (batch_size, 1, 1, dim)
         attention_mask_hf = (attention_mask == 0).view(mask_reshp).expand(
             batch_size, 12, seq_len, seq_len
         ) * -10e5
+
+        # setting to eval mode to avoid non-deterministic dropout.
+        module = module.eval()
+        pretrained_module = pretrained_module.eval()
 
         torch.manual_seed(1234)
         output = module.forward(hidden_states, attention_mask=attention_mask.squeeze())[0]
         torch.manual_seed(1234)
         hf_output = pretrained_module.forward(hidden_states, attention_mask=attention_mask_hf)[0]
 
-        # FIX: look into the reason for mismatch.
-        # Update: The discrepancy comes from torch.nn.Dropout layer, despite setting random seeds.
-        # Have also tried setting random seeds right before the actual call to dropout in both modules.
-        # assert torch.allclose(output, hf_output)
-        print(output)
-        print(hf_output)
+        assert torch.allclose(output, hf_output, atol=1e-04)
 
 
 LAYER_PARAMS_DICT = {
@@ -336,20 +335,19 @@ class TestTransformerLayer(AllenNlpTestCase):
         seq_len = 768
         dim = module.attention.self.query.in_features
         hidden_states = torch.randn(batch_size, seq_len, dim)
-        attention_mask = torch.randn(batch_size, seq_len)
+        attention_mask = torch.randint(0, 2, (batch_size, seq_len))
         mask_reshp = (batch_size, 1, 1, dim)
         attention_mask_hf = (attention_mask == 0).view(mask_reshp).expand(
             batch_size, 12, seq_len, seq_len
         ) * -10e5
+
+        # setting to eval mode to avoid non-deterministic dropout.
+        module = module.eval()
+        pretrained_module = pretrained_module.eval()
 
         torch.manual_seed(1234)
         output = module.forward(hidden_states, attention_mask=attention_mask.squeeze())[0]
         torch.manual_seed(1234)
         hf_output = pretrained_module.forward(hidden_states, attention_mask=attention_mask_hf)[0]
 
-        # FIX: look into the reason for mismatch.
-        # Update: The discrepancy comes from torch.nn.Dropout layer, despite setting random seeds.
-        # Have also tried setting random seeds right before the actual call to dropout in both modules.
-        # assert torch.allclose(output, hf_output)
-        print(output)
-        print(hf_output)
+        assert torch.allclose(output, hf_output, atol=1e-04)

@@ -3,6 +3,7 @@ from transformers import AutoModel
 from allennlp.common.testing import ModelTestCase
 from allennlp.data import Vocabulary
 from allennlp.models.visual_entailment import VisualEntailmentModel
+from allennlp.common.testing import assert_equal_parameters
 
 
 class TestVEVilbert(ModelTestCase):
@@ -48,27 +49,27 @@ class TestVEVilbert(ModelTestCase):
             image_fixed_layer=0,
         )
 
-        def convert_transformer_param_name(name: str):
-            # We wrap the encoder in a `TimeDistributed`, which gives us this extra _module.
-            name = name.replace("layer", "layers1")
-            name = name.replace("LayerNorm", "layer_norm")
-            return name
-
         transformer = AutoModel.from_pretrained(model_name)
-        model_parameters = dict(model.named_parameters())
-        print(list(model_parameters.keys()))
-        transformer_parameters = dict(transformer.named_parameters())
-        print(list(transformer_parameters.keys()))
 
-        # We loop over the transformer parameters here, because the encoder check is easier from
-        # this side (all of these encoder parameters should match, but that's not true the other way
-        # around).
-        for name, parameter in transformer_parameters.items():
-            if name.startswith("embeddings"):
-                # Embedding layer should be identical
-                assert parameter.allclose(model_parameters[name])
-            if name.startswith("encoder"):
-                # Encoder parameters should also be identical, after we match up the names
-                # correctly.
-                our_name = convert_transformer_param_name(name)
-                assert parameter.allclose(model_parameters[our_name])
+        # compare embedding parameters
+        mapping = {
+            val: key
+            for key, val in model.embeddings._construct_default_mapping(
+                transformer.embeddings, "huggingface", {}
+            ).items()
+        }
+        assert_equal_parameters(transformer.embeddings, model.embeddings, mapping=mapping)
+
+        # compare encoder parameters
+        mapping = {
+            val: key
+            for key, val in model.encoder._construct_default_mapping(
+                transformer.encoder, "huggingface", {}
+            ).items()
+        }
+
+        # We ignore the new parameters for the second modality, since they won't be present
+        # in the huggingface model.
+        assert_equal_parameters(
+            transformer.encoder, model.encoder, ignore_missing=True, mapping=mapping
+        )

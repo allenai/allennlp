@@ -1,11 +1,12 @@
-from typing import List, Iterable
+from typing import List, Iterable, Dict
 
+import torch
 import pytest
-
+from allennlp.common.testing import requires_gpu
 from allennlp.data.instance import Instance
 from allennlp.data.dataset_readers import DatasetReader
 from allennlp.data.data_loaders import MultiProcessDataLoader, WorkerError
-from allennlp.data.fields import TextField, MetadataField
+from allennlp.data.fields import Field, TextField, MetadataField, TensorField
 from allennlp.data.tokenizers import PretrainedTransformerTokenizer
 from allennlp.data.token_indexers import PretrainedTransformerIndexer
 from allennlp.data.vocabulary import Vocabulary
@@ -28,7 +29,7 @@ class MockDatasetReader(DatasetReader):
 
     def __init__(self, model: str = "epwalsh/bert-xsmall-dummy", **kwargs) -> None:
         super().__init__(
-            manual_distributed_sharding=True, manual_multi_process_sharding=True, **kwargs
+            manual_distributed_sharding=True, manual_multiprocess_sharding=True, **kwargs
         )
         self.tokenizer = PretrainedTransformerTokenizer(model)
         self.token_indexers = {"tokens": PretrainedTransformerIndexer(model)}
@@ -40,9 +41,12 @@ class MockDatasetReader(DatasetReader):
             yield self.text_to_instance(i, source, target)
 
     def text_to_instance(self, index: int, source: str, target: str = None) -> Instance:  # type: ignore
-        fields = {}
+        fields: Dict[str, Field] = {}
         fields["source"] = TextField(self.tokenizer.tokenize(source))
         fields["index"] = MetadataField(index)  # type: ignore
+        # It's important to have tests that use a tensor field since sending tensors
+        # between processes has a lot of pitfalls.
+        fields["tensor"] = TensorField(torch.tensor([1, 2, 3]))
         if target is not None:
             fields["target"] = TextField(self.tokenizer.tokenize(target))
         return Instance(fields)  # type: ignore
@@ -107,7 +111,7 @@ def test_error_raised_when_text_fields_contain_token_indexers(max_instances_in_m
     ],
     ids=str,
 )
-def test_multi_process_data_loader(options):
+def test_multiprocess_data_loader(options):
     reader = MockDatasetReader()
     data_path = "this doesn't matter"
 
@@ -171,3 +175,27 @@ def test_batches_per_epoch():
 
     assert len(loader) == 10
     assert len(list(loader)) == 10
+
+
+@pytest.mark.parametrize(
+    "options",
+    [
+        dict(num_workers=0, batch_size=2),
+        dict(num_workers=1, batch_size=2),
+        dict(num_workers=1, batch_size=2, start_method="spawn"),
+    ],
+    ids=str,
+)
+@requires_gpu
+def test_load_to_cuda(options):
+    reader = MockDatasetReader()
+    loader = MultiProcessDataLoader(
+        reader=reader,
+        data_path="this doens't matter",
+        cuda_device=0,
+        **options,
+    )
+    vocab = Vocabulary.from_instances(loader.iter_instances())
+    loader.index_with(vocab)
+    for batch in loader:
+        assert batch["tensor"].device == torch.device("cuda:0")

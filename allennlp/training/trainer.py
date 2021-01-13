@@ -22,7 +22,6 @@ from allennlp.common import util as common_util
 from allennlp.common.checks import ConfigurationError, check_for_gpu
 from allennlp.data import DataLoader, TensorDict
 from allennlp.models.model import Model
-from allennlp.nn import util as nn_util
 from allennlp.training import util as training_util
 from allennlp.training.checkpointer import Checkpointer
 from allennlp.training.learning_rate_schedulers import LearningRateScheduler
@@ -80,7 +79,7 @@ class Trainer(Registrable):
 
         self._distributed = distributed
         self._rank = local_rank
-        self._master = self._rank == 0
+        self._primary = self._rank == 0
         self._world_size = world_size
 
     def train(self) -> Dict[str, Any]:
@@ -119,7 +118,7 @@ class BatchCallback(Registrable):
         epoch: int,
         batch_number: int,
         is_training: bool,
-        is_master: bool,
+        is_primary: bool,
     ) -> None:
         pass
 
@@ -141,14 +140,14 @@ class TensoboardBatchMemoryUsage(BatchCallback):
         epoch: int,
         batch_number: int,
         is_training: bool,
-        is_master: bool,
+        is_primary: bool,
     ) -> None:
         # In the distributed case we need to call this from every worker, since every
         # worker reports its own memory usage.
         cpu_memory_usage = common_util.peak_cpu_memory()
         gpu_memory_usage = common_util.peak_gpu_memory()
-        # But we only want to log from the master process.
-        if is_master:
+        # But we only want to log from the primary process.
+        if is_primary:
             trainer._tensorboard.log_memory_usage(cpu_memory_usage, gpu_memory_usage)
 
 
@@ -168,7 +167,7 @@ class EpochCallback(Registrable):
         trainer: "GradientDescentTrainer",
         metrics: Dict[str, Any],
         epoch: int,
-        is_master: bool,
+        is_primary: bool,
     ) -> None:
         pass
 
@@ -194,7 +193,7 @@ class TrackEpochCallback(EpochCallback):
         trainer: "GradientDescentTrainer",
         metrics: Dict[str, Any],
         epoch: int,
-        is_master: bool,
+        is_primary: bool,
     ) -> None:
         trainer.model.epoch = epoch + 1
 
@@ -250,7 +249,7 @@ class TrainerCallback(Registrable, metaclass=_TrainerCallbackMeta):
         epoch: int,
         batch_number: int,
         is_training: bool,
-        is_master: bool,
+        is_primary: bool,
     ) -> None:
         """
         This callback hook is called after the end of each batch. This is equivalent to `BatchCallback`.
@@ -262,7 +261,7 @@ class TrainerCallback(Registrable, metaclass=_TrainerCallbackMeta):
         trainer: "GradientDescentTrainer",
         metrics: Dict[str, Any],
         epoch: int,
-        is_master: bool,
+        is_primary: bool,
     ) -> None:
         """
         This callback hook is called after the end of each epoch. This is equivalent to `EpochCallback`.
@@ -274,7 +273,7 @@ class TrainerCallback(Registrable, metaclass=_TrainerCallbackMeta):
         trainer: "GradientDescentTrainer",
         metrics: Dict[str, Any],
         epoch: int,
-        is_master: bool,
+        is_primary: bool,
     ) -> None:
         """
         This callback hook is called after the final training epoch. The `epoch` is passed as an argument.
@@ -500,7 +499,10 @@ class GradientDescentTrainer(Trainer):
         self.model = model
 
         self.data_loader = data_loader
+        self.data_loader.set_target_device(self.cuda_device)
         self._validation_data_loader = validation_data_loader
+        if self._validation_data_loader is not None:
+            self._validation_data_loader.set_target_device(self.cuda_device)
         self.optimizer = optimizer
 
         if patience is None:  # no early stopping
@@ -598,7 +600,6 @@ class GradientDescentTrainer(Trainer):
         Does a forward pass on the given batch and returns the output dictionary that the model
         returns, after adding any specified regularization penalty to the loss (if training).
         """
-        batch = nn_util.move_to_device(batch, self.cuda_device)
         output_dict = self._pytorch_model(**batch)
 
         if for_training:
@@ -660,9 +661,9 @@ class GradientDescentTrainer(Trainer):
         except TypeError:
             num_training_batches = float("inf")
 
-        # Having multiple tqdm bars in case of distributed training will be a mess. Hence only the master's
+        # Having multiple tqdm bars in case of distributed training will be a mess. Hence only the primary's
         # progress is shown
-        if self._master:
+        if self._primary:
             batch_group_generator_tqdm = Tqdm.tqdm(
                 batch_group_generator, total=num_training_batches
             )
@@ -742,7 +743,7 @@ class GradientDescentTrainer(Trainer):
                 self._momentum_scheduler.step_batch(batch_num_total)
 
             param_updates = None
-            if self._tensorboard.should_log_histograms_this_batch() and self._master:
+            if self._tensorboard.should_log_histograms_this_batch() and self._primary:
                 # Get the magnitude of parameter updates for logging.  We need to do some
                 # computation before and after the optimizer step, and it's expensive because of
                 # GPU/CPU copies (necessary for large models, and for shipping to tensorboard), so
@@ -783,8 +784,8 @@ class GradientDescentTrainer(Trainer):
                 cuda_device=self.cuda_device,
             )
 
-            if self._master:
-                # Updating tqdm only for the master as the trainers wouldn't have one
+            if self._primary:
+                # Updating tqdm only for the primary as the trainers wouldn't have one
                 description = training_util.description_from_metrics(metrics)
                 batch_group_generator_tqdm.set_description(description, refresh=False)
                 self._tensorboard.log_batch(
@@ -807,7 +808,7 @@ class GradientDescentTrainer(Trainer):
                     epoch,
                     batches_this_epoch,
                     is_training=True,
-                    is_master=self._master,
+                    is_primary=self._primary,
                 )
 
         if self._distributed and not done_early:
@@ -863,9 +864,9 @@ class GradientDescentTrainer(Trainer):
 
         regularization_penalty = self.model.get_regularization_penalty()
 
-        # Having multiple tqdm bars in case of distributed training will be a mess. Hence only the master's
+        # Having multiple tqdm bars in case of distributed training will be a mess. Hence only the primary's
         # progress is shown
-        if self._master:
+        if self._primary:
             val_generator_tqdm = Tqdm.tqdm(validation_data_loader)
         else:
             val_generator_tqdm = validation_data_loader
@@ -926,7 +927,7 @@ class GradientDescentTrainer(Trainer):
             )
 
             description = training_util.description_from_metrics(val_metrics)
-            if self._master:
+            if self._primary:
                 val_generator_tqdm.set_description(description, refresh=False)
 
             for callback in self._batch_callbacks:
@@ -938,7 +939,7 @@ class GradientDescentTrainer(Trainer):
                     epoch,
                     batches_this_epoch,
                     is_training=False,
-                    is_master=self._master,
+                    is_primary=self._primary,
                 )
 
         if self._distributed and not done_early:
@@ -992,16 +993,16 @@ class GradientDescentTrainer(Trainer):
             metrics["best_validation_" + key] = value
 
         for callback in self._epoch_callbacks:
-            callback(self, metrics={}, epoch=-1, is_master=self._master)
+            callback(self, metrics={}, epoch=-1, is_primary=self._primary)
 
         for epoch in range(epoch_counter, self._num_epochs):
             epoch_start_time = time.time()
             train_metrics = self._train_epoch(epoch)
 
-            if self._master and self._checkpointer is not None:
+            if self._primary and self._checkpointer is not None:
                 self._checkpointer.save_checkpoint(epoch, self, save_model_only=True)
 
-            # Wait for the master to finish saving the model checkpoint
+            # Wait for the primary process to finish saving the model checkpoint
             if self._distributed:
                 dist.barrier()
 
@@ -1041,7 +1042,7 @@ class GradientDescentTrainer(Trainer):
                         logger.info("Ran out of patience.  Stopping training.")
                         break
 
-            if self._master:
+            if self._primary:
                 self._tensorboard.log_metrics(
                     train_metrics, val_metrics=val_metrics, log_to_console=True, epoch=epoch + 1
                 )  # +1 because tensorboard doesn't like 0
@@ -1067,7 +1068,7 @@ class GradientDescentTrainer(Trainer):
 
                 self._metric_tracker.best_epoch_metrics = val_metrics
 
-            if self._serialization_dir and self._master:
+            if self._serialization_dir and self._primary:
                 common_util.dump_metrics(
                     os.path.join(self._serialization_dir, f"metrics_epoch_{epoch}.json"),
                     metrics,
@@ -1080,17 +1081,17 @@ class GradientDescentTrainer(Trainer):
             if self._momentum_scheduler:
                 self._momentum_scheduler.step(this_epoch_val_metric)
 
-            if self._master and self._checkpointer is not None:
+            if self._primary and self._checkpointer is not None:
                 self._checkpointer.save_checkpoint(
                     epoch, self, is_best_so_far=self._metric_tracker.is_best_so_far()
                 )
 
-            # Wait for the master to finish saving the checkpoint
+            # Wait for the primary process to finish saving the checkpoint
             if self._distributed:
                 dist.barrier()
 
             for callback in self._epoch_callbacks:
-                callback(self, metrics=metrics, epoch=epoch, is_master=self._master)
+                callback(self, metrics=metrics, epoch=epoch, is_primary=self._primary)
 
             epoch_elapsed_time = time.time() - epoch_start_time
             logger.info("Epoch duration: %s", datetime.timedelta(seconds=epoch_elapsed_time))
@@ -1106,7 +1107,7 @@ class GradientDescentTrainer(Trainer):
             epochs_trained += 1
 
         for callback in self._end_callbacks:
-            callback(self, metrics=metrics, epoch=epoch, is_master=self._master)
+            callback(self, metrics=metrics, epoch=epoch, is_primary=self._primary)
 
         # Load the best model state before returning
         best_model_state = (

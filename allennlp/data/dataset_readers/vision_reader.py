@@ -100,7 +100,7 @@ class VisionReader(DatasetReader):
         super().__init__(
             max_instances=max_instances,
             manual_distributed_sharding=True,
-            manual_multi_process_sharding=True,
+            manual_multiprocess_sharding=True,
         )
 
         # tokenizers and indexers

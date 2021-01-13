@@ -150,14 +150,13 @@ class TransformerModule(torch.nn.Module):
 
         # Parameters:
 
-        pretrained_module: Name of the transformer model, or the actual object.
+        pretrained_module: Name of the transformer model containing the layer,
+                           or the actual layer (not the model object).
         relevant_module: Name of the desired module. Defaults to cls._relevant_module.
         source: Where the model came from. Default - huggingface.
         mapping: Optional mapping that determines any differences in the module names
         between the class modules and the input model's modules. Default - cls._huggingface_mapping
         """
-        # if it's not str, we assume that it's the actual module,
-        # and not the model containing the module.
         if isinstance(pretrained_module, str):
             pretrained_module = cached_transformers.get(pretrained_module, False)
 

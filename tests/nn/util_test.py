@@ -1427,25 +1427,6 @@ class TestNnUtil(AllenNlpTestCase):
 
         assert_almost_equal(result.size(), [1, seq_len_1, seq_len_2])
 
-    def test_has_tensor(self):
-
-        has_tensor = util.has_tensor
-        tensor = torch.tensor([1, 2, 3])
-
-        assert has_tensor(["a", 10, tensor])
-        assert not has_tensor(["a", 10])
-
-        assert has_tensor(("a", 10, tensor))
-        assert not has_tensor(("a", 10))
-
-        assert has_tensor({"a": tensor, "b": 1})
-        assert not has_tensor({"a": 10, "b": 1})
-
-        assert has_tensor(tensor)
-        assert not has_tensor(3)
-
-        assert has_tensor({"x": [0, {"inside": {"double_inside": [3, [10, tensor]]}}]})
-
     def test_combine_initial_dims(self):
         tensor = torch.randn(4, 10, 20, 17, 5)
 
@@ -1471,13 +1452,13 @@ class TestNnUtil(AllenNlpTestCase):
         assert parameters_inspection_dict == util.inspect_parameters(model)
 
     def test_move_to_device(self):
-        # We're faking the tensor here so that we can test the calls to .cuda() without actually
+        # We're faking the tensor here so that we can test the calls to .to() without actually
         # needing a GPU.
         class FakeTensor(torch.Tensor):
             def __init__(self):
                 self._device = None
 
-            def cuda(self, device):
+            def to(self, device, **kwargs):
                 self._device = device
                 return self
 

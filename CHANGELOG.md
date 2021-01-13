@@ -45,8 +45,16 @@ dataset at every epoch) and a `MultiTaskScheduler` (for ordering the instances w
   With the `PyTorchDataLoader` this is controlled with the `lazy` parameter, but with
   the `MultiProcessDataLoading` this is controlled by the `max_instances_in_memory` setting.
 - `ArrayField` is now called `TensorField`, and implemented in terms of torch tensors, not numpy.
+- Improved `nn.util.move_to_device` function by avoiding an unnecessary recursive check for tensors and
+  adding a `non_blocking` optional argument, which is the same argument as in `torch.Tensor.to()`.
 - If you are trying to create a heterogeneous batch, you now get a better error message.
 - Readers using the new vision features now explicitly log how they are featurizing images.
+- `master_addr` and `master_port` renamed to `primary_addr` and `primary_port`, respectively.
+- `is_master` parameter for training callbacks renamed to `is_primary`.
+
+### Removed
+
+- Removed `nn.util.has_tensor`.
 
 ### Fixed
 

@@ -83,7 +83,9 @@ class Batch(Iterable):
         return {**padding_lengths}
 
     def as_tensor_dict(
-        self, padding_lengths: Dict[str, Dict[str, int]] = None, verbose: bool = False
+        self,
+        padding_lengths: Dict[str, Dict[str, int]] = None,
+        verbose: bool = False,
     ) -> Dict[str, Union[torch.Tensor, Dict[str, torch.Tensor]]]:
         # This complex return type is actually predefined elsewhere as a DataArray,
         # but we can't use it because mypy doesn't like it.
