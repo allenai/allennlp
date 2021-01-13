@@ -1222,7 +1222,7 @@ def batched_index_select(
 
     An example use case of this function is looking up the start and end indices of spans in a
     sequence tensor. This is used in the
-    [CoreferenceResolver](https://docs.allennlp.org/models/master/models/coref/models/coref/)
+    [CoreferenceResolver](https://docs.allennlp.org/models/main/models/coref/models/coref/)
     model to select contextual word representations corresponding to the start and end indices of
     mentions.
 

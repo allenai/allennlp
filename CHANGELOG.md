@@ -49,6 +49,8 @@ dataset at every epoch) and a `MultiTaskScheduler` (for ordering the instances w
   adding a `non_blocking` optional argument, which is the same argument as in `torch.Tensor.to()`.
 - If you are trying to create a heterogeneous batch, you now get a better error message.
 - Readers using the new vision features now explicitly log how they are featurizing images.
+- `master_addr` and `master_port` renamed to `primary_addr` and `primary_port`, respectively.
+- `is_master` parameter for training callbacks renamed to `is_primary`.
 
 ### Removed
 

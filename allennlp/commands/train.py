@@ -266,15 +266,15 @@ def train_model(
             )
         check_for_gpu(device_ids)
 
-        master_addr = distributed_params.pop("master_address", "127.0.0.1")
-        if master_addr in ("127.0.0.1", "0.0.0.0", "localhost"):
+        primary_addr = distributed_params.pop("primary_address", "127.0.0.1")
+        if primary_addr in ("127.0.0.1", "0.0.0.0", "localhost"):
             # If running locally, we can automatically find an open port if one is not specified.
-            master_port = (
-                distributed_params.pop("master_port", None) or common_util.find_open_port()
+            primary_port = (
+                distributed_params.pop("primary_port", None) or common_util.find_open_port()
             )
         else:
             # Otherwise we require that the port be specified.
-            master_port = distributed_params.pop("master_port")
+            primary_port = distributed_params.pop("primary_port")
 
         num_procs = len(device_ids)
         world_size = num_nodes * num_procs
@@ -300,7 +300,7 @@ def train_model(
 
         logging.info(
             "Switching to distributed training mode since multiple GPUs are configured | "
-            f"Master is at: {master_addr}:{master_port} | Rank of this node: {node_rank} | "
+            f"Primary is at: {primary_addr}:{primary_port} | Rank of this node: {node_rank} | "
             f"Number of workers in this node: {num_procs} | Number of nodes: {num_nodes} | "
             f"World size: {world_size}"
         )
@@ -313,8 +313,8 @@ def train_model(
                 include_package,
                 dry_run,
                 node_rank,
-                master_addr,
-                master_port,
+                primary_addr,
+                primary_port,
                 world_size,
                 device_ids,
                 file_friendly_logging,
@@ -337,8 +337,8 @@ def _train_worker(
     include_package: List[str] = None,
     dry_run: bool = False,
     node_rank: int = 0,
-    master_addr: str = "127.0.0.1",
-    master_port: int = 29500,
+    primary_addr: str = "127.0.0.1",
+    primary_port: int = 29500,
     world_size: int = 1,
     distributed_device_ids: List[int] = None,
     file_friendly_logging: bool = False,
@@ -366,10 +366,10 @@ def _train_worker(
         information.
     node_rank : `int`, optional
         Rank of the node.
-    master_addr : `str`, optional (default=`"127.0.0.1"`)
-        Address of the master node for distributed training.
-    master_port : `str`, optional (default=`"29500"`)
-        Port of the master node for distributed training.
+    primary_addr : `str`, optional (default=`"127.0.0.1"`)
+        Address of the primary node for distributed training.
+    primary_port : `str`, optional (default=`"29500"`)
+        Port of the primary node for distributed training.
     world_size : `int`, optional
         The number of processes involved in distributed training.
     distributed_device_ids: `List[str]`, optional
@@ -396,7 +396,7 @@ def _train_worker(
 
     distributed = world_size > 1
 
-    master = process_rank == 0
+    primary = process_rank == 0
 
     include_package = include_package or []
 
@@ -416,7 +416,7 @@ def _train_worker(
         global_rank = node_rank * num_procs_per_node + process_rank
 
         # Number of processes per node is useful to know if a process
-        # is a master in the local node(node in which it is running)
+        # is a primary in the local node(node in which it is running)
         os.environ["ALLENNLP_PROCS_PER_NODE"] = str(num_procs_per_node)
 
         # In distributed training, the configured device is always going to be a list.
@@ -434,14 +434,14 @@ def _train_worker(
             torch.cuda.set_device(int(gpu_id))
             dist.init_process_group(
                 backend="nccl",
-                init_method=f"tcp://{master_addr}:{master_port}",
+                init_method=f"tcp://{primary_addr}:{primary_port}",
                 world_size=world_size,
                 rank=global_rank,
             )
         else:
             dist.init_process_group(
                 backend="gloo",
-                init_method=f"tcp://{master_addr}:{master_port}",
+                init_method=f"tcp://{primary_addr}:{primary_port}",
                 world_size=world_size,
                 rank=global_rank,
             )
@@ -466,7 +466,7 @@ def _train_worker(
         metrics = train_loop.run()
     except KeyboardInterrupt:
         # if we have completed an epoch, try to create a model archive.
-        if master and os.path.exists(os.path.join(serialization_dir, _DEFAULT_WEIGHTS)):
+        if primary and os.path.exists(os.path.join(serialization_dir, _DEFAULT_WEIGHTS)):
             logging.info(
                 "Training interrupted by the user. Attempting to create "
                 "a model archive using the current best epoch weights."
@@ -474,7 +474,7 @@ def _train_worker(
             archive_model(serialization_dir, include_in_archive=include_in_archive)
         raise
 
-    if master:
+    if primary:
         train_loop.finish(metrics)
 
     if not distributed:
@@ -715,8 +715,8 @@ class TrainModel(Registrable):
         model_ = model.construct(vocab=vocabulary_, serialization_dir=serialization_dir)
 
         # Initializing the model can have side effect of expanding the vocabulary.
-        # Save the vocab only in the master. In the degenerate non-distributed
-        # case, we're trivially the master. In the distributed case this is safe
+        # Save the vocab only in the primary. In the degenerate non-distributed
+        # case, we're trivially the primary. In the distributed case this is safe
         # to do without worrying about race conditions since saving and loading
         # the vocab involves acquiring a file lock.
         if local_rank == 0:
