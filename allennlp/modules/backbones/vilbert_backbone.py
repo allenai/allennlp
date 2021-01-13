@@ -7,8 +7,7 @@ from overrides import overrides
 from allennlp.data.fields.text_field import TextFieldTensors
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.modules.backbones.backbone import Backbone
-from allennlp.modules.transformer import BiModalEncoder, TextEmbeddings, ImageFeatureEmbeddings
-
+from allennlp.modules.transformer import BiModalEncoder, ImageFeatureEmbeddings, Embeddings
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +23,7 @@ class VilbertBackbone(Backbone):
     def __init__(
         self,
         vocab: Vocabulary,
-        text_embeddings: TextEmbeddings,
+        text_embeddings: Embeddings,
         image_embeddings: ImageFeatureEmbeddings,
         encoder: BiModalEncoder,
         pooled_output_dim: int,
@@ -104,8 +103,8 @@ class VilbertBackbone(Backbone):
             text_embeddings = EmbeddingsShim(text_embeddings, linear_transform)
 
         image_embeddings = ImageFeatureEmbeddings(
-            feature_dim=image_feature_dim,
-            hidden_dim=image_hidden_size,
+            feature_size=image_feature_dim,
+            embedding_size=image_hidden_size,
             dropout=image_hidden_dropout,
         )
 

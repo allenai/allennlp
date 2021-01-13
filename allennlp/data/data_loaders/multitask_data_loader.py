@@ -4,6 +4,7 @@ import math
 
 import torch
 from overrides import overrides
+from torch import Tensor
 
 from allennlp.common import util
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader, DatasetReaderInput
@@ -189,7 +190,9 @@ class MultiTaskDataLoader(DataLoader):
     def __iter__(self) -> Iterator[TensorDict]:
         epoch_instances = self._get_instances_for_epoch()
         return (
-            Batch(instances).as_tensor_dict()
+            nn_util.move_to_device(
+                Batch(instances).as_tensor_dict(),
+                "cpu" if self.cuda_device is None else self.cuda_device)
             for instances in self.scheduler.batch_instances(epoch_instances)
         )
 
