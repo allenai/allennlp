@@ -160,7 +160,7 @@ class MultiTaskModel(Model):
                         f"Got duplicate argument {new_key} for {component}. This likely means that"
                         " you mapped multiple inputs to the same name. This is generally ok for"
                         " the backbone, but you have to be sure each batch only gets one of those"
-                        " inputs.  This is typically not ok for heads, and means something is not"
+                        " inputs. This is typically not ok for heads, and means something is not"
                         " set up right."
                     )
                 kept_arguments[new_key] = value
