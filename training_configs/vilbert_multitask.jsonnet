@@ -146,7 +146,7 @@ local reader_common = {
       "type": "linear_with_warmup",
       "warmup_steps": 10000,
     },
-    "validation_metric": "+fscore",
+    "validation_metric": ["+gqa_vqa", "+vqa_vqa", "+ve_acc"],
     "patience": 5,
     "num_epochs": 30,
     "num_gradient_accumulation_steps": effective_batch_size / gpu_batch_size / std.max(1, num_gpus),
