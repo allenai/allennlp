@@ -11,7 +11,7 @@ class RoundRobinSchedulerTest:
             "a": [1] * 5,
             "b": [2] * 3,
         }
-        flattened = scheduler.order_epoch_instances(epoch_instances)
+        flattened = scheduler.batch_instances(epoch_instances)
         assert list(flattened) == [
             ("a", 1),
             ("b", 2),
@@ -31,7 +31,7 @@ class HomogeneousRoundRobinSchedulerTest:
             "a": [1] * 9,
             "b": [2] * 9,
         }
-        flattened = scheduler.order_epoch_instances(epoch_instances)
+        flattened = scheduler.batch_instances(epoch_instances)
         assert list(flattened) == [
             ("a", 1),
             ("a", 1),

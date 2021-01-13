@@ -123,7 +123,9 @@ local reader_common = {
   },
   "data_loader": {
     "type": "multitask",
-    "batch_size": gpu_batch_size,
+    "scheduler": {
+        "batch_size": gpu_batch_size,
+    },
     "shuffle": true,
     //[if !construct_vocab then "max_instances_in_memory"]: 1024*16
   },
