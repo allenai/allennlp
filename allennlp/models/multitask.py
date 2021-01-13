@@ -127,11 +127,11 @@ class MultiTaskModel(Model):
             }
 
             head_outputs = self._heads[head_name](**head_arguments)
-            self._heads_called.add(head_name)
             for key in head_outputs:
                 outputs[f"{head_name}_{key}"] = head_outputs[key]
 
             if "loss" in head_outputs:
+                self._heads_called.add(head_name)
                 head_loss = self._loss_weights[head_name] * head_outputs["loss"]
                 if loss is None:
                     loss = head_loss
@@ -172,6 +172,8 @@ class MultiTaskModel(Model):
         for head_name in self._heads_called:
             for key, value in self._heads[head_name].get_metrics(reset).items():
                 metrics[f"{head_name}_{key}"] = value
+        if reset:
+            self._heads_called.clear()
         return metrics
 
     @overrides
