@@ -133,15 +133,14 @@ class VilbertBackbone(Backbone):
             fusion_method=fusion_method
         )
 
+    @overrides
     def forward(
-        self,
+        self,  # type: ignore
         box_features: torch.Tensor,
         box_coordinates: torch.Tensor,
         box_mask: torch.Tensor,
         text: TextFieldTensors,
-        label: Optional[torch.Tensor] = None,
-        label_weights: Optional[torch.Tensor] = None,
-    ) -> Dict[str, torch.Tensor]:  # type: ignore
+    ) -> Dict[str, torch.Tensor]:
         batch_size, _, feature_size = box_features.size()
 
         if "token_ids" in text["tokens"]:

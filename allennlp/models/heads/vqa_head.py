@@ -26,8 +26,9 @@ class VqaHead(Head):
         self.f1_metric = F1MultiLabelMeasure(average="micro")
         self.vqa_metric = VqaMeasure()
 
+    @overrides
     def forward(
-        self,
+        self,  # type: ignore
         encoded_boxes: torch.Tensor,
         encoded_boxes_mask: torch.Tensor,
         encoded_boxes_pooled: torch.Tensor,

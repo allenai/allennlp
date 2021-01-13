@@ -1,6 +1,6 @@
 from collections import defaultdict
 import itertools
-from typing import Any, Dict, Iterable, Tuple, Union, List
+from typing import Any, Dict, Iterable, Tuple, Union, List, Mapping
 
 import more_itertools
 
@@ -105,6 +105,7 @@ class HomogeneousRoundRobinScheduler(MultiTaskScheduler):
     """
 
     def __init__(self, batch_size: Union[int, Dict[str, int]], drop_last: bool = False):
+        self.batch_size: Mapping[str, int]
         if isinstance(batch_size, int):
             self.batch_size = defaultdict(lambda: batch_size)  # type: ignore
         else:

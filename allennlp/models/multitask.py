@@ -1,6 +1,6 @@
 from collections import defaultdict
 import inspect
-from typing import Any, Dict, List, Set, Optional, Union
+from typing import Any, Dict, List, Set, Optional, Union, Mapping
 
 from overrides import overrides
 import torch
@@ -84,7 +84,7 @@ class MultiTaskModel(Model):
         super().__init__(vocab, **kwargs)
         self._backbone = backbone
         self._heads = torch.nn.ModuleDict(heads)
-        self._heads_called = set()
+        self._heads_called: Set[str] = set()
         self._arg_name_mapping = arg_name_mapping or defaultdict(dict)
 
         self._allowed_arguments = allowed_arguments or {
@@ -95,10 +95,13 @@ class MultiTaskModel(Model):
         initializer(self)
 
     def forward(self, **kwargs) -> Dict[str, torch.Tensor]:  # type: ignore
-        task_indices = defaultdict(lambda: [])
+        task_indices_just_for_mypy: Mapping[str, List[int]] = defaultdict(lambda: [])
         for i, task in enumerate(kwargs['task']):
-            task_indices[task].append(i)
-        task_indices = {task: torch.LongTensor(indices) for task, indices in task_indices.items()}
+            task_indices_just_for_mypy[task].append(i)
+        task_indices: Dict[str, torch.LongTensor] = {
+            task: torch.LongTensor(indices)
+            for task, indices in task_indices_just_for_mypy.items()
+        }
 
         def make_inputs_for_task(task: str, whole_batch_input: Union[torch.Tensor, List]):
             if isinstance(whole_batch_input, torch.Tensor):

@@ -3,7 +3,7 @@ import itertools
 import math
 
 from allennlp.common import util
-from allennlp.data.dataset_readers.dataset_reader import DatasetReader
+from allennlp.data.dataset_readers.dataset_reader import DatasetReader, DatasetReaderInput
 from allennlp.data.batch import Batch
 from allennlp.data.data_loaders.data_loader import DataLoader, TensorDict
 from allennlp.data.data_loaders.multi_process_data_loader import MultiProcessDataLoader
@@ -242,7 +242,7 @@ class _MultitaskDatasetReaderShim(DatasetReader):
         self.inner = inner
         self.head = head
 
-    def read(self, file_path: str) -> Iterable[Instance]:
+    def read(self, file_path: DatasetReaderInput) -> Iterator[Instance]:
         from allennlp.data.fields import MetadataField
         for instance in self.inner.read(file_path):
             instance.add_field("task", MetadataField(self.head))

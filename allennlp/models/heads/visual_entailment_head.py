@@ -26,8 +26,9 @@ class VisualEntailmentHead(Head):
         self.accuracy = CategoricalAccuracy()
         self.fbeta = FBetaMeasure(beta=1.0, average="macro")
 
+    @overrides
     def forward(
-        self,
+        self,  # type: ignore
         encoded_boxes: torch.Tensor,
         encoded_boxes_mask: torch.Tensor,
         encoded_boxes_pooled: torch.Tensor,
