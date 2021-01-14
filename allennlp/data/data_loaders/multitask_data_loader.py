@@ -65,9 +65,9 @@ class MultiTaskDataLoader(DataLoader):
         for an epoch, this `sampler` will tell us with what proportion we should sample from each
         dataset.  For instance, we might want to focus more on datasets that are underperforming in
         some way, by having those datasets contribute more instances this epoch than other datasets.
-    batches_per_epoch: `int`, optional (default = `None`)
-        If not `None`, we will use this many batches per epoch of training, drawing from the
-        underlying datasets according to the `scheduler`.
+    instances_per_epoch: `int`, optional (default = `None`)
+        If not `None`, we will use this many instances per epoch of training, drawing from the
+        underlying datasets according to the `sampler`.
     num_workers: `Dict[str, int]`, optional (default = `None`)
         Used when creating one `MultiProcessDataLoader` per dataset.  If you want non-default
         behavior for this parameter in the `DataLoader` for a particular dataset, pass the
@@ -107,7 +107,7 @@ class MultiTaskDataLoader(DataLoader):
         scheduler: MultiTaskScheduler,
         *,
         sampler: MultiTaskEpochSampler = None,
-        batches_per_epoch: int = None,
+        instances_per_epoch: int = None,
         num_workers: Dict[str, int] = None,
         max_instances_in_memory: Dict[str, int] = None,
         start_method: Dict[str, str] = None,
@@ -127,10 +127,10 @@ class MultiTaskDataLoader(DataLoader):
             else:
                 self.cuda_device = cuda_device
 
-        self._batches_per_epoch = batches_per_epoch
+        self._instances_per_epoch = instances_per_epoch
         self._shuffle = shuffle
 
-        if batches_per_epoch is not None and sampler is None:
+        if instances_per_epoch is not None and sampler is None:
             raise ValueError("You must provide an EpochSampler if you want to not use all instances every epoch.")
 
         self._num_workers = num_workers or {}
@@ -171,16 +171,18 @@ class MultiTaskDataLoader(DataLoader):
 
     @overrides
     def __len__(self) -> int:
-        if self._batches_per_epoch is not None:
-            return self._batches_per_epoch
-
-        # This will raise a TypeError if any of the underlying loaders doesn't have a length,
-        # which is actually what we want.
-        loader_lengths = {
-            dataset: len(loader)
-            for dataset, loader in self._loaders.items()
-        }
-        return self.scheduler.count_batches(loader_lengths)
+        if self._instances_per_epoch is None:
+            # This will raise a TypeError if any of the underlying loaders doesn't have a length,
+            # which is actually what we want.
+            return self.scheduler.count_batches({
+                dataset: len(loader)
+                for dataset, loader in self._loaders.items()
+            })
+        else:
+            return self.scheduler.count_batches({
+                dataset: self._instances_per_epoch
+                for dataset in self._loaders.keys()
+            })
 
     @overrides
     def __iter__(self) -> Iterator[TensorDict]:
@@ -220,7 +222,7 @@ class MultiTaskDataLoader(DataLoader):
         self.cuda_device = device
 
     def _get_instances_for_epoch(self) -> Dict[str, Iterable[Instance]]:
-        if self._batches_per_epoch is None:
+        if self._instances_per_epoch is None:
             return {
                 key: maybe_shuffle_instances(loader, self._shuffle)
                 for key, loader in self._loaders.items()
@@ -232,7 +234,7 @@ class MultiTaskDataLoader(DataLoader):
         dataset_proportions = self.sampler.get_task_proportions(self._loaders)
         proportion_sum = sum(dataset_proportions.values())
         num_instances_per_dataset = {
-            key: math.floor(proportion * self._batches_per_epoch / proportion_sum)
+            key: math.floor(proportion * self._instances_per_epoch / proportion_sum)
             for key, proportion in dataset_proportions.items()
         }
         return {
