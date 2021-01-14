@@ -21,6 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - 'master' branch renamed to 'main'
 - Torch version bumped to 1.7.1 in Docker images.
+- The `tensorboard_writer` is now optional for the `GradientDescentTrainer`. When training from a config file
+  the default `TensorboardWriter` will still be used unless you explicitly set `"tensorboard_writer": null`.
 
 ### Fixed
 

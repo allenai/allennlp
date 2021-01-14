@@ -407,9 +407,8 @@ class GradientDescentTrainer(Trainer):
         If specified, the momentum will be updated at the end of each batch or epoch
         according to the schedule.
 
-    tensorboard_writer : `TensorboardWriter`, optional
-        If this is not provided, we will construct a `TensorboardWriter` with default
-        parameters and use that.
+    tensorboard_writer : `TensorboardWriter`, optional (default = `None`)
+        Writes metrics and other statistics to tensorboard logs.
 
     moving_average : `MovingAverage`, optional, (default = `None`)
         If provided, we will maintain moving averages for all parameters. During training, we
@@ -546,9 +545,10 @@ class GradientDescentTrainer(Trainer):
         # `_enable_activation_logging`.
         self._batch_num_total = 0
 
-        self._tensorboard = tensorboard_writer or TensorboardWriter(serialization_dir)
-        self._tensorboard.get_batch_num_total = lambda: self._batch_num_total
-        self._tensorboard.enable_activation_logging(self.model)
+        self._tensorboard = tensorboard_writer
+        if self._tensorboard is not None:
+            self._tensorboard.get_batch_num_total = lambda: self._batch_num_total
+            self._tensorboard.enable_activation_logging(self.model)
 
         self._last_log = 0.0  # time of last logging
 
@@ -744,7 +744,11 @@ class GradientDescentTrainer(Trainer):
                 self._momentum_scheduler.step_batch(batch_num_total)
 
             param_updates = None
-            if self._tensorboard.should_log_histograms_this_batch() and self._master:
+            if (
+                self._tensorboard is not None
+                and self._tensorboard.should_log_histograms_this_batch()
+                and self._master
+            ):
                 # Get the magnitude of parameter updates for logging.  We need to do some
                 # computation before and after the optimizer step, and it's expensive because of
                 # GPU/CPU copies (necessary for large models, and for shipping to tensorboard), so
@@ -789,14 +793,15 @@ class GradientDescentTrainer(Trainer):
                 # Updating tqdm only for the master as the trainers wouldn't have one
                 description = training_util.description_from_metrics(metrics)
                 batch_group_generator_tqdm.set_description(description, refresh=False)
-                self._tensorboard.log_batch(
-                    self.model,
-                    self.optimizer,
-                    batch_grad_norm,
-                    metrics,
-                    batch_group,
-                    param_updates,
-                )
+                if self._tensorboard is not None:
+                    self._tensorboard.log_batch(
+                        self.model,
+                        self.optimizer,
+                        batch_grad_norm,
+                        metrics,
+                        batch_group,
+                        param_updates,
+                    )
 
                 if self._checkpointer is not None:
                     self._checkpointer.maybe_save_checkpoint(self, epoch, batches_this_epoch)
@@ -966,7 +971,8 @@ class GradientDescentTrainer(Trainer):
             return self._try_train()
         finally:
             # make sure pending events are flushed to disk and files are closed properly
-            self._tensorboard.close()
+            if self._tensorboard is not None:
+                self._tensorboard.close()
 
     def _try_train(self) -> Dict[str, Any]:
         try:
@@ -1045,9 +1051,10 @@ class GradientDescentTrainer(Trainer):
                         break
 
             if self._master:
-                self._tensorboard.log_metrics(
-                    train_metrics, val_metrics=val_metrics, log_to_console=True, epoch=epoch + 1
-                )  # +1 because tensorboard doesn't like 0
+                if self._tensorboard is not None:
+                    self._tensorboard.log_metrics(
+                        train_metrics, val_metrics=val_metrics, log_to_console=True, epoch=epoch + 1
+                    )  # +1 because tensorboard doesn't like 0
 
             # Create overall metrics dict
             training_elapsed_time = time.time() - training_start_time
@@ -1232,7 +1239,7 @@ class GradientDescentTrainer(Trainer):
         optimizer: Lazy[Optimizer] = Lazy(Optimizer.default),
         learning_rate_scheduler: Lazy[LearningRateScheduler] = None,
         momentum_scheduler: Lazy[MomentumScheduler] = None,
-        tensorboard_writer: Lazy[TensorboardWriter] = Lazy(TensorboardWriter),
+        tensorboard_writer: Optional[Lazy[TensorboardWriter]] = Lazy(TensorboardWriter),
         moving_average: Lazy[MovingAverage] = None,
         checkpointer: Lazy[Checkpointer] = Lazy(Checkpointer),
         batch_callbacks: List[BatchCallback] = None,
@@ -1302,7 +1309,11 @@ class GradientDescentTrainer(Trainer):
             else momentum_scheduler.construct(optimizer=optimizer_)
         )
         checkpointer_ = checkpointer.construct(serialization_dir=serialization_dir)
-        tensorboard_writer_ = tensorboard_writer.construct(serialization_dir=serialization_dir)
+        tensorboard_writer_ = (
+            None
+            if tensorboard_writer is None
+            else tensorboard_writer.construct(serialization_dir=serialization_dir)
+        )
 
         return cls(
             model,
