@@ -58,7 +58,9 @@ class TestVEVilbert(ModelTestCase):
                 transformer.embeddings, "huggingface", {}
             ).items()
         }
-        assert_equal_parameters(transformer.embeddings, model.backbone.text_embeddings, mapping=mapping)
+        assert_equal_parameters(
+            transformer.embeddings, model.backbone.text_embeddings, mapping=mapping
+        )
 
         # compare encoder parameters
         mapping = {
