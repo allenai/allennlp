@@ -14,7 +14,6 @@ from allennlp.modules.transformer import (
     TransformerEmbeddings,
     ImageFeatureEmbeddings,
     BiModalEncoder,
-    TransformerPooler,
 )
 
 logger = logging.getLogger(__name__)
@@ -60,6 +59,7 @@ class VisionTextModel(Model):
         super().__init__(vocab)
 
         from allennlp.modules.backbones import VilbertBackbone
+
         self.backbone = VilbertBackbone(
             vocab,
             text_embeddings,
@@ -67,7 +67,8 @@ class VisionTextModel(Model):
             encoder,
             pooled_output_dim,
             fusion_method,
-            dropout)
+            dropout,
+        )
 
         num_labels = vocab.get_vocab_size(label_namespace)
         self.label_namespace = label_namespace
