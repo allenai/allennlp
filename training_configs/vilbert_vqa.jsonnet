@@ -54,15 +54,15 @@ local vocabulary = if construct_vocab then {
     "type": "vqa_vilbert",
     "text_embeddings": {
       "vocab_size": vocab_size,
-      "hidden_size": 768,
+      "embedding_size": 768,
       "pad_token_id": 0,
       "max_position_embeddings": 512,
       "type_vocab_size": 2,
       "dropout": 0.1
     },
     "image_embeddings": {
-      "feature_dim": 1024,
-      "hidden_dim": 1024
+      "feature_size": 1024,
+      "embedding_size": 1024
     },
     "encoder": {
       # text
