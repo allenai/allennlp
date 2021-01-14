@@ -42,7 +42,7 @@ class TrainingDataLoggerBatchCallback(BatchCallback):
         epoch: int,
         batch_number: int,
         is_training: bool,
-        is_master: bool,
+        is_primary: bool,
     ) -> None:
         if is_training:
             logger = logging.getLogger(__name__)
@@ -65,7 +65,7 @@ class TrainingDeviceLoggerBatchCallback(BatchCallback):
         epoch: int,
         batch_number: int,
         is_training: bool,
-        is_master: bool,
+        is_primary: bool,
     ) -> None:
         global _seen_training_devices
         for tensor in trainer.model.parameters():
@@ -540,7 +540,7 @@ class TestTrain(AllenNlpTestCase):
                 epoch: int,
                 batch_number: int,
                 is_training: bool,
-                is_master: bool,
+                is_primary: bool,
             ) -> None:
                 nonlocal batch_callback_counter
                 if is_training:

@@ -98,7 +98,7 @@ class DatasetReader(Registrable):
 
         See the section below about how to do this.
 
-    manual_multi_process_sharding : `bool`, optional (default=`False`)
+    manual_multiprocess_sharding : `bool`, optional (default=`False`)
         This is similar to the `manual_distributed_sharding` parameter, but applies to
         multi-process data loading. By default, when this reader is used by a multi-process
         data loader (i.e. a `DataLoader` with `num_workers > 1`), each worker will
@@ -107,13 +107,17 @@ class DatasetReader(Registrable):
 
         However, there is really no benefit to using multiple workers in your `DataLoader`
         unless you implement the sharding within your `_read()` method, in which
-        case you should set `manual_multi_process_sharding` to `True`, just as with
+        case you should set `manual_multiprocess_sharding` to `True`, just as with
         `manual_distributed_sharding`.
 
         See the section below about how to do this.
 
     serialization_dir: `str`, optional (default=`None`)
         The directory in which the training output is saved to, or the directory the model is loaded from.
+
+        !!! Note
+            This is typically not given an entry in a configuration file. It will be set automatically
+            when using the built-in `allennp` commands.
 
     # Using your reader with multi-process or distributed data loading
 
@@ -144,7 +148,7 @@ class DatasetReader(Registrable):
         Remember though that when you handle the sharding manually within `_read()`, you need
         to let the `DatasetReader` know about this so that it doesn't do any additional
         filtering. Therefore you need to ensure that both `self.manual_distributed_sharding` and
-        `self.manual_multi_process_sharding` are set to `True`.
+        `self.manual_multiprocess_sharding` are set to `True`.
 
         If you call the helper method `shard_iterable()` without setting these to `True`,
         you'll get an exception.
@@ -164,7 +168,7 @@ class DatasetReader(Registrable):
         self,
         max_instances: Optional[int] = None,
         manual_distributed_sharding: bool = False,
-        manual_multi_process_sharding: bool = False,
+        manual_multiprocess_sharding: bool = False,
         serialization_dir: Optional[str] = None,
     ) -> None:
         # Do some validation.
@@ -173,7 +177,7 @@ class DatasetReader(Registrable):
 
         self.max_instances = max_instances
         self.manual_distributed_sharding = manual_distributed_sharding
-        self.manual_multi_process_sharding = manual_multi_process_sharding
+        self.manual_multiprocess_sharding = manual_multiprocess_sharding
         self.serialization_dir = serialization_dir
         self._worker_info: Optional[WorkerInfo] = None
         self._distributed_info: Optional[DistributedInfo] = None
@@ -279,11 +283,11 @@ class DatasetReader(Registrable):
         Helper method that determines which items in an iterable object to skip based
         on the current node rank (for distributed training) and worker ID (for multi-process data loading).
         """
-        if not self.manual_distributed_sharding or not self.manual_multi_process_sharding:
+        if not self.manual_distributed_sharding or not self.manual_multiprocess_sharding:
             raise ValueError(
                 "self.shard_iterable() was called but self.manual_distributed_sharding and "
-                "self.manual_multi_process_sharding was not set to True. Did you forget to call "
-                "super().__init__(manual_distributed_sharding=True, manual_multi_process_sharding=True) "
+                "self.manual_multiprocess_sharding was not set to True. Did you forget to call "
+                "super().__init__(manual_distributed_sharding=True, manual_multiprocess_sharding=True) "
                 "in your constructor?"
             )
 
@@ -350,10 +354,10 @@ class DatasetReader(Registrable):
                 else:
                     max_instances = max_instances // self._worker_info.num_workers
 
-            if not self.manual_multi_process_sharding:
+            if not self.manual_multiprocess_sharding:
                 warnings.warn(
                     "Using multi-process data loading without setting "
-                    "DatasetReader.manual_multi_process_sharding to True.\n"
+                    "DatasetReader.manual_multiprocess_sharding to True.\n"
                     "Did you forget to set this?\n"
                     "If you're not handling the multi-process sharding logic within your "
                     "_read() method, there is probably no benefit to using more than one "

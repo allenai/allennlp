@@ -89,7 +89,7 @@ class Conll2003DatasetReader(DatasetReader):
         **kwargs,
     ) -> None:
         super().__init__(
-            manual_distributed_sharding=True, manual_multi_process_sharding=True, **kwargs
+            manual_distributed_sharding=True, manual_multiprocess_sharding=True, **kwargs
         )
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
         if tag_label is not None and tag_label not in self._VALID_LABELS:

@@ -49,6 +49,8 @@ dataset at every epoch) and a `MultiTaskScheduler` (for ordering the instances w
   adding a `non_blocking` optional argument, which is the same argument as in `torch.Tensor.to()`.
 - If you are trying to create a heterogeneous batch, you now get a better error message.
 - Readers using the new vision features now explicitly log how they are featurizing images.
+- `master_addr` and `master_port` renamed to `primary_addr` and `primary_port`, respectively.
+- `is_master` parameter for training callbacks renamed to `is_primary`.
 
 ### Removed
 
@@ -66,6 +68,10 @@ dataset at every epoch) and a `MultiTaskScheduler` (for ordering the instances w
 
 ### Added
 
+- Added a `FileLock` class to `common.file_utils`. This is just like the `FileLock` from the `filelock` library, except that
+  it adds an optional flag `read_only_ok: bool`, which when set to `True` changes the behavior so that a warning will be emitted
+  instead of an exception when lacking write permissions on an existing file lock.
+  This makes it possible to use the `FileLock` class on a read-only file system.
 - Added a new learning rate scheduler: `CombinedLearningRateScheduler`. This can be used to combine different LR schedulers, using one after the other.
 - Moving `ModelCard` and `TaskCard` abstractions into the main repository.
 
@@ -77,6 +83,9 @@ dataset at every epoch) and a `MultiTaskScheduler` (for ordering the instances w
 ### Fixed
 
 - Fixed typo with `LabelField` string representation: removed trailing apostrophe.
+- `Vocabulary.from_files` and `cached_path` will issue a warning, instead of failing, when a lock on an existing resource
+  can't be acquired because the file system is read-only.
+- `TrackEpochCallback` is now a `EpochCallback`.
 
 
 ## [v1.3.0](https://github.com/allenai/allennlp/releases/tag/v1.3.0) - 2020-12-15

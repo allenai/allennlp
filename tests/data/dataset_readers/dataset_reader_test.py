@@ -31,7 +31,7 @@ class MockMmpsDatasetReader(DatasetReader):
     """
 
     def __init__(self, **kwargs) -> None:
-        super().__init__(manual_multi_process_sharding=True, **kwargs)
+        super().__init__(manual_multiprocess_sharding=True, **kwargs)
 
     def _read(self, file_path):
         start_index = 0
@@ -75,7 +75,7 @@ class MockMmpdsDatasetReader(DatasetReader):
 
     def __init__(self, **kwargs) -> None:
         super().__init__(
-            manual_distributed_sharding=True, manual_multi_process_sharding=True, **kwargs
+            manual_distributed_sharding=True, manual_multiprocess_sharding=True, **kwargs
         )
 
     def _read(self, file_path):

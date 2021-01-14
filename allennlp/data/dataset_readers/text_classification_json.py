@@ -56,7 +56,7 @@ class TextClassificationJsonReader(DatasetReader):
         **kwargs,
     ) -> None:
         super().__init__(
-            manual_distributed_sharding=True, manual_multi_process_sharding=True, **kwargs
+            manual_distributed_sharding=True, manual_multiprocess_sharding=True, **kwargs
         )
         self._tokenizer = tokenizer or SpacyTokenizer()
         self._segment_sentences = segment_sentences

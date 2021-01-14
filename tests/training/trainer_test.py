@@ -16,7 +16,7 @@ from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
 from allennlp.common.testing import AllenNlpTestCase, requires_gpu, requires_multi_gpu
 from allennlp.data import Vocabulary
-from allennlp.data.data_loaders import MultiProcessDataLoader, PyTorchDataLoader, TensorDict
+from allennlp.data.data_loaders import MultiProcessDataLoader, SimpleDataLoader, TensorDict
 from allennlp.data.dataset_readers import SequenceTaggingDatasetReader
 from allennlp.models.model import Model
 from allennlp.models.simple_tagger import SimpleTagger
@@ -33,7 +33,6 @@ from allennlp.training.learning_rate_schedulers import CosineWithRestarts
 from allennlp.training.learning_rate_schedulers import ExponentialLearningRateScheduler
 from allennlp.training.momentum_schedulers import MomentumScheduler
 from allennlp.training.moving_average import ExponentialMovingAverage
-from allennlp.data import allennlp_collate
 
 
 class TrainerTestBase(AllenNlpTestCase):
@@ -180,10 +179,9 @@ class TestTrainer(TrainerTestBase):
     def test_trainer_respects_epoch_size_equals_total(self):
         batches_per_epoch = 4
         num_epochs = 3
-        data_loader_equal_epoch = PyTorchDataLoader(
+        data_loader_equal_epoch = SimpleDataLoader(
             self.instances,
-            batch_size=2,
-            collate_fn=allennlp_collate,
+            2,
             batches_per_epoch=batches_per_epoch,
         )
         trainer = GradientDescentTrainer(
@@ -203,10 +201,9 @@ class TestTrainer(TrainerTestBase):
     def test_trainer_respects_epoch_size_larger_tnan_total(self):
         batches_per_epoch = 7
         num_epochs = 3
-        data_loader_larger_epoch = PyTorchDataLoader(
+        data_loader_larger_epoch = SimpleDataLoader(
             self.instances,
-            batch_size=2,
-            collate_fn=allennlp_collate,
+            2,
             batches_per_epoch=batches_per_epoch,
         )
         trainer = GradientDescentTrainer(
@@ -226,10 +223,9 @@ class TestTrainer(TrainerTestBase):
     def test_trainer_respects_epoch_size_smaller_tnan_total(self):
         batches_per_epoch = 1
         num_epochs = 2
-        data_loader_smaller_epoch = PyTorchDataLoader(
+        data_loader_smaller_epoch = SimpleDataLoader(
             self.instances,
-            batch_size=2,
-            collate_fn=allennlp_collate,
+            2,
             batches_per_epoch=batches_per_epoch,
         )
         trainer = GradientDescentTrainer(
@@ -658,9 +654,7 @@ class TestTrainer(TrainerTestBase):
         #       2, 4, plus the last two at 5 and 6.
 
         class SlowDataLoader:
-            data_loader = PyTorchDataLoader(
-                self.instances, batch_size=2, collate_fn=allennlp_collate
-            )
+            data_loader = SimpleDataLoader(self.instances, batch_size=2)
 
             def __iter__(self):
                 time.sleep(2.5)
@@ -694,7 +688,7 @@ class TestTrainer(TrainerTestBase):
             assert sorted(epochs) == [1, 3, 4, 5]
 
     def test_trainer_can_log_learning_rates_tensorboard(self):
-        data_loader = PyTorchDataLoader(self.instances, batch_size=4, collate_fn=allennlp_collate)
+        data_loader = SimpleDataLoader(self.instances, 4)
         trainer = GradientDescentTrainer(
             self.model,
             self.optimizer,
@@ -711,7 +705,7 @@ class TestTrainer(TrainerTestBase):
         trainer.train()
 
     def test_trainer_saves_models_at_specified_interval(self):
-        data_loader = PyTorchDataLoader(self.instances, batch_size=4, collate_fn=allennlp_collate)
+        data_loader = SimpleDataLoader(self.instances, 4)
 
         trainer = GradientDescentTrainer(
             self.model,
@@ -941,7 +935,7 @@ class TestTrainer(TrainerTestBase):
                 epoch: int,
                 batch_number: int,
                 is_training: bool,
-                is_master: bool,
+                is_primary: bool,
             ) -> None:
                 if not hasattr(trainer, "batch_callback_calls"):
                     trainer.batch_callback_calls = []  # type: ignore
@@ -971,7 +965,7 @@ class TestTrainer(TrainerTestBase):
                 trainer: "GradientDescentTrainer",
                 metrics: Dict[str, Any],
                 epoch: int,
-                is_master: bool,
+                is_primary: bool,
             ) -> None:
                 if not hasattr(trainer, "epoch_callback_calls"):
                     trainer.epoch_callback_calls = []  # type: ignore
@@ -1009,7 +1003,7 @@ class TestTrainer(TrainerTestBase):
                 trainer: "GradientDescentTrainer",
                 metrics: Dict[str, Any],
                 epoch: int,
-                is_master: bool,
+                is_primary: bool,
             ) -> None:
                 if not hasattr(trainer, "end_callback_calls"):
                     trainer.end_callback_calls = []  # type: ignore
@@ -1038,7 +1032,7 @@ class TestTrainer(TrainerTestBase):
                 epoch: int,
                 batch_number: int,
                 is_training: bool,
-                is_master: bool,
+                is_primary: bool,
             ) -> None:
                 if not hasattr(trainer, "batch_callback_calls"):
                     trainer.batch_callback_calls = []  # type: ignore
@@ -1049,7 +1043,7 @@ class TestTrainer(TrainerTestBase):
                 trainer: "GradientDescentTrainer",
                 metrics: Dict[str, Any],
                 epoch: int,
-                is_master: bool,
+                is_primary: bool,
             ) -> None:
                 if not hasattr(trainer, "epoch_callback_calls"):
                     trainer.epoch_callback_calls = []  # type: ignore
@@ -1060,7 +1054,7 @@ class TestTrainer(TrainerTestBase):
                 trainer: "GradientDescentTrainer",
                 metrics: Dict[str, Any],
                 epoch: int,
-                is_master: bool,
+                is_primary: bool,
             ) -> None:
                 if not hasattr(trainer, "end_callback_calls"):
                     trainer.end_callback_calls = []  # type: ignore
@@ -1103,7 +1097,7 @@ class TestTrainer(TrainerTestBase):
                 epoch: int,
                 batch_number: int,
                 is_training: bool,
-                is_master: bool,
+                is_primary: bool,
             ) -> None:
                 if not hasattr(trainer, "batch_losses"):
                     trainer.batch_losses = []  # type: ignore
