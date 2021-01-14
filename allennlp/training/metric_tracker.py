@@ -10,24 +10,26 @@ class MetricTracker:
     `state_dict` / `load_state_dict` interface, so that it can be checkpointed along with
     your model and optimizer.
 
-    Some metrics improve by increasing; others by decreasing. Here you can either explicitly
-    supply `should_decrease`, or you can provide a `metric_name` in which case "should decrease"
-    is inferred from the first character, which must be "+" or "-".
+    Some metrics improve by increasing; others by decreasing. You can provide a
+    `metric_name` that starts with "+" to indicate an increasing metric, or "-"
+    to indicate a decreasing metric.
 
     # Parameters
 
+    metric_name : `Union[str, List[str]]`
+        Specifies the metric or metrics to track. Metric names have to start with
+        "+" for increasing metrics or "-" for decreasing ones. If you specify more
+        than one, it tracks the sum of the increasing metrics metrics minus the sum
+        of the decreasing metrics.
     patience : `int`, optional (default = `None`)
         If provided, then `should_stop_early()` returns True if we go this
         many epochs without seeing a new best value.
-    metric_name : `Union[str, List[str]]`, optional (default = `None`)
-        If provided, it's used to infer whether we expect the metric values to
-        increase (if it starts with "+") or decrease (if it starts with "-").
-        It's an error if it doesn't start with one of those. If there is more than
-        one, we use the sum of the metrics to decide.
     """
 
     def __init__(
-        self, patience: Optional[int] = None, metric_name: Union[str, List[str]] = None
+        self,
+        metric_name: Union[str, List[str]],
+        patience: Optional[int] = None,
     ) -> None:
         self._best_so_far: Optional[float] = None
         self._patience = patience
@@ -50,7 +52,7 @@ class MetricTracker:
 
     def clear(self) -> None:
         """
-        Clears out the tracked metrics, but keeps the patience and should_decrease settings.
+        Clears out the tracked metrics, but keeps the patience
         """
         self._best_so_far = None
         self._epochs_with_no_improvement = 0

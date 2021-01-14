@@ -518,7 +518,7 @@ class GradientDescentTrainer(Trainer):
             )
 
         # For tracking is_best_so_far and should_stop_early
-        self._metric_tracker = MetricTracker(patience, validation_metric)
+        self._metric_tracker = MetricTracker(validation_metric, patience)
 
         self._num_epochs = num_epochs
 
