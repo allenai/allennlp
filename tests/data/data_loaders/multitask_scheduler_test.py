@@ -12,10 +12,7 @@ class RoundRobinSchedulerTest:
             "b": [2] * 3,
         }
         batches = scheduler.batch_instances(epoch_instances)
-        assert list(batches) == [
-            [1, 2, 1, 2],
-            [1, 2, 1, 1]
-        ]
+        assert list(batches) == [[1, 2, 1, 2], [1, 2, 1, 1]]
 
 
 class HomogeneousRoundRobinSchedulerTest:

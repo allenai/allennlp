@@ -1,11 +1,9 @@
 from collections import defaultdict
-import itertools
-from typing import Any, Dict, Iterable, Tuple, Union, List, Mapping
+from typing import Any, Dict, Iterable, Union, List, Mapping
 
 import more_itertools
 
 from allennlp.common.registrable import Registrable
-from allennlp.common import util
 from allennlp.data.instance import Instance
 
 
@@ -19,7 +17,10 @@ class MultiTaskScheduler(Registrable):
     `update_from_epoch_metrics` method available, which should be called from a `Callback` during
     training.  Not all `MultiTaskSchedulers` will implement this method.
     """
-    def batch_instances(self, epoch_instances: Dict[str, Iterable[Instance]]) -> Iterable[List[Instance]]:
+
+    def batch_instances(
+        self, epoch_instances: Dict[str, Iterable[Instance]]
+    ) -> Iterable[List[Instance]]:
         """
         Given a dictionary of `Iterable[Instance]` for each dataset, combines them into an
         `Iterable` of batches of instances.
@@ -60,16 +61,18 @@ class RoundRobinScheduler(MultiTaskScheduler):
 
     Registered as a `MultiTaskScheduler` with name "roundrobin".
     """
+
     def __init__(self, batch_size: int, drop_last: bool = False):
         super().__init__()
         self.batch_size = batch_size
         self.drop_last = drop_last
 
-    def batch_instances(self, epoch_instances: Dict[str, Iterable[Instance]]) -> Iterable[List[Instance]]:
+    def batch_instances(
+        self, epoch_instances: Dict[str, Iterable[Instance]]
+    ) -> Iterable[List[Instance]]:
         return _chunked_iterator(
-            more_itertools.roundrobin(*epoch_instances.values()),
-            self.batch_size,
-            self.drop_last)
+            more_itertools.roundrobin(*epoch_instances.values()), self.batch_size, self.drop_last
+        )
 
     def count_batches(self, dataset_counts: Dict[str, int]) -> int:
         instance_count = sum(dataset_counts.values())

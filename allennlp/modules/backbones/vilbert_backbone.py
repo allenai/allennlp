@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, Optional, List
+from typing import Dict, List
 
 import torch
 from overrides import overrides
@@ -29,7 +29,7 @@ class VilbertBackbone(Backbone):
         pooled_output_dim: int,
         fusion_method: str = "sum",
         dropout: float = 0.1,
-        vocab_namespace: str = "tokens"
+        vocab_namespace: str = "tokens",
     ) -> None:
         super().__init__()
         self.fusion_method = fusion_method
@@ -37,6 +37,7 @@ class VilbertBackbone(Backbone):
         self.image_embeddings = image_embeddings
         self.encoder = encoder
         from allennlp.modules.transformer import TransformerPooler
+
         self.t_pooler = TransformerPooler(encoder.hidden_size1, pooled_output_dim)
         self.v_pooler = TransformerPooler(encoder.hidden_size2, pooled_output_dim)
         self.dropout = torch.nn.Dropout(dropout)
@@ -63,12 +64,14 @@ class VilbertBackbone(Backbone):
         text_biattention_id: List[int],
         text_fixed_layer: int,
         image_fixed_layer: int,
-        fusion_method: str = "sum"
+        fusion_method: str = "sum",
     ):
         from transformers import AutoModel
+
         transformer = AutoModel.from_pretrained(model_name)
 
         from copy import deepcopy
+
         text_embeddings = deepcopy(transformer.embeddings)
 
         # Albert (and maybe others?) has this "embedding_size", that's different from "hidden_size".
@@ -129,7 +132,7 @@ class VilbertBackbone(Backbone):
             image_embeddings=image_embeddings,
             encoder=encoder,
             pooled_output_dim=pooled_output_dim,
-            fusion_method=fusion_method
+            fusion_method=fusion_method,
         )
 
     @overrides
@@ -210,7 +213,7 @@ class VilbertBackbone(Backbone):
             "encoded_text": sequence_output_t,
             "encoded_text_mask": attention_mask,
             "encoded_text_pooled": pooled_output_t,
-            "pooled_boxes_and_text": pooled_output
+            "pooled_boxes_and_text": pooled_output,
         }
 
     @overrides
@@ -218,7 +221,9 @@ class VilbertBackbone(Backbone):
         self, output_dict: Dict[str, torch.Tensor]
     ) -> Dict[str, torch.Tensor]:
         tokens = []
-        for instance_tokens in output_dict["token_ids"]:    # TODO: do we even have "token_ids" in the output?
+        for instance_tokens in output_dict[
+            "token_ids"
+        ]:  # TODO: do we even have "token_ids" in the output?
             tokens.append(
                 [
                     self._vocab.get_token_from_index(token_id.item(), namespace=self._namespace)

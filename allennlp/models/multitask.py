@@ -1,6 +1,6 @@
 from collections import defaultdict
 import inspect
-from typing import Any, Dict, List, Set, Optional, Union, Mapping
+from typing import Any, Dict, List, Set, Union, Mapping
 
 from overrides import overrides
 import torch
@@ -99,14 +99,14 @@ class MultiTaskModel(Model):
             raise ValueError(
                 "Instances for multitask training need to contain a MetadataField with "
                 "the name 'task' to indicate which task they belong to. Usually the "
-                "MultitaskDataLoader provides this field and you don't have to do anything.")
+                "MultitaskDataLoader provides this field and you don't have to do anything."
+            )
 
         task_indices_just_for_mypy: Mapping[str, List[int]] = defaultdict(lambda: [])
-        for i, task in enumerate(kwargs['task']):
+        for i, task in enumerate(kwargs["task"]):
             task_indices_just_for_mypy[task].append(i)
         task_indices: Dict[str, torch.LongTensor] = {
-            task: torch.LongTensor(indices)
-            for task, indices in task_indices_just_for_mypy.items()
+            task: torch.LongTensor(indices) for task, indices in task_indices_just_for_mypy.items()
         }
 
         def make_inputs_for_task(task: str, whole_batch_input: Union[torch.Tensor, List]):
@@ -128,8 +128,7 @@ class MultiTaskModel(Model):
 
             head_arguments = self._get_arguments(combined_arguments, head_name)
             head_arguments = {
-                key: make_inputs_for_task(head_name, value)
-                for key, value in head_arguments.items()
+                key: make_inputs_for_task(head_name, value) for key, value in head_arguments.items()
             }
 
             head_outputs = self._heads[head_name](**head_arguments)

@@ -9,12 +9,7 @@ from allennlp.models.heads.head import Head
 
 @Head.register("visual_entailment")
 class VisualEntailmentHead(Head):
-    def __init__(
-        self,
-        vocab: Vocabulary,
-        embedding_dim: int,
-        label_namespace: str = "labels"
-    ):
+    def __init__(self, vocab: Vocabulary, embedding_dim: int, label_namespace: str = "labels"):
         super().__init__(vocab)
 
         num_labels = vocab.get_vocab_size(label_namespace)
@@ -23,6 +18,7 @@ class VisualEntailmentHead(Head):
 
         from allennlp.training.metrics import CategoricalAccuracy
         from allennlp.training.metrics import FBetaMeasure
+
         self.accuracy = CategoricalAccuracy()
         self.fbeta = FBetaMeasure(beta=1.0, average="macro")
 
@@ -42,16 +38,11 @@ class VisualEntailmentHead(Head):
         logits = self.classifier(pooled_boxes_and_text)
         probs = torch.softmax(logits, dim=-1)
 
-        output = {
-            "logits": logits,
-            "probs": probs
-        }
+        output = {"logits": logits, "probs": probs}
 
         assert label_weights is None
         if labels is not None:
-            output["loss"] = (
-                torch.nn.functional.cross_entropy(logits, labels) / logits.size(0)
-            )
+            output["loss"] = torch.nn.functional.cross_entropy(logits, labels) / logits.size(0)
             self.accuracy(logits, labels)
             self.fbeta(probs, labels)
 

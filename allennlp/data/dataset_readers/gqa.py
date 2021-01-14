@@ -91,7 +91,6 @@ class GQAReader(VisionReader):
                 answer_vocab.get_token_to_index_vocabulary("answers").keys()
             )
 
-
     @overrides
     def _read(self, split_or_filename: str):
 

@@ -29,7 +29,9 @@ class TestMultiTaskModel(ModelTestCase):
         text_field = TextField(tokens, {"tokens": token_indexers})
         label_field1 = LabelField(1, skip_indexing=True)
         label_field2 = LabelField(3, skip_indexing=True)
-        instance = Instance({"text": text_field, "label": label_field1, "task": MetadataField("cls")})
+        instance = Instance(
+            {"text": text_field, "label": label_field1, "task": MetadataField("cls")}
+        )
 
         # Now we run some tests.  First, the default.
         outputs = model.forward_on_instance(instance)
@@ -64,16 +66,12 @@ class TestMultiTaskModel(ModelTestCase):
         )
 
         # Basic case where things should work, with two heads that both need label inputs.
-        instance1 = Instance({
-            "text": text_field,
-            "label": label_field1,
-            "task": MetadataField("cls1")
-        })
-        instance2 = Instance({
-            "text": text_field,
-            "label": label_field2,
-            "task": MetadataField("cls2")
-        })
+        instance1 = Instance(
+            {"text": text_field, "label": label_field1, "task": MetadataField("cls1")}
+        )
+        instance2 = Instance(
+            {"text": text_field, "label": label_field2, "task": MetadataField("cls2")}
+        )
         batch = Batch([instance1, instance2])
         outputs = model.forward(**batch.as_tensor_dict())
         assert "encoded_text" in outputs
@@ -88,7 +86,9 @@ class TestMultiTaskModel(ModelTestCase):
         # This should fail, because we're using task 'cls1' with the labels for `cls2`, and the sizes don't match.
         # This shows up as an IndexError in this case. It'd be nice to catch this kind of error more cleanly in the
         # model class, but I'm not sure how.
-        instance = Instance({"text": text_field, "label": label_field2, "task": MetadataField("cls1")})
+        instance = Instance(
+            {"text": text_field, "label": label_field2, "task": MetadataField("cls1")}
+        )
         with pytest.raises(IndexError):
             outputs = model.forward_on_instance(instance)
 
@@ -96,6 +96,8 @@ class TestMultiTaskModel(ModelTestCase):
         # and they would clobber each other. The name mapping that we have in the model is ok, as
         # long as our data loader is set up such that we don't batch instances that have both of
         # these fields at the same time.
-        instance = Instance({"question": text_field, "text": text_field, "task": MetadataField("cls1")})
+        instance = Instance(
+            {"question": text_field, "text": text_field, "task": MetadataField("cls1")}
+        )
         with pytest.raises(ValueError, match="duplicate argument text"):
             outputs = model.forward_on_instance(instance)

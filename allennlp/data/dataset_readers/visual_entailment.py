@@ -17,7 +17,7 @@ from allennlp.data.fields import Field, ArrayField, LabelField, TextField
 from allennlp.data.instance import Instance
 from allennlp.data.dataset_readers.vision_reader import VisionReader
 
-from allennlp.common.file_utils import json_lines_from_file, cached_path
+from allennlp.common.file_utils import json_lines_from_file
 
 logger = logging.getLogger(__name__)
 

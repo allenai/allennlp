@@ -1,6 +1,5 @@
 import itertools
 
-import more_itertools
 import pytest
 import torch
 
@@ -15,16 +14,16 @@ from allennlp.data.data_loaders.multitask_epoch_sampler import UniformSampler, W
 
 class FakeDatasetReaderA(DatasetReader):
     def _read(self, file_path: str):
-        return itertools.islice(cycle_iterator_function(
-            lambda: [Instance({"label": LabelField("A")})]),
-            100)
+        return itertools.islice(
+            cycle_iterator_function(lambda: [Instance({"label": LabelField("A")})]), 100
+        )
 
 
 class FakeDatasetReaderB(DatasetReader):
     def _read(self, file_path: str):
-        return itertools.islice(cycle_iterator_function(
-            lambda: [Instance({"label": LabelField("B")})]),
-            100)
+        return itertools.islice(
+            cycle_iterator_function(lambda: [Instance({"label": LabelField("B")})]), 100
+        )
 
 
 class MultiTaskDataLoaderTest:

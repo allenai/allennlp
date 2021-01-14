@@ -54,6 +54,7 @@ class WeightedSampler(MultiTaskEpochSampler):
 
     Registered as a `MultiTaskEpochSampler` with name "weighted".
     """
+
     def __init__(self, weights: Dict[str, float]):
         self.weights = weights
 

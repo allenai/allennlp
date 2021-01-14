@@ -1,4 +1,4 @@
-from typing import Optional, Iterable, Dict, Any, List, Union
+from typing import Optional, Dict, Any, List, Union
 
 from allennlp.common.checks import ConfigurationError
 
@@ -90,13 +90,13 @@ class MetricTracker:
         """
         try:
             combined_score = sum(
-                factor * metrics[metric_name]
-                for factor, metric_name in self.tracked_metrics
+                factor * metrics[metric_name] for factor, metric_name in self.tracked_metrics
             )
         except KeyError as e:
             raise ConfigurationError(
                 f"You configured the trainer to use the {e.args[0]}"
-                "metric for early stopping, but the model did not produce that metric.")
+                "metric for early stopping, but the model did not produce that metric."
+            )
 
         new_best = (self._best_so_far is None) or (combined_score > self._best_so_far)
 

@@ -1,4 +1,4 @@
-from typing import Any, Dict, Iterable, Iterator, List, Union, Optional
+from typing import Any, Dict, Iterable, Iterator, Union, Optional
 import itertools
 import math
 
@@ -131,7 +131,9 @@ class MultiTaskDataLoader(DataLoader):
         self._shuffle = shuffle
 
         if instances_per_epoch is not None and sampler is None:
-            raise ValueError("You must provide an EpochSampler if you want to not use all instances every epoch.")
+            raise ValueError(
+                "You must provide an EpochSampler if you want to not use all instances every epoch."
+            )
 
         self._num_workers = num_workers or {}
         self._max_instances_in_memory = max_instances_in_memory or {}
@@ -174,15 +176,13 @@ class MultiTaskDataLoader(DataLoader):
         if self._instances_per_epoch is None:
             # This will raise a TypeError if any of the underlying loaders doesn't have a length,
             # which is actually what we want.
-            return self.scheduler.count_batches({
-                dataset: len(loader)
-                for dataset, loader in self._loaders.items()
-            })
+            return self.scheduler.count_batches(
+                {dataset: len(loader) for dataset, loader in self._loaders.items()}
+            )
         else:
-            return self.scheduler.count_batches({
-                dataset: self._instances_per_epoch
-                for dataset in self._loaders.keys()
-            })
+            return self.scheduler.count_batches(
+                {dataset: self._instances_per_epoch for dataset in self._loaders.keys()}
+            )
 
     @overrides
     def __iter__(self) -> Iterator[TensorDict]:
@@ -190,7 +190,8 @@ class MultiTaskDataLoader(DataLoader):
         return (
             nn_util.move_to_device(
                 Batch(instances).as_tensor_dict(),
-                -1 if self.cuda_device is None else self.cuda_device)
+                -1 if self.cuda_device is None else self.cuda_device,
+            )
             for instances in self.scheduler.batch_instances(epoch_instances)
         )
 
@@ -230,7 +231,9 @@ class MultiTaskDataLoader(DataLoader):
         if self.sampler is None:
             # We already checked for this in the constructor, so this should never happen unless you
             # modified the object after creation. But mypy is complaining, so here's another check.
-            raise ValueError("You must specify an EpochSampler if self._instances_per_epoch is not None.")
+            raise ValueError(
+                "You must specify an EpochSampler if self._instances_per_epoch is not None."
+            )
         dataset_proportions = self.sampler.get_task_proportions(self._loaders)
         proportion_sum = sum(dataset_proportions.values())
         num_instances_per_dataset = {
@@ -246,7 +249,7 @@ class MultiTaskDataLoader(DataLoader):
         kwargs: Dict[str, Any] = {}
         kwargs["reader"] = _MultitaskDatasetReaderShim(self.readers[key], key)
         kwargs["data_path"] = self.data_paths[key]
-        kwargs["batch_size"] = 1    # So that the loader gives us one instance at a time.
+        kwargs["batch_size"] = 1  # So that the loader gives us one instance at a time.
         if key in self._num_workers:
             kwargs["num_workers"] = self._num_workers[key]
         if key in self._max_instances_in_memory:
@@ -262,8 +265,10 @@ class MultiTaskDataLoader(DataLoader):
 
 @DatasetReader.register("multitask_shim")
 class _MultitaskDatasetReaderShim(DatasetReader):
-    """This dataset reader wraps another dataset reader and adds the name of the "task" into each instance as a metadata field. This exists only
-    to support `MultitaskDataLoader`. You should not have to use this yourself."""
+    """This dataset reader wraps another dataset reader and adds the name of the "task" into
+    each instance as a metadata field. This exists only to support `MultitaskDataLoader`. You
+    should not have to use this yourself."""
+
     def __init__(self, inner: DatasetReader, head: str, **kwargs):
         super().__init__(**kwargs)
         self.inner = inner
@@ -271,12 +276,14 @@ class _MultitaskDatasetReaderShim(DatasetReader):
 
     def read(self, file_path: DatasetReaderInput) -> Iterator[Instance]:
         from allennlp.data.fields import MetadataField
+
         for instance in self.inner.read(file_path):
             instance.add_field("task", MetadataField(self.head))
             yield instance
 
     def text_to_instance(self, *inputs) -> Instance:
         from allennlp.data.fields import MetadataField
+
         instance = self.inner.text_to_instance(*inputs)
         instance.add_field("task", MetadataField(self.head))
         return instance
