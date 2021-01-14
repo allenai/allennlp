@@ -3,7 +3,6 @@ import logging
 from multiprocessing.process import BaseProcess
 from os import PathLike
 import random
-import sys
 import traceback
 from typing import List, Iterator, Optional, Iterable, Union
 
@@ -399,8 +398,7 @@ class MultiProcessDataLoader(DataLoader):
                     for batch, worker_error in iter(queue.get, (None, None)):
                         if worker_error is not None:
                             e, tb = worker_error
-                            sys.stderr.write("".join(tb))
-                            raise WorkerError(e)
+                            raise WorkerError(e, tb)
 
                         if not self._worker_cuda_safe and self.cuda_device is not None:
                             # Need to move batch to target device now.
@@ -473,7 +471,7 @@ class MultiProcessDataLoader(DataLoader):
                     checked_for_token_indexers = True
                 queue.put((instance, None))
         except Exception as e:
-            queue.put((None, (str(e), traceback.format_exc())))
+            queue.put((None, (repr(e), traceback.format_exc())))
 
         # Indicate to the consumer that this worker is finished.
         queue.put((None, None))
@@ -490,7 +488,7 @@ class MultiProcessDataLoader(DataLoader):
             ):
                 queue.put((batch, None))
         except Exception as e:
-            queue.put((None, (str(e), traceback.format_exc())))
+            queue.put((None, (repr(e), traceback.format_exc())))
 
         # Indicate to the consumer (main thread) that this worker is finished.
         queue.put((None, None))
@@ -504,8 +502,7 @@ class MultiProcessDataLoader(DataLoader):
             for instance, worker_error in iter(queue.get, (None, None)):
                 if worker_error is not None:
                     e, tb = worker_error
-                    sys.stderr.write("".join(tb))
-                    raise WorkerError(e)
+                    raise WorkerError(e, tb)
 
                 self.reader.apply_token_indexers(instance)
                 if self._vocab is not None:
@@ -574,4 +571,13 @@ class WorkerError(Exception):
     An error raised when a worker fails.
     """
 
-    pass
+    def __init__(self, original_err_repr: str, traceback: List[str]) -> None:
+        super().__init__(
+            f"worker raised {original_err_repr}\n\n"
+            "  Traceback from worker:\n  " + "".join(traceback)
+            # Remove the first line of the traceback since it's redundant.
+            .replace("Traceback (most recent call last):\n", "")
+            # Give a little indentation so it's clear this traceback is separate from the traceback
+            # in the main process.
+            .replace("\n", "\n  ")
+        )
