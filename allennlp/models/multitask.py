@@ -95,6 +95,12 @@ class MultiTaskModel(Model):
         initializer(self)
 
     def forward(self, **kwargs) -> Dict[str, torch.Tensor]:  # type: ignore
+        if "task" not in kwargs:
+            raise ValueError(
+                "Instances for multitask training need to contain a MetadataField with "
+                "the name 'task' to indicate which task they belong to. Usually the "
+                "MultitaskDataLoader provides this field and you don't have to do anything.")
+
         task_indices_just_for_mypy: Mapping[str, List[int]] = defaultdict(lambda: [])
         for i, task in enumerate(kwargs['task']):
             task_indices_just_for_mypy[task].append(i)
