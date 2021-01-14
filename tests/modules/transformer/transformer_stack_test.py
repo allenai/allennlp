@@ -6,7 +6,7 @@ from allennlp.common import Params
 from allennlp.common import cached_transformers
 
 from allennlp.common.testing import assert_equal_parameters
-from allennlp.modules.transformer import TransformerStack
+from allennlp.modules.transformer import TransformerStack, TransformerLayer
 from allennlp.common.testing import AllenNlpTestCase
 
 from transformers.models.bert.configuration_bert import BertConfig
@@ -84,6 +84,35 @@ class TestTransformerStack(AllenNlpTestCase):
                 attention_mask=torch.randn(2, 3),
                 encoder_hidden_states=torch.randn(2, 3, 6),
             )
+
+    def test_layer_same_as_params(self):
+        params = copy.deepcopy(self.params_dict)
+        num_hidden_layers = params.pop("num_hidden_layers")
+        # params = Params(params)
+
+        torch.manual_seed(1234)
+        transformer_layer = TransformerLayer(**params)
+        transformer_stack_from_layer = TransformerStack(num_hidden_layers, transformer_layer)
+        torch.manual_seed(1234)
+        transformer_stack_from_params = TransformerStack(num_hidden_layers, **params)
+
+        hidden_states = torch.randn(2, 3, 6)
+        attention_mask = torch.tensor([[0, 1, 0], [1, 1, 0]])
+
+        transformer_stack_from_layer.eval()
+        transformer_stack_from_params.eval()
+
+        torch.manual_seed(1234)
+        layer_output = transformer_stack_from_layer.forward(
+            hidden_states, attention_mask=attention_mask
+        )
+
+        torch.manual_seed(1234)
+        params_output = transformer_stack_from_params.forward(
+            hidden_states, attention_mask=attention_mask
+        )
+
+        assert torch.allclose(layer_output[0], params_output[0])
 
     def test_cross_attention(self):
         params = copy.deepcopy(self.params_dict)

@@ -138,6 +138,10 @@ class TransformerLayer(TransformerModule, FromParams):
         add_cross_attention: bool = False,
     ):
         super().__init__()
+
+        self._hidden_size = hidden_size
+        self._add_cross_attention = add_cross_attention
+
         self.attention = AttentionLayer(
             hidden_size=hidden_size,
             num_attention_heads=num_attention_heads,

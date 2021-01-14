@@ -1,4 +1,5 @@
 from typing import Union, Optional, Dict
+import logging
 
 import torch
 
@@ -7,6 +8,8 @@ from allennlp.common import FromParams
 from allennlp.modules.util import replicate_layers
 from allennlp.modules.transformer.transformer_layer import TransformerLayer
 from allennlp.modules.transformer.transformer_module import TransformerModule
+
+logger = logging.getLogger(__name__)
 
 
 class TransformerStack(TransformerModule, FromParams):
@@ -19,8 +22,11 @@ class TransformerStack(TransformerModule, FromParams):
     # Parameters
 
     num_hidden_layers : `int`
-    hidden_size : `int`
-    intermediate_size : `int`
+    layer : `TransformerLayer`, optional
+    hidden_size : `int`, optional
+        This needs to be provided if no `layer` argument is passed.
+    intermediate_size : `int`, optional
+        This needs to be provided if no `layer` argument is passed.
     num_attention_heads : `int`
     attention_dropout : `float` (default = `0.0`)
         Dropout probability for the `SelfAttention` layer.
@@ -38,8 +44,9 @@ class TransformerStack(TransformerModule, FromParams):
     def __init__(
         self,
         num_hidden_layers: int,
-        hidden_size: int,
-        intermediate_size: int,
+        layer: Optional[TransformerLayer] = None,
+        hidden_size: Optional[int] = None,
+        intermediate_size: Optional[int] = None,
         num_attention_heads: int = 8,
         attention_dropout: float = 0.1,
         hidden_dropout: float = 0.1,
@@ -47,11 +54,19 @@ class TransformerStack(TransformerModule, FromParams):
         add_cross_attention: bool = False,
     ):
         super().__init__()
-        self._hidden_size = hidden_size
-        self._add_cross_attention = add_cross_attention
-        layer = TransformerLayer(
-            hidden_size,
-            intermediate_size,
+
+        if layer is not None:
+            logger.warning(
+                "The `layer` argument has been specified. Any other arguments will be ignored."
+            )
+        else:
+            assert (hidden_size is not None) and (intermediate_size is not None), "As the `layer`"
+            "has not been provided, `hidden_size` and `intermediate_size` are"
+            "required to create `TransformerLayer`s."
+
+        layer = layer or TransformerLayer(
+            hidden_size,  # type: ignore
+            intermediate_size,  # type: ignore
             num_attention_heads,
             attention_dropout,
             hidden_dropout,
