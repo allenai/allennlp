@@ -266,6 +266,35 @@ class TestTransformerLayer(AllenNlpTestCase):
         attention_mask = torch.tensor([[0, 1, 0], [1, 1, 0]])
         self.transformer_layer.forward(torch.randn(2, 3, 6), attention_mask=attention_mask)
 
+        with pytest.raises(AssertionError):
+            self.transformer_layer.forward(
+                torch.randn(2, 3, 6),
+                attention_mask=attention_mask,
+                encoder_hidden_states=torch.randn(2, 3, 6),
+            )
+
+    def test_cross_attention(self):
+        params = copy.deepcopy(self.params_dict)
+        params["add_cross_attention"] = True
+
+        params = Params(params)
+
+        transformer_layer = TransformerLayer.from_params(params)
+        assert hasattr(transformer_layer, "cross_attention")
+
+        attention_mask = torch.tensor([[0, 1, 0], [1, 1, 0]])
+        transformer_layer.forward(
+            torch.randn(2, 3, 6),
+            attention_mask=attention_mask,
+            encoder_hidden_states=torch.randn(2, 3, 6),
+        )
+
+        transformer_layer_new = TransformerLayer.from_pretrained_module(
+            transformer_layer, source="allennlp"
+        )
+
+        assert hasattr(transformer_layer_new, "cross_attention")
+
     def test_loading_from_pretrained_weights(self):
 
         # Hacky way to get a bert layer.

@@ -20,7 +20,7 @@ class TinyTransformer(TokenEmbedder):
             vocab=vocab,
         )
 
-        self.transformer = TransformerBlock(
+        self.transformer = TransformerStack(
             num_hidden_layers=4,
             hidden_size=hidden_size,
             intermediate_size=intermediate_size,
@@ -45,7 +45,7 @@ class SmallTransformer(TokenEmbedder):
         super().__init__()
         self.embeddings = TransformerEmbeddings.from_pretrained_module(pretrained)
 
-        self.transformer = TransformerBlock.from_pretrained_module(
+        self.transformer = TransformerStack.from_pretrained_module(
             pretrained, num_hidden_layers=4
         )
 
@@ -68,10 +68,10 @@ class MediumTransformer(torch.nn.Module):
     def __init__(self):
         super().__init__()
         self.embeddings = TransformerEmbeddings.from_pretrained_module("bert-base-uncased")
-        self.separate_transformer = TransformerBlock.from_pretrained_module(
+        self.separate_transformer = TransformerStack.from_pretrained_module(
             "bert-base-uncased", num_hidden_layers=range(0, 8)
         )
-        self.combined_transformer = TransformerBlock.from_pretrained_module(
+        self.combined_transformer = TransformerStack.from_pretrained_module(
             "bert-base-uncased",
             num_hidden_layers=range(8, 12),
         )
@@ -109,7 +109,7 @@ class AlmostRegularTransformer(TokenEmbedder):
     def __init__(self):
         super().__init__()
         self.embeddings = TransformerEmbeddings.get_relevant_module("albert-base-v2")
-        self.transformer = TransformerBlock.from_pretrained_module("bert-base-uncased")
+        self.transformer = TransformerStack.from_pretrained_module("bert-base-uncased")
         # We want to tune only the embeddings, because that's our experiment.
         self.transformer.requires_grad = False
 
@@ -134,7 +134,7 @@ from allennlp.modules.transformer.transformer_embeddings import (
 from allennlp.modules.transformer.self_attention import SelfAttention
 from allennlp.modules.transformer.activation_layer import ActivationLayer
 from allennlp.modules.transformer.transformer_layer import AttentionLayer, TransformerLayer
-from allennlp.modules.transformer.transformer_block import TransformerBlock
+from allennlp.modules.transformer.transformer_stack import TransformerStack
 from allennlp.modules.transformer.transformer_pooler import TransformerPooler
 from allennlp.modules.transformer.output_layer import OutputLayer
 
