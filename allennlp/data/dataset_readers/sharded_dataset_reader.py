@@ -67,7 +67,7 @@ class ShardedDatasetReader(DatasetReader):
                 raise ConfigurationError(f"No files found in {file_path}")
         except FileNotFoundError:
             # Not a local or remote archive, so treat as a glob.
-            shards = glob.glob(file_path)
+            shards = glob.glob(str(file_path))
             if not shards:
                 raise ConfigurationError(f"No files found matching {file_path}")
 
