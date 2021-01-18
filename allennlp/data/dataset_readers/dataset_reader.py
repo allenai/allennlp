@@ -189,28 +189,25 @@ class DatasetReader(Registrable):
         """
         Returns an iterator of instances that can be read from the file path.
         """
-        if not isinstance(file_path, str):
-            if isinstance(file_path, list):
-                file_path = [str(f) for f in file_path]
-            elif isinstance(file_path, dict):
-                file_path = {k: str(v) for k, v in file_path.items()}
-            else:
-                file_path = str(file_path)
-
         for instance in self._multi_worker_islice(self._read(file_path)):  # type: ignore
             if self._worker_info is None:
                 # If not running in a subprocess, it's safe to apply the token_indexers right away.
                 self.apply_token_indexers(instance)
             yield instance
 
-    def _read(self, file_path: str) -> Iterable[Instance]:
+    def _read(self, file_path) -> Iterable[Instance]:
         """
-        Reads the instances from the given file_path and returns them as an
+        Reads the instances from the given `file_path` and returns them as an
         `Iterable`.
 
         You are strongly encouraged to use a generator so that users can
         read a dataset in a lazy way, if they so choose.
         """
+        # NOTE: `file_path` is left untyped here on purpose.
+        # Technically the type should be `DatasetReaderInput`, but many subclass
+        # implementations of `DatasetReader` define their `_read()` method to take a more
+        # specific type, such as just `str`. But that would be a type error
+        # according to mypy: https://mypy.readthedocs.io/en/stable/common_issues.html#incompatible-overrides
         raise NotImplementedError
 
     def text_to_instance(self, *inputs) -> Instance:

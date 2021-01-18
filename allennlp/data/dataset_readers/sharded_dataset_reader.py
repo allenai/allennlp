@@ -5,7 +5,7 @@ from typing import Iterable
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path
-from allennlp.data.dataset_readers.dataset_reader import DatasetReader
+from allennlp.data.dataset_readers.dataset_reader import DatasetReader, PathOrStr
 from allennlp.data.instance import Instance
 
 
@@ -52,7 +52,7 @@ class ShardedDatasetReader(DatasetReader):
         """
         return self.reader.text_to_instance(*args, **kwargs)  # type: ignore
 
-    def _read(self, file_path: str) -> Iterable[Instance]:
+    def _read(self, file_path: PathOrStr) -> Iterable[Instance]:
         try:
             maybe_extracted_archive = cached_path(file_path, extract_archive=True)
             if not os.path.isdir(maybe_extracted_archive):
