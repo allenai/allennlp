@@ -315,28 +315,31 @@ class TestTrainer(TrainerTestBase):
             num_epochs=3,
             serialization_dir=self.TEST_DIR,
             patience=5,
-            validation_metric="+test",
+            validation_metric="+acc",
         )
         tracker = new_trainer._metric_tracker
 
         # when it is the only metric it should be considered the best
         new_tracker = copy.deepcopy(tracker)
-        new_tracker.add_metric(1)
+        new_tracker.add_metrics({"acc": 1})
         assert new_tracker.is_best_so_far()
 
         # when it is the same as one before it it is not considered the best
         new_tracker = copy.deepcopy(tracker)
-        new_tracker.add_metrics([0.3, 0.3, 0.3, 0.2, 0.5, 0.1, 0.3])
+        for acc in [0.3, 0.3, 0.3, 0.2, 0.5, 0.1, 0.3]:
+            new_tracker.add_metrics({"acc": acc})
         assert not new_tracker.is_best_so_far()
 
         # when it is the best it is considered the best
         new_tracker = copy.deepcopy(tracker)
-        new_tracker.add_metrics([0.3, 0.3, 0.3, 0.2, 0.5, 0.1, 13])
+        for acc in [0.3, 0.3, 0.3, 0.2, 0.5, 0.1, 13]:
+            new_tracker.add_metrics({"acc": acc})
         assert new_tracker.is_best_so_far()
 
         # when it is not the the best it is not considered the best
         new_tracker = copy.deepcopy(tracker)
-        new_tracker.add_metrics([0.3, 0.3, 0.3, 0.2, 0.5, 0.1, 0.0013])
+        for acc in [0.3, 0.3, 0.3, 0.2, 0.5, 0.1, 0.0013]:
+            new_tracker.add_metrics({"acc": acc})
         assert not new_tracker.is_best_so_far()
 
     def test_metric_only_considered_best_so_far_when_strictly_better_than_those_before_it_decreasing_metric(
@@ -350,28 +353,31 @@ class TestTrainer(TrainerTestBase):
             num_epochs=3,
             serialization_dir=self.TEST_DIR,
             patience=5,
-            validation_metric="-test",
+            validation_metric="-acc",
         )
         tracker = new_trainer._metric_tracker
 
         # when it is the only metric it should be considered the best
         new_tracker = copy.deepcopy(tracker)
-        new_tracker.add_metric(1)
+        new_tracker.add_metrics({"acc": 1})
         assert new_tracker.is_best_so_far()
 
         # when it is the same as one before it it is not considered the best
         new_tracker = copy.deepcopy(tracker)
-        new_tracker.add_metrics([0.3, 0.3, 0.3, 0.2, 0.5, 0.1, 0.3])
+        for acc in [0.3, 0.3, 0.3, 0.2, 0.5, 0.1, 0.3]:
+            new_tracker.add_metrics({"acc": acc})
         assert not new_tracker.is_best_so_far()
 
         # when it is the best it is considered the best
         new_tracker = copy.deepcopy(tracker)
-        new_tracker.add_metrics([0.3, 0.3, 0.3, 0.2, 0.5, 0.1, 0.0013])
+        for acc in [0.3, 0.3, 0.3, 0.2, 0.5, 0.1, 0.0013]:
+            new_tracker.add_metrics({"acc": acc})
         assert new_tracker.is_best_so_far()
 
         # when it is not the the best it is not considered the best
         new_tracker = copy.deepcopy(tracker)
-        new_tracker.add_metrics([0.3, 0.3, 0.3, 0.2, 0.5, 0.1, 13])
+        for acc in [0.3, 0.3, 0.3, 0.2, 0.5, 0.1, 13]:
+            new_tracker.add_metrics({"acc": acc})
 
     def test_should_stop_early_with_increasing_metric(self):
         new_trainer = GradientDescentTrainer(
@@ -382,21 +388,23 @@ class TestTrainer(TrainerTestBase):
             num_epochs=3,
             serialization_dir=self.TEST_DIR,
             patience=5,
-            validation_metric="+test",
+            validation_metric="+acc",
         )
 
         tracker = new_trainer._metric_tracker
 
         new_tracker = copy.deepcopy(tracker)
-        new_tracker.add_metrics([0.5, 0.3, 0.2, 0.1, 0.4, 0.4])
+        for acc in [0.5, 0.3, 0.2, 0.1, 0.4, 0.4]:
+            new_tracker.add_metrics({"acc": acc})
         assert new_tracker.should_stop_early()
 
         new_tracker = copy.deepcopy(tracker)
-        new_tracker.add_metrics([0.3, 0.3, 0.3, 0.2, 0.5, 0.1])
+        for acc in [0.3, 0.3, 0.3, 0.2, 0.5, 0.1]:
+            new_tracker.add_metrics({"acc": acc})
         assert not new_tracker.should_stop_early()
 
     def test_should_stop_early_with_flat_lining_metric(self):
-        flatline = [0.2] * 6
+        flatline = [{"acc": 0.2}] * 6
         tracker = GradientDescentTrainer(
             self.model,
             self.optimizer,
@@ -405,9 +413,10 @@ class TestTrainer(TrainerTestBase):
             num_epochs=3,
             serialization_dir=self.TEST_DIR,
             patience=5,
-            validation_metric="+test",
+            validation_metric="+acc",
         )._metric_tracker
-        tracker.add_metrics(flatline)
+        for m in flatline:
+            tracker.add_metrics(m)
         assert tracker.should_stop_early
 
         tracker = GradientDescentTrainer(
@@ -418,9 +427,10 @@ class TestTrainer(TrainerTestBase):
             num_epochs=3,
             serialization_dir=self.TEST_DIR,
             patience=5,
-            validation_metric="-test",
+            validation_metric="-acc",
         )._metric_tracker
-        tracker.add_metrics(flatline)
+        for m in flatline:
+            tracker.add_metrics(m)
         assert tracker.should_stop_early
 
     def test_should_stop_early_with_decreasing_metric(self):
@@ -432,20 +442,23 @@ class TestTrainer(TrainerTestBase):
             num_epochs=3,
             serialization_dir=self.TEST_DIR,
             patience=5,
-            validation_metric="-test",
+            validation_metric="-acc",
         )
         tracker = new_trainer._metric_tracker
 
         new_tracker = copy.deepcopy(tracker)
-        new_tracker.add_metrics([0.02, 0.3, 0.2, 0.1, 0.4, 0.4])
+        for acc in [0.02, 0.3, 0.2, 0.1, 0.4, 0.4]:
+            new_tracker.add_metrics({"acc": acc})
         assert new_tracker.should_stop_early()
 
         new_tracker = copy.deepcopy(tracker)
-        new_tracker.add_metrics([0.3, 0.3, 0.2, 0.1, 0.4, 0.5])
+        for acc in [0.3, 0.3, 0.2, 0.1, 0.4, 0.5]:
+            new_tracker.add_metrics({"acc": acc})
         assert not new_tracker.should_stop_early()
 
         new_tracker = copy.deepcopy(tracker)
-        new_tracker.add_metrics([0.1, 0.3, 0.2, 0.1, 0.4, 0.5])
+        for acc in [0.1, 0.3, 0.2, 0.1, 0.4, 0.5]:
+            new_tracker.add_metrics({"acc": acc})
         assert new_tracker.should_stop_early()
 
     def test_should_stop_early_with_early_stopping_disabled(self):
@@ -457,10 +470,11 @@ class TestTrainer(TrainerTestBase):
             validation_data_loader=self.validation_data_loader,
             num_epochs=100,
             patience=None,
-            validation_metric="+test",
+            validation_metric="+acc",
         )
         tracker = trainer._metric_tracker
-        tracker.add_metrics([float(i) for i in reversed(range(20))])
+        for m in [{"acc": float(i)} for i in reversed(range(20))]:
+            tracker.add_metrics(m)
         assert not tracker.should_stop_early()
 
         # Decreasing metric
@@ -471,10 +485,11 @@ class TestTrainer(TrainerTestBase):
             validation_data_loader=self.validation_data_loader,
             num_epochs=100,
             patience=None,
-            validation_metric="-test",
+            validation_metric="-acc",
         )
         tracker = trainer._metric_tracker
-        tracker.add_metrics([float(i) for i in range(20)])
+        for m in [{"acc": float(i)} for i in range(20)]:
+            tracker.add_metrics(m)
         assert not tracker.should_stop_early()
 
     def test_should_stop_early_with_invalid_patience(self):
@@ -492,7 +507,7 @@ class TestTrainer(TrainerTestBase):
                     validation_data_loader=self.validation_data_loader,
                     num_epochs=100,
                     patience=patience,
-                    validation_metric="+test",
+                    validation_metric="+acc",
                 )
 
     def test_trainer_can_run_and_resume_with_momentum_scheduler(self):
@@ -869,37 +884,6 @@ class TestTrainer(TrainerTestBase):
         assert training_metrics["best_validation_loss"] == restored_metrics["best_validation_loss"]
         assert training_metrics["best_epoch"] == 0
         assert training_metrics["validation_loss"] > restored_metrics["validation_loss"]
-
-    def test_restoring_works_with_older_checkpointing(self):
-        trainer = GradientDescentTrainer(
-            self.model,
-            self.optimizer,
-            self.data_loader,
-            validation_data_loader=self.validation_data_loader,
-            num_epochs=3,
-            serialization_dir=self.TEST_DIR,
-            checkpointer=Checkpointer(
-                serialization_dir=self.TEST_DIR, num_serialized_models_to_keep=4
-            ),
-        )
-        trainer.train()
-
-        for index in range(3):
-            path = str(self.TEST_DIR / "training_state_epoch_{}.th".format(index))
-            state = torch.load(path)
-            state.pop("metric_tracker")
-            state.pop("batch_num_total")
-            state["val_metric_per_epoch"] = [0.4, 0.1, 0.8]
-            torch.save(state, path)
-
-        next_epoch = trainer._restore_checkpoint()
-        best_epoch = trainer._metric_tracker.best_epoch
-
-        # Loss decreases in 3 epochs, but because we hard fed the val metrics as above:
-        assert next_epoch == 3
-        assert best_epoch == 1
-        assert trainer._metric_tracker._best_so_far == 0.1
-        assert trainer._metric_tracker._epochs_with_no_improvement == 1
 
     def test_trainer_can_run_gradient_accumulation(self):
         instances = list(self.instances)

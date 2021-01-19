@@ -14,7 +14,6 @@ from allennlp.modules.transformer import (
     TransformerEmbeddings,
     ImageFeatureEmbeddings,
     BiModalEncoder,
-    TransformerPooler,
 )
 
 logger = logging.getLogger(__name__)
@@ -57,17 +56,19 @@ class VisionTextModel(Model):
         ignore_text: bool = False,
         ignore_image: bool = False,
     ) -> None:
-
         super().__init__(vocab)
 
-        self.fusion_method = fusion_method
+        from allennlp.modules.backbones import VilbertBackbone
 
-        self.embeddings = text_embeddings
-        self.image_embeddings = image_embeddings
-        self.encoder = encoder
-
-        self.t_pooler = TransformerPooler(encoder.hidden_size1, pooled_output_dim)
-        self.v_pooler = TransformerPooler(encoder.hidden_size2, pooled_output_dim)
+        self.backbone = VilbertBackbone(
+            vocab,
+            text_embeddings,
+            image_embeddings,
+            encoder,
+            pooled_output_dim,
+            fusion_method,
+            dropout,
+        )
 
         num_labels = vocab.get_vocab_size(label_namespace)
         self.label_namespace = label_namespace
@@ -170,7 +171,7 @@ class VisionTextModel(Model):
         box_coordinates: torch.Tensor,
         box_mask: torch.Tensor,
         text: TextFieldTensors,
-        label: Optional[torch.Tensor] = None,
+        labels: Optional[torch.Tensor] = None,
         label_weights: Optional[torch.Tensor] = None,
     ) -> Dict[str, torch.Tensor]:
         """
@@ -193,6 +194,8 @@ class VisionTextModel(Model):
 
         """
 
+        batch_size = box_features.size(0)
+
         if self.ignore_images:
             box_features = torch.zeros_like(box_features)
             box_coordinates = torch.zeros_like(box_coordinates)
@@ -213,73 +216,10 @@ class VisionTextModel(Model):
                 dummy_text[embedder_name] = dummy_tensor_dict
             text = dummy_text
 
-        batch_size, _, feature_size = box_features.size()
-
-        if "token_ids" in text["tokens"]:
-            token_ids = text["tokens"]["token_ids"]
-        else:
-            token_ids = text["tokens"]["tokens"]
-
-        # Shape: (batch_size, num_tokens)
-        token_type_ids = text["tokens"].get("type_ids")
-        # Shape: (batch_size, num_tokens)
-        attention_mask = text["tokens"].get("mask")
-
-        # Shape: (batch_size, num_tokens, embedding_dim)
-        embedding_output = self.embeddings(token_ids, token_type_ids)
-        num_tokens = embedding_output.size(1)
-
-        # this attention mask is more simple than the triangular masking of
-        # causal attention used in OpenAI GPT, we just need to prepare the
-        # broadcast dimension here.
-        if attention_mask is not None:
-            extended_attention_mask = attention_mask
-        else:
-            extended_attention_mask = None
-
-        extended_image_attention_mask = box_mask
-
-        # Shape: (batch_size, feature_size, num_tokens)
-        # TODO (epwalsh): Why all zeros?? This doesn't seem right.
-        extended_co_attention_mask = torch.zeros(
-            batch_size,
-            feature_size,
-            num_tokens,
-            dtype=extended_image_attention_mask.dtype,
-        )
-
-        # Shape: (batch_size, num_boxes, image_embedding_dim)
-        v_embedding_output = self.image_embeddings(box_features, box_coordinates)
-
-        # Shape (encoded_layers_t): (batch_size, num_tokens, embedding_dim, num_layers)
-        # Shape (encoded_layers_v): (batch_size, num_boxes, image_embedding_dim, num_layers)
-        encoded_layers_t, encoded_layers_v = self.encoder(
-            embedding_output,
-            v_embedding_output,
-            extended_attention_mask,
-            extended_image_attention_mask,
-            extended_co_attention_mask,
-        )
-
-        # Shape: (batch_size, num_tokens, embedding_dim)
-        sequence_output_t = encoded_layers_t[:, :, :, -1]
-        # Shape: (batch_size, num_boxes, image_embedding_dim)
-        sequence_output_v = encoded_layers_v[:, :, :, -1]
-
-        # Shape: (batch_size, pooled_output_dim)
-        pooled_output_t = self.t_pooler(sequence_output_t)
-        # Shape: (batch_size, pooled_output_dim)
-        pooled_output_v = self.v_pooler(sequence_output_v)
-
-        if self.fusion_method == "sum":
-            pooled_output = self.dropout(pooled_output_t + pooled_output_v)
-        elif self.fusion_method == "mul":
-            pooled_output = self.dropout(pooled_output_t * pooled_output_v)
-        else:
-            raise ValueError(f"Fusion method '{self.fusion_method}' not supported")
+        backbone_outputs = self.backbone(box_features, box_coordinates, box_mask, text)
 
         # Shape: (batch_size, num_labels)
-        logits = self.classifier(pooled_output)
+        logits = self.classifier(backbone_outputs["pooled_boxes_and_text"])
 
         # Shape: (batch_size, num_labels)
         if self.is_multilabel:
@@ -288,7 +228,7 @@ class VisionTextModel(Model):
             probs = torch.softmax(logits, dim=-1)
 
         outputs = {"logits": logits, "probs": probs}
-        outputs = self._compute_loss_and_metrics(batch_size, outputs, label, label_weights)
+        outputs = self._compute_loss_and_metrics(batch_size, outputs, labels, label_weights)
 
         return outputs
 

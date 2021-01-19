@@ -38,10 +38,9 @@ local vocabulary = if construct_vocab then {
     #"max_instances": 1000,
     "image_processing_batch_size": 16,
     "answer_vocab": if construct_vocab then null else vocabulary,
-    "keep_unanswerable_questions": construct_vocab
   },
   "validation_dataset_reader": self.dataset_reader {
-    "keep_unanswerable_questions": true
+    "answer_vocab": null
   },
   "vocabulary": vocabulary,
   "train_data_path": "train_balanced",

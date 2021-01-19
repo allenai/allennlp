@@ -1,31 +1,29 @@
 from collections import defaultdict
-import itertools
-from typing import Any, Dict, Iterable, Tuple, Union
+from typing import Any, Dict, Iterable, Union, List, Mapping
 
 import more_itertools
 
 from allennlp.common.registrable import Registrable
-from allennlp.common import util
 from allennlp.data.instance import Instance
 
 
 class MultiTaskScheduler(Registrable):
     """
     A class that determines how to order instances within an epoch.
-    This is used by the `MultiTaskDataLoader`.  The main operation performed by this class is to
-    take a dictionary of instance iterators, one for each dataset, and combine them into a single
-    iterator, based on some scheduling algorithm (such as round robin, randomly choosing between
-    available datasets, etc.).  To control this behavior as training progresses, there is an
+    This is used by the `MultiTaskDataLoader`. The main operation performed by this class is to
+    take a dictionary of instance iterators, one for each dataset, and combine them into an
+    iterator of batches, based on some scheduling algorithm (such as round robin, randomly choosing
+    between available datasets, etc.). To control this behavior as training progresses, there is an
     `update_from_epoch_metrics` method available, which should be called from a `Callback` during
     training.  Not all `MultiTaskSchedulers` will implement this method.
     """
 
-    def order_epoch_instances(
+    def batch_instances(
         self, epoch_instances: Dict[str, Iterable[Instance]]
-    ) -> Iterable[Tuple[str, Instance]]:
+    ) -> Iterable[List[Instance]]:
         """
-        Given a dictionary of `Iterable[Instance]` for each dataset, combines them into a single
-        `Iterable`, where the values returned by that iterator are (dataset, instance) tuples.
+        Given a dictionary of `Iterable[Instance]` for each dataset, combines them into an
+        `Iterable` of batches of instances.
         """
         raise NotImplementedError
 
@@ -37,24 +35,51 @@ class MultiTaskScheduler(Registrable):
         """
         raise NotImplementedError
 
+    def count_batches(self, dataset_counts: Dict[str, int]) -> int:
+        """
+        Given the number of instances per dataset, this returns the total number of batches
+        the scheduler will return.
+        """
+        raise NotImplementedError
+
+    default_implementation = "homogeneous_roundrobin"
+
+
+def _chunked_iterator(i: Iterable, chunk_size: int, drop_last: bool):
+    chunks = more_itertools.chunked(i, chunk_size)
+    if drop_last:
+        return (chunk for chunk in chunks if len(chunk) == chunk_size)
+    else:
+        return chunks
+
 
 @MultiTaskScheduler.register("roundrobin")
 class RoundRobinScheduler(MultiTaskScheduler):
     """
     Orders instances in a round-robin fashion, where we take one instance from every dataset in
-    turn.  When one dataset runs out, we continue iterating round-robin through the rest.
+    turn. When one dataset runs out, we continue iterating round-robin through the rest.
 
     Registered as a `MultiTaskScheduler` with name "roundrobin".
     """
 
-    def order_epoch_instances(
+    def __init__(self, batch_size: int, drop_last: bool = False):
+        super().__init__()
+        self.batch_size = batch_size
+        self.drop_last = drop_last
+
+    def batch_instances(
         self, epoch_instances: Dict[str, Iterable[Instance]]
-    ) -> Iterable[Tuple[str, Instance]]:
-        iterators = [
-            zip(itertools.cycle([dataset]), iterator)
-            for dataset, iterator in epoch_instances.items()
-        ]
-        return more_itertools.roundrobin(*iterators)
+    ) -> Iterable[List[Instance]]:
+        return _chunked_iterator(
+            more_itertools.roundrobin(*epoch_instances.values()), self.batch_size, self.drop_last
+        )
+
+    def count_batches(self, dataset_counts: Dict[str, int]) -> int:
+        instance_count = sum(dataset_counts.values())
+        if self.drop_last or instance_count % self.batch_size == 0:
+            return instance_count // self.batch_size
+        else:
+            return 1 + (instance_count // self.batch_size)
 
 
 @MultiTaskScheduler.register("homogeneous_roundrobin")
@@ -79,25 +104,31 @@ class HomogeneousRoundRobinScheduler(MultiTaskScheduler):
     batch_size: `Union[int, Dict[str, int]]`
         Determines how many instances to group together in each dataset.  If this is an `int`, the
         same value is used for all datasets; otherwise, the keys must correspond to the dataset
-        names used elsewhere in the multi-task code.  Note also that this needs to match the batch
-        size set in the `MultiTaskDataLoader`; because of how the ordering works, we will actually
-        unroll the batching that we create here, so that the `MultiTaskDataLoader` can re-batch them
-        (this is because not all ordering methods perform batching, so we do it in the data loader
-        itself).
+        names used elsewhere in the multi-task code.
     """
 
-    def __init__(self, batch_size: Union[int, Dict[str, int]]):
+    def __init__(self, batch_size: Union[int, Dict[str, int]], drop_last: bool = False):
+        self.batch_size: Mapping[str, int]
         if isinstance(batch_size, int):
-            batch_size = defaultdict(lambda: batch_size)  # type: ignore
-        self.batch_size = batch_size
+            self.batch_size = defaultdict(lambda: batch_size)  # type: ignore
+        else:
+            self.batch_size = batch_size
+        self.drop_last = drop_last
 
-    def order_epoch_instances(
+    def batch_instances(
         self, epoch_instances: Dict[str, Iterable[Instance]]
-    ) -> Iterable[Tuple[str, Instance]]:
-        grouped_iterators = [
-            util.lazy_groups_of(zip(itertools.cycle([dataset]), iterator), self.batch_size[dataset])
+    ) -> Iterable[List[Instance]]:
+        chunked_iterators = [
+            _chunked_iterator(iterator, self.batch_size[dataset], self.drop_last)
             for dataset, iterator in epoch_instances.items()
         ]
-        batch_iterator = more_itertools.roundrobin(*grouped_iterators)
-        for batch in batch_iterator:
-            yield from batch
+        return more_itertools.roundrobin(*chunked_iterators)
+
+    def count_batches(self, dataset_counts: Dict[str, int]) -> int:
+        result = 0
+        for dataset, count in dataset_counts.items():
+            batch_size = self.batch_size[dataset]
+            result += count // batch_size
+            if not self.drop_last and count % batch_size != 0:
+                result += 1
+        return result

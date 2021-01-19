@@ -55,16 +55,18 @@ class TestVqaVilbert(ModelTestCase):
         # compare embedding parameters
         mapping = {
             val: key
-            for key, val in model.embeddings._construct_default_mapping(
+            for key, val in model.backbone.text_embeddings._construct_default_mapping(
                 transformer.embeddings, "huggingface", {}
             ).items()
         }
-        assert_equal_parameters(transformer.embeddings, model.embeddings, mapping=mapping)
+        assert_equal_parameters(
+            transformer.embeddings, model.backbone.text_embeddings, mapping=mapping
+        )
 
         # compare encoder parameters
         mapping = {
             val: key
-            for key, val in model.encoder._construct_default_mapping(
+            for key, val in model.backbone.encoder._construct_default_mapping(
                 transformer.encoder, "huggingface", {}
             ).items()
         }
@@ -72,5 +74,5 @@ class TestVqaVilbert(ModelTestCase):
         # We ignore the new parameters for the second modality, since they won't be present
         # in the huggingface model.
         assert_equal_parameters(
-            transformer.encoder, model.encoder, ignore_missing=True, mapping=mapping
+            transformer.encoder, model.backbone.encoder, ignore_missing=True, mapping=mapping
         )

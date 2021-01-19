@@ -67,7 +67,7 @@ local datadir = "/net/s3/allennlp/akshitab/data/SNLI-VE/data/";
       "num_steps_per_epoch": std.ceil(529527 / $["data_loader"]["batch_size"] / $["trainer"]["num_gradient_accumulation_steps"]),
       "warmup_steps": std.ceil(self.num_steps_per_epoch / 2),
     },
-    "validation_metric": "+fscore",
+    "validation_metric": "+accuracy",
     "num_epochs": 20,
     "num_gradient_accumulation_steps": effective_batch_size / gpu_batch_size / std.max(1, num_gpus)
   },

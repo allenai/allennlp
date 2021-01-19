@@ -78,7 +78,7 @@ class VisualEntailmentModel(VisionTextModel):
         box_coordinates: torch.Tensor,
         box_mask: torch.Tensor,
         hypothesis: TextFieldTensors,
-        label: Optional[torch.Tensor] = None,
+        labels: Optional[torch.Tensor] = None,
     ) -> Dict[str, torch.Tensor]:
 
         return super().forward(
@@ -86,7 +86,7 @@ class VisualEntailmentModel(VisionTextModel):
             box_coordinates,
             box_mask,
             text=hypothesis,
-            label=label,
+            labels=labels,
             label_weights=None,
         )
 

@@ -46,6 +46,23 @@ class UniformSampler(MultiTaskEpochSampler):
         return {key: 1 / len(data_loaders) for key in data_loaders}
 
 
+@MultiTaskEpochSampler.register("weighted")
+class WeightedSampler(MultiTaskEpochSampler):
+    """
+    Returns a weighted distribution over datasets at every epoch, where every
+    task has a weight.
+
+    Registered as a `MultiTaskEpochSampler` with name "weighted".
+    """
+
+    def __init__(self, weights: Dict[str, float]):
+        self.weights = weights
+
+    def get_task_proportions(self, data_loaders: Mapping[str, DataLoader]) -> Dict[str, float]:
+        total = sum(self.weights[task] for task in data_loaders.keys())
+        return {task: self.weights[task] / total for task in data_loaders.keys()}
+
+
 @MultiTaskEpochSampler.register("proportional")
 class ProportionalSampler(MultiTaskEpochSampler):
     """

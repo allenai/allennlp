@@ -63,7 +63,6 @@ class GQAReader(VisionReader):
         cuda_device: Optional[Union[int, torch.device]] = None,
         max_instances: Optional[int] = None,
         image_processing_batch_size: int = 8,
-        keep_unanswerable_questions: bool = True,
         write_to_cache: bool = True,
     ) -> None:
         super().__init__(
@@ -82,7 +81,7 @@ class GQAReader(VisionReader):
         self.data_dir = data_dir
 
         # read answer vocab
-        if keep_unanswerable_questions or not answer_vocab:
+        if answer_vocab is None:
             self.answer_vocab = None
         else:
             if isinstance(answer_vocab, str):

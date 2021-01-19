@@ -27,7 +27,7 @@ class TestVisualEntailmentReader(AllenNlpTestCase):
         assert len(instance["hypothesis"]) == 4
         sentence_tokens = [t.text for t in instance["hypothesis"]]
         assert sentence_tokens == ["A", "toddler", "sleeps", "outside."]
-        assert instance["label"].label == "contradiction"
+        assert instance["labels"].label == "contradiction"
 
         batch = Batch(instances)
         vocab = Vocabulary()

@@ -1,4 +1,3 @@
-import collections
 import logging
 from typing import Dict, Optional
 
@@ -66,13 +65,10 @@ class VqaVilbert(VisionTextModel):
             ignore_image=ignore_image,
         )
 
-        self.loss = torch.nn.BCELoss()
-        self.consistency_wrong_map: Dict[str, int] = collections.Counter()
         from allennlp.training.metrics import F1MultiLabelMeasure
-
-        self.f1_metric = F1MultiLabelMeasure(average="micro")
         from allennlp.training.metrics.vqa import VqaMeasure
 
+        self.f1_metric = F1MultiLabelMeasure(average="micro")
         self.vqa_metric = VqaMeasure()
 
     @overrides
@@ -91,7 +87,7 @@ class VqaVilbert(VisionTextModel):
             box_coordinates,
             box_mask,
             text=question,
-            label=labels,
+            labels=labels,
             label_weights=label_weights,
         )
 
