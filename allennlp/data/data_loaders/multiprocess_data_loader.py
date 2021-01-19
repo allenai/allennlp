@@ -1,7 +1,6 @@
 from collections import deque
 import logging
 from multiprocessing.process import BaseProcess
-from os import PathLike
 import random
 import traceback
 from typing import List, Iterator, Optional, Iterable, Union
@@ -14,7 +13,7 @@ from allennlp.common.util import lazy_groups_of, shuffle_iterable
 from allennlp.common.tqdm import Tqdm
 from allennlp.data.instance import Instance
 from allennlp.data.data_loaders.data_loader import DataLoader, TensorDict, allennlp_collate
-from allennlp.data.dataset_readers import DatasetReader, WorkerInfo
+from allennlp.data.dataset_readers import DatasetReader, WorkerInfo, DatasetReaderInput
 from allennlp.data.fields import TextField
 from allennlp.data.samplers import BatchSampler
 from allennlp.data.vocabulary import Vocabulary
@@ -39,7 +38,7 @@ class MultiProcessDataLoader(DataLoader):
     reader: `DatasetReader`, required
         A `DatasetReader` used to load instances from the `data_path`.
 
-    data_path: `Union[str, PathLike]`, required
+    data_path: `DatasetReaderInput`, required
         Passed to `DatasetReader.read()`.
 
         !!! Note
@@ -190,7 +189,7 @@ class MultiProcessDataLoader(DataLoader):
     def __init__(
         self,
         reader: DatasetReader,
-        data_path: Union[str, PathLike],
+        data_path: DatasetReaderInput,
         *,
         batch_size: int = None,
         drop_last: bool = False,

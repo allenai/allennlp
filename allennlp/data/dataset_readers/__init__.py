@@ -10,6 +10,7 @@ and produce datasets in the formats required by specific models.
 from allennlp.data.dataset_readers.dataset_reader import (
     DatasetReader,
     WorkerInfo,
+    DatasetReaderInput,
 )
 from allennlp.data.dataset_readers.babi import BabiReader
 from allennlp.data.dataset_readers.conll2003 import Conll2003DatasetReader
