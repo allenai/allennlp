@@ -118,7 +118,9 @@ class TrainerCallback(Registrable):
         self.serialization_dir = serialization_dir
         self.trainer: Optional["GradientDescentTrainer"] = None
 
-    def on_start(self, trainer: "GradientDescentTrainer", is_primary: bool = True, **kwargs) -> None:
+    def on_start(
+        self, trainer: "GradientDescentTrainer", is_primary: bool = True, **kwargs
+    ) -> None:
         """
         This callback hook is called before the training is started.
         """
@@ -209,7 +211,9 @@ class TrackEpochCallback(TrainerCallback):
     completed epochs at a given training state.
     """
 
-    def on_start(self, trainer: "GradientDescentTrainer", is_primary: bool = True, **kwargs) -> None:
+    def on_start(
+        self, trainer: "GradientDescentTrainer", is_primary: bool = True, **kwargs
+    ) -> None:
         super().on_start(trainer, is_primary)
         trainer.model.epoch = 0
 
