@@ -18,6 +18,21 @@ logger = logging.getLogger(__name__)
 
 
 class DeepspeedCheckpointer(Checkpointer):
+    def manual_save(
+        self, 
+        model_engine,
+        serialization_dir: str, 
+        tag: str,
+        client_state={}
+    ):
+        # if self.save_non_zero_checkpoint:
+        model_engine._create_checkpoint_file(serialization_dir, tag, False)
+        model_engine._save_checkpoint(serialization_dir, tag, client_state=client_state)
+
+        # if self.save_zero_checkpoint:
+        model_engine._create_zero_checkpoint_files(serialization_dir, tag)
+        model_engine._save_zero_checkpoint(serialization_dir, tag)
+
     @overrides
     def save_checkpoint(
         self,
@@ -36,7 +51,8 @@ class DeepspeedCheckpointer(Checkpointer):
 
             checkpoint_id = "deepspeed_epoch_{}".format(epoch)
             model_path = os.path.join(self._serialization_dir, "model_state_epoch_{}".format(epoch))
-            model_engine.save_checkpoint(self._serialization_dir, checkpoint_id)
+            # model_engine.save_checkpoint(self._serialization_dir, checkpoint_id)
+            self.manual_save(model_engine, self._serialization_dir, checkpoint_id)
 
             # TODO
             # Model will need a weight file to load;
