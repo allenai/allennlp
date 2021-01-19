@@ -246,10 +246,13 @@ class MultiTaskDataLoader(DataLoader):
         }
 
     def _make_data_loader(self, key: str) -> MultiProcessDataLoader:
-        kwargs: Dict[str, Any] = {}
-        kwargs["reader"] = _MultitaskDatasetReaderShim(self.readers[key], key)
-        kwargs["data_path"] = self.data_paths[key]
-        kwargs["batch_size"] = 1  # So that the loader gives us one instance at a time.
+        kwargs: Dict[str, Any] = {
+            "reader": _MultitaskDatasetReaderShim(self.readers[key], key),
+            "data_path": self.data_paths[key],
+            # We don't load batches from this data loader, only instances, but we have to set
+            # something for the batch size, so we set 1.
+            "batch_size": 1,
+        }
         if key in self._num_workers:
             kwargs["num_workers"] = self._num_workers[key]
         if key in self._max_instances_in_memory:
