@@ -256,10 +256,6 @@ class MultiTaskDataLoader(DataLoader):
             kwargs["max_instances_in_memory"] = self._max_instances_in_memory[key]
         if key in self._start_method:
             kwargs["start_method"] = self._start_method[key]
-        if key in self._instance_queue_size:
-            kwargs["instance_queue_size"] = self._instance_queue_size[key]
-        if key in self._instance_chunk_size:
-            kwargs["instance_chunk_size"] = self._instance_chunk_size[key]
         return MultiProcessDataLoader(**kwargs)
 
 
