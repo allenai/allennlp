@@ -135,7 +135,7 @@ class ELMoTokenCharactersIndexer(TokenIndexer):
     ) -> Dict[str, List[List[int]]]:
         # TODO(brendanr): Retain the token to index mappings in the vocabulary and remove this
 
-        # https://github.com/allenai/allennlp/blob/master/allennlp/data/token_indexers/wordpiece_indexer.py#L113
+        # https://github.com/allenai/allennlp/blob/main/allennlp/data/token_indexers/wordpiece_indexer.py#L113
 
         return {
             "elmo_tokens": [self._mapper.convert_word_to_char_ids(t.ensure_text()) for t in tokens]

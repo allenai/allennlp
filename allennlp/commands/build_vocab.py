@@ -65,7 +65,8 @@ def build_vocab_from_args(args: argparse.Namespace):
         raise RuntimeError(f"{args.output_path} already exists. Use --force to overwrite.")
 
     output_directory = os.path.dirname(args.output_path)
-    os.makedirs(output_directory, exist_ok=True)
+    if len(output_directory) > 0:
+        os.makedirs(output_directory, exist_ok=True)
 
     params = Params.from_file(args.param_path)
 

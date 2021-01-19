@@ -10,10 +10,12 @@ from allennlp.common.testing.test_case import AllenNlpTestCase
 from allennlp.common.testing.model_test_case import ModelTestCase
 from allennlp.common.testing.distributed_test import run_distributed_test
 
+from allennlp.modules.transformer import TransformerModule
+
 from allennlp.training.metrics import Metric
 
 
-_available_devices = ["cpu"] + (["cuda"] if torch.cuda.is_available() else [])
+_available_devices = ["cpu"] + (["cuda:0"] if torch.cuda.is_available() else [])
 
 
 def multi_device(test_method):
@@ -100,3 +102,30 @@ def global_distributed_metric(
         atol = exact[1]
 
     assert_metrics_values(metrics, desired_values, rtol, atol)  # type: ignore
+
+
+def assert_equal_parameters(
+    old_module: torch.nn.Module,
+    new_module: TransformerModule,
+    ignore_missing: bool = False,
+    mapping: Optional[Dict] = None,
+):
+    """
+    Tests if the parameters present in the `new_module` are equal to the ones in `old_module`.
+    Note that any parameters present in the `old_module` that are not present in `new_module`
+    are ignored.
+    """
+    mapping = mapping or {}
+
+    old_parameters = dict(old_module.named_parameters())
+    present_only_in_old = set(old_parameters.keys())
+
+    for name, parameter in new_module.named_parameters():
+        for key, val in mapping.items():
+            name = name.replace(key, val)
+        if ignore_missing:
+            if name not in old_parameters:
+                continue
+        present_only_in_old.remove(name)
+        assert torch.allclose(old_parameters[name], parameter)
+    return present_only_in_old

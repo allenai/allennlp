@@ -6,7 +6,65 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## Unreleased
+## Unreleased (2.0 branch)
+
+### Added
+
+- Added `TensorCache` class for caching tensors on disk
+- Added reader for the NLVR2 dataset
+- Added cache for Detectron models that we might re-use several times in the code base
+- Added abstraction and concrete implementation for image loading
+- Added abstraction and concrete implementation for `GridEmbedder`
+- Added abstraction and demo implementation for an image augmentation module.
+- Added abstraction and concrete implementation for region detectors.
+- A new high-performance default `DataLoader`: `MultiProcessDataLoading`.
+- A `MultiTaskModel` and abstractions to use with it, including `Backbone` and `Head`.  The
+  `MultiTaskModel` first runs its inputs through the `Backbone`, then passes the result (and
+whatever other relevant inputs it got) to each `Head` that's in use.
+- A `MultiTaskDataLoader`, with a corresponding `MultiTaskDatasetReader`, and a couple of new
+  configuration objects: `MultiTaskEpochSampler` (for deciding what proportion to sample from each
+dataset at every epoch) and a `MultiTaskScheduler` (for ordering the instances within an epoch).
+- Added `TensorCache` class for caching tensors on disk
+- Added reader for the NLVR2 dataset
+- Added cache for Detectron models that we might re-use several times in the code base
+- Added abstraction and concrete implementation for image loading
+- Added abstraction and concrete implementation for `GridEmbedder`
+- Added abstraction and demo implementation for an image augmentation module.
+- Added abstraction and concrete implementation for region detectors.
+- Transformer toolkit to plug and play with modular components of transformer architectures.
+- `VisionReader` and `VisionTextModel` base classes added. `VisualEntailment` and `VQA` inherit from these.
+- Added reader for the GQA dataset
+- Added a config to traing a GQA model
+- Added a command to count the number of instances we're going to be training with
+
+### Changed
+
+- `DatasetReader`s are now always lazy. This means there is no `lazy` parameter in the base
+  class, and the `_read()` method should always be a generator.
+- The `DataLoader` now decides whether to load instances lazily or not.
+  With the `PyTorchDataLoader` this is controlled with the `lazy` parameter, but with
+  the `MultiProcessDataLoading` this is controlled by the `max_instances_in_memory` setting.
+- `ArrayField` is now called `TensorField`, and implemented in terms of torch tensors, not numpy.
+- Improved `nn.util.move_to_device` function by avoiding an unnecessary recursive check for tensors and
+  adding a `non_blocking` optional argument, which is the same argument as in `torch.Tensor.to()`.
+- If you are trying to create a heterogeneous batch, you now get a better error message.
+- Readers using the new vision features now explicitly log how they are featurizing images.
+- `master_addr` and `master_port` renamed to `primary_addr` and `primary_port`, respectively.
+- `is_master` parameter for training callbacks renamed to `is_primary`.
+
+### Removed
+
+- Removed `nn.util.has_tensor`.
+
+### Fixed
+
+- The `build-vocab` command no longer crashes when the resulting vocab file is
+  in the current working directory.
+- VQA models now use the `vqa_score` metric for early stopping. This results in
+  much better scores.
+
+
+## Unreleased (1.x branch)
 
 ### Added
 
@@ -210,6 +268,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed a bug in the cnn_encoder where activations involving masked tokens could be picked up by the max
 - Fix intra word tokenization for `PretrainedTransformerTokenizer` when disabling fast tokenizer.
 
+
 ## [v1.1.0](https://github.com/allenai/allennlp/releases/tag/v1.1.0) - 2020-09-08
 
 ### Fixed
@@ -224,8 +283,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- `Predictor.capture_model_internals()` now accepts a regex specifying
-  which modules to capture
+- `Predictor.capture_model_internals()` now accepts a regex specifying which modules to capture.
 
 
 ## [v1.1.0rc4](https://github.com/allenai/allennlp/releases/tag/v1.1.0rc4) - 2020-08-20
@@ -292,7 +350,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   in the log output even when `train_parameters` was set to `False`.
 - Fixed a bug with the sharded dataset reader where it would only read a fraction of the instances
   in distributed training.
-- Fixed checking equality of `ArrayField`s.
+- Fixed checking equality of `TensorField`s.
 - Fixed a bug where `NamespaceSwappingField` did not work correctly with `.empty_field()`.
 - Put more sensible defaults on the `huggingface_adamw` optimizer.
 - Simplified logging so that all logging output always goes to one file.

@@ -18,7 +18,7 @@ LABEL com.nvidia.volumes.needed="nvidia_driver"
 
 WORKDIR /stage/allennlp
 
-# Install torch first. This build arg should be in the form of a version requirement,
+# Install torch ecosystem first. This build arg should be in the form of a version requirement,
 # like 'torch==1.7' or 'torch==1.7+cu102 -f https://download.pytorch.org/whl/torch_stable.html'.
 ARG TORCH
 RUN pip install --no-cache-dir ${TORCH}

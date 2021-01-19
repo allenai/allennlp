@@ -1,4 +1,4 @@
-from typing import Dict, List, Iterator
+from typing import Dict, List, Iterator, Sequence
 
 from overrides import overrides
 
@@ -26,13 +26,13 @@ class ListField(SequenceField[DataArray]):
 
     __slots__ = ["field_list"]
 
-    def __init__(self, field_list: List[Field]) -> None:
+    def __init__(self, field_list: Sequence[Field]) -> None:
         field_class_set = {field.__class__ for field in field_list}
         assert (
             len(field_class_set) == 1
         ), "ListFields must contain a single field type, found " + str(field_class_set)
         # Not sure why mypy has a hard time with this type...
-        self.field_list: List[Field] = field_list
+        self.field_list = field_list
 
     # Sequence[Field] methods
     def __iter__(self) -> Iterator[Field]:

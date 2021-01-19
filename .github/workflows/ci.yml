@@ -4,6 +4,7 @@ on:
   pull_request:
     branches:
     - main
+    - vision
   push:
     branches:
     - main
@@ -151,7 +152,10 @@ jobs:
         ALLENNLP_VERSION_OVERRIDE: ""  # Don't replace the core library.
       run: |
         git clone https://github.com/allenai/allennlp-models.git
-        cd allennlp-models && pip install --upgrade --upgrade-strategy eager -e . -r dev-requirements.txt
+        cd allennlp-models
+        # TODO: remove this next line when it's no longer necessary.
+        git checkout vision
+        pip install --upgrade --upgrade-strategy eager -e . -r dev-requirements.txt
 
     - name: Run models tests
       run: |
@@ -288,9 +292,9 @@ jobs:
       run: |
         # Check the install instructions on https://pytorch.org/ to keep these up-to-date.
         if [[ $CUDA == '10.2' ]]; then
-            echo "DOCKER_TORCH_VERSION='torch==1.7.1'" >> $GITHUB_ENV;
+            echo "DOCKER_TORCH_VERSION='torch==1.7.1 torchvision==0.8.2'" >> $GITHUB_ENV;
         elif [[ $CUDA == '11.0' ]]; then
-            echo "DOCKER_TORCH_VERSION='torch==1.7.1+cu110 -f https://download.pytorch.org/whl/torch_stable.html'" >> $GITHUB_ENV;
+            echo "DOCKER_TORCH_VERSION='torch==1.7.1+cu110 torchvision==0.8.2+cu110 -f https://download.pytorch.org/whl/torch_stable.html'" >> $GITHUB_ENV;
         else
             echo "Unhandled CUDA version $CUDA";
             exit 1;
@@ -388,14 +392,14 @@ jobs:
         ./scripts/build_docs.sh
 
     - name: Configure Git
-      if: github.event_name == 'release' || github.event_name == 'push'
+      if: (github.event_name == 'release' || github.event_name == 'push') && github.ref == 'refs/heads/master'
       run: |
         git config --global user.email "ai2service@allenai.org"
         git config --global user.name "ai2service"
         git config --global push.default simple
 
     - name: Stage docs
-      if: github.event_name == 'release' || github.event_name == 'push'
+      if: (github.event_name == 'release' || github.event_name == 'push') && github.ref == 'refs/heads/master'
       run: |
         echo "Staging docs to $DOCS_FOLDER"
 
@@ -447,7 +451,7 @@ jobs:
         EOL
 
     - name: Deploy docs
-      if: github.event_name == 'release' || github.event_name == 'push'
+      if: (github.event_name == 'release' || github.event_name == 'push') && github.ref == 'refs/heads/master'
       run: |
         # And push them up to GitHub
         cd ~/allennlp-docs/
