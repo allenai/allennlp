@@ -76,6 +76,8 @@ class Checkpointer(Registrable):
         only looks at time, not batch or epoch number, though those parameters are available to you
         if you want to customize the behavior of this function.
         """
+        if not trainer._master:
+            return
         if self._model_save_interval is None:
             return
         if time.time() - self._last_save_time < self._model_save_interval:
@@ -92,6 +94,8 @@ class Checkpointer(Registrable):
         is_best_so_far: bool = False,
         save_model_only=False,
     ) -> None:
+        if not trainer._master:
+            return
         if self._serialization_dir is not None:
             with trainer.get_checkpoint_state() as state:
                 model_state, training_states = state

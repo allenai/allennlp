@@ -16,7 +16,7 @@ import torch
 from allennlp.commands.train import Train, train_model, train_model_from_args, TrainModel
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.testing import AllenNlpTestCase, cpu_or_gpu
+from allennlp.common.testing import AllenNlpTestCase, cpu_or_gpu, requires_multi_gpu
 from allennlp.data import DatasetReader, Instance, Vocabulary
 from allennlp.data.dataloader import TensorDict
 from allennlp.models import load_archive, Model
@@ -235,6 +235,7 @@ class TestTrain(AllenNlpTestCase):
         # Check we can load the serialized model
         assert load_archive(out_dir).model
 
+    @requires_multi_gpu
     def test_train_model_deepspeed(self):
         if torch.cuda.device_count() >= 2:
             devices = [0, 1]

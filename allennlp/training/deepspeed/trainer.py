@@ -85,7 +85,7 @@ class DeepspeedTrainer(GradientDescentTrainer):
             epoch_callbacks=epoch_callbacks,
             end_callbacks=end_callbacks,
             trainer_callbacks=trainer_callbacks,
-            distributed=False,
+            distributed=False, # Avoid DDP init
             local_rank=local_rank,
             world_size=world_size,
             num_gradient_accumulation_steps=num_gradient_accumulation_steps,
@@ -129,9 +129,7 @@ class DeepspeedTrainer(GradientDescentTrainer):
         """
         Trains one epoch and returns metrics.
         """
-        print(f'Rank {self._rank}: Starting epoch')
         logger.info("Epoch %d/%d", epoch, self._num_epochs - 1)
-        logger.info(f"logging mem usg")
         cpu_memory_usage = []
         for worker, memory in common_util.peak_cpu_memory().items():
             cpu_memory_usage.append((worker, memory))
@@ -140,7 +138,6 @@ class DeepspeedTrainer(GradientDescentTrainer):
         for gpu, memory in common_util.peak_gpu_memory().items():
             gpu_memory_usage.append((gpu, memory))
             logger.info(f"GPU {gpu} memory usage: {common_util.format_size(memory)}")
-        logger.info(f"done logging mem usg")
 
         regularization_penalty = self.model.get_regularization_penalty()
 
@@ -178,8 +175,8 @@ class DeepspeedTrainer(GradientDescentTrainer):
             batches_this_epoch += 1
             self._batch_num_total += 1
             batch_num_total = self._batch_num_total
-            if not self._master:
-                print(f'Rank {self._rank}: {batch_num_total}')
+            # if not self._master:
+            #     print(f'Rank {self._rank}: {batch_num_total}')
 
             batch_outputs = self.batch_outputs(batch, for_training=True)
 
@@ -255,14 +252,14 @@ class DeepspeedTrainer(GradientDescentTrainer):
                     is_master=self._master,
                 )
 
-        if not self._master:
-            print(f'Rank {self._rank}: {batches_this_epoch}')
+        # if not self._master:
+        #     print(f'Rank {self._rank}: {batches_this_epoch}')
 
         if self._distributed:
             dist.barrier()
 
-        if not self._master:
-            print(f'Rank {self._rank}: Passed barrier')
+        # if not self._master:
+        #     print(f'Rank {self._rank}: Passed barrier')
         
         metrics = training_util.get_metrics(
             self.model,
@@ -282,7 +279,7 @@ class DeepspeedTrainer(GradientDescentTrainer):
             metrics["gpu_" + str(gpu_num) + "_memory_MB"] = memory / (1024 * 1024)
         return metrics
 
-    def _try_train(self) -> Dict[str, Any]:
+    def __try_train(self) -> Dict[str, Any]:
         try:
             epoch_counter = self._restore_checkpoint()
         except RuntimeError:

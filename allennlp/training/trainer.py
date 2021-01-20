@@ -1000,7 +1000,7 @@ class GradientDescentTrainer(Trainer):
             epoch_start_time = time.time()
             train_metrics = self._train_epoch(epoch)
 
-            if self._master and self._checkpointer is not None:
+            if self._checkpointer is not None:
                 self._checkpointer.save_checkpoint(epoch, self, save_model_only=True)
 
             # Wait for the master to finish saving the model checkpoint
@@ -1083,7 +1083,7 @@ class GradientDescentTrainer(Trainer):
             if self._momentum_scheduler:
                 self._momentum_scheduler.step(this_epoch_val_metric)
 
-            if self._master and self._checkpointer is not None:
+            if self._checkpointer is not None:
                 self._checkpointer.save_checkpoint(
                     epoch, self, is_best_so_far=self._metric_tracker.is_best_so_far()
                 )
