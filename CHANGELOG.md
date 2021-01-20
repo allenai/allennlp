@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   instead of an exception when lacking write permissions on an existing file lock.
   This makes it possible to use the `FileLock` class on a read-only file system.
 - Added a new learning rate scheduler: `CombinedLearningRateScheduler`. This can be used to combine different LR schedulers, using one after the other.
+- Added an official CUDA 10.1 Docker image.
 - Moving `ModelCard` and `TaskCard` abstractions into the main repository.
 - Added a util function `allennlp.nn.util.dist_reduce(...)` for handling distributed reductions.
   This is especially useful when implementing a distributed `Metric`.
