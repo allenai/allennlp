@@ -399,7 +399,7 @@ class QuantitativeAnalyses(ModelCardInfo):
 
 
 @dataclass(frozen=True)
-class EthicalConsiderations(ModelCardInfo):
+class ModelEthicalConsiderations(ModelCardInfo):
     """
     This highlights any ethical considerations to keep
     in mind when using the model.
@@ -416,7 +416,7 @@ class EthicalConsiderations(ModelCardInfo):
 
 
 @dataclass(frozen=True)
-class CaveatsAndRecommendations(ModelCardInfo):
+class ModelCaveatsAndRecommendations(ModelCardInfo):
     """
     This lists any additional concerns. For instance, were any
     relevant groups not present in the evaluation data?
@@ -456,8 +456,8 @@ class ModelCard(ModelCardInfo):
     metrics : `Union[Metrics, str]`, optional
     evaluation_data : `Union[EvaluationData, str]`, optional
     quantitative_analyses : `Union[QuantitativeAnalyses, str]`, optional
-    ethical_considerations : `Union[EthicalConsiderations, str]`, optional
-    caveats_and_recommendations : `Union[CaveatsAndRecommendations, str]`, optional
+    ethical_considerations : `Union[ModelEthicalConsiderations, str]`, optional
+    caveats_and_recommendations : `Union[ModelCaveatsAndRecommendations, str]`, optional
 
     !!! Note
         For all the fields that are `Union[ModelCardInfo, str]`, a `str` input will be
@@ -484,8 +484,10 @@ class ModelCard(ModelCardInfo):
         evaluation_data: Optional[Union[str, EvaluationData]] = None,
         training_data: Optional[Union[str, TrainingData]] = None,
         quantitative_analyses: Optional[Union[str, QuantitativeAnalyses]] = None,
-        ethical_considerations: Optional[Union[str, EthicalConsiderations]] = None,
-        caveats_and_recommendations: Optional[Union[str, CaveatsAndRecommendations]] = None,
+        model_ethical_considerations: Optional[Union[str, ModelEthicalConsiderations]] = None,
+        model_caveats_and_recommendations: Optional[
+            Union[str, ModelCaveatsAndRecommendations]
+        ] = None,
     ):
 
         assert id
@@ -518,10 +520,12 @@ class ModelCard(ModelCardInfo):
             training_data = TrainingData(dataset=training_data)
         if isinstance(quantitative_analyses, str):
             quantitative_analyses = QuantitativeAnalyses(unitary_results=quantitative_analyses)
-        if isinstance(ethical_considerations, str):
-            ethical_considerations = EthicalConsiderations(ethical_considerations)
-        if isinstance(caveats_and_recommendations, str):
-            caveats_and_recommendations = CaveatsAndRecommendations(caveats_and_recommendations)
+        if isinstance(model_ethical_considerations, str):
+            model_ethical_considerations = ModelEthicalConsiderations(model_ethical_considerations)
+        if isinstance(model_caveats_and_recommendations, str):
+            model_caveats_and_recommendations = ModelCaveatsAndRecommendations(
+                model_caveats_and_recommendations
+            )
 
         self.id = id
         self.registered_model_name = registered_model_name
@@ -536,8 +540,8 @@ class ModelCard(ModelCardInfo):
         self.evaluation_data = evaluation_data
         self.training_data = training_data
         self.quantitative_analyses = quantitative_analyses
-        self.ethical_considerations = ethical_considerations
-        self.caveats_and_recommendations = caveats_and_recommendations
+        self.model_ethical_considerations = model_ethical_considerations
+        self.model_caveats_and_recommendations = model_caveats_and_recommendations
 
     def to_dict(self) -> Dict[str, Any]:
         """
