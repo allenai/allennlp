@@ -55,6 +55,28 @@ class ModelCardInfo(FromParams):
 
 
 @dataclass(frozen=True)
+class Paper(ModelCardInfo):
+    """
+    This provides information about the paper.
+
+    # Parameters
+
+    name : `str`
+        The name of the paper.
+
+    link : `str`
+        A web link to the paper.
+
+    citation : `str`
+        The BibTex for the paper.
+
+    """
+
+    name: Optional[str] = None
+    link: Optional[str] = None
+    citation: Optional[str] = None
+
+
 class ModelDetails(ModelCardInfo):
     """
     This provides the basic information about the model.
@@ -102,14 +124,14 @@ class ModelDetails(ModelCardInfo):
         kinds of assumptions are encoded in the system.
         Eg. Naive Bayes Classifier.
 
-    paper : `str`
+    paper : `Union[str, Dict, Paper]`
         The paper on which the model is based.
         Format example:
-        [Model Cards for Model Reporting (Mitchell et al, 2019)]
-        (https://api.semanticscholar.org/CorpusID:52946140)
-
-    citation : `str`
-        The BibTex for the paper.
+        {
+            "name": "Model Cards for Model Reporting (Mitchell et al, 2019)",
+            "link": "https://api.semanticscholar.org/CorpusID:52946140",
+            "citation": "<BibTex>",
+        }
 
     license : `str`
         License information for the model.
@@ -122,18 +144,38 @@ class ModelDetails(ModelCardInfo):
         Link to training configuration.
     """
 
-    description: Optional[str] = None
-    short_description: Optional[str] = None
-    developed_by: Optional[str] = None
-    contributed_by: Optional[str] = None
-    date: Optional[str] = None
-    version: Optional[str] = None
-    model_type: Optional[str] = None
-    paper: Optional[str] = None
-    citation: Optional[str] = None
-    license: Optional[str] = None
-    contact: Optional[str] = None
-    training_config: Optional[str] = None
+    def __init__(
+        self,
+        description: Optional[str] = None,
+        short_description: Optional[str] = None,
+        developed_by: Optional[str] = None,
+        contributed_by: Optional[str] = None,
+        date: Optional[str] = None,
+        version: Optional[str] = None,
+        model_type: Optional[str] = None,
+        paper: Optional[Union[str, Dict, Paper]] = None,
+        # citation: Optional[str] = None,
+        license: Optional[str] = None,
+        contact: Optional[str] = None,
+        training_config: Optional[str] = None,
+    ):
+        self.description = description
+        self.short_description = short_description
+        self.developed_by = developed_by
+        self.contributed_by = contributed_by
+        self.date = date
+        self.version = version
+        self.model_type = model_type
+        if isinstance(paper, Paper):
+            self.paper = paper
+        elif isinstance(paper, Dict):
+            self.paper = Paper(**paper)
+        else:
+            self.paper = Paper(name=paper)
+        # self.citation = citation
+        self.license = license
+        self.contact = contact
+        self.training_config = training_config
 
 
 @dataclass(frozen=True)
@@ -228,13 +270,31 @@ class Metrics(ModelCardInfo):
 
 
 @dataclass(frozen=True)
+class Dataset(ModelCardInfo):
+    """
+    This provides basic information about the dataset.
+
+    # Parameters
+
+    name : `str`
+        The name of the dataset.
+
+    link : `str`
+        A web link to the dataset.
+
+    """
+
+    name: Optional[str] = None
+    link: Optional[str] = None
+
+
 class EvaluationData(ModelCardInfo):
     """
     This provides information about the evaluation data.
 
     # Parameters
 
-    dataset : `str`
+    dataset : `Union[str, Dict, Dataset]`
         The name(s) (and link(s), if available) of the dataset(s) used to evaluate
         the model. Optionally, provide a link to the relevant datasheet(s) as well.
     motivation : `str`
@@ -246,9 +306,20 @@ class EvaluationData(ModelCardInfo):
         Eg. tokenization of sentences, filtering of paragraphs by length, etc.
     """
 
-    dataset: Optional[str] = None
-    motivation: Optional[str] = None
-    preprocessing: Optional[str] = None
+    def __init__(
+        self,
+        dataset: Optional[Union[str, Dict, Dataset]] = None,
+        motivation: Optional[str] = None,
+        preprocessing: Optional[str] = None,
+    ):
+        if isinstance(dataset, Dataset):
+            self.dataset = dataset
+        elif isinstance(dataset, Dict):
+            self.dataset = Dataset(**dataset)
+        else:
+            self.dataset = Dataset(name=dataset)
+        self.motivation = motivation
+        self.preprocessing = preprocessing
 
     def to_dict(self):
         info = {}
@@ -258,7 +329,6 @@ class EvaluationData(ModelCardInfo):
         return info
 
 
-@dataclass(frozen=True)
 class TrainingData(ModelCardInfo):
     """
     This provides information about the training data. If the model was initialized
@@ -268,7 +338,7 @@ class TrainingData(ModelCardInfo):
 
     # Parameters
 
-    dataset : `str`
+    dataset : `Union[str, Dict, Dataset]`
         The name(s) (and link(s), if available) of the dataset(s) used to train
         the model. Optionally, provide a link to the relevant datasheet(s) as well.
         Eg. * Proprietary data from Perspective API; includes comments from online
@@ -285,9 +355,20 @@ class TrainingData(ModelCardInfo):
             and headers were ignored.
     """
 
-    dataset: Optional[str] = None
-    motivation: Optional[str] = None
-    preprocessing: Optional[str] = None
+    def __init__(
+        self,
+        dataset: Optional[Union[str, Dict, Dataset]] = None,
+        motivation: Optional[str] = None,
+        preprocessing: Optional[str] = None,
+    ):
+        if isinstance(dataset, Dataset):
+            self.dataset = dataset
+        elif isinstance(dataset, Dict):
+            self.dataset = Dataset(**dataset)
+        else:
+            self.dataset = Dataset(name=dataset)
+        self.motivation = motivation
+        self.preprocessing = preprocessing
 
     def to_dict(self):
         info = {}
