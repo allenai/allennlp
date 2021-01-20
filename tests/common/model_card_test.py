@@ -143,14 +143,16 @@ class TestPretrainedModelConfiguration(AllenNlpTestCase):
                     "model_details": {
                         "description": "This is the fake model trained on a dataset.",
                         "paper": {
-                            "name": "paper name",
-                            "link": "paper link",
+                            "title": "paper name",
+                            "url": "paper link",
                             "citation": "test citation",
                         },
                     },
+                    "training_data": {"dataset": {"name": "dataset 1", "url": "dataset url"}},
                 }
             )
         )
 
         assert isinstance(model_card.model_details.paper, Paper)
-        assert model_card.model_details.paper.link == "paper link"
+        assert model_card.model_details.paper.url == "paper link"
+        assert model_card.training_data.dataset.name == "dataset 1"

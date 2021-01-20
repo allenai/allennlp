@@ -61,10 +61,10 @@ class Paper(ModelCardInfo):
 
     # Parameters
 
-    name : `str`
+    title : `str`
         The name of the paper.
 
-    link : `str`
+    url : `str`
         A web link to the paper.
 
     citation : `str`
@@ -72,8 +72,8 @@ class Paper(ModelCardInfo):
 
     """
 
-    name: Optional[str] = None
-    link: Optional[str] = None
+    title: Optional[str] = None
+    url: Optional[str] = None
     citation: Optional[str] = None
 
 
@@ -128,8 +128,8 @@ class ModelDetails(ModelCardInfo):
         The paper on which the model is based.
         Format example:
         {
-            "name": "Model Cards for Model Reporting (Mitchell et al, 2019)",
-            "link": "https://api.semanticscholar.org/CorpusID:52946140",
+            "title": "Model Cards for Model Reporting (Mitchell et al, 2019)",
+            "url": "https://api.semanticscholar.org/CorpusID:52946140",
             "citation": "<BibTex>",
         }
 
@@ -154,7 +154,6 @@ class ModelDetails(ModelCardInfo):
         version: Optional[str] = None,
         model_type: Optional[str] = None,
         paper: Optional[Union[str, Dict, Paper]] = None,
-        # citation: Optional[str] = None,
         license: Optional[str] = None,
         contact: Optional[str] = None,
         training_config: Optional[str] = None,
@@ -171,8 +170,7 @@ class ModelDetails(ModelCardInfo):
         elif isinstance(paper, Dict):
             self.paper = Paper(**paper)
         else:
-            self.paper = Paper(name=paper)
-        # self.citation = citation
+            self.paper = Paper(title=paper)
         self.license = license
         self.contact = contact
         self.training_config = training_config
@@ -279,13 +277,13 @@ class Dataset(ModelCardInfo):
     name : `str`
         The name of the dataset.
 
-    link : `str`
+    url : `str`
         A web link to the dataset.
 
     """
 
     name: Optional[str] = None
-    link: Optional[str] = None
+    url: Optional[str] = None
 
 
 class EvaluationData(ModelCardInfo):
