@@ -12,9 +12,7 @@ class TorchImageLoaderTest(AllenNlpTestCase):
         self.image_fixture_path = str(
             self.FIXTURES_ROOT
             / "data"
-            / "vqav2"
             / "images"
-            / "test_fixture"
             / "COCO_train2014_000000458752.jpg"
         )
 
