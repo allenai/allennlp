@@ -19,7 +19,3 @@ from allennlp.data.dataset_readers.multitask import MultiTaskDatasetReader
 from allennlp.data.dataset_readers.sequence_tagging import SequenceTaggingDatasetReader
 from allennlp.data.dataset_readers.sharded_dataset_reader import ShardedDatasetReader
 from allennlp.data.dataset_readers.text_classification_json import TextClassificationJsonReader
-from allennlp.data.dataset_readers.vision_reader import VisionReader
-from allennlp.data.dataset_readers.vqav2 import VQAv2Reader
-from allennlp.data.dataset_readers.visual_entailment import VisualEntailmentReader
-from allennlp.data.dataset_readers.gqa import GQAReader

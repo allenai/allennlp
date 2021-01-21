@@ -300,6 +300,12 @@ class DatasetReader(Registrable):
                 sharded_slice, self._worker_info.id, None, self._worker_info.num_workers
             )
 
+        # We don't know for sure how many instances we have to produce.
+        # _multi_worker_islice() figures that out. But we know for sure
+        # it won't be more than max_instances.
+        if self.max_instances is not None:
+            sharded_slice = itertools.islice(sharded_slice, self.max_instances)
+
         return sharded_slice
 
     def _multi_worker_islice(
