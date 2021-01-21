@@ -2,7 +2,7 @@
   "dataset_reader": {
     "type": "conll2003",
     "tag_label": "ner",
-    "coding_scheme": "BIOUL",
+    "convert_to_coding_scheme": "BIOUL",
     "token_indexers": {
       "elmo": {
         "type": "elmo_characters"
