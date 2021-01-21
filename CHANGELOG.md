@@ -6,13 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## Unreleased (2.0 branch)
+## [v2.0.0rc1](https://github.com/allenai/allennlp/releases/tag/v2.0.0rc1) - 2021-01-21
 
 ### Added
 
 - Added `TensorCache` class for caching tensors on disk
-- Added reader for the NLVR2 dataset
-- Added cache for Detectron models that we might re-use several times in the code base
 - Added abstraction and concrete implementation for image loading
 - Added abstraction and concrete implementation for `GridEmbedder`
 - Added abstraction and demo implementation for an image augmentation module.
@@ -20,22 +18,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A new high-performance default `DataLoader`: `MultiProcessDataLoading`.
 - A `MultiTaskModel` and abstractions to use with it, including `Backbone` and `Head`.  The
   `MultiTaskModel` first runs its inputs through the `Backbone`, then passes the result (and
-whatever other relevant inputs it got) to each `Head` that's in use.
+  whatever other relevant inputs it got) to each `Head` that's in use.
 - A `MultiTaskDataLoader`, with a corresponding `MultiTaskDatasetReader`, and a couple of new
   configuration objects: `MultiTaskEpochSampler` (for deciding what proportion to sample from each
-dataset at every epoch) and a `MultiTaskScheduler` (for ordering the instances within an epoch).
-- Added `TensorCache` class for caching tensors on disk
-- Added reader for the NLVR2 dataset
-- Added cache for Detectron models that we might re-use several times in the code base
-- Added abstraction and concrete implementation for image loading
-- Added abstraction and concrete implementation for `GridEmbedder`
-- Added abstraction and demo implementation for an image augmentation module.
-- Added abstraction and concrete implementation for region detectors.
+  dataset at every epoch) and a `MultiTaskScheduler` (for ordering the instances within an epoch).
 - Transformer toolkit to plug and play with modular components of transformer architectures.
-- `VisionReader` and `VisionTextModel` base classes added. `VisualEntailment` and `VQA` inherit from these.
-- Added reader for the GQA dataset
-- Added a config to traing a GQA model
 - Added a command to count the number of instances we're going to be training with
+- Added a `FileLock` class to `common.file_utils`. This is just like the `FileLock` from the `filelock` library, except that
+  it adds an optional flag `read_only_ok: bool`, which when set to `True` changes the behavior so that a warning will be emitted
+  instead of an exception when lacking write permissions on an existing file lock.
+  This makes it possible to use the `FileLock` class on a read-only file system.
+- Added a new learning rate scheduler: `CombinedLearningRateScheduler`. This can be used to combine different LR schedulers, using one after the other.
+- Added an official CUDA 10.1 Docker image.
+- Moving `ModelCard` and `TaskCard` abstractions into the main repository.
+- Added a util function `allennlp.nn.util.dist_reduce(...)` for handling distributed reductions.
+  This is especially useful when implementing a distributed `Metric`.
 
 ### Changed
 
@@ -51,6 +48,8 @@ dataset at every epoch) and a `MultiTaskScheduler` (for ordering the instances w
 - Readers using the new vision features now explicitly log how they are featurizing images.
 - `master_addr` and `master_port` renamed to `primary_addr` and `primary_port`, respectively.
 - `is_master` parameter for training callbacks renamed to `is_primary`.
+- `master` branch renamed to `main`
+- Torch version bumped to 1.7.1 in Docker images.
 
 ### Removed
 
@@ -60,31 +59,6 @@ dataset at every epoch) and a `MultiTaskScheduler` (for ordering the instances w
 
 - The `build-vocab` command no longer crashes when the resulting vocab file is
   in the current working directory.
-- VQA models now use the `vqa_score` metric for early stopping. This results in
-  much better scores.
-
-
-## Unreleased (1.x branch)
-
-### Added
-
-- Added a `FileLock` class to `common.file_utils`. This is just like the `FileLock` from the `filelock` library, except that
-  it adds an optional flag `read_only_ok: bool`, which when set to `True` changes the behavior so that a warning will be emitted
-  instead of an exception when lacking write permissions on an existing file lock.
-  This makes it possible to use the `FileLock` class on a read-only file system.
-- Added a new learning rate scheduler: `CombinedLearningRateScheduler`. This can be used to combine different LR schedulers, using one after the other.
-- Added an official CUDA 10.1 Docker image.
-- Moving `ModelCard` and `TaskCard` abstractions into the main repository.
-- Added a util function `allennlp.nn.util.dist_reduce(...)` for handling distributed reductions.
-  This is especially useful when implementing a distributed `Metric`.
-
-### Changed
-
-- 'master' branch renamed to 'main'
-- Torch version bumped to 1.7.1 in Docker images.
-
-### Fixed
-
 - Fixed typo with `LabelField` string representation: removed trailing apostrophe.
 - `Vocabulary.from_files` and `cached_path` will issue a warning, instead of failing, when a lock on an existing resource
   can't be acquired because the file system is read-only.
@@ -120,6 +94,7 @@ dataset at every epoch) and a `MultiTaskScheduler` (for ordering the instances w
   by adding a `transformers` import.
 - Added safety checks for extracting tar files
 - Turned superfluous warning to info when extending the vocab in the embedding matrix, if no pretrained file was provided
+
 
 ## [v1.2.2](https://github.com/allenai/allennlp/releases/tag/v1.2.2) - 2020-11-17
 
