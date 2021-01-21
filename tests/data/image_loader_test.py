@@ -10,10 +10,7 @@ class TorchImageLoaderTest(AllenNlpTestCase):
     def setup_method(self):
         super().setup_method()
         self.image_fixture_path = str(
-            self.FIXTURES_ROOT
-            / "data"
-            / "images"
-            / "COCO_train2014_000000458752.jpg"
+            self.FIXTURES_ROOT / "data" / "images" / "COCO_train2014_000000458752.jpg"
         )
 
         # Create a few small images of different sizes from the fixture.
