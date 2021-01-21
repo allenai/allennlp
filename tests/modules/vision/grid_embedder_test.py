@@ -10,14 +10,7 @@ class TestResnetBackbone(AllenNlpTestCase):
         backbone = ResnetBackbone().to("cuda:0")
 
         image_pixels, image_size = loader(
-            [
-                self.FIXTURES_ROOT
-                / "data"
-                / "vqav2"
-                / "images"
-                / "test_fixture"
-                / "COCO_train2014_000000458752.jpg"
-            ]
+            [self.FIXTURES_ROOT / "data" / "images" / "COCO_train2014_000000458752.jpg"]
         )
         result = backbone(image_pixels, image_size)
         assert tuple(result.keys()) == backbone.get_feature_names()

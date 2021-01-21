@@ -15,14 +15,7 @@ class TestFasterRcnnRegionDetector(AllenNlpTestCase):
         detector = FasterRcnnRegionDetector().to(device="cuda:0")
         detector.eval()
 
-        image_path = (
-            self.FIXTURES_ROOT
-            / "data"
-            / "vqav2"
-            / "images"
-            / "test_fixture"
-            / "COCO_train2014_000000458752.jpg"
-        )
+        image_path = self.FIXTURES_ROOT / "data" / "images" / "COCO_train2014_000000458752.jpg"
 
         images, sizes = loader([image_path, image_path])
         image_features = backbone(images, sizes)
