@@ -4,7 +4,7 @@ import torch
 import torch.distributed as dist
 from overrides import overrides
 
-from allennlp.common.util import is_distributed
+from allennlp.common.util import is_distributed, nan_safe_tensor_divide
 from allennlp.common.checks import ConfigurationError
 from allennlp.training.metrics.metric import Metric
 
@@ -142,7 +142,7 @@ class FBetaMeasure(Metric):
         # Watch it:
         # The total numbers of true positives under all _predicted_ classes are zeros.
         if true_positives_bins.shape[0] == 0:
-            true_positive_sum = torch.zeros(num_classes, device=predictions.device)
+            true_positive_sum = torch.zeros(num_classes, device=device)
         else:
             true_positive_sum = torch.bincount(
                 true_positives_bins.long(), minlength=num_classes
@@ -154,7 +154,7 @@ class FBetaMeasure(Metric):
         if pred_bins.shape[0] != 0:
             pred_sum = torch.bincount(pred_bins, minlength=num_classes).float()
         else:
-            pred_sum = torch.zeros(num_classes, device=predictions.device)
+            pred_sum = torch.zeros(num_classes, device=device)
 
         gold_labels_bins = gold_labels[mask].long()
         if gold_labels.shape[0] != 0:
@@ -165,9 +165,7 @@ class FBetaMeasure(Metric):
         self._total_sum += mask.sum().to(torch.float)
 
         if is_distributed():
-            true_positive_sum = torch.tensor(true_positive_sum).to(device)
-            pred_sum = torch.tensor(pred_sum).to(device)
-            true_sum = torch.tensor(true_sum).to(device)
+            true_positive_sum = torch.tensor(true_positive_sum, device=device)
             dist.all_reduce(true_positive_sum, op=dist.ReduceOp.SUM)
             dist.all_reduce(pred_sum, op=dist.ReduceOp.SUM)
             dist.all_reduce(true_sum, op=dist.ReduceOp.SUM)
@@ -209,8 +207,8 @@ class FBetaMeasure(Metric):
 
         beta2 = self._beta ** 2
         # Finally, we have all our sufficient statistics.
-        precision = _prf_divide(tp_sum, pred_sum)
-        recall = _prf_divide(tp_sum, true_sum)
+        precision = nan_safe_tensor_divide(tp_sum, pred_sum)
+        recall = nan_safe_tensor_divide(tp_sum, true_sum)
         fscore = (1 + beta2) * precision * recall / (beta2 * precision + recall)
         fscore[tp_sum == 0] = 0.0
 
@@ -221,9 +219,9 @@ class FBetaMeasure(Metric):
         elif self._average == "weighted":
             weights = true_sum
             weights_sum = true_sum.sum()  # type: ignore
-            precision = _prf_divide((weights * precision).sum(), weights_sum)
-            recall = _prf_divide((weights * recall).sum(), weights_sum)
-            fscore = _prf_divide((weights * fscore).sum(), weights_sum)
+            precision = nan_safe_tensor_divide((weights * precision).sum(), weights_sum)
+            recall = nan_safe_tensor_divide((weights * recall).sum(), weights_sum)
+            fscore = nan_safe_tensor_divide((weights * fscore).sum(), weights_sum)
 
         if reset:
             self.reset()
@@ -253,18 +251,3 @@ class FBetaMeasure(Metric):
                 self._total_sum - self._pred_sum - self._true_sum + self._true_positive_sum
             )
             return true_negative_sum
-
-
-def _prf_divide(numerator, denominator):
-    """Performs division and handles divide-by-zero.
-
-    On zero-division, sets the corresponding result elements to zero.
-    """
-    result = numerator / denominator
-    mask = denominator == 0.0
-    if not mask.any():
-        return result
-
-    # remove nan
-    result[mask] = 0.0
-    return result

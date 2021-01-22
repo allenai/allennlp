@@ -92,7 +92,7 @@ class Hotflip(Attacker):
         final output embedding. We then group all of those output embeddings into an "embedding
         matrix".
         """
-        embedding_layer = util.find_embedding_layer(self.predictor._model)
+        embedding_layer = self.predictor.get_interpretable_layer()
         self.embedding_layer = embedding_layer
         if isinstance(embedding_layer, (Embedding, torch.nn.modules.sparse.Embedding)):
             # If we're using something that already has an only embedding matrix, we can just use
@@ -194,6 +194,7 @@ class Hotflip(Attacker):
             whatever it was to `"she"`.
         """
         instance = self.predictor._json_to_instance(inputs)
+        self.predictor._dataset_reader.apply_token_indexers(instance)
         if target is None:
             output_dict = self.predictor._model.forward_on_instance(instance)
         else:

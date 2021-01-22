@@ -12,7 +12,9 @@ from allennlp.common import FromParams
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path
 from allennlp.common.util import lazy_groups_of
-from allennlp.data import Instance, Token, Vocabulary
+from allennlp.data.instance import Instance
+from allennlp.data.tokenizers.token_class import Token
+from allennlp.data.vocabulary import Vocabulary
 from allennlp.data.batch import Batch
 from allennlp.data.fields import TextField
 from allennlp.data.token_indexers.elmo_indexer import (
@@ -440,7 +442,7 @@ class _ElmoCharacterEncoder(torch.nn.Module):
         # create the layers, and load the weights
         self._highways = Highway(n_filters, n_highway, activation=torch.nn.functional.relu)
         for k in range(n_highway):
-            # The AllenNLP highway is one matrix multplication with concatenation of
+            # The AllenNLP highway is one matrix multiplication with concatenation of
             # transform and carry weights.
             with h5py.File(cached_path(self._weight_file), "r") as fin:
                 # The weights are transposed due to multiplication order assumptions in tf

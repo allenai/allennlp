@@ -11,51 +11,44 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple, TypeVar, Union
 import math
 import numpy
 import torch
+import torch.distributed as dist
+from torch.distributed import ReduceOp
 
 from allennlp.common.checks import ConfigurationError
+from allennlp.common.util import int_to_device, is_distributed
 
 logger = logging.getLogger(__name__)
 
 T = TypeVar("T")
 
 
-def has_tensor(obj) -> bool:
+def move_to_device(obj, device: Union[torch.device, int]):
     """
-    Given a possibly complex data structure,
-    check if it has any torch.Tensors in it.
+    Given a structure (possibly) containing Tensors,
+    move all the Tensors to the specified device (or do nothing, if they are already on
+    the target device).
     """
+    device = int_to_device(device)
+
     if isinstance(obj, torch.Tensor):
-        return True
+        # You may be wondering why we don't just always call `obj.to(device)` since that would
+        # be a no-op anyway if `obj` is already on `device`. Well that works fine except
+        # when PyTorch is not compiled with CUDA support, in which case even calling
+        # `obj.to(torch.device("cpu"))` would result in an error.
+        return obj if obj.device == device else obj.to(device=device)
     elif isinstance(obj, dict):
-        return any(has_tensor(value) for value in obj.values())
-    elif isinstance(obj, (list, tuple)):
-        return any(has_tensor(item) for item in obj)
-    else:
-        return False
-
-
-def move_to_device(obj, cuda_device: Union[torch.device, int]):
-    """
-    Given a structure (possibly) containing Tensors on the CPU,
-    move all the Tensors to the specified GPU (or do nothing, if they should be on the CPU).
-    """
-    from allennlp.common.util import int_to_device
-
-    cuda_device = int_to_device(cuda_device)
-
-    if cuda_device == torch.device("cpu") or not has_tensor(obj):
+        for key, value in obj.items():
+            obj[key] = move_to_device(value, device)
         return obj
-    elif isinstance(obj, torch.Tensor):
-        return obj.cuda(cuda_device)
-    elif isinstance(obj, dict):
-        return {key: move_to_device(value, cuda_device) for key, value in obj.items()}
     elif isinstance(obj, list):
-        return [move_to_device(item, cuda_device) for item in obj]
+        for i, item in enumerate(obj):
+            obj[i] = move_to_device(item, device)
+        return obj
     elif isinstance(obj, tuple) and hasattr(obj, "_fields"):
         # This is the best way to detect a NamedTuple, it turns out.
-        return obj.__class__(*(move_to_device(item, cuda_device) for item in obj))
+        return obj.__class__(*(move_to_device(item, device) for item in obj))
     elif isinstance(obj, tuple):
-        return tuple(move_to_device(item, cuda_device) for item in obj)
+        return tuple(move_to_device(item, device) for item in obj)
     else:
         return obj
 
@@ -1230,7 +1223,7 @@ def batched_index_select(
 
     An example use case of this function is looking up the start and end indices of spans in a
     sequence tensor. This is used in the
-    [CoreferenceResolver](https://docs.allennlp.org/models/master/models/coref/models/coref/)
+    [CoreferenceResolver](https://docs.allennlp.org/models/main/models/coref/models/coref/)
     model to select contextual word representations corresponding to the start and end indices of
     mentions.
 
@@ -1548,7 +1541,6 @@ def add_sentence_boundary_token_ids(
         The new mask for the tensor, taking into account the appended tokens
         marking the beginning and end of the sentence.
     """
-    # TODO: matthewp, profile this transfer
     sequence_lengths = mask.sum(dim=1).detach().cpu().numpy()
     tensor_shape = list(tensor.data.shape)
     new_shape = list(tensor_shape)
@@ -1603,7 +1595,6 @@ def remove_sentence_boundaries(
     new_mask : `torch.BoolTensor`
         The new mask for the tensor of shape `(batch_size, timesteps - 2)`.
     """
-    # TODO: matthewp, profile this transfer
     sequence_lengths = mask.sum(dim=1).detach().cpu().numpy()
     tensor_shape = list(tensor.data.shape)
     new_shape = list(tensor_shape)
@@ -1769,10 +1760,10 @@ def find_embedding_layer(model: torch.nn.Module) -> torch.nn.Module:
     """
     # We'll look for a few special cases in a first pass, then fall back to just finding a
     # TextFieldEmbedder in a second pass if we didn't find a special case.
-    from transformers.modeling_gpt2 import GPT2Model
-    from transformers.modeling_bert import BertEmbeddings
-    from transformers.modeling_albert import AlbertEmbeddings
-    from transformers.modeling_roberta import RobertaEmbeddings
+    from transformers.models.gpt2.modeling_gpt2 import GPT2Model
+    from transformers.models.bert.modeling_bert import BertEmbeddings
+    from transformers.models.albert.modeling_albert import AlbertEmbeddings
+    from transformers.models.roberta.modeling_roberta import RobertaEmbeddings
     from allennlp.modules.text_field_embedders.text_field_embedder import TextFieldEmbedder
     from allennlp.modules.text_field_embedders.basic_text_field_embedder import (
         BasicTextFieldEmbedder,
@@ -2024,3 +2015,35 @@ def tiny_value_of_dtype(dtype: torch.dtype):
         return 1e-4
     else:
         raise TypeError("Does not support dtype " + str(dtype))
+
+
+_V = TypeVar("_V", int, float)
+
+
+def dist_reduce(value: _V, reduce_op: ReduceOp, **kwargs) -> _V:
+    """
+    Reduces the given `value` across all distributed worker nodes according the given
+    reduction operation.
+
+    If called outside of a distributed context, it will just return `value`.
+
+    # Parameters
+
+    value : `_V`
+        The value to reduce across distributed nodes.
+    reduce_op : `ReduceOp`
+        The reduction operation to use.
+    **kwargs : `Any`
+        Additional arguments used to construct the tensor that will wrap `value`.
+
+    # Returns
+
+    `_V`
+        The final value.
+    """
+    if not is_distributed():
+        return value
+    device = int_to_device(-1 if dist.get_backend() != "nccl" else torch.cuda.current_device())
+    value_tensor = torch.tensor(value, device=device, **kwargs)
+    dist.all_reduce(value_tensor, op=reduce_op)
+    return value_tensor.item()  # type: ignore[return-value]

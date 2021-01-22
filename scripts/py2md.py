@@ -31,7 +31,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("py2md")
 BASE_MODULE = os.environ.get("BASE_MODULE", "allennlp")
 BASE_SOURCE_LINK = os.environ.get(
-    "BASE_SOURCE_LINK", "https://github.com/allenai/allennlp/blob/master/allennlp/"
+    "BASE_SOURCE_LINK", "https://github.com/allenai/allennlp/blob/main/allennlp/"
 )
 
 
@@ -213,18 +213,20 @@ class AllenNlpDocstringProcessor(Struct):
                         state.current_section = None
                 else:
                     state.consecutive_blank_line_count = 0
-                line = self._preprocess_line(line, state)
+                line = self._preprocess_line(node, line, state)
 
             lines.append(line)
 
         # Now set the docstring to our preprocessed version of it.
         node.docstring = "\n".join(lines)
 
-    def _preprocess_line(self, line, state: ProcessorState) -> str:
+    def _preprocess_line(self, node, line, state: ProcessorState) -> str:
         match = re.match(r"#+ (.*)$", line)
         if match:
             state.current_section = Section.from_str(match.group(1).strip())
-            line = re.sub(r"#+ (.*)$", r"<strong>\1</strong>\n", line)
+            name = match.group(1).strip()
+            slug = (node.name + "." + match.group(1).strip()).lower().replace(" ", "_")
+            line = f'<h4 id="{slug}">{name}<a class="headerlink" href="#{slug}" title="Permanent link">&para;</a></h4>\n'  # noqa: E501
         else:
             if line and not line.startswith(" ") and not line.startswith("!!! "):
                 if state.current_section in (
@@ -272,7 +274,7 @@ class AllenNlpFilterProcessor(Struct):
     Used to filter out nodes that we don't want to document.
     """
 
-    PRIVATE_METHODS_TO_KEEP = {"DatasetReader._read", "__call__"}
+    PRIVATE_METHODS_TO_KEEP = {"DatasetReader._read", "__call__", "__iter__"}
 
     def process(self, graph, _resolver):
         graph.visit(self._process_node)
