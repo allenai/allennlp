@@ -1,10 +1,12 @@
 from typing import Any, Dict, List
 
+import math
+
 import torch
 
 from allennlp.common import Registrable
 from allennlp.common.util import pad_sequence_to_length
-from allennlp.data.tokenizers.token import Token
+from allennlp.data.tokenizers import Token
 from allennlp.data.vocabulary import Vocabulary
 
 # An indexed token list represents the arguments that will be passed to a TokenEmbedder
@@ -39,8 +41,9 @@ class TokenIndexer(Registrable):
     default_implementation = "single_id"
     has_warned_for_as_padded_tensor = False
 
-    def __init__(self, token_min_padding_length: int = 0) -> None:
+    def __init__(self, token_min_padding_length: int = 0, pad_to_multiple_of: int = 1) -> None:
         self._token_min_padding_length: int = token_min_padding_length
+        self._pad_to_multiple_of = pad_to_multiple_of
 
     def count_vocab_items(self, token: Token, counter: Dict[str, Dict[str, int]]):
         """
@@ -90,7 +93,11 @@ class TokenIndexer(Registrable):
         """
         padding_lengths = {}
         for key, token_list in indexed_tokens.items():
-            padding_lengths[key] = max(len(token_list), self._token_min_padding_length)
+            num_tokens = len(token_list)
+            num_tokens = max(num_tokens, self._token_min_padding_length)
+            # Here we round up to the closest multiple above
+            num_tokens = math.ceil(num_tokens / self._pad_to_multiple_of) * self._pad_to_multiple_of
+            padding_lengths[key] = num_tokens
         return padding_lengths
 
     def as_padded_tensor_dict(
