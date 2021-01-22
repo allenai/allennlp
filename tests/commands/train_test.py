@@ -42,7 +42,8 @@ class TrainingDataLoggerOnBatchCallback(TrainerCallback):
         epoch: int,
         batch_number: int,
         is_training: bool,
-        is_primary: bool,
+        is_primary: bool = True,
+        **kwargs,
     ) -> None:
         if is_training:
             logger = logging.getLogger(__name__)
@@ -65,7 +66,8 @@ class TrainingDeviceLoggerOnBatchCallback(TrainerCallback):
         epoch: int,
         batch_number: int,
         is_training: bool,
-        is_primary: bool,
+        is_primary: bool = True,
+        **kwargs,
     ) -> None:
         global _seen_training_devices
         for tensor in trainer.model.parameters():
@@ -351,9 +353,7 @@ class TestTrain(AllenNlpTestCase):
                 "trainer": {
                     "num_epochs": num_epochs,
                     "optimizer": "adam",
-                    "callbacks": [
-                        "tests.commands.train_test.TrainingDataLoggerOnBatchCallback"
-                    ],
+                    "callbacks": ["tests.commands.train_test.TrainingDataLoggerOnBatchCallback"],
                 },
                 "distributed": {"cuda_devices": devices},
             }
@@ -540,7 +540,8 @@ class TestTrain(AllenNlpTestCase):
                 epoch: int,
                 batch_number: int,
                 is_training: bool,
-                is_primary: bool,
+                is_primary: bool = True,
+                **kwargs,
             ) -> None:
                 nonlocal batch_callback_counter
                 if is_training:

@@ -925,7 +925,7 @@ class TestTrainer(TrainerTestBase):
                 self, trainer: "GradientDescentTrainer", is_primary: bool = True, **kwargs
             ) -> None:
                 if not hasattr(trainer, "start_callback_is_fired_first"):
-                    trainer.start_callback_is_fired_first = True
+                    trainer.start_callback_is_fired_first = True  # type: ignore
 
             def on_batch(
                 self,
@@ -936,10 +936,11 @@ class TestTrainer(TrainerTestBase):
                 epoch: int,
                 batch_number: int,
                 is_training: bool,
-                is_primary: bool,
+                is_primary: bool = True,
+                **kwargs,
             ) -> None:
                 if not hasattr(trainer, "start_callback_is_fired_first"):
-                    trainer.start_callback_is_fired_first = False
+                    trainer.start_callback_is_fired_first = False  # type: ignore
 
                 if not hasattr(trainer, "batch_callback_calls"):
                     trainer.batch_callback_calls = []  # type: ignore
@@ -950,10 +951,11 @@ class TestTrainer(TrainerTestBase):
                 trainer: "GradientDescentTrainer",
                 metrics: Dict[str, Any],
                 epoch: int,
-                is_primary: bool,
+                is_primary: bool = True,
+                **kwargs,
             ) -> None:
                 if not hasattr(trainer, "start_callback_is_fired_first"):
-                    trainer.start_callback_is_fired_first = False
+                    trainer.start_callback_is_fired_first = False  # type: ignore
 
                 if not hasattr(trainer, "epoch_callback_calls"):
                     trainer.epoch_callback_calls = []  # type: ignore
@@ -962,12 +964,13 @@ class TestTrainer(TrainerTestBase):
             def on_end(
                 self,
                 trainer: "GradientDescentTrainer",
-                metrics: Dict[str, Any],
-                epoch: int,
-                is_primary: bool,
+                metrics: Dict[str, Any] = None,
+                epoch: int = None,
+                is_primary: bool = True,
+                **kwargs,
             ) -> None:
                 if not hasattr(trainer, "start_callback_is_fired_first"):
-                    trainer.start_callback_is_fired_first = False
+                    trainer.start_callback_is_fired_first = False  # type: ignore
 
                 if not hasattr(trainer, "end_callback_calls"):
                     trainer.end_callback_calls = []  # type: ignore
@@ -1011,7 +1014,8 @@ class TestTrainer(TrainerTestBase):
                 epoch: int,
                 batch_number: int,
                 is_training: bool,
-                is_primary: bool,
+                is_primary: bool = True,
+                **kwargs,
             ) -> None:
                 if not hasattr(trainer, "batch_losses"):
                     trainer.batch_losses = []  # type: ignore
