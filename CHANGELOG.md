@@ -6,6 +6,35 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## Unreleased (2.x branch)
+
+### Added
+
+- The `TrainerCallback` constructor accepts `serialization_dir` provided by `Trainer`. This can be useful for `Logger` callbacks those need to store files in the run directory.
+- The `TrainerCallback.on_start()` is fired at the start of the training.
+- The `TrainerCallback` event methods now accept `**kwargs`. This may be useful to maintain backwards-compability of callbacks easier in the future. E.g. we may decide to pass the exception/traceback object in case of failure to `on_end()` and this older callbacks may simply ignore the argument instead of raising a `TypeError`.
+
+### Changed
+
+- The `TrainerCallack.on_epoch()` does not fire with `epoch=-1` at the start of the training.
+  Instead, `TrainerCallback.on_start()` should be used for these cases.
+- `TensorBoardBatchMemoryUsage` is converted from `BatchCallback` into `TrainerCallback`.
+- `TrackEpochCallback` is converted from `EpochCallback` into `TrainerCallback`.
+- `Trainer` can accept callbacks simply with name `callbacks` instead of `trainer_callbacks`.
+
+### Removed
+
+- Removed `EpochCallback`, `BatchCallback` in favour of `TrainerCallback`.
+  The metaclass-wrapping implementation is removed as well.
+
+### Fixed
+
+- Now Trainer always fires `TrainerCallback.on_end()` so all the resources can be cleaned up properly.
+- Fixed the misspelling, changed `TensoboardBatchMemoryUsage` to `TensorBoardBatchMemoryUsage`.
+- We set a value to `epoch` so in case of firing `TrainerCallback.on_end()` the variable is bound.
+  This could have lead to an error in case of trying to recover a run after it was finished training.
+
+
 ## [v2.0.0rc1](https://github.com/allenai/allennlp/releases/tag/v2.0.0rc1) - 2021-01-21
 
 ### Added
@@ -59,6 +88,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The `build-vocab` command no longer crashes when the resulting vocab file is
   in the current working directory.
+- VQA models now use the `vqa_score` metric for early stopping. This results in
+  much better scores.
+
+
+## Unreleased (1.x branch)
+
+### Added
+
+- Added a `FileLock` class to `common.file_utils`. This is just like the `FileLock` from the `filelock` library, except that
+  it adds an optional flag `read_only_ok: bool`, which when set to `True` changes the behavior so that a warning will be emitted
+  instead of an exception when lacking write permissions on an existing file lock.
+  This makes it possible to use the `FileLock` class on a read-only file system.
+- Added a new learning rate scheduler: `CombinedLearningRateScheduler`. This can be used to combine different LR schedulers, using one after the other.
+- Moving `ModelCard` and `TaskCard` abstractions into the main repository.
+
+### Changed
+
+- 'master' branch renamed to 'main'
+- Torch version bumped to 1.7.1 in Docker images.
+
+### Fixed
+
 - Fixed typo with `LabelField` string representation: removed trailing apostrophe.
 - `Vocabulary.from_files` and `cached_path` will issue a warning, instead of failing, when a lock on an existing resource
   can't be acquired because the file system is read-only.
@@ -90,7 +141,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   were not passed to the constructor if the value of the parameter was equal to the default value.
   This caused bugs in some edge cases where a subclass that takes `**kwargs` needs to inspect
   `kwargs` before passing them to its superclass.
-- Improved the band-aid solution for segmentation faults and the "ImportError: dlopen: cannot load any more object with static TLS" 
+- Improved the band-aid solution for segmentation faults and the "ImportError: dlopen: cannot load any more object with static TLS"
   by adding a `transformers` import.
 - Added safety checks for extracting tar files
 - Turned superfluous warning to info when extending the vocab in the embedding matrix, if no pretrained file was provided
