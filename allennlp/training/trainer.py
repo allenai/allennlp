@@ -273,11 +273,12 @@ class GradientDescentTrainer(Trainer):
         after `patience` epochs with no improvement. If given, it must be `> 0`.
         If None, early stopping is disabled.
 
-    validation_metric : `str`, optional (default=`"-loss"`)
+    validation_metric : `Union[str, List[str]]`, optional (default=`"-loss"`)
         Validation metric to measure for whether to stop training using patience
         and whether to serialize an `is_best` model each epoch. The metric name
         must be prepended with either "+" or "-", which specifies whether the metric
-        is an increasing or decreasing function.
+        is an increasing or decreasing function. If you specify more than one metric,
+        the metrics will be summed to make the `is_best` decision.
 
     validation_data_loader : `DataLoader`, optional (default=`None`)
         A `DataLoader` to use for the validation set.  If `None`, then
@@ -378,7 +379,7 @@ class GradientDescentTrainer(Trainer):
         optimizer: torch.optim.Optimizer,
         data_loader: DataLoader,
         patience: Optional[int] = None,
-        validation_metric: str = "-loss",
+        validation_metric: Union[str, List[str]] = "-loss",
         validation_data_loader: DataLoader = None,
         num_epochs: int = 20,
         serialization_dir: Optional[str] = None,
@@ -423,9 +424,7 @@ class GradientDescentTrainer(Trainer):
             )
 
         # For tracking is_best_so_far and should_stop_early
-        self._metric_tracker = MetricTracker(patience, validation_metric)
-        # Get rid of + or -
-        self._validation_metric = validation_metric[1:]
+        self._metric_tracker = MetricTracker(validation_metric, patience)
 
         self._num_epochs = num_epochs
 
@@ -946,8 +945,7 @@ class GradientDescentTrainer(Trainer):
                     )
 
                     # Check validation metric for early stopping
-                    this_epoch_val_metric = val_metrics[self._validation_metric]
-                    self._metric_tracker.add_metric(this_epoch_val_metric)
+                    self._metric_tracker.add_metrics(val_metrics)
 
                     if self._metric_tracker.should_stop_early():
                         logger.info("Ran out of patience.  Stopping training.")
@@ -1097,11 +1095,6 @@ class GradientDescentTrainer(Trainer):
         # Currently the `training_state` contains a serialized `MetricTracker`.
         if "metric_tracker" in training_state:
             self._metric_tracker.load_state_dict(training_state["metric_tracker"])
-        # It used to be the case that we tracked `val_metric_per_epoch`.
-        elif "val_metric_per_epoch" in training_state:
-            self._metric_tracker.clear()
-            self._metric_tracker.add_metrics(training_state["val_metric_per_epoch"])
-        # And before that we didn't track anything.
         else:
             self._metric_tracker.clear()
 
@@ -1127,7 +1120,7 @@ class GradientDescentTrainer(Trainer):
         validation_data_loader: DataLoader = None,
         local_rank: int = 0,
         patience: int = None,
-        validation_metric: str = "-loss",
+        validation_metric: Union[str, List[str]] = "-loss",
         num_epochs: int = 20,
         cuda_device: Optional[Union[int, torch.device]] = None,
         grad_norm: float = None,

@@ -1,83 +1,49 @@
 import logging
-from copy import deepcopy
-from typing import Dict, List, Optional
+from typing import Dict, List
 
-from overrides import overrides
-import numpy as np
 import torch
-from transformers import AutoModel
+from overrides import overrides
 
 from allennlp.data.fields.text_field import TextFieldTensors
 from allennlp.data.vocabulary import Vocabulary
-from allennlp.models.model import Model
-from allennlp.modules.transformer import (
-    TransformerEmbeddings,
-    ImageFeatureEmbeddings,
-    BiModalEncoder,
-    TransformerPooler,
-)
+from allennlp.modules.backbones.backbone import Backbone
+from allennlp.modules.transformer import BiModalEncoder, ImageFeatureEmbeddings, Embeddings
 
 logger = logging.getLogger(__name__)
 
 
-@Model.register("vision_model")
-class VisionTextModel(Model):
+@Backbone.register("vilbert")
+@Backbone.register("vilbert_from_huggingface", constructor="from_huggingface_model_name")
+class VilbertBackbone(Backbone):
     """
-    `VisionTextModel` takes as input a single text input and a single image input
-    to produce some output. Example tasks include visual question-answering, visual
-    entailment, etc.
-
-    # Parameters
-
-    vocab : `Vocabulary`
-    text_embeddings : `TransformerEmbeddings`
-    image_embeddings : `ImageFeatureEmbeddings`
-    encoder : `BiModalEncoder`
-    pooled_output_dim : `int`
-    fusion_method : `str`, optional (default = `"sum"`)
-    dropout : `float`, optional (default = `0.1`)
-    label_namespace : `str`, optional (default = `"labels"`)
-    is_multilabel: `bool`, optional (default = `False`)
-        Whether the output classification is multilabel.
-        (i.e., can have multiple correct answers)
+    Uses a Vilbert model as a `Backbone`.
+    Registered as a `Backbone` with name "vilbert".
     """
 
     def __init__(
         self,
         vocab: Vocabulary,
-        text_embeddings: TransformerEmbeddings,
+        text_embeddings: Embeddings,
         image_embeddings: ImageFeatureEmbeddings,
         encoder: BiModalEncoder,
         pooled_output_dim: int,
         fusion_method: str = "sum",
         dropout: float = 0.1,
-        label_namespace: str = "labels",
-        is_multilabel: bool = False,
-        *,
-        ignore_text: bool = False,
-        ignore_image: bool = False,
+        vocab_namespace: str = "tokens",
     ) -> None:
-
-        super().__init__(vocab)
-
+        super().__init__()
         self.fusion_method = fusion_method
-
-        self.embeddings = text_embeddings
+        self.text_embeddings = text_embeddings
         self.image_embeddings = image_embeddings
         self.encoder = encoder
+        from allennlp.modules.transformer import TransformerPooler
 
         self.t_pooler = TransformerPooler(encoder.hidden_size1, pooled_output_dim)
         self.v_pooler = TransformerPooler(encoder.hidden_size2, pooled_output_dim)
-
-        num_labels = vocab.get_vocab_size(label_namespace)
-        self.label_namespace = label_namespace
-
-        self.classifier = torch.nn.Linear(pooled_output_dim, num_labels)
         self.dropout = torch.nn.Dropout(dropout)
 
-        self.is_multilabel = is_multilabel
-        self.ignore_text = ignore_text
-        self.ignore_images = ignore_image
+        self._vocab = vocab
+        self._namespace = vocab_namespace
 
     @classmethod
     def from_huggingface_model_name(
@@ -98,13 +64,15 @@ class VisionTextModel(Model):
         text_biattention_id: List[int],
         text_fixed_layer: int,
         image_fixed_layer: int,
-        pooled_dropout: float = 0.1,
         fusion_method: str = "sum",
-        *,
-        ignore_text: bool = False,
-        ignore_image: bool = False,
     ):
+        from transformers import AutoModel
+
         transformer = AutoModel.from_pretrained(model_name)
+
+        from copy import deepcopy
+
+        text_embeddings = deepcopy(transformer.embeddings)
 
         # Albert (and maybe others?) has this "embedding_size", that's different from "hidden_size".
         # To get them to the same dimensionality, it uses a linear transform after the embedding
@@ -112,23 +80,30 @@ class VisionTextModel(Model):
         if hasattr(transformer.config, "embedding_size"):
             config = transformer.config
 
-            text_embeddings = TransformerEmbeddings.from_pretrained_module(
-                transformer.embeddings, output_size=config.hidden_dim
-            )
-
             from transformers.models.albert.modeling_albert import AlbertModel
 
             if isinstance(transformer, AlbertModel):
-                text_embeddings.linear_transform = deepcopy(
-                    transformer.encoder.embedding_hidden_mapping_in
-                )
+                linear_transform = deepcopy(transformer.encoder.embedding_hidden_mapping_in)
             else:
                 logger.warning(
                     "Unknown model that uses separate embedding size; weights of the linear "
                     f"transform will not be initialized.  Model type is: {transformer.__class__}"
                 )
-        else:
-            text_embeddings = TransformerEmbeddings.from_pretrained_module(transformer.embeddings)
+                linear_transform = torch.nn.Linear(config.embedding_dim, config.hidden_dim)
+
+            # We can't just use torch.nn.Sequential here, even though that's basically all this is,
+            # because Sequential doesn't accept *inputs, only a single argument.
+
+            class EmbeddingsShim(torch.nn.Module):
+                def __init__(self, embeddings: torch.nn.Module, linear_transform: torch.nn.Module):
+                    super().__init__()
+                    self.linear_transform = linear_transform
+                    self.embeddings = embeddings
+
+                def forward(self, *inputs, **kwargs):
+                    return self.linear_transform(self.embeddings(*inputs, **kwargs))
+
+            text_embeddings = EmbeddingsShim(text_embeddings, linear_transform)
 
         image_embeddings = ImageFeatureEmbeddings(
             feature_size=image_feature_dim,
@@ -158,9 +133,6 @@ class VisionTextModel(Model):
             encoder=encoder,
             pooled_output_dim=pooled_output_dim,
             fusion_method=fusion_method,
-            dropout=pooled_dropout,
-            ignore_text=ignore_text,
-            ignore_image=ignore_image,
         )
 
     @overrides
@@ -170,49 +142,7 @@ class VisionTextModel(Model):
         box_coordinates: torch.Tensor,
         box_mask: torch.Tensor,
         text: TextFieldTensors,
-        label: Optional[torch.Tensor] = None,
-        label_weights: Optional[torch.Tensor] = None,
     ) -> Dict[str, torch.Tensor]:
-        """
-        # Parameters
-
-        box_features : `Tensor`
-            Shape: `(batch_size, num_boxes, feature_size)`
-
-        box_coordinates : `Tensor`
-            Shape: `(batch_size, num_boxes, 4)`
-
-        box_mask : `Tensor`
-            A bool and 0-1 tensor of shape `(batch_size, num_boxes)`.
-
-        text : `TextFieldTensors`
-
-        label : `Optional[Tensor]`
-
-        label_weights : `Optional[Tensor]`
-
-        """
-
-        if self.ignore_images:
-            box_features = torch.zeros_like(box_features)
-            box_coordinates = torch.zeros_like(box_coordinates)
-            box_coordinates[..., 2] = 1
-            box_coordinates[..., 3] = 1
-            box_mask = torch.ones_like(box_mask)
-
-        if self.ignore_text:
-            dummy_text = {}
-            for embedder_name, tensor_dict in text.items():
-                dummy_tensor_dict = {}
-                for tensor_name, tensor in tensor_dict.items():
-                    if "mask" in tensor_name:
-                        tensor = torch.ones_like(tensor)
-                    else:
-                        tensor = torch.zeros_like(tensor)
-                    dummy_tensor_dict[tensor_name] = tensor
-                dummy_text[embedder_name] = dummy_tensor_dict
-            text = dummy_text
-
         batch_size, _, feature_size = box_features.size()
 
         if "token_ids" in text["tokens"]:
@@ -226,7 +156,7 @@ class VisionTextModel(Model):
         attention_mask = text["tokens"].get("mask")
 
         # Shape: (batch_size, num_tokens, embedding_dim)
-        embedding_output = self.embeddings(token_ids, token_type_ids)
+        embedding_output = self.text_embeddings(token_ids, token_type_ids)
         num_tokens = embedding_output.size(1)
 
         # this attention mask is more simple than the triangular masking of
@@ -251,8 +181,6 @@ class VisionTextModel(Model):
         # Shape: (batch_size, num_boxes, image_embedding_dim)
         v_embedding_output = self.image_embeddings(box_features, box_coordinates)
 
-        # Shape (encoded_layers_t): (batch_size, num_tokens, embedding_dim, num_layers)
-        # Shape (encoded_layers_v): (batch_size, num_boxes, image_embedding_dim, num_layers)
         encoded_layers_t, encoded_layers_v = self.encoder(
             embedding_output,
             v_embedding_output,
@@ -278,41 +206,29 @@ class VisionTextModel(Model):
         else:
             raise ValueError(f"Fusion method '{self.fusion_method}' not supported")
 
-        # Shape: (batch_size, num_labels)
-        logits = self.classifier(pooled_output)
-
-        # Shape: (batch_size, num_labels)
-        if self.is_multilabel:
-            probs = torch.sigmoid(logits)
-        else:
-            probs = torch.softmax(logits, dim=-1)
-
-        outputs = {"logits": logits, "probs": probs}
-        outputs = self._compute_loss_and_metrics(batch_size, outputs, label, label_weights)
-
-        return outputs
-
-    def _compute_loss_and_metrics(
-        self,
-        batch_size: int,
-        outputs: torch.Tensor,
-        label: torch.Tensor,
-        label_weights: Optional[torch.Tensor] = None,
-    ):
-        return outputs
-
-    @overrides
-    def get_metrics(self, reset: bool = False) -> Dict[str, float]:
-        result = self.accuracy.get_metric(reset)
-        return {"accuracy": result}
+        return {
+            "encoded_boxes": sequence_output_v,
+            "encoded_boxes_mask": box_mask,
+            "encoded_boxes_pooled": pooled_output_v,
+            "encoded_text": sequence_output_t,
+            "encoded_text_mask": attention_mask,
+            "encoded_text_pooled": pooled_output_t,
+            "pooled_boxes_and_text": pooled_output,
+        }
 
     @overrides
     def make_output_human_readable(
         self, output_dict: Dict[str, torch.Tensor]
     ) -> Dict[str, torch.Tensor]:
-        batch_labels = []
-        for batch_index, batch in enumerate(output_dict["probs"]):
-            labels = np.argmax(batch, axis=-1)
-            batch_labels.append(labels)
-        output_dict["labels"] = batch_labels
+        tokens = []
+        for instance_tokens in output_dict[
+            "token_ids"
+        ]:  # TODO: do we even have "token_ids" in the output?
+            tokens.append(
+                [
+                    self._vocab.get_token_from_index(token_id.item(), namespace=self._namespace)
+                    for token_id in instance_tokens
+                ]
+            )
+        output_dict["tokens"] = tokens
         return output_dict

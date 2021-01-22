@@ -6,22 +6,13 @@ from allennlp.data.data_loaders.multitask_scheduler import (
 
 class RoundRobinSchedulerTest:
     def test_order_instances(self):
-        scheduler = RoundRobinScheduler()
+        scheduler = RoundRobinScheduler(batch_size=4)
         epoch_instances = {
             "a": [1] * 5,
             "b": [2] * 3,
         }
-        flattened = scheduler.order_epoch_instances(epoch_instances)
-        assert list(flattened) == [
-            ("a", 1),
-            ("b", 2),
-            ("a", 1),
-            ("b", 2),
-            ("a", 1),
-            ("b", 2),
-            ("a", 1),
-            ("a", 1),
-        ]
+        batches = scheduler.batch_instances(epoch_instances)
+        assert list(batches) == [[1, 2, 1, 2], [1, 2, 1, 1]]
 
 
 class HomogeneousRoundRobinSchedulerTest:
@@ -31,24 +22,14 @@ class HomogeneousRoundRobinSchedulerTest:
             "a": [1] * 9,
             "b": [2] * 9,
         }
-        flattened = scheduler.order_epoch_instances(epoch_instances)
+        flattened = scheduler.batch_instances(epoch_instances)
         assert list(flattened) == [
-            ("a", 1),
-            ("a", 1),
-            ("b", 2),
-            ("b", 2),
-            ("b", 2),
-            ("a", 1),
-            ("a", 1),
-            ("b", 2),
-            ("b", 2),
-            ("b", 2),
-            ("a", 1),
-            ("a", 1),
-            ("b", 2),
-            ("b", 2),
-            ("b", 2),
-            ("a", 1),
-            ("a", 1),
-            ("a", 1),
+            [1, 1],
+            [2, 2, 2],
+            [1, 1],
+            [2, 2, 2],
+            [1, 1],
+            [2, 2, 2],
+            [1, 1],
+            [1],
         ]

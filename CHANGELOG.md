@@ -6,13 +6,40 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## Unreleased (2.0 branch)
+## Unreleased (2.x branch)
+
+### Added
+
+- The `TrainerCallback` constructor accepts `serialization_dir` provided by `Trainer`. This can be useful for `Logger` callbacks those need to store files in the run directory.
+- The `TrainerCallback.on_start()` is fired at the start of the training.
+- The `TrainerCallback` event methods now accept `**kwargs`. This may be useful to maintain backwards-compability of callbacks easier in the future. E.g. we may decide to pass the exception/traceback object in case of failure to `on_end()` and this older callbacks may simply ignore the argument instead of raising a `TypeError`.
+
+### Changed
+
+- The `TrainerCallack.on_epoch()` does not fire with `epoch=-1` at the start of the training.
+  Instead, `TrainerCallback.on_start()` should be used for these cases.
+- `TensorBoardBatchMemoryUsage` is converted from `BatchCallback` into `TrainerCallback`.
+- `TrackEpochCallback` is converted from `EpochCallback` into `TrainerCallback`.
+- `Trainer` can accept callbacks simply with name `callbacks` instead of `trainer_callbacks`.
+
+### Removed
+
+- Removed `EpochCallback`, `BatchCallback` in favour of `TrainerCallback`.
+  The metaclass-wrapping implementation is removed as well.
+
+### Fixed
+
+- Now Trainer always fires `TrainerCallback.on_end()` so all the resources can be cleaned up properly.
+- Fixed the misspelling, changed `TensoboardBatchMemoryUsage` to `TensorBoardBatchMemoryUsage`.
+- We set a value to `epoch` so in case of firing `TrainerCallback.on_end()` the variable is bound.
+  This could have lead to an error in case of trying to recover a run after it was finished training.
+
+
+## [v2.0.0rc1](https://github.com/allenai/allennlp/releases/tag/v2.0.0rc1) - 2021-01-21
 
 ### Added
 
 - Added `TensorCache` class for caching tensors on disk
-- Added reader for the NLVR2 dataset
-- Added cache for Detectron models that we might re-use several times in the code base
 - Added abstraction and concrete implementation for image loading
 - Added abstraction and concrete implementation for `GridEmbedder`
 - Added abstraction and demo implementation for an image augmentation module.
@@ -20,22 +47,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A new high-performance default `DataLoader`: `MultiProcessDataLoading`.
 - A `MultiTaskModel` and abstractions to use with it, including `Backbone` and `Head`.  The
   `MultiTaskModel` first runs its inputs through the `Backbone`, then passes the result (and
-whatever other relevant inputs it got) to each `Head` that's in use.
+  whatever other relevant inputs it got) to each `Head` that's in use.
 - A `MultiTaskDataLoader`, with a corresponding `MultiTaskDatasetReader`, and a couple of new
   configuration objects: `MultiTaskEpochSampler` (for deciding what proportion to sample from each
-dataset at every epoch) and a `MultiTaskScheduler` (for ordering the instances within an epoch).
-- Added `TensorCache` class for caching tensors on disk
-- Added reader for the NLVR2 dataset
-- Added cache for Detectron models that we might re-use several times in the code base
-- Added abstraction and concrete implementation for image loading
-- Added abstraction and concrete implementation for `GridEmbedder`
-- Added abstraction and demo implementation for an image augmentation module.
-- Added abstraction and concrete implementation for region detectors.
+  dataset at every epoch) and a `MultiTaskScheduler` (for ordering the instances within an epoch).
 - Transformer toolkit to plug and play with modular components of transformer architectures.
-- `VisionReader` and `VisionTextModel` base classes added. `VisualEntailment` and `VQA` inherit from these.
-- Added reader for the GQA dataset
-- Added a config to traing a GQA model
 - Added a command to count the number of instances we're going to be training with
+- Added a `FileLock` class to `common.file_utils`. This is just like the `FileLock` from the `filelock` library, except that
+  it adds an optional flag `read_only_ok: bool`, which when set to `True` changes the behavior so that a warning will be emitted
+  instead of an exception when lacking write permissions on an existing file lock.
+  This makes it possible to use the `FileLock` class on a read-only file system.
+- Added a new learning rate scheduler: `CombinedLearningRateScheduler`. This can be used to combine different LR schedulers, using one after the other.
+- Added an official CUDA 10.1 Docker image.
+- Moving `ModelCard` and `TaskCard` abstractions into the main repository.
+- Added a util function `allennlp.nn.util.dist_reduce(...)` for handling distributed reductions.
+  This is especially useful when implementing a distributed `Metric`.
 
 ### Changed
 
@@ -51,6 +77,8 @@ dataset at every epoch) and a `MultiTaskScheduler` (for ordering the instances w
 - Readers using the new vision features now explicitly log how they are featurizing images.
 - `master_addr` and `master_port` renamed to `primary_addr` and `primary_port`, respectively.
 - `is_master` parameter for training callbacks renamed to `is_primary`.
+- `master` branch renamed to `main`
+- Torch version bumped to 1.7.1 in Docker images.
 
 ### Removed
 
@@ -74,19 +102,11 @@ dataset at every epoch) and a `MultiTaskScheduler` (for ordering the instances w
   This makes it possible to use the `FileLock` class on a read-only file system.
 - Added a new learning rate scheduler: `CombinedLearningRateScheduler`. This can be used to combine different LR schedulers, using one after the other.
 - Moving `ModelCard` and `TaskCard` abstractions into the main repository.
-- The `TrainerCallback` constructor accepts `serialization_dir` provided by `Trainer`. This can be useful for `Logger` callbacks those need to store files in the run directory.
-- The `TrainerCallback.on_start()` is fired at the start of the training.
-- The `TrainerCallback` event methods now accept `**kwargs`. This may be useful to maintain backwards-compability of callbacks easier in the future. E.g. we may decide to pass the exception/traceback object in case of failure to `on_end()` and this older callbacks may simply ignore the argument instead of raising a `TypeError`.
 
 ### Changed
 
 - 'master' branch renamed to 'main'
 - Torch version bumped to 1.7.1 in Docker images.
-- The `TrainerCallack.on_epoch()` does not fire with `epoch=-1` at the start of the training.
-  Instead, `TrainerCallback.on_start()` should be used for these cases.
-- `TensorBoardBatchMemoryUsage` is converted from `BatchCallback` into `TrainerCallback`.
-- `TrackEpochCallback` is converted from `EpochCallback` into `TrainerCallback`.
-- `Trainer` can accept callbacks simply with name `callbacks` instead of `trainer_callbacks`.
 
 ### Fixed
 
@@ -94,15 +114,6 @@ dataset at every epoch) and a `MultiTaskScheduler` (for ordering the instances w
 - `Vocabulary.from_files` and `cached_path` will issue a warning, instead of failing, when a lock on an existing resource
   can't be acquired because the file system is read-only.
 - `TrackEpochCallback` is now a `EpochCallback`.
-- Now Trainer always fires `TrainerCallback.on_end()` so all the resources can be cleaned up properly.
-- Fixed the misspelling, changed `TensoboardBatchMemoryUsage` to `TensorBoardBatchMemoryUsage`.
-- We set a value to `epoch` so in case of firing `TrainerCallback.on_end()` the variable is bound.
-  This could have lead to an error in case of trying to recover a run after it was finished training.
-
-### Removed
-
-- Removed `EpochCallback`, `BatchCallback` in favour of `TrainerCallback`.
-  The metaclass-wrapping implementation is removed as well.
 
 
 ## [v1.3.0](https://github.com/allenai/allennlp/releases/tag/v1.3.0) - 2020-12-15
@@ -134,6 +145,7 @@ dataset at every epoch) and a `MultiTaskScheduler` (for ordering the instances w
   by adding a `transformers` import.
 - Added safety checks for extracting tar files
 - Turned superfluous warning to info when extending the vocab in the embedding matrix, if no pretrained file was provided
+
 
 ## [v1.2.2](https://github.com/allenai/allennlp/releases/tag/v1.2.2) - 2020-11-17
 

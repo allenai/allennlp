@@ -11,8 +11,11 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple, TypeVar, Union
 import math
 import numpy
 import torch
+import torch.distributed as dist
+from torch.distributed import ReduceOp
 
 from allennlp.common.checks import ConfigurationError
+from allennlp.common.util import int_to_device, is_distributed
 
 logger = logging.getLogger(__name__)
 
@@ -25,8 +28,6 @@ def move_to_device(obj, device: Union[torch.device, int]):
     move all the Tensors to the specified device (or do nothing, if they are already on
     the target device).
     """
-    from allennlp.common.util import int_to_device
-
     device = int_to_device(device)
 
     if isinstance(obj, torch.Tensor):
@@ -2014,3 +2015,35 @@ def tiny_value_of_dtype(dtype: torch.dtype):
         return 1e-4
     else:
         raise TypeError("Does not support dtype " + str(dtype))
+
+
+_V = TypeVar("_V", int, float)
+
+
+def dist_reduce(value: _V, reduce_op: ReduceOp, **kwargs) -> _V:
+    """
+    Reduces the given `value` across all distributed worker nodes according the given
+    reduction operation.
+
+    If called outside of a distributed context, it will just return `value`.
+
+    # Parameters
+
+    value : `_V`
+        The value to reduce across distributed nodes.
+    reduce_op : `ReduceOp`
+        The reduction operation to use.
+    **kwargs : `Any`
+        Additional arguments used to construct the tensor that will wrap `value`.
+
+    # Returns
+
+    `_V`
+        The final value.
+    """
+    if not is_distributed():
+        return value
+    device = int_to_device(-1 if dist.get_backend() != "nccl" else torch.cuda.current_device())
+    value_tensor = torch.tensor(value, device=device, **kwargs)
+    dist.all_reduce(value_tensor, op=reduce_op)
+    return value_tensor.item()  # type: ignore[return-value]

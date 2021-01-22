@@ -230,7 +230,7 @@ class MultiProcessDataLoader(DataLoader):
                 raise ValueError("max_instances_in_memory must be at least 1")
 
         self.reader = reader
-        self.data_path = str(data_path)
+        self.data_path = data_path
         self.batch_size = batch_size
         self.drop_last = drop_last
         self.shuffle = shuffle
