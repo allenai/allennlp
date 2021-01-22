@@ -21,7 +21,7 @@ from allennlp.data import Vocabulary
 from allennlp.data.data_loaders import TensorDict
 from allennlp.models import load_archive, Model
 from allennlp.models.archival import CONFIG_NAME
-from allennlp.training import BatchCallback, GradientDescentTrainer
+from allennlp.training import TrainerCallback, GradientDescentTrainer
 from allennlp.training.learning_rate_schedulers import (
     ExponentialLearningRateScheduler,
     LearningRateScheduler,
@@ -31,9 +31,9 @@ SEQUENCE_TAGGING_DATA_PATH = str(AllenNlpTestCase.FIXTURES_ROOT / "data" / "sequ
 SEQUENCE_TAGGING_SHARDS_PATH = str(AllenNlpTestCase.FIXTURES_ROOT / "data" / "shards" / "*")
 
 
-@BatchCallback.register("training_data_logger")
-class TrainingDataLoggerBatchCallback(BatchCallback):
-    def __call__(  # type: ignore
+@TrainerCallback.register("training_data_logger")
+class TrainingDataLoggerOnBatchCallback(TrainerCallback):
+    def on_batch(  # type: ignore
         self,
         trainer: "GradientDescentTrainer",
         batch_inputs: List[TensorDict],
@@ -54,9 +54,9 @@ class TrainingDataLoggerBatchCallback(BatchCallback):
 _seen_training_devices = set()
 
 
-@BatchCallback.register("training_device_logger")
-class TrainingDeviceLoggerBatchCallback(BatchCallback):
-    def __call__(  # type: ignore
+@TrainerCallback.register("training_device_logger")
+class TrainingDeviceLoggerOnBatchCallback(TrainerCallback):
+    def on_batch(  # type: ignore
         self,
         trainer: "GradientDescentTrainer",
         batch_inputs: List[TensorDict],
@@ -141,7 +141,7 @@ class TestTrain(AllenNlpTestCase):
         import copy
 
         params = copy.deepcopy(self.DEFAULT_PARAMS)
-        params["trainer"]["batch_callbacks"] = ["training_device_logger"]
+        params["trainer"]["callbacks"] = ["training_device_logger"]
 
         global _seen_training_devices
         _seen_training_devices.clear()
@@ -158,7 +158,7 @@ class TestTrain(AllenNlpTestCase):
         import copy
 
         params = copy.deepcopy(self.DEFAULT_PARAMS)
-        params["trainer"]["batch_callbacks"] = ["training_device_logger"]
+        params["trainer"]["callbacks"] = ["training_device_logger"]
         params["trainer"]["cuda_device"] = 0
 
         global _seen_training_devices
@@ -177,7 +177,7 @@ class TestTrain(AllenNlpTestCase):
         import copy
 
         params = copy.deepcopy(self.DEFAULT_PARAMS)
-        params["trainer"]["batch_callbacks"] = ["training_device_logger"]
+        params["trainer"]["callbacks"] = ["training_device_logger"]
         params["trainer"]["cuda_device"] = -1
 
         global _seen_training_devices
@@ -351,8 +351,8 @@ class TestTrain(AllenNlpTestCase):
                 "trainer": {
                     "num_epochs": num_epochs,
                     "optimizer": "adam",
-                    "batch_callbacks": [
-                        "tests.commands.train_test.TrainingDataLoggerBatchCallback"
+                    "callbacks": [
+                        "tests.commands.train_test.TrainingDataLoggerOnBatchCallback"
                     ],
                 },
                 "distributed": {"cuda_devices": devices},
@@ -529,9 +529,9 @@ class TestTrain(AllenNlpTestCase):
 
         batch_callback_counter = 0
 
-        @BatchCallback.register("counter")
-        class CounterBatchCallback(BatchCallback):
-            def __call__(
+        @TrainerCallback.register("counter")
+        class CounterOnBatchCallback(TrainerCallback):
+            def on_batch(
                 self,
                 trainer: GradientDescentTrainer,
                 batch_inputs: List[List[TensorDict]],
@@ -565,7 +565,7 @@ class TestTrain(AllenNlpTestCase):
                     "num_epochs": number_of_epochs,
                     "optimizer": "adam",
                     "learning_rate_scheduler": {"type": "mock"},
-                    "batch_callbacks": ["counter"],
+                    "callbacks": ["counter"],
                 },
             }
         )
