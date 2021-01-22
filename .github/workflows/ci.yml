@@ -394,14 +394,14 @@ jobs:
         ./scripts/build_docs.sh
 
     - name: Configure Git
-      if: (github.event_name == 'release' || github.event_name == 'push') && github.ref == 'refs/heads/master'
+      if: (github.event_name == 'release' || github.event_name == 'push') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/vision')
       run: |
         git config --global user.email "ai2service@allenai.org"
         git config --global user.name "ai2service"
         git config --global push.default simple
 
     - name: Stage docs
-      if: (github.event_name == 'release' || github.event_name == 'push') && github.ref == 'refs/heads/master'
+      if: (github.event_name == 'release' || github.event_name == 'push') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/vision')
       run: |
         echo "Staging docs to $DOCS_FOLDER"
 
@@ -453,7 +453,7 @@ jobs:
         EOL
 
     - name: Deploy docs
-      if: (github.event_name == 'release' || github.event_name == 'push') && github.ref == 'refs/heads/master'
+      if: (github.event_name == 'release' || github.event_name == 'push') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/vision')
       run: |
         # And push them up to GitHub
         cd ~/allennlp-docs/
