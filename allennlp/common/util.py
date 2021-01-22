@@ -348,7 +348,7 @@ def import_module_and_submodules(package_name: str) -> None:
         for module_finder, name, _ in pkgutil.walk_packages(path):
             # Sometimes when you import third-party libraries that are on your path,
             # `pkgutil.walk_packages` returns those too, so we need to skip them.
-            if path_string and module_finder.path != path_string:
+            if path_string and module_finder.path != path_string:  # type: ignore[union-attr]
                 continue
             subpackage = f"{package_name}.{name}"
             import_module_and_submodules(subpackage)
