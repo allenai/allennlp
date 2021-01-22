@@ -37,6 +37,7 @@ class MetricTracker:
         self._is_best_so_far = True
         self._epoch_number = 0
         self.best_epoch: Optional[int] = None
+        self.best_epoch_metrics: Dict[str, float] = {}
 
         if isinstance(metric_name, str):
             metric_name = [metric_name]
@@ -58,6 +59,7 @@ class MetricTracker:
         self._is_best_so_far = True
         self._epoch_number = 0
         self.best_epoch = None
+        self.best_epoch_metrics.clear()
 
     def state_dict(self) -> Dict[str, Any]:
         """
@@ -69,6 +71,7 @@ class MetricTracker:
             "is_best_so_far": self._is_best_so_far,
             "epoch_number": self._epoch_number,
             "best_epoch": self.best_epoch,
+            "best_epoch_metrics": self.best_epoch_metrics,
         }
 
     def load_state_dict(self, state_dict: Dict[str, Any]) -> None:
@@ -80,6 +83,7 @@ class MetricTracker:
         self._is_best_so_far = state_dict["is_best_so_far"]
         self._epoch_number = state_dict["epoch_number"]
         self.best_epoch = state_dict["best_epoch"]
+        self.best_epoch_metrics = state_dict["best_epoch_metrics"]
 
     def add_metrics(self, metrics: Dict[str, float]) -> None:
         """
