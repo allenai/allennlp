@@ -1017,7 +1017,7 @@ class GradientDescentTrainer(Trainer):
 
             epochs_trained += 1
         else:
-            epoch = epoch_counter
+            epoch = self._num_epochs - 1
 
         # Load the best model state before returning
         best_model_state = (

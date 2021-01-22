@@ -74,7 +74,7 @@ dataset at every epoch) and a `MultiTaskScheduler` (for ordering the instances w
   This makes it possible to use the `FileLock` class on a read-only file system.
 - Added a new learning rate scheduler: `CombinedLearningRateScheduler`. This can be used to combine different LR schedulers, using one after the other.
 - Moving `ModelCard` and `TaskCard` abstractions into the main repository.
-- The `TrainerCallback` constructor accepts `serialization_dir` provided by `Trainer`. This can be useeful for `Logger` callbacks those need to store files in the run directory.
+- The `TrainerCallback` constructor accepts `serialization_dir` provided by `Trainer`. This can be useful for `Logger` callbacks those need to store files in the run directory.
 - The `TrainerCallback.on_start()` is fired at the start of the training.
 - The `TrainerCallback` event methods now accept `**kwargs`. This may be useful to maintain backwards-compability of callbacks easier in the future. E.g. we may decide to pass the exception/traceback object in case of failure to `on_end()` and this older callbacks may simply ignore the argument instead of raising a `TypeError`.
 
