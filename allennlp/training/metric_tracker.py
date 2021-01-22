@@ -83,7 +83,7 @@ class MetricTracker:
         self._is_best_so_far = state_dict["is_best_so_far"]
         self._epoch_number = state_dict["epoch_number"]
         self.best_epoch = state_dict["best_epoch"]
-        
+
         # Even though we don't promise backwards compatibility for the --recover flag,
         # it's particularly easy and harmless to provide it here, so we do it.
         self.best_epoch_metrics = state_dict.get("best_epoch_metrics", {})
