@@ -393,6 +393,10 @@ jobs:
       run: |
         ./scripts/build_docs.sh
 
+    - name: Print the ref
+      run: |
+        echo ${{ github.ref }}
+
     - name: Configure Git
       if: (github.event_name == 'release' || github.event_name == 'push') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/vision')
       run: |
