@@ -1,9 +1,12 @@
+import pytest
+
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.models.archival import load_archive
 from allennlp.predictors import Predictor
 
 
 class TestSentenceTaggerPredictor(AllenNlpTestCase):
+    @pytest.mark.filterwarnings("ignore::DeprecationWarning")
     def test_predictions_to_labeled_instances(self):
         inputs = {"sentence": "Eric Wallace was an intern at AI2"}
 

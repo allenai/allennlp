@@ -78,13 +78,16 @@ class SimpleTaggerSpanF1Test(ModelTestCase):
             self.FIXTURES_ROOT / "data" / "conll2003.txt",
         )
 
+    @pytest.mark.filterwarnings("ignore::DeprecationWarning")
     def test_simple_tagger_can_train_save_and_load(self):
         self.ensure_model_can_train_save_and_load(self.param_file)
 
     @flaky
+    @pytest.mark.filterwarnings("ignore::DeprecationWarning")
     def test_batch_predictions_are_consistent(self):
         self.ensure_batch_predictions_are_consistent()
 
+    @pytest.mark.filterwarnings("ignore::DeprecationWarning")
     def test_simple_tagger_can_enable_span_f1(self):
         assert self.model.calculate_span_f1 and self.model._f1_metric is not None
 

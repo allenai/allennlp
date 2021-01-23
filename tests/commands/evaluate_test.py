@@ -60,6 +60,7 @@ class TestEvaluate(AllenNlpTestCase):
         assert metrics["loss"] == pytest.approx((70 + 18 + 12) / 13.5)
 
     @flaky
+    @pytest.mark.filterwarnings("ignore::DeprecationWarning")
     def test_evaluate_from_args(self):
         kebab_args = [
             "evaluate",
@@ -82,6 +83,7 @@ class TestEvaluate(AllenNlpTestCase):
             "loss",
         }
 
+    @pytest.mark.filterwarnings("ignore::DeprecationWarning")
     def test_output_file_evaluate_from_args(self):
         output_file = str(self.TEST_DIR / "metrics.json")
         predictions_output_file = str(self.TEST_DIR / "predictions.jsonl")

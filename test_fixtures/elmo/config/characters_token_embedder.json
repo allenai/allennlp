@@ -1,6 +1,7 @@
 {
     "dataset_reader": {
       "type": "conll2003",
+      "convert_to_coding_scheme": "BIOUL",
       "tag_label": "ner",
       "token_indexers": {
         "tokens": {

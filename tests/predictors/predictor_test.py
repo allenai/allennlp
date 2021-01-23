@@ -4,7 +4,11 @@ from allennlp.predictors import Predictor
 from allennlp.nn import util
 
 
+import pytest
+
+
 class TestPredictor(AllenNlpTestCase):
+    @pytest.mark.filterwarnings("ignore::DeprecationWarning")
     def test_from_archive_does_not_consume_params(self):
         archive = load_archive(
             self.FIXTURES_ROOT / "simple_tagger" / "serialization" / "model.tar.gz"
@@ -14,6 +18,7 @@ class TestPredictor(AllenNlpTestCase):
         # If it consumes the params, this will raise an exception
         Predictor.from_archive(archive, "sentence_tagger")
 
+    @pytest.mark.filterwarnings("ignore::DeprecationWarning")
     def test_loads_correct_dataset_reader(self):
         # This model has a different dataset reader configuration for train and validation. The
         # parameter that differs is the token indexer's namespace.

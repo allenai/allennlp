@@ -7,6 +7,7 @@ from allennlp.common.testing import AllenNlpTestCase
 
 
 class TestConll2003Reader:
+    @pytest.mark.filterwarnings("ignore::DeprecationWarning")
     @pytest.mark.parametrize("lazy", (True, False))
     @pytest.mark.parametrize("coding_scheme", ("IOB1", "BIOUL"))
     def test_read_from_file_with_deprecated_parameter(self, lazy, coding_scheme):
@@ -30,15 +31,16 @@ class TestConll2003Reader:
         assert tokens == ["AI2", "engineer", "Joel", "lives", "in", "Seattle", "."]
         assert fields["tags"].labels == expected_labels
 
+    @pytest.mark.filterwarnings("ignore::DeprecationWarning")
     @pytest.mark.parametrize("lazy", (True, False))
-    @pytest.mark.parametrize("coding_scheme", ("IOB1", "BIOUL"))
-    def test_read_from_file(self, lazy, coding_scheme):
-        conll_reader = Conll2003DatasetReader(lazy=lazy, coding_scheme=coding_scheme)
+    @pytest.mark.parametrize("convert_to_coding_scheme", (None, "BIOUL"))
+    def test_read_from_file(self, lazy, convert_to_coding_scheme):
+        conll_reader = Conll2003DatasetReader(lazy=lazy, convert_to_coding_scheme=convert_to_coding_scheme)
         instances = ensure_list(
             conll_reader.read(AllenNlpTestCase.FIXTURES_ROOT / "data" / "conll2003.txt")
         )
 
-        if coding_scheme == "IOB1":
+        if convert_to_coding_scheme is None:
             expected_labels = ["I-ORG", "O", "I-PER", "O", "O", "I-LOC", "O"]
         else:
             expected_labels = ["U-ORG", "O", "U-PER", "O", "O", "U-LOC", "O"]
