@@ -1,6 +1,7 @@
 import pytest
 
 from allennlp.data.dataset_readers.conll2003 import Conll2003DatasetReader
+from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import ensure_list
 from allennlp.common.testing import AllenNlpTestCase
 
@@ -51,3 +52,8 @@ class TestConll2003Reader:
         tokens = [t.text for t in fields["tokens"].tokens]
         assert tokens == ["AI2", "engineer", "Joel", "lives", "in", "Seattle", "."]
         assert fields["tags"].labels == expected_labels
+
+    def test_read_data_from_with_unsupported_coding_scheme(self):
+        with pytest.raises(ConfigurationError):
+            # `IOB1` is not supported in `convert_to_coding_scheme`.
+            Conll2003DatasetReader(convert_to_coding_scheme="IOB1")
