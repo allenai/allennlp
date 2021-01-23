@@ -35,7 +35,9 @@ class TestConll2003Reader:
     @pytest.mark.parametrize("lazy", (True, False))
     @pytest.mark.parametrize("convert_to_coding_scheme", (None, "BIOUL"))
     def test_read_from_file(self, lazy, convert_to_coding_scheme):
-        conll_reader = Conll2003DatasetReader(lazy=lazy, convert_to_coding_scheme=convert_to_coding_scheme)
+        conll_reader = Conll2003DatasetReader(
+            lazy=lazy, convert_to_coding_scheme=convert_to_coding_scheme
+        )
         instances = ensure_list(
             conll_reader.read(AllenNlpTestCase.FIXTURES_ROOT / "data" / "conll2003.txt")
         )
