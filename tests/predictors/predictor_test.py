@@ -4,11 +4,7 @@ from allennlp.predictors import Predictor
 from allennlp.nn import util
 
 
-import pytest
-
-
 class TestPredictor(AllenNlpTestCase):
-    @pytest.mark.filterwarnings("ignore::DeprecationWarning")
     def test_from_archive_does_not_consume_params(self):
         archive = load_archive(
             self.FIXTURES_ROOT / "simple_tagger" / "serialization" / "model.tar.gz"

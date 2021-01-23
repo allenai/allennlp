@@ -1,5 +1,3 @@
-import pytest
-
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.models.archival import load_archive
 from allennlp.predictors import Predictor
@@ -7,7 +5,6 @@ from allennlp.interpret.attackers import InputReduction
 
 
 class TestInputReduction(AllenNlpTestCase):
-    @pytest.mark.filterwarnings("ignore::DeprecationWarning")
     def test_input_reduction(self):
         # test using classification model
         inputs = {"sentence": "I always write unit tests for my code."}
