@@ -1,6 +1,7 @@
 {
   "dataset_reader": {
     "type": "conll2003",
+    "convert_to_coding_scheme": "BIOUL",
     "tag_label": "ner",
     "token_indexers": {
       "tokens": {
@@ -11,6 +12,7 @@
   },
   "validation_dataset_reader": {
     "type": "conll2003",
+    "convert_to_coding_scheme": "BIOUL",
     "tag_label": "ner",
     "token_indexers": {
       "tokens": {
@@ -25,7 +27,7 @@
   "model": {
     "type": "simple_tagger",
     "calculate_span_f1": true,
-    "label_encoding": "IOB1",
+    "label_encoding": "BIOUL",
     "text_field_embedder": {
       "token_embedders": {
         "tokens": {
