@@ -103,10 +103,15 @@ class Conll2003DatasetReader(DatasetReader):
         for label in feature_labels:
             if label not in self._VALID_LABELS:
                 raise ConfigurationError("unknown feature label type: {}".format(label))
-        if convert_to_coding_scheme not in (None, "BIOUL") or coding_scheme not in ("IOB1", "BIOUL"):
+        if convert_to_coding_scheme not in (None, "BIOUL") or coding_scheme not in (
+            "IOB1",
+            "BIOUL",
+        ):
             raise ConfigurationError("unknown coding_scheme: {}".format(convert_to_coding_scheme))
         if convert_to_coding_scheme is None:
-            warnings.warn("`coding_scheme` is deprecated. Consider using `convert_to_coding_scheme`.")
+            warnings.warn(
+                "`coding_scheme` is deprecated. Consider using `convert_to_coding_scheme`."
+            )
             convert_to_coding_scheme = coding_scheme
 
         self.tag_label = tag_label
