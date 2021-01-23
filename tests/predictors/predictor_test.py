@@ -18,7 +18,6 @@ class TestPredictor(AllenNlpTestCase):
         # If it consumes the params, this will raise an exception
         Predictor.from_archive(archive, "sentence_tagger")
 
-    @pytest.mark.filterwarnings("ignore::DeprecationWarning")
     def test_loads_correct_dataset_reader(self):
         # This model has a different dataset reader configuration for train and validation. The
         # parameter that differs is the token indexer's namespace.
