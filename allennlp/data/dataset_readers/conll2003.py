@@ -105,7 +105,7 @@ class Conll2003DatasetReader(DatasetReader):
                 raise ConfigurationError("unknown feature label type: {}".format(label))
         if convert_to_coding_scheme not in (None, "BIOUL") or coding_scheme not in ("IOB1", "BIOUL"):
             raise ConfigurationError("unknown coding_scheme: {}".format(convert_to_coding_scheme))
-        if coding_scheme != "IOB1" and convert_to_coding_scheme is None:
+        if convert_to_coding_scheme is None:
             warnings.warn("`coding_scheme` is deprecated. Consider using `convert_to_coding_scheme`.")
             convert_to_coding_scheme = coding_scheme
 
