@@ -1,4 +1,2 @@
-O
-U-ORG
-U-PER
-U-LOC
+N
+V
