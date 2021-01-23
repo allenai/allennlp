@@ -37,8 +37,7 @@ nav:
 markdown_extensions:
 - toc:
     permalink: '#'
-- markdown.extensions.codehilite:
-    guess_lang: true
 - admonition
-- codehilite
 - extra
+- pymdownx.highlight
+- pymdownx.superfences
