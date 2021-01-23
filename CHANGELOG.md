@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - 'master' branch renamed to 'main'
 - Torch version bumped to 1.7.1 in Docker images.
+- Introduce `convert_to_coding_scheme` and make `coding_scheme` deprecated in `Conll2003DatasetReader`.
 
 ### Fixed
 
@@ -58,7 +59,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   were not passed to the constructor if the value of the parameter was equal to the default value.
   This caused bugs in some edge cases where a subclass that takes `**kwargs` needs to inspect
   `kwargs` before passing them to its superclass.
-- Improved the band-aid solution for segmentation faults and the "ImportError: dlopen: cannot load any more object with static TLS" 
+- Improved the band-aid solution for segmentation faults and the "ImportError: dlopen: cannot load any more object with static TLS"
   by adding a `transformers` import.
 - Added safety checks for extracting tar files
 - Turned superfluous warning to info when extending the vocab in the embedding matrix, if no pretrained file was provided
