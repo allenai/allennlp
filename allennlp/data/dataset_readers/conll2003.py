@@ -117,6 +117,7 @@ class Conll2003DatasetReader(DatasetReader):
 
         self.tag_label = tag_label
         self.feature_labels = set(feature_labels)
+        self.coding_scheme = None
         self.convert_to_coding_scheme = convert_to_coding_scheme
         self.label_namespace = label_namespace
         self._original_coding_scheme = "IOB1"
