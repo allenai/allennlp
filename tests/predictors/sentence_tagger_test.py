@@ -1,14 +1,11 @@
-import pytest
-
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.models.archival import load_archive
 from allennlp.predictors import Predictor
 
 
 class TestSentenceTaggerPredictor(AllenNlpTestCase):
-    @pytest.mark.filterwarnings("ignore::DeprecationWarning")
     def test_predictions_to_labeled_instances(self):
-        inputs = {"sentence": "Eric Wallace was an intern at AI2"}
+        inputs = {"sentence": "cats are animals."}
 
         archive = load_archive(
             self.FIXTURES_ROOT / "simple_tagger" / "serialization" / "model.tar.gz"
@@ -17,8 +14,4 @@ class TestSentenceTaggerPredictor(AllenNlpTestCase):
 
         instance = predictor._json_to_instance(inputs)
         outputs = predictor._model.forward_on_instance(instance)
-        new_instances = predictor.predictions_to_labeled_instances(instance, outputs)
-        assert len(new_instances) > 1
-        for new_instance in new_instances:
-            assert "tags" in new_instance
-            assert len(new_instance["tags"]) == 7  # 7 words in input
+        assert outputs["tags"] == ["N", "V", "N", "N"]
