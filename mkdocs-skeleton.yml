@@ -43,3 +43,5 @@ markdown_extensions:
 - admonition
 - codehilite
 - extra
+- pymdownx.highlight
+- pymdownx.superfences
