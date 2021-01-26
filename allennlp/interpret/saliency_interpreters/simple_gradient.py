@@ -16,7 +16,7 @@ class SimpleGradient(SaliencyInterpreter):
     """
     Registered as a `SaliencyInterpreter` with name "simple-gradient".
     """
-
+    
     def saliency_interpret_from_json(self, inputs: JsonDict) -> JsonDict:
         """
         Interprets the model's prediction for inputs.  Gets the gradients of the loss with respect
@@ -33,7 +33,8 @@ class SimpleGradient(SaliencyInterpreter):
             # Hook used for saving embeddings
             handles = self._register_hooks(embeddings_list, token_offsets)
             try:
-                grads = self.predictor.get_gradients([instance])[0]
+                tmp = self.predictor.get_gradients([instance])
+                grads = tmp[0]
             finally:
                 for handle in handles:
                     handle.remove()
