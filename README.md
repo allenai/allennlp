@@ -30,7 +30,7 @@
 - [Website](https://allennlp.org/)
 - [Guide](https://guide.allennlp.org/)
 - [Documentation](https://docs.allennlp.org/) ( [latest](https://docs.allennlp.org/latest/) | [stable](https://docs.allennlp.org/stable/) | [commit](https://docs.allennlp.org/main/) )
-- [Forum](https://discourse.allennlp.org)
+- [Upgrade Guide from 1.x to 2.0](https://github.com/allenai/allennlp/discussions/4933)
 - [Stack Overflow](https://stackoverflow.com/questions/tagged/allennlp)
 - [Contributing Guidelines](CONTRIBUTING.md)
 - [Officially Supported Models](https://github.com/allenai/allennlp-models)
