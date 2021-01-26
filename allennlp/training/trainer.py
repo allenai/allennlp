@@ -338,7 +338,7 @@ class GradientDescentTrainer(Trainer):
         parameters. This is necessary because we want the saved model to perform as well as the validated
         model if we load it later. But this may cause problems if you restart the training from checkpoint.
 
-    trainer_callbacks : `List[TrainerCallback]`, optional (default = `None`)
+    callbacks : `List[TrainerCallback]`, optional (default = `None`)
         A list of callbacks that can be called at certain events: e.g. each batch, epoch, and at the start
         and end of training, etc.
 
