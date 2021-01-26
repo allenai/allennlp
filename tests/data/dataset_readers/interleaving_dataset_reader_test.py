@@ -32,11 +32,11 @@ class TestInterleavingDatasetReader(AllenNlpTestCase):
         reader = InterleavingDatasetReader(readers)
         data_dir = self.FIXTURES_ROOT / "data"
 
-        file_path = f"""{{
-            "a": "{data_dir / 'babi.txt'}",
-            "b": "{data_dir / 'conll2003.txt'}",
-            "c": "{data_dir / 'conll2003.txt'}"
-        }}"""
+        file_path = {
+            "a": data_dir / "babi.txt",
+            "b": data_dir / "conll2003.txt",
+            "c": data_dir / "conll2003.txt",
+        }
 
         instances = list(reader.read(file_path))
         first_three_keys = {instance.fields["dataset"].metadata for instance in instances[:3]}

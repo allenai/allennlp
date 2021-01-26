@@ -30,7 +30,7 @@
 - [Website](https://allennlp.org/)
 - [Guide](https://guide.allennlp.org/)
 - [Documentation](https://docs.allennlp.org/) ( [latest](https://docs.allennlp.org/latest/) | [stable](https://docs.allennlp.org/stable/) | [commit](https://docs.allennlp.org/main/) )
-- [Forum](https://discourse.allennlp.org)
+- [Upgrade Guide from 1.x to 2.0](https://github.com/allenai/allennlp/discussions/4933)
 - [Stack Overflow](https://stackoverflow.com/questions/tagged/allennlp)
 - [Contributing Guidelines](CONTRIBUTING.md)
 - [Officially Supported Models](https://github.com/allenai/allennlp-models)
@@ -148,7 +148,10 @@ to distribute as a plugin, see the [subcommand API docs](https://docs.allennlp.o
 
 ## Installation
 
-AllenNLP requires Python 3.6.1 or later. The preferred way to install AllenNLP is via `pip`.  Just run `pip install allennlp` in your Python environment and you're good to go!
+AllenNLP requires Python 3.6.1 or later and [PyTorch](https://pytorch.org/).
+It's recommended that you install the PyTorch ecosystem **before** installing AllenNLP by following the instructions on [pytorch.org](https://pytorch.org/).
+
+The preferred way to install AllenNLP is via `pip`. Just run `pip install allennlp`.
 
 > ⚠️ If you're using Python 3.7 or greater, you should ensure that you don't have the PyPI version of `dataclasses` installed after running the above command, as this could cause issues on certain platforms. You can quickly check this by running `pip freeze | grep dataclasses`. If you see something like `dataclasses=0.6` in the output, then just run `pip uninstall -y dataclasses`.
 
