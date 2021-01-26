@@ -2,11 +2,14 @@
 Utilities for working with the local dataset cache.
 """
 
+from contextlib import contextmanager
 import glob
+import io
 import os
 import logging
 import tempfile
 import json
+from abc import ABC
 from collections import defaultdict
 from dataclasses import dataclass, asdict
 from datetime import timedelta
@@ -26,24 +29,31 @@ from typing import (
     Iterable,
     Dict,
     NamedTuple,
+    MutableMapping,
 )
 from hashlib import sha256
 from functools import wraps
+from weakref import WeakValueDictionary
 from zipfile import ZipFile, is_zipfile
 import tarfile
 import shutil
+import pickle
 import time
 import warnings
 
 import boto3
 import botocore
+import torch
 from botocore.exceptions import ClientError, EndpointConnectionError
 from filelock import FileLock as _FileLock
+import numpy as np
 from overrides import overrides
 import requests
 from requests.adapters import HTTPAdapter
 from requests.exceptions import ConnectionError
 from requests.packages.urllib3.util.retry import Retry
+import lmdb
+from torch import Tensor
 
 from allennlp.common.tqdm import Tqdm
 
@@ -271,7 +281,11 @@ def cached_path(
             # Normalize the path.
             url_or_filename = os.path.abspath(url_or_filename)
 
-            if extract_archive and (is_zipfile(file_path) or tarfile.is_tarfile(file_path)):
+            if (
+                extract_archive
+                and os.path.isfile(file_path)
+                and (is_zipfile(file_path) or tarfile.is_tarfile(file_path))
+            ):
                 # We'll use a unique directory within the cache to root to extract the archive to.
                 # The name of the directoy is a hash of the resource file path and it's modification
                 # time. That way, if the file changes, we'll know when to extract it again.
@@ -460,6 +474,171 @@ def _find_latest_cached(url: str, cache_dir: Union[str, Path]) -> Optional[str]:
     return None
 
 
+def _serialize(data):
+    buffer = pickle.dumps(data, protocol=-1)
+    return np.frombuffer(buffer, dtype=np.uint8)
+
+
+class TensorCache(MutableMapping[str, Tensor], ABC):
+    """
+    This is a key-value store, mapping strings to tensors. The data is kept on disk,
+    making this class useful as a cache for storing tensors.
+
+    `TensorCache` is also safe to access from multiple processes at the same time, so
+    you can use it in distributed training situations, or from multiple training
+    runs at the same time.
+    """
+
+    def __init__(
+        self,
+        filename: Union[str, PathLike],
+        *,
+        map_size: int = 1024 * 1024 * 1024 * 1024,
+        read_only: bool = False,
+    ) -> None:
+        """
+        Creates a `TensorCache` by either opening an existing one on disk, or creating
+        a new one. Its interface is almost exactly like a Python dictionary, where the
+        keys are strings and the values are `torch.Tensor`.
+
+        Parameters
+        ----------
+        filename: `str`
+            Path to the location of the cache
+        map_size: `int`, optional, defaults to 1TB
+            This is the maximum size the cache will ever grow to. On reasonable operating
+            systems, there is no penalty to making this a large value.
+            `TensorCache` uses a memory-mapped file to store the data. When the file is
+            first opened, we have to give the maximum size it can ever grow to. This is
+            that number. Reasonable operating systems don't actually allocate that space
+            until it is really needed.
+        """
+        filename = str(filename)
+
+        cpu_count = os.cpu_count() or 1
+        if os.path.exists(filename):
+            if os.path.isfile(filename):
+                # If the file is not writable, set read_only to True, but issue a warning.
+                if not os.access(filename, os.W_OK):
+                    if not read_only:
+                        warnings.warn(
+                            f"File '{filename}' is read-only, so cache will be read-only",
+                            UserWarning,
+                        )
+                    read_only = True
+            else:
+                # If it's not a file, raise an error.
+                raise ValueError("Expect a file, found a directory instead")
+
+        use_lock = True
+        if read_only:
+            # Check if the lock file is writable. If it's not, then we won't be able to use the lock.
+
+            # This is always how lmdb names the lock file.
+            lock_filename = filename + "-lock"
+            if os.path.isfile(lock_filename):
+                use_lock = os.access(lock_filename, os.W_OK)
+            else:
+                # If the lock file doesn't exist yet, then the directory needs to be writable in
+                # order to create and use the lock file.
+                use_lock = os.access(os.path.dirname(lock_filename), os.W_OK)
+
+        if not use_lock:
+            warnings.warn(
+                f"Lacking permissions to use lock file on cache '{filename}'.\nUse at your own risk!",
+                UserWarning,
+            )
+
+        self.lmdb_env = lmdb.open(
+            str(filename),
+            subdir=False,
+            map_size=map_size,
+            max_readers=cpu_count * 2,
+            max_spare_txns=cpu_count * 2,
+            metasync=False,
+            sync=True,
+            readahead=False,
+            meminit=False,
+            readonly=read_only,
+            lock=use_lock,
+        )
+
+        # We have another cache here that makes sure we return the same object for the same key. Without it,
+        # you would get a different tensor, using different memory, every time you call __getitem__(), even
+        # if you call it with the same key.
+        # The downside is that we can't keep self.cache_cache up to date when multiple processes modify the
+        # cache at the same time. We can guarantee though that it is up to date as long as processes either
+        # write new values, or read existing ones.
+        self.cache_cache: MutableMapping[str, Tensor] = WeakValueDictionary()
+
+    @property
+    def read_only(self) -> bool:
+        return self.lmdb_env.flags()["readonly"]
+
+    def __contains__(self, key: object):
+        if not isinstance(key, str):
+            return False
+        if key in self.cache_cache:
+            return True
+        encoded_key = key.encode()
+        with self.lmdb_env.begin(write=False) as txn:
+            result = txn.get(encoded_key)
+            return result is not None
+
+    def __getitem__(self, key: str):
+        try:
+            return self.cache_cache[key]
+        except KeyError:
+            encoded_key = key.encode()
+            with self.lmdb_env.begin(write=False) as txn:
+                buffer = txn.get(encoded_key)
+                if buffer is None:
+                    raise KeyError()
+                tensor = torch.load(io.BytesIO(buffer), map_location="cpu")
+            self.cache_cache[key] = tensor
+            return tensor
+
+    def __setitem__(self, key: str, tensor: torch.Tensor):
+        if self.read_only:
+            raise ValueError("cannot write to a read-only cache")
+
+        encoded_key = key.encode()
+        buffer = io.BytesIO()
+        if tensor.storage().size() != np.prod(tensor.size()):
+            tensor = tensor.clone()
+        assert tensor.storage().size() == np.prod(tensor.size())
+        torch.save(tensor.detach(), buffer, pickle_protocol=pickle.HIGHEST_PROTOCOL)
+        with self.lmdb_env.begin(write=True) as txn:
+            txn.put(encoded_key, buffer.getbuffer())
+
+        self.cache_cache[key] = tensor
+
+    def __delitem__(self, key: str):
+        if self.read_only:
+            raise ValueError("cannot write to a read-only cache")
+
+        encoded_key = key.encode()
+        with self.lmdb_env.begin(write=True) as txn:
+            txn.delete(encoded_key)
+
+        try:
+            del self.cache_cache[key]
+        except KeyError:
+            pass
+
+    def __del__(self):
+        if self.lmdb_env is not None:
+            self.lmdb_env.close()
+            self.lmdb_env = None
+
+    def __len__(self):
+        return self.lmdb_env.stat()["entries"]
+
+    def __iter__(self):
+        # It is not hard to implement this, but we have not needed it so far.
+        raise NotImplementedError()
+
+
 class CacheFile:
     """
     This is a context manager that makes robust caching easier.
@@ -472,7 +651,7 @@ class CacheFile:
     """
 
     def __init__(
-        self, cache_filename: Union[Path, str], mode: str = "w+b", suffix: str = ".tmp"
+        self, cache_filename: Union[PathLike, str], mode: str = "w+b", suffix: str = ".tmp"
     ) -> None:
         self.cache_filename = (
             cache_filename if isinstance(cache_filename, Path) else Path(cache_filename)
@@ -499,6 +678,78 @@ class CacheFile:
         # Something went wrong, remove the temp file.
         logger.debug("removing temp file %s", self.temp_file.name)
         os.remove(self.temp_file.name)
+        return False
+
+
+class LocalCacheResource:
+    """
+    This is a context manager that can be used to fetch and cache arbitrary resources locally
+    using the same mechanisms that `cached_path` uses for remote resources.
+
+    It can be used, for example, when you want to cache the result of an expensive computation.
+
+    # Examples
+
+    ```python
+    with LocalCacheResource("long-computation", "v1") as cache:
+        if cache.cached():
+            with cache.reader() as f:
+                # read from cache
+        else:
+            with cache.writer() as f:
+                # do the computation
+                # ...
+                # write to cache
+    ```
+    """
+
+    def __init__(self, resource_name: str, version: str, cache_dir: str = CACHE_DIRECTORY) -> None:
+        self.resource_name = resource_name
+        self.version = version
+        self.cache_dir = cache_dir
+        self.path = os.path.join(self.cache_dir, _resource_to_filename(resource_name, version))
+        self.file_lock = FileLock(self.path + ".lock")
+
+    def cached(self) -> bool:
+        return os.path.exists(self.path)
+
+    @contextmanager
+    def writer(self, mode="w"):
+        if self.cached():
+            raise ValueError(
+                f"local cache of {self.resource_name} (version '{self.version}') already exists!"
+            )
+
+        with CacheFile(self.path, mode=mode) as f:
+            yield f
+
+        meta = _Meta(
+            resource=self.resource_name,
+            cached_path=self.path,
+            creation_time=time.time(),
+            etag=self.version,
+            size=_get_resource_size(self.path),
+        )
+        meta.to_file()
+
+    @contextmanager
+    def reader(self, mode="r"):
+        if not self.cached():
+            raise ValueError(
+                f"local cache of {self.resource_name} (version '{self.version}') does not exist yet!"
+            )
+
+        with open(self.path, mode) as f:
+            yield f
+
+    def __enter__(self):
+        self.file_lock.acquire()
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.file_lock.release()
+        if exc_value is None:
+            return True
         return False
 
 
@@ -670,9 +921,9 @@ def get_file_extension(path: str, dot=True, lower: bool = True):
 
 
 def open_compressed(
-    filename: Union[str, Path], mode: str = "rt", encoding: Optional[str] = "UTF-8", **kwargs
+    filename: Union[str, PathLike], mode: str = "rt", encoding: Optional[str] = "UTF-8", **kwargs
 ):
-    if isinstance(filename, Path):
+    if not isinstance(filename, str):
         filename = str(filename)
     open_fn: Callable = open
 
@@ -684,10 +935,10 @@ def open_compressed(
         import bz2
 
         open_fn = bz2.open
-    return open_fn(filename, mode=mode, encoding=encoding, **kwargs)
+    return open_fn(cached_path(filename), mode=mode, encoding=encoding, **kwargs)
 
 
-def text_lines_from_file(filename: Union[str, Path], strip_lines: bool = True) -> Iterator[str]:
+def text_lines_from_file(filename: Union[str, PathLike], strip_lines: bool = True) -> Iterator[str]:
     with open_compressed(filename, "rt", encoding="UTF-8", errors="replace") as p:
         if strip_lines:
             for line in p:
@@ -696,7 +947,7 @@ def text_lines_from_file(filename: Union[str, Path], strip_lines: bool = True) -
             yield from p
 
 
-def json_lines_from_file(filename: Union[str, Path]) -> Iterable[Union[list, dict]]:
+def json_lines_from_file(filename: Union[str, PathLike]) -> Iterable[Union[list, dict]]:
     return (json.loads(line) for line in text_lines_from_file(filename))
 
 

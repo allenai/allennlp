@@ -56,8 +56,18 @@ class TimeDistributed(torch.nn.Module):
 
         # Now get the output back into the right shape.
         # (batch_size, time_steps, **output_size)
-        new_size = some_input.size()[:2] + reshaped_outputs.size()[1:]
-        outputs = reshaped_outputs.contiguous().view(new_size)
+        tuple_output = True
+        if not isinstance(reshaped_outputs, tuple):
+            tuple_output = False
+            reshaped_outputs = (reshaped_outputs,)
+
+        outputs = []
+        for reshaped_output in reshaped_outputs:
+            new_size = some_input.size()[:2] + reshaped_output.size()[1:]
+            outputs.append(reshaped_output.contiguous().view(new_size))
+
+        if not tuple_output:
+            outputs = outputs[0]
 
         return outputs
 

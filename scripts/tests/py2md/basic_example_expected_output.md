@@ -37,7 +37,7 @@ def func_with_args(a: int, b: int, c: int = 3) -> int
 
 This function has some args.
 
-<strong>Parameters</strong>
+<h4 id="func_with_args.parameters">Parameters<a class="headerlink" href="#func_with_args.parameters" title="Permanent link">&para;</a></h4>
 
 
 - __a__ : `int` <br>
@@ -47,11 +47,11 @@ This function has some args.
 - __c__ : `int`, optional (default = `3`) <br>
     Yet another number.
 
-<strong>Notes</strong>
+<h4 id="func_with_args.notes">Notes<a class="headerlink" href="#func_with_args.notes" title="Permanent link">&para;</a></h4>
 
 These are some notes.
 
-<strong>Returns</strong>
+<h4 id="func_with_args.returns">Returns<a class="headerlink" href="#func_with_args.returns" title="Permanent link">&para;</a></h4>
 
 
 - `int` <br>
@@ -67,7 +67,7 @@ class SomeClass:
 
 I'm a class!
 
-<strong>Parameters</strong>
+<h4 id="someclass.parameters">Parameters<a class="headerlink" href="#someclass.parameters" title="Permanent link">&para;</a></h4>
 
 
 - __x__ : `float` <br>
@@ -106,7 +106,7 @@ I'm a method!
 
 But I don't do anything.
 
-<strong>Returns</strong>
+<h4 id="some_method.returns">Returns<a class="headerlink" href="#some_method.returns" title="Permanent link">&para;</a></h4>
 
 
 - `None` <br>
@@ -122,7 +122,7 @@ class SomeClass:
 
 Another method.
 
-<strong>Returns</strong>
+<h4 id="method_with_alternative_return_section.returns">Returns<a class="headerlink" href="#method_with_alternative_return_section.returns" title="Permanent link">&para;</a></h4>
 
 
 - A completely arbitrary number. <br>
@@ -138,7 +138,7 @@ class SomeClass:
 
 Another method.
 
-<strong>Returns</strong>
+<h4 id="method_with_alternative_return_section3.returns">Returns<a class="headerlink" href="#method_with_alternative_return_section3.returns" title="Permanent link">&para;</a></h4>
 
 
 - __number__ : `int` <br>

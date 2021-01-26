@@ -1,21 +1,18 @@
 from allennlp.common import Params
-from allennlp.data import Instance, Token
-from allennlp.data.batch import Batch
+from allennlp.data import Instance, Token, Batch
 from allennlp.data.fields import TextField
 from allennlp.data.samplers import BucketBatchSampler
-from allennlp.data.dataset_readers.dataset_reader import AllennlpDataset
-from allennlp.data.dataloader import PyTorchDataLoader
+from allennlp.data.data_loaders import MultiProcessDataLoader
 
 from .sampler_test import SamplerTest
 
 
 class TestBucketSampler(SamplerTest):
     def test_create_batches_groups_correctly(self):
-        dataset = AllennlpDataset(self.instances, vocab=self.vocab)
-        sampler = BucketBatchSampler(dataset, batch_size=2, padding_noise=0, sorting_keys=["text"])
+        sampler = BucketBatchSampler(batch_size=2, padding_noise=0, sorting_keys=["text"])
 
         grouped_instances = []
-        for indices in sampler:
+        for indices in sampler.get_batch_indices(self.instances):
             grouped_instances.append([self.instances[idx] for idx in indices])
         expected_groups = [
             [self.instances[4], self.instances[2]],
@@ -28,8 +25,7 @@ class TestBucketSampler(SamplerTest):
         assert expected_groups == []
 
     def test_guess_sorting_key_picks_the_longest_key(self):
-        dataset = AllennlpDataset(self.instances, vocab=self.vocab)
-        sampler = BucketBatchSampler(dataset, batch_size=2, padding_noise=0)
+        sampler = BucketBatchSampler(batch_size=2, padding_noise=0)
         instances = []
         short_tokens = [Token(t) for t in ["what", "is", "this", "?"]]
         long_tokens = [Token(t) for t in ["this", "is", "a", "not", "very", "long", "passage"]]
@@ -62,13 +58,12 @@ class TestBucketSampler(SamplerTest):
         assert sampler.sorting_keys == ["passage"]
 
     def test_from_params(self):
-        dataset = AllennlpDataset(self.instances, self.vocab)
         params = Params({})
 
         sorting_keys = ["s1", "s2"]
         params["sorting_keys"] = sorting_keys
         params["batch_size"] = 32
-        sampler = BucketBatchSampler.from_params(params=params, data_source=dataset)
+        sampler = BucketBatchSampler.from_params(params=params)
 
         assert sampler.sorting_keys == sorting_keys
         assert sampler.padding_noise == 0.1
@@ -83,27 +78,33 @@ class TestBucketSampler(SamplerTest):
             }
         )
 
-        sampler = BucketBatchSampler.from_params(params=params, data_source=dataset)
+        sampler = BucketBatchSampler.from_params(params=params)
         assert sampler.sorting_keys == sorting_keys
         assert sampler.padding_noise == 0.5
         assert sampler.batch_size == 100
         assert sampler.drop_last
 
     def test_drop_last_works(self):
-        dataset = AllennlpDataset(self.instances, vocab=self.vocab)
         sampler = BucketBatchSampler(
-            dataset,
             batch_size=2,
             padding_noise=0,
             sorting_keys=["text"],
             drop_last=True,
         )
+
         # We use a custom collate_fn for testing, which doesn't actually create tensors,
         # just the allennlp Batches.
-        dataloader = PyTorchDataLoader(
-            dataset, batch_sampler=sampler, collate_fn=lambda x: Batch(x)
+        def collate_fn(x, **kwargs):
+            return Batch(x)
+
+        data_loader = MultiProcessDataLoader(
+            self.get_mock_reader(),
+            "fake_path",
+            batch_sampler=sampler,
         )
-        batches = [batch for batch in iter(dataloader)]
+        data_loader.collate_fn = collate_fn
+        data_loader.index_with(self.vocab)
+        batches = [batch for batch in iter(data_loader)]
         stats = self.get_batches_stats(batches)
 
         # all batches have length batch_size
@@ -113,29 +114,21 @@ class TestBucketSampler(SamplerTest):
         assert stats["total_instances"] == len(self.instances) - 1
 
     def test_batch_count(self):
-        dataset = AllennlpDataset(self.instances, vocab=self.vocab)
-        sampler = BucketBatchSampler(dataset, batch_size=2, padding_noise=0, sorting_keys=["text"])
-        # We use a custom collate_fn for testing, which doesn't actually create tensors,
-        # just the allennlp Batches.
-        dataloader = PyTorchDataLoader(
-            dataset, batch_sampler=sampler, collate_fn=lambda x: Batch(x)
+        sampler = BucketBatchSampler(batch_size=2, padding_noise=0, sorting_keys=["text"])
+        data_loader = MultiProcessDataLoader(
+            self.get_mock_reader(), "fake_path", batch_sampler=sampler
         )
-
-        assert len(dataloader) == 3
+        data_loader.index_with(self.vocab)
+        assert len(data_loader) == 3
 
     def test_batch_count_with_drop_last(self):
-        dataset = AllennlpDataset(self.instances, vocab=self.vocab)
         sampler = BucketBatchSampler(
-            dataset,
             batch_size=2,
             padding_noise=0,
             sorting_keys=["text"],
             drop_last=True,
         )
-        # We use a custom collate_fn for testing, which doesn't actually create tensors,
-        # just the allennlp Batches.
-        dataloader = PyTorchDataLoader(
-            dataset, batch_sampler=sampler, collate_fn=lambda x: Batch(x)
+        data_loader = MultiProcessDataLoader(
+            self.get_mock_reader(), "fake_path", batch_sampler=sampler
         )
-
-        assert len(dataloader) == 2
+        assert len(data_loader) == 2
