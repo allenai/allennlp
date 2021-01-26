@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## Unreleased (2.x branch)
+## Unreleased
 
 ### Added
 
@@ -62,6 +62,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Moving `ModelCard` and `TaskCard` abstractions into the main repository.
 - Added a util function `allennlp.nn.util.dist_reduce(...)` for handling distributed reductions.
   This is especially useful when implementing a distributed `Metric`.
+- Added a `FileLock` class to `common.file_utils`. This is just like the `FileLock` from the `filelock` library, except that
+  it adds an optional flag `read_only_ok: bool`, which when set to `True` changes the behavior so that a warning will be emitted
+  instead of an exception when lacking write permissions on an existing file lock.
+  This makes it possible to use the `FileLock` class on a read-only file system.
+- Added a new learning rate scheduler: `CombinedLearningRateScheduler`. This can be used to combine different LR schedulers, using one after the other.
+- Moving `ModelCard` and `TaskCard` abstractions into the main repository.
 
 ### Changed
 
@@ -79,6 +85,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `is_master` parameter for training callbacks renamed to `is_primary`.
 - `master` branch renamed to `main`
 - Torch version bumped to 1.7.1 in Docker images.
+- 'master' branch renamed to 'main'
+- Torch version bumped to 1.7.1 in Docker images.
 
 ### Removed
 
@@ -90,26 +98,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   in the current working directory.
 - VQA models now use the `vqa_score` metric for early stopping. This results in
   much better scores.
-
-
-## Unreleased (1.x branch)
-
-### Added
-
-- Added a `FileLock` class to `common.file_utils`. This is just like the `FileLock` from the `filelock` library, except that
-  it adds an optional flag `read_only_ok: bool`, which when set to `True` changes the behavior so that a warning will be emitted
-  instead of an exception when lacking write permissions on an existing file lock.
-  This makes it possible to use the `FileLock` class on a read-only file system.
-- Added a new learning rate scheduler: `CombinedLearningRateScheduler`. This can be used to combine different LR schedulers, using one after the other.
-- Moving `ModelCard` and `TaskCard` abstractions into the main repository.
-
-### Changed
-
-- 'master' branch renamed to 'main'
-- Torch version bumped to 1.7.1 in Docker images.
-
-### Fixed
-
 - Fixed typo with `LabelField` string representation: removed trailing apostrophe.
 - `Vocabulary.from_files` and `cached_path` will issue a warning, instead of failing, when a lock on an existing resource
   can't be acquired because the file system is read-only.
