@@ -27,6 +27,7 @@ from typing import (
     Tuple,
     TypeVar,
     Union,
+    Sequence,
 )
 
 import numpy
@@ -143,7 +144,7 @@ def lazy_groups_of(iterable: Iterable[A], group_size: int) -> Iterator[List[A]]:
 
 
 def pad_sequence_to_length(
-    sequence: List,
+    sequence: Sequence,
     desired_length: int,
     default_value: Callable[[], Any] = lambda: 0,
     padding_on_right: bool = True,
@@ -174,6 +175,7 @@ def pad_sequence_to_length(
 
     padded_sequence : `List`
     """
+    sequence = list(sequence)
     # Truncates the sequence to the desired length.
     if padding_on_right:
         padded_sequence = sequence[:desired_length]
@@ -639,6 +641,64 @@ def format_size(size: int) -> str:
     if KBs >= 1:
         return f"{round(KBs, 1):.1f}K"
     return f"{size}B"
+
+
+def nan_safe_tensor_divide(numerator, denominator):
+    """Performs division and handles divide-by-zero.
+
+    On zero-division, sets the corresponding result elements to zero.
+    """
+    result = numerator / denominator
+    mask = denominator == 0.0
+    if not mask.any():
+        return result
+
+    # remove nan
+    result[mask] = 0.0
+    return result
+
+
+def shuffle_iterable(i: Iterable[T], pool_size: int = 1024) -> Iterable[T]:
+    import random
+
+    i = iter(i)
+    pool = []
+
+    # fill up the pool
+    for item in i:
+        pool.append(item)
+        if len(pool) >= pool_size:
+            break
+
+    # play in it
+    while len(pool) > 0:
+        index = random.randrange(len(pool))
+        yield pool[index]
+        try:
+            pool[index] = next(i)
+        except StopIteration:
+            del pool[index]
+            break
+
+    # drain it
+    random.shuffle(pool)
+    yield from pool
+
+
+def cycle_iterator_function(iterator_function: Callable[[], Iterable[T]]) -> Iterator[T]:
+    """
+    Functionally equivalent to `itertools.cycle(iterator_function())`, but this function does not
+    cache the result of calling the iterator like `cycle` does.  Instead, we just call
+    `iterator_function()` again whenever we get a `StopIteration`.  This should only be preferred
+    over `itertools.cycle` in cases where you're sure you don't want the caching behavior that's
+    done in `itertools.cycle`.
+    """
+    iterator = iter(iterator_function())
+    while True:
+        try:
+            yield next(iterator)
+        except StopIteration:
+            iterator = iter(iterator_function())
 
 
 def hash_object(o: Any) -> str:

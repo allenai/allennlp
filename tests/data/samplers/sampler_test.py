@@ -1,7 +1,7 @@
 from typing import List, Iterable, Dict, Union
 
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.data import Vocabulary, Instance, Token, Batch
+from allennlp.data import Vocabulary, Instance, Token, Batch, DatasetReader
 from allennlp.data.fields import TextField
 from allennlp.data.token_indexers import SingleIdTokenIndexer
 
@@ -40,9 +40,22 @@ class SamplerTest(AllenNlpTestCase):
         self.instances = instances
         self.lazy_instances = LazyIterable(instances)
 
+    def get_mock_reader(self) -> DatasetReader:
+        class MockReader(DatasetReader):
+            def __init__(self, instances, **kwargs):
+                super().__init__(**kwargs)
+                self.instances = instances
+
+            def _read(self, file_path: str):
+                for instance in self.instances:
+                    yield instance
+
+        return MockReader(self.instances)
+
     def create_instance(self, str_tokens: List[str]):
         tokens = [Token(t) for t in str_tokens]
         instance = Instance({"text": TextField(tokens, self.token_indexers)})
+        instance.index_fields(self.vocab)
         return instance
 
     def create_instances_from_token_counts(self, token_counts: List[int]) -> List[Instance]:

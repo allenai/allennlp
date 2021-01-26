@@ -1,8 +1,8 @@
-from typing import Dict, Mapping, Iterable
+from typing import Dict, Mapping, Iterable, Union
 import json
 
 from allennlp.common.checks import ConfigurationError
-from allennlp.data.dataset_readers.dataset_reader import DatasetReader
+from allennlp.data.dataset_readers.dataset_reader import DatasetReader, PathOrStr
 from allennlp.data.fields import MetadataField
 from allennlp.data.instance import Instance
 
@@ -72,14 +72,17 @@ class InterleavingDatasetReader(DatasetReader):
                 instance.fields[self._dataset_field_name] = MetadataField(key)
                 yield instance
 
-    def _read(self, file_path: str) -> Iterable[Instance]:
-        try:
-            file_paths = json.loads(file_path)
-        except json.JSONDecodeError:
-            raise ConfigurationError(
-                "the file_path for the InterleavingDatasetReader "
-                "needs to be a JSON-serialized dictionary {reader_name -> file_path}"
-            )
+    def _read(self, file_path: Union[str, Dict[str, PathOrStr]]) -> Iterable[Instance]:
+        if isinstance(file_path, str):
+            try:
+                file_paths = json.loads(file_path)
+            except json.JSONDecodeError:
+                raise ConfigurationError(
+                    "the file_path for the InterleavingDatasetReader "
+                    "needs to be a JSON-serialized dictionary {reader_name -> file_path}"
+                )
+        else:
+            file_paths = file_path
 
         if file_paths.keys() != self._readers.keys():
             raise ConfigurationError("mismatched keys")
