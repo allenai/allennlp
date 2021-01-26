@@ -35,9 +35,9 @@ class InfluenceInterpreter(Registrable):
         self._test_filepath = test_filepath
 
         self._train_set = self.train_dataset_reader.read(train_filepath)
-        self._train_set.index_with(self.vocab)
+        self._train_set.index_instances(self.vocab)
         self._test_set = self.test_dataset_reader.read(test_filepath)
-        self._test_set.index_with(self.vocab)
+        self._test_set.index_instances(self.vocab)
         self._train_batch_size = train_batch_size
         self._train_loader = PyTorchDataLoader(self._train_set, batch_size=self._train_batch_size)
         self._k = k
@@ -52,6 +52,7 @@ class InfluenceInterpreter(Registrable):
         # self._used_name2params = None  # some parameters might not be used.
         # this is not set until we actually run the calculation, because some parameters might not be used.
         self._used_params = None
+        self._used_params_name = None
 
     def influence_interpret_from_json(self, inputs: JsonDict) -> JsonDict:
         """

@@ -59,9 +59,9 @@ class SimpleInfluence(InfluenceInterpreter):
     def calculate_inflence_and_save(self, output_file):
         for instance in self._test_set:
             self.model.eval()
-            prediction = self.predictor.predict_instance(instance)
+            # prediction = self.predictor.predict_instance(instance)
             input_as_tensor_dict = Batch([instance]).as_tensor_dict()
-            raw_prediction = self.predictor._model(**input_as_tensor_dict)
+            raw_prediction = self.model(**input_as_tensor_dict)
 
             # get test example's gradient
             test_loss = raw_prediction["loss"]
