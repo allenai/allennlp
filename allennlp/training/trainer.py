@@ -180,7 +180,11 @@ class TensorBoardCallback(TrainerCallback):
     Log training statistics and metrics to TensorBoard using the `TensorBoardWriter`.
     """
 
-    def __init__(self, serialization_dir: str, tensorboard_writer: Lazy[TensorBoardWriter]) -> None:
+    def __init__(
+        self,
+        serialization_dir: str,
+        tensorboard_writer: Lazy[TensorBoardWriter] = Lazy(TensorBoardWriter),
+    ) -> None:
         super().__init__(serialization_dir=serialization_dir)
         self._tensorboard_constructor = tensorboard_writer
         self._tensorboard: Optional[TensorBoardWriter] = None

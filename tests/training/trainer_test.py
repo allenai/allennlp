@@ -4,7 +4,7 @@ import json
 import os
 import re
 import time
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import math
 import pytest
@@ -948,6 +948,7 @@ class TestTrainer(TrainerTestBase):
                 batch_number: int,
                 is_training: bool,
                 is_primary: bool = True,
+                batch_grad_norm: Optional[float] = None,
                 **kwargs,
             ) -> None:
                 if not hasattr(trainer, "start_callback_is_fired_first"):
@@ -1026,6 +1027,7 @@ class TestTrainer(TrainerTestBase):
                 batch_number: int,
                 is_training: bool,
                 is_primary: bool = True,
+                batch_grad_norm: Optional[float] = None,
                 **kwargs,
             ) -> None:
                 if not hasattr(trainer, "batch_losses"):
