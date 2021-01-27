@@ -23,9 +23,9 @@ from allennlp.models.simple_tagger import SimpleTagger
 from allennlp.training import (
     GradientDescentTrainer,
     Checkpointer,
-    TensorboardWriter,
     TrainerCallback,
     TrackEpochCallback,
+    TensorBoardCallback,
 )
 from allennlp.training.learning_rate_schedulers import CosineWithRestarts
 from allennlp.training.learning_rate_schedulers import ExponentialLearningRateScheduler
@@ -611,9 +611,12 @@ class TestTrainer(TrainerTestBase):
             self.data_loader,
             num_epochs=3,
             serialization_dir=self.TEST_DIR,
-            tensorboard_writer=TensorboardWriter(
-                serialization_dir=self.TEST_DIR, histogram_interval=2
-            ),
+            callbacks=[
+                TensorBoardCallback.from_params(
+                    Params({"tensorboard_writer": {"histogram_interval": 2}}),
+                    serialization_dir=self.TEST_DIR,
+                )
+            ],
         )
         trainer.train()
 
@@ -708,11 +711,19 @@ class TestTrainer(TrainerTestBase):
             data_loader,
             num_epochs=2,
             serialization_dir=self.TEST_DIR,
-            tensorboard_writer=TensorboardWriter(
-                serialization_dir=self.TEST_DIR,
-                should_log_learning_rate=True,
-                summary_interval=2,
-            ),
+            callbacks=[
+                TensorBoardCallback.from_params(
+                    Params(
+                        {
+                            "tensorboard_writer": {
+                                "summary_interval": 2,
+                                "should_log_learning_rate": True,
+                            }
+                        }
+                    ),
+                    serialization_dir=self.TEST_DIR,
+                )
+            ],
         )
 
         trainer.train()
