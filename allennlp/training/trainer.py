@@ -225,19 +225,12 @@ class TensorBoardCallback(TrainerCallback):
             return None
         assert self._tensorboard is not None
 
-        if self._tensorboard.should_log_histograms_next_batch():
-            # Get the magnitude of parameter updates for logging.  We need to do some
-            # computation before and after the optimizer step, and it's expensive because of
-            # GPU/CPU copies (necessary for large models, and for shipping to tensorboard), so
-            # we don't do this every batch, only when it's requested.
-            self._param_updates = {
-                name: param.detach().cpu().clone()
-                for name, param in trainer.model.named_parameters()
-            }
-        elif self._tensorboard.should_log_histograms_this_batch():
+        if self._tensorboard.should_log_histograms_this_batch():
             assert self._param_updates is not None
             for name, param in trainer.model.named_parameters():
                 self._param_updates[name].sub_(param.detach().cpu())
+        else:
+            self._param_updates = None
 
         self._tensorboard.log_memory_usage(cpu_memory_usage, gpu_memory_usage)
         self._tensorboard.log_batch(
@@ -248,6 +241,12 @@ class TensorBoardCallback(TrainerCallback):
             batch_inputs,
             self._param_updates,
         )
+
+        if self._tensorboard.should_log_histograms_next_batch():
+            self._param_updates = {
+                name: param.detach().cpu().clone()
+                for name, param in trainer.model.named_parameters()
+            }
 
     def on_epoch(
         self,
