@@ -198,7 +198,7 @@ class TensorBoardBatchMemoryUsage(TrainerCallback):
         cpu_memory_usage = common_util.peak_cpu_memory()
         gpu_memory_usage = common_util.peak_gpu_memory()
         # But we only want to log from the primary process.
-        if is_primary:
+        if is_primary and trainer._tensorboard is not None:
             trainer._tensorboard.log_memory_usage(cpu_memory_usage, gpu_memory_usage)
 
 
@@ -957,11 +957,10 @@ class GradientDescentTrainer(Trainer):
                         logger.info("Ran out of patience.  Stopping training.")
                         break
 
-            if self._primary:
-                if self._tensorboard is not None:
-                    self._tensorboard.log_metrics(
-                        train_metrics, val_metrics=val_metrics, log_to_console=True, epoch=epoch + 1
-                    )  # +1 because tensorboard doesn't like 0
+            if self._primary and self._tensorboard is not None:
+                self._tensorboard.log_metrics(
+                    train_metrics, val_metrics=val_metrics, log_to_console=True, epoch=epoch + 1
+                )  # +1 because tensorboard doesn't like 0
 
             # Create overall metrics dict
             training_elapsed_time = time.time() - training_start_time
