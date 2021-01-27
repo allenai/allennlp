@@ -18,8 +18,13 @@ class AllenNlpTestCase:
     PROJECT_ROOT = (pathlib.Path(__file__).parent / ".." / ".." / "..").resolve()
     MODULE_ROOT = PROJECT_ROOT / "allennlp"
     TOOLS_ROOT = MODULE_ROOT / "tools"
-    TESTS_ROOT = PROJECT_ROOT / "tests"
-    FIXTURES_ROOT = PROJECT_ROOT / "test_fixtures"
+    # to run test suite with finished package, which does not contain
+    # tests & fixtures, we must be able to look them up somewhere else
+    PROJECT_ROOT_FALLBACK = (
+        pathlib.Path(os.environ["SRC_DIR"]) if "SRC_DIR" in os.environ else PROJECT_ROOT
+    )
+    TESTS_ROOT = PROJECT_ROOT_FALLBACK / "tests"
+    FIXTURES_ROOT = PROJECT_ROOT_FALLBACK / "test_fixtures"
 
     def setup_method(self):
         logging.basicConfig(
