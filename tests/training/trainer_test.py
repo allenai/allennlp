@@ -4,7 +4,7 @@ import json
 import os
 import re
 import time
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import math
 import pytest
@@ -23,9 +23,9 @@ from allennlp.models.simple_tagger import SimpleTagger
 from allennlp.training import (
     GradientDescentTrainer,
     Checkpointer,
-    TensorboardWriter,
     TrainerCallback,
     TrackEpochCallback,
+    TensorBoardCallback,
 )
 from allennlp.training.learning_rate_schedulers import CosineWithRestarts
 from allennlp.training.learning_rate_schedulers import ExponentialLearningRateScheduler
@@ -611,9 +611,12 @@ class TestTrainer(TrainerTestBase):
             self.data_loader,
             num_epochs=3,
             serialization_dir=self.TEST_DIR,
-            tensorboard_writer=TensorboardWriter(
-                serialization_dir=self.TEST_DIR, histogram_interval=2
-            ),
+            callbacks=[
+                TensorBoardCallback.from_params(
+                    Params({"tensorboard_writer": {"histogram_interval": 2}}),
+                    serialization_dir=self.TEST_DIR,
+                )
+            ],
         )
         trainer.train()
 
@@ -708,11 +711,19 @@ class TestTrainer(TrainerTestBase):
             data_loader,
             num_epochs=2,
             serialization_dir=self.TEST_DIR,
-            tensorboard_writer=TensorboardWriter(
-                serialization_dir=self.TEST_DIR,
-                should_log_learning_rate=True,
-                summary_interval=2,
-            ),
+            callbacks=[
+                TensorBoardCallback.from_params(
+                    Params(
+                        {
+                            "tensorboard_writer": {
+                                "summary_interval": 2,
+                                "should_log_learning_rate": True,
+                            }
+                        }
+                    ),
+                    serialization_dir=self.TEST_DIR,
+                )
+            ],
         )
 
         trainer.train()
@@ -937,6 +948,7 @@ class TestTrainer(TrainerTestBase):
                 batch_number: int,
                 is_training: bool,
                 is_primary: bool = True,
+                batch_grad_norm: Optional[float] = None,
                 **kwargs,
             ) -> None:
                 if not hasattr(trainer, "start_callback_is_fired_first"):
@@ -1015,6 +1027,7 @@ class TestTrainer(TrainerTestBase):
                 batch_number: int,
                 is_training: bool,
                 is_primary: bool = True,
+                batch_grad_norm: Optional[float] = None,
                 **kwargs,
             ) -> None:
                 if not hasattr(trainer, "batch_losses"):

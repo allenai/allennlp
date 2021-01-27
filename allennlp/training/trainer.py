@@ -29,7 +29,7 @@ from allennlp.training.metric_tracker import MetricTracker
 from allennlp.training.momentum_schedulers import MomentumScheduler
 from allennlp.training.moving_average import MovingAverage
 from allennlp.training.optimizers import Optimizer
-from allennlp.training.tensorboard_writer import TensorboardWriter
+from allennlp.training.tensorboard_writer import TensorBoardWriter
 
 logger = logging.getLogger(__name__)
 
@@ -136,6 +136,7 @@ class TrainerCallback(Registrable):
         batch_number: int,
         is_training: bool,
         is_primary: bool = True,
+        batch_grad_norm: Optional[float] = None,
         **kwargs,
     ) -> None:
         """
@@ -173,13 +174,34 @@ class TrainerCallback(Registrable):
 TrainerCallback.register("null")(TrainerCallback)
 
 
-@TrainerCallback.register("tensorboard-memory-usage")
-class TensorBoardBatchMemoryUsage(TrainerCallback):
+@TrainerCallback.register("tensorboard")
+class TensorBoardCallback(TrainerCallback):
     """
-    Logs the CPU and GPU memory usage to tensorboard on every batch.
+    Log training statistics and metrics to TensorBoard using the `TensorBoardWriter`.
+    """
 
-    This is mainly used for debugging as it can cause a significant slowdown in training.
-    """
+    def __init__(
+        self,
+        serialization_dir: str,
+        tensorboard_writer: Lazy[TensorBoardWriter] = Lazy(TensorBoardWriter),
+    ) -> None:
+        super().__init__(serialization_dir=serialization_dir)
+        self._tensorboard_constructor = tensorboard_writer
+        self._tensorboard: Optional[TensorBoardWriter] = None
+        self._param_updates: Optional[Dict[str, torch.Tensor]] = None
+
+    def on_start(
+        self, trainer: "GradientDescentTrainer", is_primary: bool = True, **kwargs
+    ) -> None:
+        self.trainer = trainer
+        if is_primary:
+            self._tensorboard = self._tensorboard_constructor.construct(
+                serialization_dir=self.serialization_dir
+            )
+            self._tensorboard.get_batch_num_total = (
+                lambda: self.trainer._batch_num_total  # type: ignore[union-attr]
+            )
+            self._tensorboard.enable_activation_logging(self.trainer.model)
 
     def on_batch(
         self,
@@ -191,15 +213,82 @@ class TensorBoardBatchMemoryUsage(TrainerCallback):
         batch_number: int,
         is_training: bool,
         is_primary: bool = True,
+        batch_grad_norm: Optional[float] = None,
         **kwargs,
     ) -> None:
         # In the distributed case we need to call this from every worker, since every
         # worker reports its own memory usage.
         cpu_memory_usage = common_util.peak_cpu_memory()
         gpu_memory_usage = common_util.peak_gpu_memory()
-        # But we only want to log from the primary process.
+
+        if not is_primary:
+            return None
+        assert self._tensorboard is not None
+
+        if self._tensorboard.should_log_histograms_this_batch():
+            assert self._param_updates is not None
+            for name, param in trainer.model.named_parameters():
+                self._param_updates[name].sub_(param.detach().cpu())
+        else:
+            self._param_updates = None
+
+        self._tensorboard.log_memory_usage(cpu_memory_usage, gpu_memory_usage)
+        self._tensorboard.log_batch(
+            trainer.model,
+            trainer.optimizer,  # type: ignore[arg-type]
+            batch_grad_norm,
+            batch_metrics,
+            batch_inputs,
+            self._param_updates,
+        )
+
+        if self._tensorboard.should_log_histograms_next_batch():
+            self._param_updates = {
+                name: param.detach().cpu().clone()
+                for name, param in trainer.model.named_parameters()
+            }
+
+    def on_epoch(
+        self,
+        trainer: "GradientDescentTrainer",
+        metrics: Dict[str, Any],
+        epoch: int,
+        is_primary: bool = True,
+        **kwargs,
+    ) -> None:
+        if not is_primary:
+            return None
+        assert self._tensorboard is not None
+
+        train_metrics: Dict[str, Any] = {}
+        val_metrics: Dict[str, Any] = {}
+        for key, value in metrics.items():
+            if key.startswith("training_"):
+                key = key.replace("training_", "", 1)
+                if key not in {"duration", "start_epoch", "epochs"}:
+                    train_metrics[key] = value
+            elif key.startswith("validation_"):
+                key = key.replace("validation_", "", 1)
+                val_metrics[key] = value
+
+        self._tensorboard.log_metrics(
+            train_metrics,
+            val_metrics=val_metrics,
+            log_to_console=True,
+            epoch=epoch + 1,  # +1 because tensorboard doesn't like 0
+        )
+
+    def on_end(
+        self,
+        trainer: "GradientDescentTrainer",
+        metrics: Dict[str, Any] = None,
+        epoch: int = None,
+        is_primary: bool = True,
+        **kwargs,
+    ) -> None:
         if is_primary:
-            trainer._tensorboard.log_memory_usage(cpu_memory_usage, gpu_memory_usage)
+            assert self._tensorboard is not None
+            self._tensorboard.close()
 
 
 @TrainerCallback.register("track_epoch_callback")
@@ -326,10 +415,6 @@ class GradientDescentTrainer(Trainer):
         If specified, the momentum will be updated at the end of each batch or epoch
         according to the schedule.
 
-    tensorboard_writer : `TensorboardWriter`, optional
-        If this is not provided, we will construct a `TensorboardWriter` with default
-        parameters and use that.
-
     moving_average : `MovingAverage`, optional, (default = `None`)
         If provided, we will maintain moving averages for all parameters. During training, we
         employ a shadow variable for each parameter, which maintains the moving average. During
@@ -389,7 +474,6 @@ class GradientDescentTrainer(Trainer):
         grad_clipping: Optional[float] = None,
         learning_rate_scheduler: Optional[LearningRateScheduler] = None,
         momentum_scheduler: Optional[MomentumScheduler] = None,
-        tensorboard_writer: TensorboardWriter = None,
         moving_average: Optional[MovingAverage] = None,
         callbacks: List[TrainerCallback] = None,
         distributed: bool = False,
@@ -445,10 +529,6 @@ class GradientDescentTrainer(Trainer):
         # is used inside a closure for the hook which logs activations in
         # `_enable_activation_logging`.
         self._batch_num_total = 0
-
-        self._tensorboard = tensorboard_writer or TensorboardWriter(serialization_dir)
-        self._tensorboard.get_batch_num_total = lambda: self._batch_num_total
-        self._tensorboard.enable_activation_logging(self.model)
 
         self._last_log = 0.0  # time of last logging
 
@@ -642,31 +722,11 @@ class GradientDescentTrainer(Trainer):
             if self._momentum_scheduler:
                 self._momentum_scheduler.step_batch(batch_num_total)
 
-            param_updates = None
-            if self._tensorboard.should_log_histograms_this_batch() and self._primary:
-                # Get the magnitude of parameter updates for logging.  We need to do some
-                # computation before and after the optimizer step, and it's expensive because of
-                # GPU/CPU copies (necessary for large models, and for shipping to tensorboard), so
-                # we don't do this every batch, only when it's requested.
-                param_updates = {
-                    name: param.detach().cpu().clone()
-                    for name, param in self.model.named_parameters()
-                }
-
-                if self._scaler is not None:
-                    self._scaler.step(self.optimizer)
-                    self._scaler.update()
-                else:
-                    self.optimizer.step()
-
-                for name, param in self.model.named_parameters():
-                    param_updates[name].sub_(param.detach().cpu())
+            if self._scaler is not None:
+                self._scaler.step(self.optimizer)
+                self._scaler.update()
             else:
-                if self._scaler is not None:
-                    self._scaler.step(self.optimizer)
-                    self._scaler.update()
-                else:
-                    self.optimizer.step()
+                self.optimizer.step()
 
             # Update moving averages
             if self._moving_average is not None:
@@ -688,14 +748,6 @@ class GradientDescentTrainer(Trainer):
                 # Updating tqdm only for the primary as the trainers wouldn't have one
                 description = training_util.description_from_metrics(metrics)
                 batch_group_generator_tqdm.set_description(description, refresh=False)
-                self._tensorboard.log_batch(
-                    self.model,
-                    self.optimizer,
-                    batch_grad_norm,
-                    metrics,
-                    batch_group,
-                    param_updates,
-                )
 
                 if self._checkpointer is not None:
                     self._checkpointer.maybe_save_checkpoint(self, epoch, batches_this_epoch)
@@ -710,6 +762,7 @@ class GradientDescentTrainer(Trainer):
                     batches_this_epoch,
                     is_training=True,
                     is_primary=self._primary,
+                    batch_grad_norm=batch_grad_norm,
                 )
 
         if self._distributed and not done_early:
@@ -874,10 +927,8 @@ class GradientDescentTrainer(Trainer):
             metrics, epoch = self._try_train()
             return metrics
         finally:
-            # make sure pending events are flushed to disk and files are closed properly
             for callback in self._callbacks:
                 callback.on_end(self, metrics=metrics, epoch=epoch, is_primary=self._primary)
-            self._tensorboard.close()
 
     def _try_train(self) -> Tuple[Dict[str, Any], int]:
         try:
@@ -950,11 +1001,6 @@ class GradientDescentTrainer(Trainer):
                     if self._metric_tracker.should_stop_early():
                         logger.info("Ran out of patience.  Stopping training.")
                         break
-
-            if self._primary:
-                self._tensorboard.log_metrics(
-                    train_metrics, val_metrics=val_metrics, log_to_console=True, epoch=epoch + 1
-                )  # +1 because tensorboard doesn't like 0
 
             # Create overall metrics dict
             training_elapsed_time = time.time() - training_start_time
@@ -1133,7 +1179,6 @@ class GradientDescentTrainer(Trainer):
         optimizer: Lazy[Optimizer] = Lazy(Optimizer.default),
         learning_rate_scheduler: Lazy[LearningRateScheduler] = None,
         momentum_scheduler: Lazy[MomentumScheduler] = None,
-        tensorboard_writer: Lazy[TensorboardWriter] = Lazy(TensorboardWriter),
         moving_average: Lazy[MovingAverage] = None,
         checkpointer: Lazy[Checkpointer] = Lazy(Checkpointer),
         callbacks: List[Lazy[TrainerCallback]] = None,
@@ -1201,7 +1246,6 @@ class GradientDescentTrainer(Trainer):
             else momentum_scheduler.construct(optimizer=optimizer_)
         )
         checkpointer_ = checkpointer.construct(serialization_dir=serialization_dir)
-        tensorboard_writer_ = tensorboard_writer.construct(serialization_dir=serialization_dir)
 
         callbacks = callbacks or trainer_callbacks or []
 
@@ -1225,7 +1269,6 @@ class GradientDescentTrainer(Trainer):
             grad_clipping=grad_clipping,
             learning_rate_scheduler=learning_rate_scheduler_,
             momentum_scheduler=momentum_scheduler_,
-            tensorboard_writer=tensorboard_writer_,
             checkpointer=checkpointer_,
             moving_average=moving_average_,
             callbacks=callbacks_,

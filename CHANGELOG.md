@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The `TrainerCallback` constructor accepts `serialization_dir` provided by `Trainer`. This can be useful for `Logger` callbacks those need to store files in the run directory.
 - The `TrainerCallback.on_start()` is fired at the start of the training.
 - The `TrainerCallback` event methods now accept `**kwargs`. This may be useful to maintain backwards-compability of callbacks easier in the future. E.g. we may decide to pass the exception/traceback object in case of failure to `on_end()` and this older callbacks may simply ignore the argument instead of raising a `TypeError`.
+- Added a `TensorBoardCallback` which wraps the `TensorBoardWriter`.
 
 ### Changed
 
@@ -21,11 +22,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `TensorBoardBatchMemoryUsage` is converted from `BatchCallback` into `TrainerCallback`.
 - `TrackEpochCallback` is converted from `EpochCallback` into `TrainerCallback`.
 - `Trainer` can accept callbacks simply with name `callbacks` instead of `trainer_callbacks`.
+- `TensorboardWriter` renamed to `TensorBoardWriter`, and removed as an argument to the `GradientDescentTrainer`.
+  In order to enable TensorBoard logging during training, you should utilize the `TensorBoardCallback` instead.
 
 ### Removed
 
 - Removed `EpochCallback`, `BatchCallback` in favour of `TrainerCallback`.
   The metaclass-wrapping implementation is removed as well.
+- Removed the `tensorboard_writer` parameter to `GradientDescentTrainer`. You should use the `TensorBoardCallback` now instead.
 
 ### Fixed
 
