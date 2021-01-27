@@ -194,6 +194,7 @@ class Hotflip(Attacker):
             whatever it was to `"she"`.
         """
         instance = self.predictor._json_to_instance(inputs)
+        self.predictor._dataset_reader.apply_token_indexers(instance)
         if target is None:
             output_dict = self.predictor._model.forward_on_instance(instance)
         else:

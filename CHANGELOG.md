@@ -10,6 +10,58 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- The `TrainerCallback` constructor accepts `serialization_dir` provided by `Trainer`. This can be useful for `Logger` callbacks those need to store files in the run directory.
+- The `TrainerCallback.on_start()` is fired at the start of the training.
+- The `TrainerCallback` event methods now accept `**kwargs`. This may be useful to maintain backwards-compability of callbacks easier in the future. E.g. we may decide to pass the exception/traceback object in case of failure to `on_end()` and this older callbacks may simply ignore the argument instead of raising a `TypeError`.
+
+### Changed
+
+- The `TrainerCallack.on_epoch()` does not fire with `epoch=-1` at the start of the training.
+  Instead, `TrainerCallback.on_start()` should be used for these cases.
+- `TensorBoardBatchMemoryUsage` is converted from `BatchCallback` into `TrainerCallback`.
+- `TrackEpochCallback` is converted from `EpochCallback` into `TrainerCallback`.
+- `Trainer` can accept callbacks simply with name `callbacks` instead of `trainer_callbacks`.
+
+### Removed
+
+- Removed `EpochCallback`, `BatchCallback` in favour of `TrainerCallback`.
+  The metaclass-wrapping implementation is removed as well.
+
+### Fixed
+
+- Now Trainer always fires `TrainerCallback.on_end()` so all the resources can be cleaned up properly.
+- Fixed the misspelling, changed `TensoboardBatchMemoryUsage` to `TensorBoardBatchMemoryUsage`.
+- We set a value to `epoch` so in case of firing `TrainerCallback.on_end()` the variable is bound.
+  This could have lead to an error in case of trying to recover a run after it was finished training.
+
+
+## [v2.0.0rc1](https://github.com/allenai/allennlp/releases/tag/v2.0.0rc1) - 2021-01-21
+
+### Added
+
+- Added `TensorCache` class for caching tensors on disk
+- Added abstraction and concrete implementation for image loading
+- Added abstraction and concrete implementation for `GridEmbedder`
+- Added abstraction and demo implementation for an image augmentation module.
+- Added abstraction and concrete implementation for region detectors.
+- A new high-performance default `DataLoader`: `MultiProcessDataLoading`.
+- A `MultiTaskModel` and abstractions to use with it, including `Backbone` and `Head`.  The
+  `MultiTaskModel` first runs its inputs through the `Backbone`, then passes the result (and
+  whatever other relevant inputs it got) to each `Head` that's in use.
+- A `MultiTaskDataLoader`, with a corresponding `MultiTaskDatasetReader`, and a couple of new
+  configuration objects: `MultiTaskEpochSampler` (for deciding what proportion to sample from each
+  dataset at every epoch) and a `MultiTaskScheduler` (for ordering the instances within an epoch).
+- Transformer toolkit to plug and play with modular components of transformer architectures.
+- Added a command to count the number of instances we're going to be training with
+- Added a `FileLock` class to `common.file_utils`. This is just like the `FileLock` from the `filelock` library, except that
+  it adds an optional flag `read_only_ok: bool`, which when set to `True` changes the behavior so that a warning will be emitted
+  instead of an exception when lacking write permissions on an existing file lock.
+  This makes it possible to use the `FileLock` class on a read-only file system.
+- Added a new learning rate scheduler: `CombinedLearningRateScheduler`. This can be used to combine different LR schedulers, using one after the other.
+- Added an official CUDA 10.1 Docker image.
+- Moving `ModelCard` and `TaskCard` abstractions into the main repository.
+- Added a util function `allennlp.nn.util.dist_reduce(...)` for handling distributed reductions.
+  This is especially useful when implementing a distributed `Metric`.
 - Added a `FileLock` class to `common.file_utils`. This is just like the `FileLock` from the `filelock` library, except that
   it adds an optional flag `read_only_ok: bool`, which when set to `True` changes the behavior so that a warning will be emitted
   instead of an exception when lacking write permissions on an existing file lock.
@@ -19,13 +71,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `DatasetReader`s are now always lazy. This means there is no `lazy` parameter in the base
+  class, and the `_read()` method should always be a generator.
+- The `DataLoader` now decides whether to load instances lazily or not.
+  With the `PyTorchDataLoader` this is controlled with the `lazy` parameter, but with
+  the `MultiProcessDataLoading` this is controlled by the `max_instances_in_memory` setting.
+- `ArrayField` is now called `TensorField`, and implemented in terms of torch tensors, not numpy.
+- Improved `nn.util.move_to_device` function by avoiding an unnecessary recursive check for tensors and
+  adding a `non_blocking` optional argument, which is the same argument as in `torch.Tensor.to()`.
+- If you are trying to create a heterogeneous batch, you now get a better error message.
+- Readers using the new vision features now explicitly log how they are featurizing images.
+- `master_addr` and `master_port` renamed to `primary_addr` and `primary_port`, respectively.
+- `is_master` parameter for training callbacks renamed to `is_primary`.
+- `master` branch renamed to `main`
+- Torch version bumped to 1.7.1 in Docker images.
 - 'master' branch renamed to 'main'
 - Torch version bumped to 1.7.1 in Docker images.
 - The `tensorboard_writer` is now optional for the `GradientDescentTrainer`. When training from a config file
   the default `TensorboardWriter` will still be used unless you explicitly set `"tensorboard_writer": null`.
 
+### Removed
+
+- Removed `nn.util.has_tensor`.
+
 ### Fixed
 
+- The `build-vocab` command no longer crashes when the resulting vocab file is
+  in the current working directory.
+- VQA models now use the `vqa_score` metric for early stopping. This results in
+  much better scores.
 - Fixed typo with `LabelField` string representation: removed trailing apostrophe.
 - `Vocabulary.from_files` and `cached_path` will issue a warning, instead of failing, when a lock on an existing resource
   can't be acquired because the file system is read-only.
@@ -57,10 +131,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   were not passed to the constructor if the value of the parameter was equal to the default value.
   This caused bugs in some edge cases where a subclass that takes `**kwargs` needs to inspect
   `kwargs` before passing them to its superclass.
-- Improved the band-aid solution for segmentation faults and the "ImportError: dlopen: cannot load any more object with static TLS" 
+- Improved the band-aid solution for segmentation faults and the "ImportError: dlopen: cannot load any more object with static TLS"
   by adding a `transformers` import.
 - Added safety checks for extracting tar files
 - Turned superfluous warning to info when extending the vocab in the embedding matrix, if no pretrained file was provided
+
 
 ## [v1.2.2](https://github.com/allenai/allennlp/releases/tag/v1.2.2) - 2020-11-17
 
@@ -212,6 +287,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed a bug in the cnn_encoder where activations involving masked tokens could be picked up by the max
 - Fix intra word tokenization for `PretrainedTransformerTokenizer` when disabling fast tokenizer.
 
+
 ## [v1.1.0](https://github.com/allenai/allennlp/releases/tag/v1.1.0) - 2020-09-08
 
 ### Fixed
@@ -226,8 +302,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- `Predictor.capture_model_internals()` now accepts a regex specifying
-  which modules to capture
+- `Predictor.capture_model_internals()` now accepts a regex specifying which modules to capture.
 
 
 ## [v1.1.0rc4](https://github.com/allenai/allennlp/releases/tag/v1.1.0rc4) - 2020-08-20
@@ -294,7 +369,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   in the log output even when `train_parameters` was set to `False`.
 - Fixed a bug with the sharded dataset reader where it would only read a fraction of the instances
   in distributed training.
-- Fixed checking equality of `ArrayField`s.
+- Fixed checking equality of `TensorField`s.
 - Fixed a bug where `NamespaceSwappingField` did not work correctly with `.empty_field()`.
 - Put more sensible defaults on the `huggingface_adamw` optimizer.
 - Simplified logging so that all logging output always goes to one file.

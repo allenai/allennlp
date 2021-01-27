@@ -1,18 +1,15 @@
 import pytest
 
 from allennlp.common import Params
-from allennlp.common.util import ensure_list
 from allennlp.data.dataset_readers import BabiReader
 from allennlp.common.testing import AllenNlpTestCase
 
 
 class TestBAbIReader:
-    @pytest.mark.parametrize(
-        "keep_sentences, lazy", [(False, False), (False, True), (True, False), (True, True)]
-    )
-    def test_read_from_file(self, keep_sentences, lazy):
-        reader = BabiReader(keep_sentences=keep_sentences, lazy=lazy)
-        instances = ensure_list(reader.read(AllenNlpTestCase.FIXTURES_ROOT / "data" / "babi.txt"))
+    @pytest.mark.parametrize("keep_sentences", [False, True])
+    def test_read_from_file(self, keep_sentences):
+        reader = BabiReader(keep_sentences=keep_sentences)
+        instances = list(reader.read(AllenNlpTestCase.FIXTURES_ROOT / "data" / "babi.txt"))
         assert len(instances) == 8
 
         if keep_sentences:

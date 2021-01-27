@@ -55,7 +55,9 @@ class TextClassificationJsonReader(DatasetReader):
         skip_label_indexing: bool = False,
         **kwargs,
     ) -> None:
-        super().__init__(**kwargs)
+        super().__init__(
+            manual_distributed_sharding=True, manual_multiprocess_sharding=True, **kwargs
+        )
         self._tokenizer = tokenizer or SpacyTokenizer()
         self._segment_sentences = segment_sentences
         self._max_sequence_length = max_sequence_length
@@ -67,7 +69,7 @@ class TextClassificationJsonReader(DatasetReader):
     @overrides
     def _read(self, file_path):
         with open(cached_path(file_path), "r") as data_file:
-            for line in data_file.readlines():
+            for line in self.shard_iterable(data_file.readlines()):
                 if not line:
                     continue
                 items = json.loads(line)
@@ -83,9 +85,7 @@ class TextClassificationJsonReader(DatasetReader):
                             )
                     else:
                         label = str(label)
-                instance = self.text_to_instance(text=text, label=label)
-                if instance is not None:
-                    yield instance
+                yield self.text_to_instance(text=text, label=label)
 
     def _truncate(self, tokens):
         """
@@ -124,13 +124,21 @@ class TextClassificationJsonReader(DatasetReader):
                 word_tokens = self._tokenizer.tokenize(sentence)
                 if self._max_sequence_length is not None:
                     word_tokens = self._truncate(word_tokens)
-                sentences.append(TextField(word_tokens, self._token_indexers))
+                sentences.append(TextField(word_tokens))
             fields["tokens"] = ListField(sentences)
         else:
             tokens = self._tokenizer.tokenize(text)
             if self._max_sequence_length is not None:
                 tokens = self._truncate(tokens)
-            fields["tokens"] = TextField(tokens, self._token_indexers)
+            fields["tokens"] = TextField(tokens)
         if label is not None:
             fields["label"] = LabelField(label, skip_indexing=self._skip_label_indexing)
         return Instance(fields)
+
+    @overrides
+    def apply_token_indexers(self, instance: Instance) -> None:
+        if self._segment_sentences:
+            for text_field in instance.fields["tokens"]:  # type: ignore
+                text_field._token_indexers = self._token_indexers
+        else:
+            instance.fields["tokens"]._token_indexers = self._token_indexers  # type: ignore

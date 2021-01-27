@@ -45,6 +45,7 @@ class TestPredictor(AllenNlpTestCase):
         predictor = Predictor.from_archive(archive)
 
         instance = predictor._json_to_instance(inputs)
+        predictor._dataset_reader.apply_token_indexers(instance)
         outputs = predictor._model.forward_on_instance(instance)
         labeled_instances = predictor.predictions_to_labeled_instances(instance, outputs)
         for instance in labeled_instances:
@@ -70,6 +71,7 @@ class TestPredictor(AllenNlpTestCase):
         embedding_layer = util.find_embedding_layer(predictor._model)
         assert not embedding_layer.weight.requires_grad
         instance = predictor._json_to_instance(inputs)
+        predictor._dataset_reader.apply_token_indexers(instance)
         outputs = predictor._model.forward_on_instance(instance)
         labeled_instances = predictor.predictions_to_labeled_instances(instance, outputs)
         # ensure that gradients are always present, despite requires_grad being false on the embedding layer

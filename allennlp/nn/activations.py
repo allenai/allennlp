@@ -86,6 +86,7 @@ Registrable._registry[Activation] = {
     "relu": (torch.nn.ReLU, None),
     "relu6": (torch.nn.ReLU6, None),
     "elu": (torch.nn.ELU, None),
+    "gelu": (torch.nn.GELU, None),
     "prelu": (torch.nn.PReLU, None),
     "leaky_relu": (torch.nn.LeakyReLU, None),
     "threshold": (torch.nn.Threshold, None),
@@ -98,5 +99,4 @@ Registrable._registry[Activation] = {
     "softsign": (torch.nn.Softsign, None),
     "tanhshrink": (torch.nn.Tanhshrink, None),
     "selu": (torch.nn.SELU, None),
-    "gelu": (torch.nn.GELU, None),
 }

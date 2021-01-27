@@ -70,9 +70,9 @@ class Instance(Mapping[str, Field]):
         indexed your instances, you might get unexpected behavior.
         """
         if not self.indexed:
-            self.indexed = True
             for field in self.fields.values():
                 field.index(vocab)
+            self.indexed = True
 
     def get_padding_lengths(self) -> Dict[str, Dict[str, int]]:
         """

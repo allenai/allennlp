@@ -1,7 +1,7 @@
 import torch
 
-from allennlp.common import Registrable
-from allennlp.data import TextFieldTensors
+from allennlp.common.registrable import Registrable
+from allennlp.data.fields.text_field import TextFieldTensors
 
 
 class TextFieldEmbedder(torch.nn.Module, Registrable):
