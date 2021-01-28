@@ -55,6 +55,28 @@ class ModelCardInfo(FromParams):
 
 
 @dataclass(frozen=True)
+class Paper(ModelCardInfo):
+    """
+    This provides information about the paper.
+
+    # Parameters
+
+    title : `str`
+        The name of the paper.
+
+    url : `str`
+        A web link to the paper.
+
+    citation : `str`
+        The BibTex for the paper.
+
+    """
+
+    title: Optional[str] = None
+    url: Optional[str] = None
+    citation: Optional[str] = None
+
+
 class ModelDetails(ModelCardInfo):
     """
     This provides the basic information about the model.
@@ -102,14 +124,14 @@ class ModelDetails(ModelCardInfo):
         kinds of assumptions are encoded in the system.
         Eg. Naive Bayes Classifier.
 
-    paper : `str`
+    paper : `Union[str, Dict, Paper]`
         The paper on which the model is based.
         Format example:
-        [Model Cards for Model Reporting (Mitchell et al, 2019)]
-        (https://api.semanticscholar.org/CorpusID:52946140)
-
-    citation : `str`
-        The BibTex for the paper.
+        {
+            "title": "Model Cards for Model Reporting (Mitchell et al, 2019)",
+            "url": "https://api.semanticscholar.org/CorpusID:52946140",
+            "citation": "<BibTex>",
+        }
 
     license : `str`
         License information for the model.
@@ -122,18 +144,36 @@ class ModelDetails(ModelCardInfo):
         Link to training configuration.
     """
 
-    description: Optional[str] = None
-    short_description: Optional[str] = None
-    developed_by: Optional[str] = None
-    contributed_by: Optional[str] = None
-    date: Optional[str] = None
-    version: Optional[str] = None
-    model_type: Optional[str] = None
-    paper: Optional[str] = None
-    citation: Optional[str] = None
-    license: Optional[str] = None
-    contact: Optional[str] = None
-    training_config: Optional[str] = None
+    def __init__(
+        self,
+        description: Optional[str] = None,
+        short_description: Optional[str] = None,
+        developed_by: Optional[str] = None,
+        contributed_by: Optional[str] = None,
+        date: Optional[str] = None,
+        version: Optional[str] = None,
+        model_type: Optional[str] = None,
+        paper: Optional[Union[str, Dict, Paper]] = None,
+        license: Optional[str] = None,
+        contact: Optional[str] = None,
+        training_config: Optional[str] = None,
+    ):
+        self.description = description
+        self.short_description = short_description
+        self.developed_by = developed_by
+        self.contributed_by = contributed_by
+        self.date = date
+        self.version = version
+        self.model_type = model_type
+        if isinstance(paper, Paper):
+            self.paper = paper
+        elif isinstance(paper, Dict):
+            self.paper = Paper(**paper)
+        else:
+            self.paper = Paper(title=paper)
+        self.license = license
+        self.contact = contact
+        self.training_config = training_config
 
 
 @dataclass(frozen=True)
@@ -228,13 +268,31 @@ class Metrics(ModelCardInfo):
 
 
 @dataclass(frozen=True)
+class Dataset(ModelCardInfo):
+    """
+    This provides basic information about the dataset.
+
+    # Parameters
+
+    name : `str`
+        The name of the dataset.
+
+    url : `str`
+        A web link to the dataset.
+
+    """
+
+    name: Optional[str] = None
+    url: Optional[str] = None
+
+
 class EvaluationData(ModelCardInfo):
     """
     This provides information about the evaluation data.
 
     # Parameters
 
-    dataset : `str`
+    dataset : `Union[str, Dict, Dataset]`
         The name(s) (and link(s), if available) of the dataset(s) used to evaluate
         the model. Optionally, provide a link to the relevant datasheet(s) as well.
     motivation : `str`
@@ -246,9 +304,20 @@ class EvaluationData(ModelCardInfo):
         Eg. tokenization of sentences, filtering of paragraphs by length, etc.
     """
 
-    dataset: Optional[str] = None
-    motivation: Optional[str] = None
-    preprocessing: Optional[str] = None
+    def __init__(
+        self,
+        dataset: Optional[Union[str, Dict, Dataset]] = None,
+        motivation: Optional[str] = None,
+        preprocessing: Optional[str] = None,
+    ):
+        if isinstance(dataset, Dataset):
+            self.dataset = dataset
+        elif isinstance(dataset, Dict):
+            self.dataset = Dataset(**dataset)
+        else:
+            self.dataset = Dataset(name=dataset)
+        self.motivation = motivation
+        self.preprocessing = preprocessing
 
     def to_dict(self):
         info = {}
@@ -258,7 +327,6 @@ class EvaluationData(ModelCardInfo):
         return info
 
 
-@dataclass(frozen=True)
 class TrainingData(ModelCardInfo):
     """
     This provides information about the training data. If the model was initialized
@@ -268,7 +336,7 @@ class TrainingData(ModelCardInfo):
 
     # Parameters
 
-    dataset : `str`
+    dataset : `Union[str, Dict, Dataset]`
         The name(s) (and link(s), if available) of the dataset(s) used to train
         the model. Optionally, provide a link to the relevant datasheet(s) as well.
         Eg. * Proprietary data from Perspective API; includes comments from online
@@ -285,9 +353,20 @@ class TrainingData(ModelCardInfo):
             and headers were ignored.
     """
 
-    dataset: Optional[str] = None
-    motivation: Optional[str] = None
-    preprocessing: Optional[str] = None
+    def __init__(
+        self,
+        dataset: Optional[Union[str, Dict, Dataset]] = None,
+        motivation: Optional[str] = None,
+        preprocessing: Optional[str] = None,
+    ):
+        if isinstance(dataset, Dataset):
+            self.dataset = dataset
+        elif isinstance(dataset, Dict):
+            self.dataset = Dataset(**dataset)
+        else:
+            self.dataset = Dataset(name=dataset)
+        self.motivation = motivation
+        self.preprocessing = preprocessing
 
     def to_dict(self):
         info = {}
@@ -320,7 +399,7 @@ class QuantitativeAnalyses(ModelCardInfo):
 
 
 @dataclass(frozen=True)
-class EthicalConsiderations(ModelCardInfo):
+class ModelEthicalConsiderations(ModelCardInfo):
     """
     This highlights any ethical considerations to keep
     in mind when using the model.
@@ -337,7 +416,7 @@ class EthicalConsiderations(ModelCardInfo):
 
 
 @dataclass(frozen=True)
-class CaveatsAndRecommendations(ModelCardInfo):
+class ModelCaveatsAndRecommendations(ModelCardInfo):
     """
     This lists any additional concerns. For instance, were any
     relevant groups not present in the evaluation data?
@@ -377,8 +456,8 @@ class ModelCard(ModelCardInfo):
     metrics : `Union[Metrics, str]`, optional
     evaluation_data : `Union[EvaluationData, str]`, optional
     quantitative_analyses : `Union[QuantitativeAnalyses, str]`, optional
-    ethical_considerations : `Union[EthicalConsiderations, str]`, optional
-    caveats_and_recommendations : `Union[CaveatsAndRecommendations, str]`, optional
+    ethical_considerations : `Union[ModelEthicalConsiderations, str]`, optional
+    caveats_and_recommendations : `Union[ModelCaveatsAndRecommendations, str]`, optional
 
     !!! Note
         For all the fields that are `Union[ModelCardInfo, str]`, a `str` input will be
@@ -405,8 +484,10 @@ class ModelCard(ModelCardInfo):
         evaluation_data: Optional[Union[str, EvaluationData]] = None,
         training_data: Optional[Union[str, TrainingData]] = None,
         quantitative_analyses: Optional[Union[str, QuantitativeAnalyses]] = None,
-        ethical_considerations: Optional[Union[str, EthicalConsiderations]] = None,
-        caveats_and_recommendations: Optional[Union[str, CaveatsAndRecommendations]] = None,
+        model_ethical_considerations: Optional[Union[str, ModelEthicalConsiderations]] = None,
+        model_caveats_and_recommendations: Optional[
+            Union[str, ModelCaveatsAndRecommendations]
+        ] = None,
     ):
 
         assert id
@@ -439,10 +520,12 @@ class ModelCard(ModelCardInfo):
             training_data = TrainingData(dataset=training_data)
         if isinstance(quantitative_analyses, str):
             quantitative_analyses = QuantitativeAnalyses(unitary_results=quantitative_analyses)
-        if isinstance(ethical_considerations, str):
-            ethical_considerations = EthicalConsiderations(ethical_considerations)
-        if isinstance(caveats_and_recommendations, str):
-            caveats_and_recommendations = CaveatsAndRecommendations(caveats_and_recommendations)
+        if isinstance(model_ethical_considerations, str):
+            model_ethical_considerations = ModelEthicalConsiderations(model_ethical_considerations)
+        if isinstance(model_caveats_and_recommendations, str):
+            model_caveats_and_recommendations = ModelCaveatsAndRecommendations(
+                model_caveats_and_recommendations
+            )
 
         self.id = id
         self.registered_model_name = registered_model_name
@@ -457,8 +540,8 @@ class ModelCard(ModelCardInfo):
         self.evaluation_data = evaluation_data
         self.training_data = training_data
         self.quantitative_analyses = quantitative_analyses
-        self.ethical_considerations = ethical_considerations
-        self.caveats_and_recommendations = caveats_and_recommendations
+        self.model_ethical_considerations = model_ethical_considerations
+        self.model_caveats_and_recommendations = model_caveats_and_recommendations
 
     def to_dict(self) -> Dict[str, Any]:
         """

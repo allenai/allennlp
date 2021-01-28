@@ -1,5 +1,6 @@
+from allennlp.common.params import Params
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.common.model_card import ModelCard, IntendedUse
+from allennlp.common.model_card import ModelCard, IntendedUse, Paper
 from allennlp.models import Model
 
 
@@ -118,3 +119,40 @@ class TestPretrainedModelConfiguration(AllenNlpTestCase):
                 assert key in model_card_dict
             else:
                 assert key not in model_card_dict
+
+    def test_nested_json(self):
+        @Model.register("fake-model-4")
+        class FakeModel(Model):
+            """
+            This is a fake model with a docstring.
+
+            # Parameters
+
+            fake_param1: str
+            fake_param2: int
+            """
+
+            def forward(self, **kwargs):
+                return {}
+
+        model_card = ModelCard.from_params(
+            Params(
+                {
+                    "id": "this-fake-model",
+                    "registered_model_name": "fake-model-4",
+                    "model_details": {
+                        "description": "This is the fake model trained on a dataset.",
+                        "paper": {
+                            "title": "paper name",
+                            "url": "paper link",
+                            "citation": "test citation",
+                        },
+                    },
+                    "training_data": {"dataset": {"name": "dataset 1", "url": "dataset url"}},
+                }
+            )
+        )
+
+        assert isinstance(model_card.model_details.paper, Paper)
+        assert model_card.model_details.paper.url == "paper link"
+        assert model_card.training_data.dataset.name == "dataset 1"
