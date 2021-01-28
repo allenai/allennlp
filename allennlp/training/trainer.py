@@ -514,6 +514,7 @@ class GradientDescentTrainer(Trainer):
 
         self._checkpointer: Optional[Checkpointer] = checkpointer
         if checkpointer is None and serialization_dir is not None:
+            os.makedirs(serialization_dir, exist_ok=True)
             self._checkpointer = Checkpointer(serialization_dir)
 
         self._grad_norm = grad_norm
