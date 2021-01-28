@@ -96,6 +96,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Torch version bumped to 1.7.1 in Docker images.
 - 'master' branch renamed to 'main'
 - Torch version bumped to 1.7.1 in Docker images.
+- GradientDescentTrainer makes `serialization_dir` in its instantiated step.
 
 ### Removed
 
