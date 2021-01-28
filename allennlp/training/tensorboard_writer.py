@@ -15,14 +15,14 @@ from allennlp.models.model import Model
 logger = logging.getLogger(__name__)
 
 
-class TensorboardWriter(FromParams):
+class TensorBoardWriter(FromParams):
     """
-    Class that handles Tensorboard (and other) logging.
+    Class that handles TensorBoard (and other) logging.
 
     # Parameters
 
     serialization_dir : `str`, optional (default = `None`)
-        If provided, this is where the Tensorboard logs will be written.
+        If provided, this is where the TensorBoard logs will be written.
 
         In a typical AllenNLP configuration file, this parameter does not get an entry under the
         "tensorboard_writer", it gets passed in separately.
@@ -152,6 +152,13 @@ class TensorboardWriter(FromParams):
         assert self.get_batch_num_total is not None
         return self.get_batch_num_total() % self._summary_interval == 0
 
+    def should_log_histograms_next_batch(self) -> bool:
+        assert self.get_batch_num_total is not None
+        return (
+            self._histogram_interval is not None
+            and (self.get_batch_num_total() + 1) % self._histogram_interval == 0
+        )
+
     def should_log_histograms_this_batch(self) -> bool:
         assert self.get_batch_num_total is not None
         return (
@@ -187,7 +194,7 @@ class TensorboardWriter(FromParams):
         as logging the average gradient norm.
         """
         if self._should_log_parameter_statistics:
-            # Log parameter values to Tensorboard
+            # Log parameter values to TensorBoard
             for name, param in model.named_parameters():
                 if param.data.numel() > 0:
                     self.add_train_scalar("parameter_mean/" + name, param.data.mean().item())

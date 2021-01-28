@@ -541,6 +541,7 @@ class TestTrain(AllenNlpTestCase):
                 batch_number: int,
                 is_training: bool,
                 is_primary: bool = True,
+                batch_grad_norm: Optional[float] = None,
                 **kwargs,
             ) -> None:
                 nonlocal batch_callback_counter

@@ -32,11 +32,15 @@ class Lazy(Generic[T]):
         cls,
         some_object: Lazy[MyObject],
         optional_object: Lazy[MyObject] = None,
+        # or:
+        #  optional_object: Optional[Lazy[MyObject]] = None,
+        optional_object_with_default: Optional[Lazy[MyObject]] = Lazy(MyObjectDefault),
         required_object_with_default: Lazy[MyObject] = Lazy(MyObjectDefault),
     ) -> MyClass:
         obj1 = some_object.construct()
         obj2 = None if optional_object is None else optional_object.construct()
-        obj3 = required_object_with_default.construct()
+        obj3 = None optional_object_with_default is None else optional_object_with_default.construct()
+        obj4 = required_object_with_default.construct()
     ```
 
     """
