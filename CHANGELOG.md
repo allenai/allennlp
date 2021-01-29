@@ -11,6 +11,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added `transformer_kwargs` argument to `PretrainedTransformerBackbone`
 
+### Fixed
+
+- `common.util.sanitize` now handles sets.
+
+
 ## [v2.0.0](https://github.com/allenai/allennlp/releases/tag/v2.0.0) - 2021-01-27
 
 ### Added
