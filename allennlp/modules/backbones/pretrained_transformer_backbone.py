@@ -47,6 +47,10 @@ class PretrainedTransformerBackbone(Backbone):
         When `True` (the default), only the final layer of the pretrained transformer is taken
         for the embeddings. But if set to `False`, a scalar mix of all of the layers
         is used.
+    tokenizer_kwargs: `Dict[str, Any]`, optional (default = `None`)
+        Dictionary with
+        [additional arguments](https://github.com/huggingface/transformers/blob/155c782a2ccd103cf63ad48a2becd7c76a7d2115/transformers/tokenization_utils.py#L691)
+        for `AutoTokenizer.from_pretrained`.
     transformer_kwargs: `Dict[str, Any]`, optional (default = `None`)
         Dictionary with
         [additional arguments](https://github.com/huggingface/transformers/blob/155c782a2ccd103cf63ad48a2becd7c76a7d2115/transformers/modeling_utils.py#L253)
@@ -72,6 +76,7 @@ class PretrainedTransformerBackbone(Backbone):
         last_layer_only: bool = True,
         override_weights_file: Optional[str] = None,
         override_weights_strip_prefix: Optional[str] = None,
+        tokenizer_kwargs: Optional[Dict[str, Any]] = None,
         transformer_kwargs: Optional[Dict[str, Any]] = None,
         output_token_strings: bool = True,
         vocab_namespace: str = "tags",
@@ -87,6 +92,7 @@ class PretrainedTransformerBackbone(Backbone):
             last_layer_only=last_layer_only,
             override_weights_file=override_weights_file,
             override_weights_strip_prefix=override_weights_strip_prefix,
+            tokenizer_kwargs=tokenizer_kwargs,
             transformer_kwargs=transformer_kwargs,
         )
         self._output_token_strings = output_token_strings
