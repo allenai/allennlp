@@ -93,8 +93,8 @@ def sanitize(x: Any) -> Any:
     elif isinstance(x, (spacy.tokens.Token, Token)):
         # Tokens get sanitized to just their text.
         return x.text
-    elif isinstance(x, (list, tuple)):
-        # Lists and Tuples need their values sanitized
+    elif isinstance(x, (list, tuple, set)):
+        # Lists, tuples, and sets need their values sanitized
         return [sanitize(x_i) for x_i in x]
     elif x is None:
         return "None"
