@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added `tokenizer_kwargs` and `transformer_kwargs` arguments to `PretrainedTransformerBackbone`
 
+### Changed
+
+- GradientDescentTrainer makes `serialization_dir` when it's instantiated, if it doesn't exist.
+
 ### Fixed
 
 - `common.util.sanitize` now handles sets.
