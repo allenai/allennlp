@@ -102,7 +102,11 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
             tokenizer_kwargs=tokenizer_kwargs,
         )
 
-        self.transformer_model.resize_token_embeddings(len(tokenizer.tokenizer))
+        try:
+            self.transformer_model.resize_token_embeddings(len(tokenizer.tokenizer))
+        except NotImplementedError:
+            # Can't resize for transformers models that don't implement base_model.get_input_embeddings()
+            pass
 
         self._num_added_start_tokens = len(tokenizer.single_sequence_start_tokens)
         self._num_added_end_tokens = len(tokenizer.single_sequence_end_tokens)
