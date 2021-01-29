@@ -81,6 +81,9 @@ class Trainer(Registrable):
         self._rank = local_rank
         self._primary = self._rank == 0
         self._world_size = world_size
+        
+        # Ensure serialization directory exists.
+        os.makedirs(serialization_dir, exist_ok=True)
 
     def train(self) -> Dict[str, Any]:
         """
@@ -514,7 +517,6 @@ class GradientDescentTrainer(Trainer):
 
         self._checkpointer: Optional[Checkpointer] = checkpointer
         if checkpointer is None and serialization_dir is not None:
-            os.makedirs(serialization_dir, exist_ok=True)
             self._checkpointer = Checkpointer(serialization_dir)
 
         self._grad_norm = grad_norm
