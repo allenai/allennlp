@@ -83,7 +83,8 @@ class Trainer(Registrable):
         self._world_size = world_size
         
         # Ensure serialization directory exists.
-        os.makedirs(serialization_dir, exist_ok=True)
+        if serialization_dir is not None:
+            os.makedirs(serialization_dir, exist_ok=True)
 
     def train(self) -> Dict[str, Any]:
         """
