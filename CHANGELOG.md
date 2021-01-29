@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ## [v1.4.0](https://github.com/allenai/allennlp/releases/tag/v1.4.0) - 2021-01-26
+=======
+### Added
+
+- Added `tokenizer_kwargs` and `transformer_kwargs` arguments to `PretrainedTransformerBackbone`
+
+### Changed
+
+- GradientDescentTrainer makes `serialization_dir` when it's instantiated, if it doesn't exist.
+
+### Fixed
+
+- `common.util.sanitize` now handles sets.
+
+
+## [v2.0.0](https://github.com/allenai/allennlp/releases/tag/v2.0.0) - 2021-01-27
+- Update `GradientDescentTrainer` to automatically create directory for `serialization_dir` (#4940)
 
 ### Added
 
