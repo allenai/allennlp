@@ -318,7 +318,15 @@ class TestPretrainedTransformerEmbedder(AllenNlpTestCase):
 
     def test_embeddings_resize(self):
         regular_token_embedder = PretrainedTransformerEmbedder("bert-base-cased")
-        assert regular_token_embedder.transformer_model.embeddings.word_embeddings.num_embeddings == 28996
-        tokenizer_kwargs = {"additional_special_tokens": ['<NEW_TOKEN>']}
-        enhanced_token_embedder = PretrainedTransformerEmbedder("bert-base-cased", tokenizer_kwargs=tokenizer_kwargs)
-        assert enhanced_token_embedder.transformer_model.embeddings.word_embeddings.num_embeddings == 28997
+        assert (
+            regular_token_embedder.transformer_model.embeddings.word_embeddings.num_embeddings
+            == 28996
+        )
+        tokenizer_kwargs = {"additional_special_tokens": ["<NEW_TOKEN>"]}
+        enhanced_token_embedder = PretrainedTransformerEmbedder(
+            "bert-base-cased", tokenizer_kwargs=tokenizer_kwargs
+        )
+        assert (
+            enhanced_token_embedder.transformer_model.embeddings.word_embeddings.num_embeddings
+            == 28997
+        )
