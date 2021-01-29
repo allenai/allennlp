@@ -315,3 +315,10 @@ class TestPretrainedTransformerEmbedder(AllenNlpTestCase):
         token_ids = torch.LongTensor([[1, 2, 3], [2, 3, 4]])
         mask = torch.ones_like(token_ids).bool()
         token_embedder(token_ids, mask)
+
+    def test_embeddings_resize(self):
+        regular_token_embedder = PretrainedTransformerEmbedder("bert-base-cased")
+        assert regular_token_embedder.transformer_model.embeddings.word_embeddings.num_embeddings == 28996
+        tokenizer_kwargs = {"additional_special_tokens": ['<NEW_TOKEN>']}
+        enhanced_token_embedder = PretrainedTransformerEmbedder("bert-base-cased", tokenizer_kwargs=tokenizer_kwargs)
+        assert enhanced_token_embedder.transformer_model.embeddings.word_embeddings.num_embeddings == 28997

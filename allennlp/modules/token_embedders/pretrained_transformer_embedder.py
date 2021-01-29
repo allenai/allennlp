@@ -101,6 +101,9 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
             model_name,
             tokenizer_kwargs=tokenizer_kwargs,
         )
+
+        self.transformer_model.resize_token_embeddings(len(tokenizer.tokenizer))
+
         self._num_added_start_tokens = len(tokenizer.single_sequence_start_tokens)
         self._num_added_end_tokens = len(tokenizer.single_sequence_end_tokens)
         self._num_added_tokens = self._num_added_start_tokens + self._num_added_end_tokens

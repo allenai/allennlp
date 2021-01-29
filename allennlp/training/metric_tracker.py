@@ -99,7 +99,7 @@ class MetricTracker:
         except KeyError as e:
             raise ConfigurationError(
                 f"You configured the trainer to use the {e.args[0]}"
-                "metric for early stopping, but the model did not produce that metric."
+                " metric for early stopping, but the model did not produce that metric."
             )
 
         new_best = (self._best_so_far is None) or (combined_score > self._best_so_far)
