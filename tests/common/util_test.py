@@ -57,6 +57,10 @@ class TestCommonUtils(AllenNlpTestCase):
 
         assert util.sanitize(Sanitizable()) == {"sanitizable": True}
 
+        x = util.sanitize({1, 2, 3})
+        assert isinstance(x, list)
+        assert len(x) == 3
+
     def test_import_submodules(self):
         (self.TEST_DIR / "mymodule").mkdir()
         (self.TEST_DIR / "mymodule" / "__init__.py").touch()

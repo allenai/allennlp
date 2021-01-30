@@ -12,6 +12,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added a way to specify extra parameters to the predictor in an `allennlp predict` call.
 
 
+## [v2.0.1](https://github.com/allenai/allennlp/releases/tag/v2.0.1) - 2021-01-29
+
+### Added
+
+- Added `tokenizer_kwargs` and `transformer_kwargs` arguments to `PretrainedTransformerBackbone`
+
+### Changed
+
+- GradientDescentTrainer makes `serialization_dir` when it's instantiated, if it doesn't exist.
+
+### Fixed
+
+- `common.util.sanitize` now handles sets.
+
+
 ## [v2.0.0](https://github.com/allenai/allennlp/releases/tag/v2.0.0) - 2021-01-27
 
 ### Added
