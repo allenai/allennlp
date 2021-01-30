@@ -1,3 +1,4 @@
+import logging
 import math
 from typing import Optional, Tuple, Dict, Any
 
@@ -11,6 +12,8 @@ from allennlp.data.tokenizers import PretrainedTransformerTokenizer
 from allennlp.modules.scalar_mix import ScalarMix
 from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
 from allennlp.nn.util import batched_index_select
+
+logger = logging.getLogger(__name__)
 
 
 @TokenEmbedder.register("pretrained_transformer")
@@ -103,10 +106,12 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         )
 
         try:
-            self.transformer_model.resize_token_embeddings(len(tokenizer.tokenizer))
+            if self.transformer_model.get_input_embeddings().num_embeddings != len(tokenizer.tokenizer):
+                self.transformer_model.resize_token_embeddings(len(tokenizer.tokenizer))
         except NotImplementedError:
             # Can't resize for transformers models that don't implement base_model.get_input_embeddings()
-            pass
+            logger.warning("Could not resize the token embedding matrix of the transformer model. "
+                           "This model does not support resizing.")
 
         self._num_added_start_tokens = len(tokenizer.single_sequence_start_tokens)
         self._num_added_end_tokens = len(tokenizer.single_sequence_end_tokens)
