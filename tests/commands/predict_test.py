@@ -16,6 +16,7 @@ from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.common.util import JsonDict, push_python_path
 from allennlp.data.dataset_readers import DatasetReader, TextClassificationJsonReader
+from allennlp.models import Model
 from allennlp.models.archival import load_archive
 from allennlp.predictors import Predictor, TextClassifierPredictor
 
@@ -342,6 +343,63 @@ class TestPredict(AllenNlpTestCase):
                 "tokens",
                 "token_ids",
             }
+
+        shutil.rmtree(self.tempdir)
+
+    def test_can_specify_extra_args(self):
+        @Predictor.register("classification-extra-args")
+        class ExtraArgsPredictor(TextClassifierPredictor):
+            def __init__(
+                self,
+                model: Model,
+                dataset_reader: DatasetReader,
+                frozen: bool = True,
+                tag: str = "",
+            ) -> None:
+                super().__init__(model, dataset_reader, frozen)
+                self.tag = tag
+
+            def predict_json(self, inputs: JsonDict) -> JsonDict:
+                result = super().predict_json(inputs)
+                result["tag"] = self.tag
+                return result
+
+        with open(self.infile, "w") as f:
+            f.write("""{"sentence": "the seahawks won the super bowl in 2016"}\n""")
+            f.write("""{"sentence": "the mariners won the super bowl in 2037"}\n""")
+
+        sys.argv = [
+            "__main__.py",  # executable
+            "predict",  # command
+            str(self.classifier_model_path),
+            str(self.infile),  # input_file
+            "--output-file",
+            str(self.outfile),
+            "--predictor",
+            "classification-extra-args",
+            "--silent",
+            "--predictor-args",
+            """{"tag": "fish"}""",
+        ]
+
+        main()
+        assert os.path.exists(self.outfile)
+
+        with open(self.outfile, "r") as f:
+            results = [json.loads(line) for line in f]
+
+        assert len(results) == 2
+        # Overridden predictor should output extra field
+        for result in results:
+            assert set(result.keys()) == {
+                "label",
+                "logits",
+                "tag",
+                "probs",
+                "tokens",
+                "token_ids",
+            }
+            assert result["tag"] == "fish"
 
         shutil.rmtree(self.tempdir)
 
