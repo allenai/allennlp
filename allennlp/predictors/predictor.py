@@ -1,4 +1,4 @@
-from typing import List, Iterator, Dict, Tuple, Any, Type, Union
+from typing import List, Iterator, Dict, Tuple, Any, Type, Union, Optional
 import logging
 import json
 import re
@@ -364,6 +364,7 @@ class Predictor(Registrable):
         predictor_name: str = None,
         dataset_reader_to_load: str = "validation",
         frozen: bool = True,
+        extra_args: Optional[Dict[str, Any]] = None,
     ) -> "Predictor":
         """
         Instantiate a `Predictor` from an [`Archive`](../models/archival.md);
@@ -394,4 +395,7 @@ class Predictor(Registrable):
         if frozen:
             model.eval()
 
-        return predictor_class(model, dataset_reader)
+        if extra_args is None:
+            extra_args = {}
+
+        return predictor_class(model, dataset_reader, **extra_args)
