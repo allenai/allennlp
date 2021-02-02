@@ -8,7 +8,8 @@ from allennlp.common.util import JsonDict
 from allennlp.nn import util
 from allennlp.models.model import Model
 from allennlp.predictors import Predictor
-from allennlp.data import DatasetReader, DataLoader, PyTorchDataLoader # , MultiProcessDataLoader
+from allennlp.data.dataset_readers import DatasetReader
+from allennlp.data.data_loaders import DataLoader, MultiProcessDataLoader
 
 
 class InfluenceInterpreter(Registrable):
@@ -31,15 +32,6 @@ class InfluenceInterpreter(Registrable):
         self.vocab = self.model.vocab
         self.train_dataset_reader = train_dataset_reader
         self.test_dataset_reader = test_dataset_reader or train_dataset_reader
-        self._train_filepath = train_filepath
-        self._test_filepath = test_filepath
-
-        self._train_set = self.train_dataset_reader.read(train_filepath)
-        self._train_set.index_instances(self.vocab)
-        self._test_set = self.test_dataset_reader.read(test_filepath)
-        self._test_set.index_instances(self.vocab)
-        self._train_batch_size = train_batch_size
-        self._train_loader = PyTorchDataLoader(self._train_set, batch_size=self._train_batch_size)
         self._k = k
         self._device = torch.device(f"cuda:{int(device)}" if torch.cuda.is_available() and not device >= 0 else "cpu")
         self.model.to(self._device)
