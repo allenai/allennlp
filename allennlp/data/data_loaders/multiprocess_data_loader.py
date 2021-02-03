@@ -322,14 +322,19 @@ class MultiProcessDataLoader(DataLoader):
         if self.batches_per_epoch is None:
             yield from self._iter_batches()
         else:
-            if self._batch_generator is None:
-                self._batch_generator = self._iter_batches()
+            if self._batch_generator is not None:
+                batch_generator = self._batch_generator
+                # Can't have a pointer to this in `self` when we try to spawn workers.
+                self._batch_generator = None
+            else:
+                batch_generator = self._iter_batches()
             for i in range(self.batches_per_epoch):
                 try:
-                    yield next(self._batch_generator)
-                except StopIteration:  # data_generator is exhausted
-                    self._batch_generator = self._iter_batches()  # so refresh it
-                    yield next(self._batch_generator)
+                    yield next(batch_generator)
+                except StopIteration:  # batch_generator is exhausted
+                    batch_generator = self._iter_batches()  # so refresh it
+                    yield next(batch_generator)
+            self._batch_generator = batch_generator
 
     @overrides
     def iter_instances(self) -> Iterator[Instance]:
