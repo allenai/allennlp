@@ -11,6 +11,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added a way to specify extra parameters to the predictor in an `allennlp predict` call.
 
+### Fixed
+
+- Learning rate schedulers that rely on metrics from the validation set were broken in v2.0.0. This
+  brings that functionality back.
+
 
 ## [v2.0.1](https://github.com/allenai/allennlp/releases/tag/v2.0.1) - 2021-01-29
 
