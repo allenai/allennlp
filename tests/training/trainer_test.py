@@ -564,7 +564,7 @@ class TestTrainer(TrainerTestBase):
         class RecordMetricLearningRateScheduler(ReduceOnPlateauLearningRateScheduler):
             def __init__(self, optimizer: Optimizer):
                 super(RecordMetricLearningRateScheduler, self).__init__(optimizer)
-                self.recordings = []
+                self.recordings: List[float] = []
 
             def step(self, metric: float = None) -> None:
                 self.recordings.append(metric)
