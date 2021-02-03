@@ -45,12 +45,12 @@ class PretrainedTransformerIndexer(TokenIndexer):
     """  # noqa: E501
 
     def __init__(
-            self,
-            model_name: str,
-            namespace: str = "tags",
-            max_length: int = None,
-            tokenizer_kwargs: Optional[Dict[str, Any]] = None,
-            **kwargs,
+        self,
+        model_name: str,
+        namespace: str = "tags",
+        max_length: int = None,
+        tokenizer_kwargs: Optional[Dict[str, Any]] = None,
+        **kwargs,
     ) -> None:
         super().__init__(**kwargs)
         self._namespace = namespace
@@ -67,7 +67,7 @@ class PretrainedTransformerIndexer(TokenIndexer):
         if self._max_length is not None:
             num_added_tokens = len(self._allennlp_tokenizer.tokenize("a")) - 1
             self._effective_max_length = (  # we need to take into account special tokens
-                    self._max_length - num_added_tokens
+                self._max_length - num_added_tokens
             )
             if self._effective_max_length <= 0:
                 raise ValueError(
@@ -108,7 +108,7 @@ class PretrainedTransformerIndexer(TokenIndexer):
 
     @overrides
     def indices_to_tokens(
-            self, indexed_tokens: IndexedTokenList, vocabulary: Vocabulary
+        self, indexed_tokens: IndexedTokenList, vocabulary: Vocabulary
     ) -> List[Token]:
         self._add_encoding_to_vocabulary_if_needed(vocabulary)
 
@@ -158,11 +158,11 @@ class PretrainedTransformerIndexer(TokenIndexer):
             indices = output["token_ids"]
             # Strips original special tokens
             indices = indices[
-                      self._num_added_start_tokens: len(indices) - self._num_added_end_tokens
-                      ]
+                self._num_added_start_tokens : len(indices) - self._num_added_end_tokens
+            ]
             # Folds indices
             folded_indices = [
-                indices[i: i + self._effective_max_length]
+                indices[i : i + self._effective_max_length]
                 for i in range(0, len(indices), self._effective_max_length)
             ]
             # Adds special tokens to each segment
@@ -188,7 +188,7 @@ class PretrainedTransformerIndexer(TokenIndexer):
 
     @overrides
     def as_padded_tensor_dict(
-            self, tokens: IndexedTokenList, padding_lengths: Dict[str, int]
+        self, tokens: IndexedTokenList, padding_lengths: Dict[str, int]
     ) -> Dict[str, torch.Tensor]:
         tensor_dict = {}
         for key, val in tokens.items():
