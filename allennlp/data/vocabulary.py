@@ -261,7 +261,9 @@ class Vocabulary(Registrable):
         )
 
     @classmethod
-    def from_pretrained_transformer(cls, model_name: str, namespace: str = "tokens") -> "Vocabulary":
+    def from_pretrained_transformer(
+        cls, model_name: str, namespace: str = "tokens"
+    ) -> "Vocabulary":
         vocab = cls.empty()
         from allennlp.common import cached_transformers
 
@@ -773,7 +775,9 @@ class Vocabulary(Registrable):
 
 # We can't decorate `Vocabulary` with `Vocabulary.register()`, because `Vocabulary` hasn't been
 # defined yet.  So we put these down here.
-Vocabulary.register("from_pretrained_transformer", constructor="from_pretrained_transformer")(Vocabulary)
+Vocabulary.register("from_pretrained_transformer", constructor="from_pretrained_transformer")(
+    Vocabulary
+)
 Vocabulary.register("from_instances", constructor="from_instances")(Vocabulary)
 Vocabulary.register("from_files", constructor="from_files")(Vocabulary)
 Vocabulary.register("extend", constructor="from_files_and_instances")(Vocabulary)
