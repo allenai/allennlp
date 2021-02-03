@@ -5,15 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [v1.4.1](https://github.com/allenai/allennlp/releases/tag/v1.4.1) - 2021-01-29
+## Unreleased
 
 ### Changed
 
 - Updated `Paper` and `Dataset` classes in `ModelCard`.
 
 
+## [v1.4.1](https://github.com/allenai/allennlp/releases/tag/v1.4.1) - 2021-01-29
+
+### Added
+
+- Added `ModelUsage` to `ModelCard` class.
+- Added a way to specify extra parameters to the predictor in an `allennlp predict` call.
+
+### Fixed
+
+- Fixed a bug where the `MultiProcessDataLoading` would crash when `num_workers > 0`, `start_method = "spawn"`, `max_instances_in_memory not None`, and `batches_per_epoch not None`.
+
+## [v2.0.1](https://github.com/allenai/allennlp/releases/tag/v2.0.1) - 2021-01-29
+
 ## [v1.4.0](https://github.com/allenai/allennlp/releases/tag/v1.4.0) - 2021-01-26
-=======
 ### Added
 
 - Added `tokenizer_kwargs` and `transformer_kwargs` arguments to `PretrainedTransformerBackbone`
