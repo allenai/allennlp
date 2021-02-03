@@ -8,6 +8,7 @@ from overrides import overrides
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.data.tokenizers import Token, PretrainedTransformerTokenizer
 from allennlp.data.token_indexers.token_indexer import TokenIndexer, IndexedTokenList
+from allennlp.tools import copy_transformer_vocab
 
 logger = logging.getLogger(__name__)
 
@@ -44,12 +45,12 @@ class PretrainedTransformerIndexer(TokenIndexer):
     """  # noqa: E501
 
     def __init__(
-        self,
-        model_name: str,
-        namespace: str = "tags",
-        max_length: int = None,
-        tokenizer_kwargs: Optional[Dict[str, Any]] = None,
-        **kwargs,
+            self,
+            model_name: str,
+            namespace: str = "tags",
+            max_length: int = None,
+            tokenizer_kwargs: Optional[Dict[str, Any]] = None,
+            **kwargs,
     ) -> None:
         super().__init__(**kwargs)
         self._namespace = namespace
@@ -66,7 +67,7 @@ class PretrainedTransformerIndexer(TokenIndexer):
         if self._max_length is not None:
             num_added_tokens = len(self._allennlp_tokenizer.tokenize("a")) - 1
             self._effective_max_length = (  # we need to take into account special tokens
-                self._max_length - num_added_tokens
+                    self._max_length - num_added_tokens
             )
             if self._effective_max_length <= 0:
                 raise ValueError(
@@ -80,16 +81,9 @@ class PretrainedTransformerIndexer(TokenIndexer):
         if self._added_to_vocabulary:
             return
 
-        try:
-            vocab_items = self._tokenizer.get_vocab().items()
-        except NotImplementedError:
-            vocab_items = (
-                (self._tokenizer.convert_ids_to_tokens(idx), idx)
-                for idx in range(self._tokenizer.vocab_size)
-            )
-        for word, idx in vocab_items:
-            vocab._token_to_index[self._namespace][word] = idx
-            vocab._index_to_token[self._namespace][idx] = word
+        result = copy_transformer_vocab(tokenizer=self._tokenizer)
+        vocab._token_to_index[self._namespace] = result["token_to_index"]
+        vocab._index_to_token[self._namespace] = result["index_to_token"]
 
         self._added_to_vocabulary = True
 
@@ -114,7 +108,7 @@ class PretrainedTransformerIndexer(TokenIndexer):
 
     @overrides
     def indices_to_tokens(
-        self, indexed_tokens: IndexedTokenList, vocabulary: Vocabulary
+            self, indexed_tokens: IndexedTokenList, vocabulary: Vocabulary
     ) -> List[Token]:
         self._add_encoding_to_vocabulary_if_needed(vocabulary)
 
@@ -164,11 +158,11 @@ class PretrainedTransformerIndexer(TokenIndexer):
             indices = output["token_ids"]
             # Strips original special tokens
             indices = indices[
-                self._num_added_start_tokens : len(indices) - self._num_added_end_tokens
-            ]
+                      self._num_added_start_tokens: len(indices) - self._num_added_end_tokens
+                      ]
             # Folds indices
             folded_indices = [
-                indices[i : i + self._effective_max_length]
+                indices[i: i + self._effective_max_length]
                 for i in range(0, len(indices), self._effective_max_length)
             ]
             # Adds special tokens to each segment
@@ -194,7 +188,7 @@ class PretrainedTransformerIndexer(TokenIndexer):
 
     @overrides
     def as_padded_tensor_dict(
-        self, tokens: IndexedTokenList, padding_lengths: Dict[str, int]
+            self, tokens: IndexedTokenList, padding_lengths: Dict[str, int]
     ) -> Dict[str, torch.Tensor]:
         tensor_dict = {}
         for key, val in tokens.items():

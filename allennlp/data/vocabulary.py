@@ -16,6 +16,7 @@ from allennlp.common.file_utils import cached_path, FileLock
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.tqdm import Tqdm
 from allennlp.common.util import namespace_match
+from allennlp.tools import copy_transformer_vocab
 
 if TYPE_CHECKING:
     from allennlp.data import instance as adi  # noqa
@@ -258,6 +259,17 @@ class Vocabulary(Registrable):
             tokens_to_add,
             min_pretrained_embeddings,
         )
+
+    @classmethod
+    def from_pretrained_transformer(cls, model_name: str, namespace: str = "tokens") -> "Vocabulary":
+        vocab = cls.empty()
+        from allennlp.common import cached_transformers
+
+        tokenizer = cached_transformers.get_tokenizer(model_name)
+        result = copy_transformer_vocab(tokenizer)
+        vocab._token_to_index[namespace] = result["token_to_index"]
+        vocab._index_to_token[namespace] = result["index_to_token"]
+        return vocab
 
     @classmethod
     def from_instances(
@@ -761,6 +773,7 @@ class Vocabulary(Registrable):
 
 # We can't decorate `Vocabulary` with `Vocabulary.register()`, because `Vocabulary` hasn't been
 # defined yet.  So we put these down here.
+Vocabulary.register("from_pretrained_transformer", constructor="from_pretrained_transformer")(Vocabulary)
 Vocabulary.register("from_instances", constructor="from_instances")(Vocabulary)
 Vocabulary.register("from_files", constructor="from_files")(Vocabulary)
 Vocabulary.register("extend", constructor="from_files_and_instances")(Vocabulary)
