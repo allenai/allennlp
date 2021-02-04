@@ -1,7 +1,8 @@
+from typing import Dict, Any
 from transformers import PreTrainedTokenizer
 
 
-def copy_transformer_vocab(tokenizer: PreTrainedTokenizer) -> None:
+def copy_transformer_vocab(tokenizer: PreTrainedTokenizer) -> Dict[str, Any]:
     """
     Copies tokens from ```transformers``` model's vocab
     """
@@ -16,7 +17,7 @@ def copy_transformer_vocab(tokenizer: PreTrainedTokenizer) -> None:
     outputs["token_to_index"] = dict()
     outputs["index_to_token"] = dict()
     for word, idx in vocab_items:
-        outputs["token_to_index"] = idx
-        outputs["index_to_token"] = word
+        outputs["token_to_index"][word] = idx
+        outputs["index_to_token"][idx] = word
 
     return outputs

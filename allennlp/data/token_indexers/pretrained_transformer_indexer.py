@@ -81,7 +81,7 @@ class PretrainedTransformerIndexer(TokenIndexer):
         if self._added_to_vocabulary:
             return
 
-        result = copy_transformer_vocab(tokenizer=self._tokenizer)
+        result = copy_transformer_vocab(self._tokenizer)
         vocab._token_to_index[self._namespace] = result["token_to_index"]
         vocab._index_to_token[self._namespace] = result["index_to_token"]
 
