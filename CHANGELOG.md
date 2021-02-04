@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+- Introduce `convert_to_coding_scheme` and make `coding_scheme` deprecated in `Conll2003DatasetReader`.
+
 ### Added
 
 - Added `ModelUsage` to `ModelCard` class.
