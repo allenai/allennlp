@@ -74,6 +74,11 @@ class Conll2003DatasetReader(DatasetReader):
         In the IOB1 scheme, I is a token inside a span, O is a token outside
         a span and B is the beginning of span immediately following another
         span of the same type.
+    coding_scheme : `str`, optional (default=`IOB1`)
+        This parameter is deprecated. If you specify `coding_scheme` to
+        `IOB1`, consider simply removing it or specifying `convert_to_coding_scheme`
+        to `None`. If you want to specify `BIOUL` for `coding_scheme`,
+        replace it with `convert_to_coding_scheme`.
     label_namespace : `str`, optional (default=`labels`)
         Specifies the namespace for the chosen `tag_label`.
     """
