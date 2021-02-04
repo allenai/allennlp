@@ -18,10 +18,8 @@ from allennlp.common.checks import ConfigurationError
 from allennlp.common.tqdm import Tqdm
 from allennlp.common.util import namespace_match
 
-
 if TYPE_CHECKING:
     from allennlp.data import instance as adi  # noqa
-
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +30,7 @@ NAMESPACE_PADDING_FILE = "non_padded_namespaces.txt"
 _NEW_LINE_REGEX = re.compile(r"\n|\r\n")
 
 
-def copy_transformer_vocab(tokenizer: PreTrainedTokenizer) -> Dict[str, Any]:
+def copy_transformer_vocab(tokenizer: PreTrainedTokenizer) -> Dict[str, Dict]:
     """
     Copies tokens from ```transformers``` model's vocab
     """
@@ -42,7 +40,7 @@ def copy_transformer_vocab(tokenizer: PreTrainedTokenizer) -> Dict[str, Any]:
         vocab_items = (
             (tokenizer.convert_ids_to_tokens(idx), idx) for idx in range(tokenizer.vocab_size)
         )
-    outputs = dict()
+    outputs: Dict[str, Dict] = dict()
     outputs["token_to_index"] = dict()
     outputs["index_to_token"] = dict()
     for word, idx in vocab_items:
