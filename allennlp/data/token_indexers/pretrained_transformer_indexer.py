@@ -5,10 +5,10 @@ from allennlp.common.util import pad_sequence_to_length
 
 from overrides import overrides
 
-from allennlp.data.vocabulary import Vocabulary
+from allennlp.data.vocabulary import Vocabulary, copy_transformer_vocab
 from allennlp.data.tokenizers import Token, PretrainedTransformerTokenizer
 from allennlp.data.token_indexers.token_indexer import TokenIndexer, IndexedTokenList
-from allennlp.tools import copy_transformer_vocab
+
 
 logger = logging.getLogger(__name__)
 
