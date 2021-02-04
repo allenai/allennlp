@@ -69,6 +69,7 @@ class Conll2003DatasetReader(DatasetReader):
         specified here.
     convert_to_coding_scheme : `str`, optional (default=`None`)
         Specifies the coding scheme for `ner_labels` and `chunk_labels`.
+        `Conll2003DatasetReader` assumes a coding scheme of input data is `IOB1`.
         Valid options are `None` and `BIOUL`.  The `None` default maintains
         the original IOB1 scheme in the CoNLL 2003 NER data.
         In the IOB1 scheme, I is a token inside a span, O is a token outside
