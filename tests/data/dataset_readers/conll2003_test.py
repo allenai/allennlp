@@ -30,7 +30,6 @@ class TestConll2003Reader:
         assert tokens == ["AI2", "engineer", "Joel", "lives", "in", "Seattle", "."]
         assert fields["tags"].labels == expected_labels
 
-    @pytest.mark.filterwarnings("ignore::DeprecationWarning")
     @pytest.mark.parametrize("convert_to_coding_scheme", (None, "BIOUL"))
     def test_read_from_file(self, convert_to_coding_scheme):
         conll_reader = Conll2003DatasetReader(convert_to_coding_scheme=convert_to_coding_scheme)
