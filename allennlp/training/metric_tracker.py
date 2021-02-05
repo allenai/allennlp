@@ -128,6 +128,6 @@ class MetricTracker:
             )
         except KeyError as e:
             raise ConfigurationError(
-                f"You configured the trainer to use the {e.args[0]}"
+                f"You configured the trainer to use the {e.args[0]} "
                 "metric for early stopping, but the model did not produce that metric."
             )
