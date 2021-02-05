@@ -98,8 +98,7 @@ class Conll2003DatasetReader(DatasetReader):
 
         if "coding_scheme" in kwargs:
             warnings.warn("`coding_scheme` is deprecated.", DeprecationWarning)
-            coding_scheme = kwargs["coding_scheme"]
-            kwargs.pop("coding_scheme")
+            coding_scheme = kwargs.pop("coding_scheme")
 
             if coding_scheme not in ("IOB1", "BIOUL"):
                 raise ConfigurationError("unknown coding_scheme: {}".format(coding_scheme))
