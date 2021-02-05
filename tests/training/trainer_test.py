@@ -31,6 +31,7 @@ from allennlp.training.learning_rate_schedulers import CosineWithRestarts
 from allennlp.training.learning_rate_schedulers import ExponentialLearningRateScheduler
 from allennlp.training.momentum_schedulers import MomentumScheduler
 from allennlp.training.moving_average import ExponentialMovingAverage
+from allennlp.training.optimizers import Optimizer
 
 
 class TrainerTestBase(AllenNlpTestCase):
@@ -556,6 +557,32 @@ class TestTrainer(TrainerTestBase):
             num_epochs=2,
         )
         trainer.train()
+
+    def test_trainer_sends_metric_to_lr_scheduler(self):
+        from allennlp.training.learning_rate_schedulers import ReduceOnPlateauLearningRateScheduler
+
+        class RecordMetricLearningRateScheduler(ReduceOnPlateauLearningRateScheduler):
+            def __init__(self, optimizer: Optimizer):
+                super(RecordMetricLearningRateScheduler, self).__init__(optimizer)
+                self.recordings: List[float] = []
+
+            def step(self, metric: float = None) -> None:
+                self.recordings.append(metric)
+                super().step(metric)
+
+        lr_scheduler = RecordMetricLearningRateScheduler(self.optimizer)
+        trainer = GradientDescentTrainer(
+            model=self.model,
+            optimizer=self.optimizer,
+            data_loader=self.data_loader,
+            learning_rate_scheduler=lr_scheduler,
+            validation_metric="-loss",
+            validation_data_loader=self.validation_data_loader,
+            num_epochs=2,
+        )
+        trainer.train()
+
+        assert all([value != 0 for value in lr_scheduler.recordings])
 
     def test_trainer_can_resume_with_lr_scheduler(self):
         lr_scheduler = CosineWithRestarts(self.optimizer, t_initial=5)

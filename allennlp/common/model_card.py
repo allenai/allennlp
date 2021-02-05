@@ -140,8 +140,6 @@ class ModelDetails(ModelCardInfo):
         The email address to reach out to the relevant developers/contributors
         for questions/feedback about the model.
 
-    training_config : `str`
-        Link to training configuration.
     """
 
     def __init__(
@@ -156,7 +154,6 @@ class ModelDetails(ModelCardInfo):
         paper: Optional[Union[str, Dict, Paper]] = None,
         license: Optional[str] = None,
         contact: Optional[str] = None,
-        training_config: Optional[str] = None,
     ):
         self.description = description
         self.short_description = short_description
@@ -173,7 +170,6 @@ class ModelDetails(ModelCardInfo):
             self.paper = Paper(title=paper)
         self.license = license
         self.contact = contact
-        self.training_config = training_config
 
 
 @dataclass(frozen=True)
@@ -278,12 +274,20 @@ class Dataset(ModelCardInfo):
         The name of the dataset.
 
     url : `str`
-        A web link to the dataset.
+        A web link to the dataset information/datasheet.
 
+    processed_url : `str`
+        A web link to a downloadable/directly usable version
+        of the dataset, if available.
+
+    notes: `str`
+        Any other notes on downloading/processing the data.
     """
 
     name: Optional[str] = None
     url: Optional[str] = None
+    processed_url: Optional[str] = None
+    notes: Optional[str] = None
 
 
 class EvaluationData(ModelCardInfo):
@@ -428,6 +432,43 @@ class ModelCaveatsAndRecommendations(ModelCardInfo):
     caveats_and_recommendations: Optional[str] = None
 
 
+class ModelUsage(ModelCardInfo):
+    """
+    archive_file : `str`, optional
+        The location of model's pretrained weights.
+    training_config : `str`, optional
+        A url to the training config.
+    install_instructions : `str`, optional
+        Any additional instructions for installations.
+    overrides : `Dict`, optional
+        Optional overrides for the model's architecture.
+    """
+
+    _storage_location = "https://storage.googleapis.com/allennlp-public-models/"
+    _config_location = (
+        "https://raw.githubusercontent.com/allenai/allennlp-models/main/training_config"
+    )
+
+    def __init__(
+        self,
+        archive_file: Optional[str] = None,
+        training_config: Optional[str] = None,
+        install_instructions: Optional[str] = None,
+        overrides: Optional[Dict] = None,
+    ):
+
+        if archive_file and not archive_file.startswith("https:"):
+            archive_file = os.path.join(self._storage_location, archive_file)
+
+        if training_config and not training_config.startswith("https:"):
+            training_config = os.path.join(self._config_location, training_config)
+
+        self.archive_file = archive_file
+        self.training_config = training_config
+        self.install_instructions = install_instructions
+        self.overrides = overrides
+
+
 class ModelCard(ModelCardInfo):
     """
     The model card stores the recommended attributes for model reporting.
@@ -446,10 +487,9 @@ class ModelCard(ModelCardInfo):
         The registered name of the corresponding predictor.
     display_name : `str`, optional
         The pretrained model's display name.
-    archive_file : `str`, optional
-        The location of model's pretrained weights.
-    overrides : `Dict`, optional
-        Optional overrides for the model's architecture.
+    task_id : `str`, optional
+        The id of the task for which the model was built.
+    model_usage: `Union[ModelUsage, str]`, optional
     model_details : `Union[ModelDetails, str]`, optional
     intended_use : `Union[IntendedUse, str]`, optional
     factors : `Union[Factors, str]`, optional
@@ -465,8 +505,6 @@ class ModelCard(ModelCardInfo):
 
     """
 
-    _storage_location = "https://storage.googleapis.com/allennlp-public-models/"
-
     def __init__(
         self,
         id: str,
@@ -475,8 +513,7 @@ class ModelCard(ModelCardInfo):
         registered_predictor_name: Optional[str] = None,
         display_name: Optional[str] = None,
         task_id: Optional[str] = None,
-        archive_file: Optional[str] = None,
-        overrides: Optional[Dict] = None,
+        model_usage: Optional[Union[str, ModelUsage]] = None,
         model_details: Optional[Union[str, ModelDetails]] = None,
         intended_use: Optional[Union[str, IntendedUse]] = None,
         factors: Optional[Union[str, Factors]] = None,
@@ -503,9 +540,8 @@ class ModelCard(ModelCardInfo):
             if not registered_predictor_name:
                 registered_predictor_name = model_class.default_predictor  # type: ignore
 
-        if archive_file and not archive_file.startswith("https:"):
-            archive_file = os.path.join(self._storage_location, archive_file)
-
+        if isinstance(model_usage, str):
+            model_usage = ModelUsage(archive_file=model_usage)
         if isinstance(model_details, str):
             model_details = ModelDetails(description=model_details)
         if isinstance(intended_use, str):
@@ -532,7 +568,7 @@ class ModelCard(ModelCardInfo):
         self.registered_predictor_name = registered_predictor_name
         self.display_name = display_name
         self.task_id = task_id
-        self.archive_file = archive_file
+        self.model_usage = model_usage
         self.model_details = model_details
         self.intended_use = intended_use
         self.factors = factors
