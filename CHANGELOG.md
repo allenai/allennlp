@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Changed
+
+- `coding_scheme` parameter is now deprecated in `Conll2003DatasetReader`, please use `convert_to_coding_scheme` instead.
+
 ### Added
 
 - Added `ModelUsage` to `ModelCard` class.
@@ -24,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Added `tokenizer_kwargs` and `transformer_kwargs` arguments to `PretrainedTransformerBackbone`
+- Resize transformers word embeddings layer for `additional_special_tokens`
 
 ### Changed
 
