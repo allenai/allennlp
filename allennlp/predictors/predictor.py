@@ -271,7 +271,7 @@ class Predictor(Registrable):
         to the `outputs`. This function is used to (1) compute gradients of what the model predicted; 
         (2) label the instance for the attack. For example, (a) for the untargeted attack for classification 
         this function labels the instance according to the class with the highest probability; (b) for 
-        targeted attack, it directly constructs fields from given target. 
+        targeted attack, it directly constructs fields from the given target. 
         The return type is a list because in some tasks there are multiple predictions in the output 
         (e.g., in NER a model predicts multiple spans). In this case, each instance in the returned list of 
         Instances contains an individual entity prediction as the label.
