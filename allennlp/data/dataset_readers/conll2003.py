@@ -1,6 +1,7 @@
-from typing import Dict, List, Sequence, Iterable
+from typing import Dict, List, Optional, Sequence, Iterable
 import itertools
 import logging
+import warnings
 
 from overrides import overrides
 
@@ -66,13 +67,19 @@ class Conll2003DatasetReader(DatasetReader):
         Each will have its own namespace : `pos_tags`, `chunk_tags`, `ner_tags`.
         If you want to use one of the tags as a `feature` in your model, it should be
         specified here.
-    coding_scheme : `str`, optional (default=`IOB1`)
+    convert_to_coding_scheme : `str`, optional (default=`None`)
         Specifies the coding scheme for `ner_labels` and `chunk_labels`.
-        Valid options are `IOB1` and `BIOUL`.  The `IOB1` default maintains
+        `Conll2003DatasetReader` assumes a coding scheme of input data is `IOB1`.
+        Valid options are `None` and `BIOUL`.  The `None` default maintains
         the original IOB1 scheme in the CoNLL 2003 NER data.
         In the IOB1 scheme, I is a token inside a span, O is a token outside
         a span and B is the beginning of span immediately following another
         span of the same type.
+    coding_scheme : `str`, optional (default=`IOB1`)
+        This parameter is deprecated. If you specify `coding_scheme` to
+        `IOB1`, consider simply removing it or specifying `convert_to_coding_scheme`
+        to `None`. If you want to specify `BIOUL` for `coding_scheme`,
+        replace it with `convert_to_coding_scheme`.
     label_namespace : `str`, optional (default=`labels`)
         Specifies the namespace for the chosen `tag_label`.
     """
@@ -84,10 +91,23 @@ class Conll2003DatasetReader(DatasetReader):
         token_indexers: Dict[str, TokenIndexer] = None,
         tag_label: str = "ner",
         feature_labels: Sequence[str] = (),
-        coding_scheme: str = "IOB1",
+        convert_to_coding_scheme: Optional[str] = None,
         label_namespace: str = "labels",
         **kwargs,
     ) -> None:
+
+        if "coding_scheme" in kwargs:
+            warnings.warn("`coding_scheme` is deprecated.", DeprecationWarning)
+            coding_scheme = kwargs.pop("coding_scheme")
+
+            if coding_scheme not in ("IOB1", "BIOUL"):
+                raise ConfigurationError("unknown coding_scheme: {}".format(coding_scheme))
+
+            if coding_scheme == "IOB1":
+                convert_to_coding_scheme = None
+            else:
+                convert_to_coding_scheme = coding_scheme
+
         super().__init__(
             manual_distributed_sharding=True, manual_multiprocess_sharding=True, **kwargs
         )
@@ -97,12 +117,14 @@ class Conll2003DatasetReader(DatasetReader):
         for label in feature_labels:
             if label not in self._VALID_LABELS:
                 raise ConfigurationError("unknown feature label type: {}".format(label))
-        if coding_scheme not in ("IOB1", "BIOUL"):
-            raise ConfigurationError("unknown coding_scheme: {}".format(coding_scheme))
+        if convert_to_coding_scheme not in (None, "BIOUL"):
+            raise ConfigurationError(
+                "unknown convert_to_coding_scheme: {}".format(convert_to_coding_scheme)
+            )
 
         self.tag_label = tag_label
         self.feature_labels = set(feature_labels)
-        self.coding_scheme = coding_scheme
+        self.convert_to_coding_scheme = convert_to_coding_scheme
         self.label_namespace = label_namespace
         self._original_coding_scheme = "IOB1"
 
@@ -148,7 +170,7 @@ class Conll2003DatasetReader(DatasetReader):
         instance_fields["metadata"] = MetadataField({"words": [x.text for x in tokens]})
 
         # Recode the labels if necessary.
-        if self.coding_scheme == "BIOUL":
+        if self.convert_to_coding_scheme == "BIOUL":
             coded_chunks = (
                 to_bioul(chunk_tags, encoding=self._original_coding_scheme)
                 if chunk_tags is not None
