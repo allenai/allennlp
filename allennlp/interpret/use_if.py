@@ -1,6 +1,8 @@
 from allennlp_models.pair_classification.dataset_readers.snli import CollapsedSnliReader
 from allennlp.interpret.influence_interpreters import SimpleInfluence
-from allennlp_models.pair_classification.predictors.textual_entailment import TextualEntailmentPredictor
+from allennlp_models.pair_classification.predictors.textual_entailment import (
+    TextualEntailmentPredictor,
+)
 from allennlp.models.archival import load_archive
 
 archive_file = "../allennlp-models/mnli_bert_output/model.tar.gz"
