@@ -5,7 +5,7 @@ from allennlp.common.util import pad_sequence_to_length
 
 from overrides import overrides
 
-from allennlp.data.vocabulary import Vocabulary, copy_transformer_vocab
+from allennlp.data.vocabulary import Vocabulary
 from allennlp.data.tokenizers import Token, PretrainedTransformerTokenizer
 from allennlp.data.token_indexers.token_indexer import TokenIndexer, IndexedTokenList
 
@@ -81,7 +81,7 @@ class PretrainedTransformerIndexer(TokenIndexer):
         if self._added_to_vocabulary:
             return
 
-        result = copy_transformer_vocab(self._tokenizer)
+        result = vocab.copy_transformer_vocab(self._tokenizer)
         vocab._token_to_index[self._namespace] = result["token_to_index"]
         vocab._index_to_token[self._namespace] = result["index_to_token"]
 

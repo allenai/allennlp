@@ -30,26 +30,6 @@ NAMESPACE_PADDING_FILE = "non_padded_namespaces.txt"
 _NEW_LINE_REGEX = re.compile(r"\n|\r\n")
 
 
-def copy_transformer_vocab(tokenizer: PreTrainedTokenizer) -> Dict[str, Dict]:
-    """
-    Copies tokens from ```transformers``` model's vocab
-    """
-    try:
-        vocab_items = tokenizer.get_vocab().items()
-    except NotImplementedError:
-        vocab_items = (
-            (tokenizer.convert_ids_to_tokens(idx), idx) for idx in range(tokenizer.vocab_size)
-        )
-    outputs: Dict[str, Dict] = dict()
-    outputs["token_to_index"] = dict()
-    outputs["index_to_token"] = dict()
-    for word, idx in vocab_items:
-        outputs["token_to_index"][word] = idx
-        outputs["index_to_token"][idx] = word
-
-    return outputs
-
-
 class _NamespaceDependentDefaultDict(defaultdict):
     """
     This is a [defaultdict]
@@ -287,7 +267,7 @@ class Vocabulary(Registrable):
         from allennlp.common import cached_transformers
 
         tokenizer = cached_transformers.get_tokenizer(model_name)
-        result = copy_transformer_vocab(tokenizer)
+        result = vocab.add_transformer_vocab(tokenizer)
         vocab._token_to_index[namespace] = result["token_to_index"]
         vocab._index_to_token[namespace] = result["index_to_token"]
         return vocab
@@ -449,6 +429,26 @@ class Vocabulary(Registrable):
         through the data.
         """
         return cls()
+
+    @staticmethod
+    def add_transformer_vocab(tokenizer: PreTrainedTokenizer) -> Dict[str, Dict]:
+        """
+        Copies tokens from ```transformers``` model's vocab
+        """
+        try:
+            vocab_items = tokenizer.get_vocab().items()
+        except NotImplementedError:
+            vocab_items = (
+                (tokenizer.convert_ids_to_tokens(idx), idx) for idx in range(tokenizer.vocab_size)
+            )
+        outputs: Dict[str, Dict] = dict()
+        outputs["token_to_index"] = dict()
+        outputs["index_to_token"] = dict()
+        for word, idx in vocab_items:
+            outputs["token_to_index"][word] = idx
+            outputs["index_to_token"][idx] = word
+
+        return outputs
 
     def set_from_file(
         self,
