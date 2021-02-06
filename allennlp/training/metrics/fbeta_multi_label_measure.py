@@ -90,8 +90,8 @@ class FBetaMultiLabelMeasure(FBetaMeasure):
         predictions : `torch.Tensor`, required.
             A tensor of predictions of shape (batch_size, ..., num_classes).
         gold_labels : `torch.Tensor`, required.
-            A tensor of integer class label of shape (batch_size, ...). It must be the same
-            shape as the `predictions` tensor without the `num_classes` dimension.
+            A tensor of integer class label of shape (batch_size, ..., num_classes).
+            It must be the same shape as the `predictions` tensor.
         mask : `torch.BoolTensor`, optional (default = `None`).
             A masking tensor the same size as `gold_labels`.
         """
