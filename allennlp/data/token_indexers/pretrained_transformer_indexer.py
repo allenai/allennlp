@@ -81,7 +81,7 @@ class PretrainedTransformerIndexer(TokenIndexer):
         if self._added_to_vocabulary:
             return
 
-        vocab.add_transformer_vocab(self._tokenizer)
+        vocab.add_transformer_vocab(self._tokenizer, self._namespace)
 
         self._added_to_vocabulary = True
 
