@@ -267,9 +267,7 @@ class Vocabulary(Registrable):
         from allennlp.common import cached_transformers
 
         tokenizer = cached_transformers.get_tokenizer(model_name)
-        result = vocab.add_transformer_vocab(tokenizer)
-        vocab._token_to_index[namespace] = result["token_to_index"]
-        vocab._index_to_token[namespace] = result["index_to_token"]
+        vocab.add_transformer_vocab(tokenizer, namespace)
         return vocab
 
     @classmethod
@@ -430,8 +428,9 @@ class Vocabulary(Registrable):
         """
         return cls()
 
-    @staticmethod
-    def add_transformer_vocab(tokenizer: PreTrainedTokenizer) -> Dict[str, Dict]:
+    def add_transformer_vocab(
+        self, tokenizer: PreTrainedTokenizer, namespace: str = "tokens"
+    ) -> None:
         """
         Copies tokens from ```transformers``` model's vocab
         """
@@ -441,14 +440,10 @@ class Vocabulary(Registrable):
             vocab_items = (
                 (tokenizer.convert_ids_to_tokens(idx), idx) for idx in range(tokenizer.vocab_size)
             )
-        outputs: Dict[str, Dict] = dict()
-        outputs["token_to_index"] = dict()
-        outputs["index_to_token"] = dict()
-        for word, idx in vocab_items:
-            outputs["token_to_index"][word] = idx
-            outputs["index_to_token"][idx] = word
 
-        return outputs
+        for word, idx in vocab_items:
+            self._token_to_index[namespace][word] = idx
+            self._index_to_token[namespace][idx] = word
 
     def set_from_file(
         self,
