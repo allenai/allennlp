@@ -441,7 +441,7 @@ class Vocabulary(Registrable):
         self, tokenizer: PreTrainedTokenizer, namespace: str = "tokens"
     ) -> None:
         """
-        Copies tokens from ```transformers``` model's vocab
+        Copies tokens from a transformer tokenizer's vocab into the given namespace.
         """
         try:
             vocab_items = tokenizer.get_vocab().items()
