@@ -259,11 +259,12 @@ class Vocabulary(Registrable):
             min_pretrained_embeddings,
         )
 
-    @classmethod
     def from_pretrained_transformer(
-        cls, model_name: str, namespace: str = "tokens"
+        cls, model_name: str, namespace: str = "tokens", padding_token="[PAD]", oov_token="[UNK]"
     ) -> "Vocabulary":
         vocab = cls.empty()
+        vocab._oov_token = oov_token
+        vocab._padding_token = padding_token
         from allennlp.common import cached_transformers
 
         tokenizer = cached_transformers.get_tokenizer(model_name)
