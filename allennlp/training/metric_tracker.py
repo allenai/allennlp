@@ -92,15 +92,7 @@ class MetricTracker:
         """
         Record a new value of the metric and update the various things that depend on it.
         """
-        try:
-            combined_score = sum(
-                factor * metrics[metric_name] for factor, metric_name in self.tracked_metrics
-            )
-        except KeyError as e:
-            raise ConfigurationError(
-                f"You configured the trainer to use the {e.args[0]}"
-                "metric for early stopping, but the model did not produce that metric."
-            )
+        combined_score = self.combined_score(metrics)
 
         new_best = (self._best_so_far is None) or (combined_score > self._best_so_far)
 
@@ -128,3 +120,14 @@ class MetricTracker:
             return False
         else:
             return self._epochs_with_no_improvement >= self._patience
+
+    def combined_score(self, metrics: Dict[str, float]) -> float:
+        try:
+            return sum(
+                factor * metrics[metric_name] for factor, metric_name in self.tracked_metrics
+            )
+        except KeyError as e:
+            raise ConfigurationError(
+                f"You configured the trainer to use the {e.args[0]} "
+                "metric for early stopping, but the model did not produce that metric."
+            )
