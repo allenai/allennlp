@@ -259,6 +259,7 @@ class Vocabulary(Registrable):
             min_pretrained_embeddings,
         )
 
+    @classmethod
     def from_pretrained_transformer(
         cls, model_name: str, namespace: str = "tokens", padding_token="[PAD]", oov_token="[UNK]"
     ) -> "Vocabulary":
