@@ -261,14 +261,21 @@ class Vocabulary(Registrable):
 
     @classmethod
     def from_pretrained_transformer(
-        cls, model_name: str, namespace: str = "tokens", padding_token="[PAD]", oov_token="[UNK]"
+        cls, model_name: str, namespace: str = "tokens", oov_token: Optional[str] = None
     ) -> "Vocabulary":
-        vocab = cls.empty()
-        vocab._oov_token = oov_token
-        vocab._padding_token = padding_token
+        """
+        Initialize a vocabulary from the vocabulary of a pretrained transformer model.
+        If `oov_token` is not given, we will try to infer it from the transformer tokenizer.
+        """
         from allennlp.common import cached_transformers
 
         tokenizer = cached_transformers.get_tokenizer(model_name)
+        if oov_token is None:
+            if hasattr(tokenizer, "_unk_token"):
+                oov_token = tokenizer._unk_token
+            elif hasattr(tokenizer, "special_tokens_map"):
+                oov_token = tokenizer.special_tokens_map.get("unk_token")
+        vocab = cls(non_padded_namespaces=[namespace], oov_token=oov_token)
         vocab.add_transformer_vocab(tokenizer, namespace)
         return vocab
 
