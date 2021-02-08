@@ -453,7 +453,7 @@ class Vocabulary(Registrable):
         for word, idx in vocab_items:
             self._token_to_index[namespace][word] = idx
             self._index_to_token[namespace][idx] = word
-            
+
         self._non_padded_namespaces.add(namespace)
 
     def set_from_file(
