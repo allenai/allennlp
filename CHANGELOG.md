@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Added a way to specify extra parameters to the predictor in an `allennlp predict` call.
+- Added a way to initialize a `Vocabulary` from transformers models.
 
 ### Changed
 
