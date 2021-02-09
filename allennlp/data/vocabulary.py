@@ -9,6 +9,7 @@ import logging
 import os
 import re
 from collections import defaultdict
+from transformers import PreTrainedTokenizer
 from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Union, TYPE_CHECKING
 
 from allennlp.common import Registrable
@@ -19,7 +20,6 @@ from allennlp.common.util import namespace_match
 
 if TYPE_CHECKING:
     from allennlp.data import instance as adi  # noqa
-
 
 logger = logging.getLogger(__name__)
 
@@ -260,6 +260,26 @@ class Vocabulary(Registrable):
         )
 
     @classmethod
+    def from_pretrained_transformer(
+        cls, model_name: str, namespace: str = "tokens", oov_token: Optional[str] = None
+    ) -> "Vocabulary":
+        """
+        Initialize a vocabulary from the vocabulary of a pretrained transformer model.
+        If `oov_token` is not given, we will try to infer it from the transformer tokenizer.
+        """
+        from allennlp.common import cached_transformers
+
+        tokenizer = cached_transformers.get_tokenizer(model_name)
+        if oov_token is None:
+            if hasattr(tokenizer, "_unk_token"):
+                oov_token = tokenizer._unk_token
+            elif hasattr(tokenizer, "special_tokens_map"):
+                oov_token = tokenizer.special_tokens_map.get("unk_token")
+        vocab = cls(non_padded_namespaces=[namespace], oov_token=oov_token)
+        vocab.add_transformer_vocab(tokenizer, namespace)
+        return vocab
+
+    @classmethod
     def from_instances(
         cls,
         instances: Iterable["adi.Instance"],
@@ -416,6 +436,25 @@ class Vocabulary(Registrable):
         through the data.
         """
         return cls()
+
+    def add_transformer_vocab(
+        self, tokenizer: PreTrainedTokenizer, namespace: str = "tokens"
+    ) -> None:
+        """
+        Copies tokens from a transformer tokenizer's vocab into the given namespace.
+        """
+        try:
+            vocab_items = tokenizer.get_vocab().items()
+        except NotImplementedError:
+            vocab_items = (
+                (tokenizer.convert_ids_to_tokens(idx), idx) for idx in range(tokenizer.vocab_size)
+            )
+
+        for word, idx in vocab_items:
+            self._token_to_index[namespace][word] = idx
+            self._index_to_token[namespace][idx] = word
+
+        self._non_padded_namespaces.add(namespace)
 
     def set_from_file(
         self,
@@ -761,6 +800,9 @@ class Vocabulary(Registrable):
 
 # We can't decorate `Vocabulary` with `Vocabulary.register()`, because `Vocabulary` hasn't been
 # defined yet.  So we put these down here.
+Vocabulary.register("from_pretrained_transformer", constructor="from_pretrained_transformer")(
+    Vocabulary
+)
 Vocabulary.register("from_instances", constructor="from_instances")(Vocabulary)
 Vocabulary.register("from_files", constructor="from_files")(Vocabulary)
 Vocabulary.register("extend", constructor="from_files_and_instances")(Vocabulary)
