@@ -58,7 +58,11 @@ class StepLearningRateScheduler(_PyTorchLearningRateSchedulerWrapper):
     """
 
     def __init__(
-        self, optimizer: Optimizer, step_size: int, gamma: float = 0.1, last_epoch: int = -1
+        self,
+        optimizer: Optimizer,
+        step_size: int,
+        gamma: float = 0.1,
+        last_epoch: int = -1,
     ) -> None:
         lr_scheduler = torch.optim.lr_scheduler.StepLR(
             optimizer=optimizer, step_size=step_size, gamma=gamma, last_epoch=last_epoch
@@ -74,10 +78,17 @@ class MultiStepLearningRateScheduler(_PyTorchLearningRateSchedulerWrapper):
     """
 
     def __init__(
-        self, optimizer: Optimizer, milestones: List[int], gamma: float = 0.1, last_epoch: int = -1
+        self,
+        optimizer: Optimizer,
+        milestones: List[int],
+        gamma: float = 0.1,
+        last_epoch: int = -1,
     ) -> None:
         lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(
-            optimizer=optimizer, milestones=milestones, gamma=gamma, last_epoch=last_epoch
+            optimizer=optimizer,
+            milestones=milestones,
+            gamma=gamma,
+            last_epoch=last_epoch,
         )
         super().__init__(lr_scheduler)
 

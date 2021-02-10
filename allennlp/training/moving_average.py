@@ -92,7 +92,8 @@ class ExponentialMovingAverage(MovingAverage):
         """
         if num_updates is not None:
             decay = min(
-                self._decay, (self._numerator + num_updates) / (self._denominator + num_updates)
+                self._decay,
+                (self._numerator + num_updates) / (self._denominator + num_updates),
             )
         else:
             decay = self._decay

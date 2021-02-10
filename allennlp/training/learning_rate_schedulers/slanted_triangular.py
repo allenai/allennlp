@@ -4,7 +4,9 @@ from typing import List, Optional
 from overrides import overrides
 import torch
 
-from allennlp.training.learning_rate_schedulers.learning_rate_scheduler import LearningRateScheduler
+from allennlp.training.learning_rate_schedulers.learning_rate_scheduler import (
+    LearningRateScheduler,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -150,7 +152,10 @@ class SlantedTriangular(LearningRateScheduler):
         if self.freezing_current:
             # if we are still freezing layers, we restrict the schedule to the current epoch
             num_steps = actual_num_steps_per_epoch
-            step = min(self.last_batch_num_total - self.batch_num_total_epoch_end[-1], num_steps)
+            step = min(
+                self.last_batch_num_total - self.batch_num_total_epoch_end[-1],
+                num_steps,
+            )
         else:
             # otherwise we use the schedule for the rest of training
             if not self.gradual_unfreezing:

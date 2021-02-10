@@ -153,7 +153,9 @@ class ELMoTokenCharactersIndexer(TokenIndexer):
 
         tensor_dict["elmo_tokens"] = torch.LongTensor(
             pad_sequence_to_length(
-                tokens["elmo_tokens"], padding_lengths["elmo_tokens"], default_value=padding_token
+                tokens["elmo_tokens"],
+                padding_lengths["elmo_tokens"],
+                default_value=padding_token,
             )
         )
         return tensor_dict

@@ -28,10 +28,12 @@ class TestPrintResults(AllenNlpTestCase):
             open(os.path.join(self.directory1 / "metrics.json"), "w+"),
         )
         json.dump(
-            {"train": 4, "dev": 5}, open(os.path.join(self.directory2 / "metrics.json"), "w+")
+            {"train": 4, "dev": 5},
+            open(os.path.join(self.directory2 / "metrics.json"), "w+"),
         )
         json.dump(
-            {"train": 6, "dev": 7}, open(os.path.join(self.directory3 / "cool_metrics.json"), "w+")
+            {"train": 6, "dev": 7},
+            open(os.path.join(self.directory3 / "cool_metrics.json"), "w+"),
         )
 
     def test_print_results(self):

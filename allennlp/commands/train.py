@@ -24,7 +24,11 @@ from allennlp.common import util as common_util
 from allennlp.common.plugins import import_plugins
 from allennlp.data import DatasetReader, Vocabulary
 from allennlp.data import DataLoader
-from allennlp.models.archival import archive_model, CONFIG_NAME, verify_include_in_archive
+from allennlp.models.archival import (
+    archive_model,
+    CONFIG_NAME,
+    verify_include_in_archive,
+)
 from allennlp.models.model import _DEFAULT_WEIGHTS, Model
 from allennlp.training.trainer import Trainer
 from allennlp.training import util as training_util
@@ -40,7 +44,9 @@ class Train(Subcommand):
         subparser = parser.add_parser(self.name, description=description, help="Train a model.")
 
         subparser.add_argument(
-            "param_path", type=str, help="path to parameter file describing the model to be trained"
+            "param_path",
+            type=str,
+            help="path to parameter file describing the model to be trained",
         )
 
         subparser.add_argument(
@@ -80,7 +86,10 @@ class Train(Subcommand):
         )
 
         subparser.add_argument(
-            "--node-rank", type=int, default=0, help="rank of this node in the distributed setup"
+            "--node-rank",
+            type=int,
+            default=0,
+            help="rank of this node in the distributed setup",
         )
 
         subparser.add_argument(

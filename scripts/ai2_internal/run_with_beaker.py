@@ -15,7 +15,8 @@ import sys
 random_int = random.randint(0, 2 ** 32)
 
 sys.path.insert(
-    0, os.path.dirname(os.path.abspath(os.path.join(os.path.join(__file__, os.pardir), os.pardir)))
+    0,
+    os.path.dirname(os.path.abspath(os.path.join(os.path.join(__file__, os.pardir), os.pardir))),
 )
 
 from allennlp.common.params import Params
@@ -62,17 +63,25 @@ def main(param_file: str, args: argparse.Namespace):
 
         print("Create a Beaker image...")
         image = subprocess.check_output(
-            f"beaker image create --quiet {docker_image}", shell=True, universal_newlines=True
+            f"beaker image create --quiet {docker_image}",
+            shell=True,
+            universal_newlines=True,
         ).strip()
         print(f"  Image created: {docker_image}")
 
     config_dataset_id = subprocess.check_output(
-        f"beaker dataset create --quiet {params_dir}/*", shell=True, universal_newlines=True
+        f"beaker dataset create --quiet {params_dir}/*",
+        shell=True,
+        universal_newlines=True,
     ).strip()
 
     # Arguments that differ between preemptible and regular machine execution.
     if args.preemptible:
-        allennlp_prefix = ["/stage/allennlp/resumable_train.sh", "/output", "/config/config.json"]
+        allennlp_prefix = [
+            "/stage/allennlp/resumable_train.sh",
+            "/output",
+            "/config/config.json",
+        ]
     else:
         allennlp_prefix = [
             "python",
@@ -132,7 +141,14 @@ def main(param_file: str, args: argparse.Namespace):
         output.write(json.dumps(config, indent=4))
     print(f"Beaker spec written to {output_path}.")
 
-    experiment_command = ["beaker", "experiment", "create", "--quiet", "--file", output_path]
+    experiment_command = [
+        "beaker",
+        "experiment",
+        "create",
+        "--quiet",
+        "--file",
+        output_path,
+    ]
     if args.name:
         experiment_command.append("--name")
         experiment_command.append(args.name.replace(" ", "-"))
@@ -175,10 +191,14 @@ if __name__ == "__main__":
     parser.add_argument("param_file", type=str, help="The model configuration file.")
     parser.add_argument("--name", type=str, help="A name for the experiment.")
     parser.add_argument(
-        "--spec_output_path", type=str, help="The destination to write the experiment spec."
+        "--spec_output_path",
+        type=str,
+        help="The destination to write the experiment spec.",
     )
     parser.add_argument(
-        "--dry-run", action="store_true", help="If specified, an experiment will not be created."
+        "--dry-run",
+        action="store_true",
+        help="If specified, an experiment will not be created.",
     )
     parser.add_argument(
         "--image", type=str, help="The image to use (if unspecified one will be built)"
@@ -198,11 +218,15 @@ if __name__ == "__main__":
     )
     parser.add_argument("--cpu", help="CPUs to reserve for this experiment (e.g., 0.5)")
     parser.add_argument(
-        "--gpu-count", default=1, help="GPUs to use for this experiment (e.g., 1 (default))"
+        "--gpu-count",
+        default=1,
+        help="GPUs to use for this experiment (e.g., 1 (default))",
     )
     parser.add_argument("--memory", help="Memory to reserve for this experiment (e.g., 1GB)")
     parser.add_argument(
-        "--preemptible", action="store_true", help="Allow task to run on preemptible hardware"
+        "--preemptible",
+        action="store_true",
+        help="Allow task to run on preemptible hardware",
     )
     parser.add_argument(
         "--max-resumes",

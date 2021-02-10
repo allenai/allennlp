@@ -14,7 +14,10 @@ class Metric(Registrable):
     supports_distributed = False
 
     def __call__(
-        self, predictions: torch.Tensor, gold_labels: torch.Tensor, mask: Optional[torch.BoolTensor]
+        self,
+        predictions: torch.Tensor,
+        gold_labels: torch.Tensor,
+        mask: Optional[torch.BoolTensor],
     ):
         """
         # Parameters

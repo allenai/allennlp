@@ -69,7 +69,13 @@ def decode_mst(
 
     # The main algorithm operates inplace.
     chu_liu_edmonds(
-        length, score_matrix, current_nodes, final_edges, old_input, old_output, representatives
+        length,
+        score_matrix,
+        current_nodes,
+        final_edges,
+        old_input,
+        old_output,
+        representatives,
     )
 
     heads = numpy.zeros([max_length], numpy.int32)
@@ -224,7 +230,13 @@ def chu_liu_edmonds(
                 representatives[cycle_representative].add(node)
 
     chu_liu_edmonds(
-        length, score_matrix, current_nodes, final_edges, old_input, old_output, representatives
+        length,
+        score_matrix,
+        current_nodes,
+        final_edges,
+        old_input,
+        old_output,
+        representatives,
     )
 
     # Expansion stage.

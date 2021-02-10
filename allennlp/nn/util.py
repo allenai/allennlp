@@ -172,7 +172,12 @@ def sort_batch_by_length(tensor: torch.Tensor, sequence_lengths: torch.Tensor):
     # sequence lengths and returning the now sorted indices.
     _, reverse_mapping = permutation_index.sort(0, descending=False)
     restoration_indices = index_range.index_select(0, reverse_mapping)
-    return sorted_tensor, sorted_sequence_lengths, restoration_indices, permutation_index
+    return (
+        sorted_tensor,
+        sorted_sequence_lengths,
+        restoration_indices,
+        permutation_index,
+    )
 
 
 def get_final_encoder_states(
@@ -784,7 +789,9 @@ def sequence_cross_entropy_with_logits(
 
             # shape : (2,)
             alpha_factor = torch.tensor(
-                [1.0 - float(alpha), float(alpha)], dtype=weights.dtype, device=weights.device
+                [1.0 - float(alpha), float(alpha)],
+                dtype=weights.dtype,
+                device=weights.device,
             )
 
         elif isinstance(alpha, (list, numpy.ndarray, torch.Tensor)):
@@ -1266,7 +1273,10 @@ def batched_index_select(
 
 
 def masked_index_fill(
-    target: torch.Tensor, indices: torch.LongTensor, mask: torch.BoolTensor, fill_value: int = 1
+    target: torch.Tensor,
+    indices: torch.LongTensor,
+    mask: torch.BoolTensor,
+    fill_value: int = 1,
 ) -> torch.Tensor:
     """
     The given `indices` in `target` will be will be filled with `fill_value` given a `mask`.
@@ -1508,7 +1518,10 @@ def bucket_values(
 
 
 def add_sentence_boundary_token_ids(
-    tensor: torch.Tensor, mask: torch.BoolTensor, sentence_begin_token: Any, sentence_end_token: Any
+    tensor: torch.Tensor,
+    mask: torch.BoolTensor,
+    sentence_begin_token: Any,
+    sentence_end_token: Any,
 ) -> Tuple[torch.Tensor, torch.BoolTensor]:
     """
     Add begin/end of sentence tokens to the batch of sentences.
@@ -1742,7 +1755,9 @@ def find_text_field_embedder(model: torch.nn.Module) -> torch.nn.Module:
     first one, as it's very rare to have more than one.  If there isn't a `TextFieldEmbedder` in the
     given `Model`, we raise a `ValueError`.
     """
-    from allennlp.modules.text_field_embedders.text_field_embedder import TextFieldEmbedder
+    from allennlp.modules.text_field_embedders.text_field_embedder import (
+        TextFieldEmbedder,
+    )
 
     for module in model.modules():
         if isinstance(module, TextFieldEmbedder):
@@ -1764,7 +1779,9 @@ def find_embedding_layer(model: torch.nn.Module) -> torch.nn.Module:
     from transformers.models.bert.modeling_bert import BertEmbeddings
     from transformers.models.albert.modeling_albert import AlbertEmbeddings
     from transformers.models.roberta.modeling_roberta import RobertaEmbeddings
-    from allennlp.modules.text_field_embedders.text_field_embedder import TextFieldEmbedder
+    from allennlp.modules.text_field_embedders.text_field_embedder import (
+        TextFieldEmbedder,
+    )
     from allennlp.modules.text_field_embedders.basic_text_field_embedder import (
         BasicTextFieldEmbedder,
     )

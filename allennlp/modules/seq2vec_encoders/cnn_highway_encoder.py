@@ -67,7 +67,10 @@ class CnnHighwayEncoder(Seq2VecEncoder):
         self._convolutions: List[torch.nn.Module] = []
         for i, (width, num) in enumerate(filters):
             conv = torch.nn.Conv1d(
-                in_channels=embedding_dim, out_channels=num, kernel_size=width, bias=True
+                in_channels=embedding_dim,
+                out_channels=num,
+                kernel_size=width,
+                bias=True,
             )
             conv.weight.data.uniform_(-0.05, 0.05)
             conv.bias.data.fill_(0.0)

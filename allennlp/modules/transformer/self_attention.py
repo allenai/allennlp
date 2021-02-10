@@ -134,7 +134,10 @@ class SelfAttention(TransformerModule, FromParams):
 
     @classmethod
     def _get_mapping(
-        cls, pretrained_module=None, source="huggingface", mapping: Optional[Dict[str, str]] = None
+        cls,
+        pretrained_module=None,
+        source="huggingface",
+        mapping: Optional[Dict[str, str]] = None,
     ):
         combined_mapping = {}
         if "huggingface" in source:

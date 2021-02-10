@@ -99,7 +99,7 @@ class TestPretrainedTransformerIndexer(AllenNlpTestCase):
 
     def test_transformers_vocabs_added_correctly(self):
         namespace, model_name = "tags", "roberta-base"
-        tokenizer = cached_transformers.get_tokenizer(model_name, use_fast=False)
+        tokenizer = cached_transformers.get_tokenizer(model_name)
         allennlp_tokenizer = PretrainedTransformerTokenizer(model_name)
         indexer = PretrainedTransformerIndexer(model_name=model_name, namespace=namespace)
         allennlp_tokens = allennlp_tokenizer.tokenize("AllenNLP is great!")

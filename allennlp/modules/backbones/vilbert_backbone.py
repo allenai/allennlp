@@ -7,7 +7,11 @@ from overrides import overrides
 from allennlp.data.fields.text_field import TextFieldTensors
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.modules.backbones.backbone import Backbone
-from allennlp.modules.transformer import BiModalEncoder, ImageFeatureEmbeddings, Embeddings
+from allennlp.modules.transformer import (
+    BiModalEncoder,
+    ImageFeatureEmbeddings,
+    Embeddings,
+)
 
 logger = logging.getLogger(__name__)
 

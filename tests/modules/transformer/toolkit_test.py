@@ -112,16 +112,24 @@ class TestTransformerToolkit(AllenNlpTestCase):
         medium_layers = dict(medium.combined_transformer.layers.named_modules())
 
         assert_equal_parameters(
-            medium_layers["0"], pretrained_layers["8"], TransformerStack._huggingface_mapping
+            medium_layers["0"],
+            pretrained_layers["8"],
+            TransformerStack._huggingface_mapping,
         )
         assert_equal_parameters(
-            medium_layers["1"], pretrained_layers["9"], TransformerStack._huggingface_mapping
+            medium_layers["1"],
+            pretrained_layers["9"],
+            TransformerStack._huggingface_mapping,
         )
         assert_equal_parameters(
-            medium_layers["2"], pretrained_layers["10"], TransformerStack._huggingface_mapping
+            medium_layers["2"],
+            pretrained_layers["10"],
+            TransformerStack._huggingface_mapping,
         )
         assert_equal_parameters(
-            medium_layers["3"], pretrained_layers["11"], TransformerStack._huggingface_mapping
+            medium_layers["3"],
+            pretrained_layers["11"],
+            TransformerStack._huggingface_mapping,
         )
 
     def test_combination_of_two_different_berts(self):

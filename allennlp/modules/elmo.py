@@ -196,9 +196,10 @@ class Elmo(torch.nn.Module, FromParams):
                 processed_representation = representation_with_bos_eos
                 processed_mask = mask_with_bos_eos
             else:
-                representation_without_bos_eos, mask_without_bos_eos = remove_sentence_boundaries(
-                    representation_with_bos_eos, mask_with_bos_eos
-                )
+                (
+                    representation_without_bos_eos,
+                    mask_without_bos_eos,
+                ) = remove_sentence_boundaries(representation_with_bos_eos, mask_with_bos_eos)
                 processed_representation = representation_without_bos_eos
                 processed_mask = mask_without_bos_eos
             representations.append(self._dropout(processed_representation))
@@ -336,14 +337,18 @@ class _ElmoCharacterEncoder(torch.nn.Module):
         # Add BOS/EOS
         mask = (inputs > 0).sum(dim=-1) > 0
         character_ids_with_bos_eos, mask_with_bos_eos = add_sentence_boundary_token_ids(
-            inputs, mask, self._beginning_of_sentence_characters, self._end_of_sentence_characters
+            inputs,
+            mask,
+            self._beginning_of_sentence_characters,
+            self._end_of_sentence_characters,
         )
 
         # the character id embedding
         max_chars_per_token = self._options["char_cnn"]["max_characters_per_token"]
         # (batch_size * sequence_length, max_chars_per_token, embed_dim)
         character_embedding = torch.nn.functional.embedding(
-            character_ids_with_bos_eos.view(-1, max_chars_per_token), self._char_embedding_weights
+            character_ids_with_bos_eos.view(-1, max_chars_per_token),
+            self._char_embedding_weights,
         )
 
         # run convolutions
@@ -394,7 +399,8 @@ class _ElmoCharacterEncoder(torch.nn.Module):
             char_embed_weights = fin["char_embed"][...]
 
         weights = numpy.zeros(
-            (char_embed_weights.shape[0] + 1, char_embed_weights.shape[1]), dtype="float32"
+            (char_embed_weights.shape[0] + 1, char_embed_weights.shape[1]),
+            dtype="float32",
         )
         weights[1:, :] = char_embed_weights
 
@@ -410,7 +416,10 @@ class _ElmoCharacterEncoder(torch.nn.Module):
         convolutions = []
         for i, (width, num) in enumerate(filters):
             conv = torch.nn.Conv1d(
-                in_channels=char_embed_dim, out_channels=num, kernel_size=width, bias=True
+                in_channels=char_embed_dim,
+                out_channels=num,
+                kernel_size=width,
+                bias=True,
             )
             # load the weights
             with h5py.File(cached_path(self._weight_file), "r") as fin:
@@ -583,7 +592,10 @@ class _ElmoBiLm(torch.nn.Module):
                 embedded_inputs = self._word_embedding(word_inputs)  # type: ignore
                 # shape (batch_size, timesteps + 2, embedding_dim)
                 type_representation, mask = add_sentence_boundary_token_ids(
-                    embedded_inputs, mask_without_bos_eos, self._bos_embedding, self._eos_embedding
+                    embedded_inputs,
+                    mask_without_bos_eos,
+                    self._bos_embedding,
+                    self._eos_embedding,
                 )
             except (RuntimeError, IndexError):
                 # Back off to running the character convolutions,

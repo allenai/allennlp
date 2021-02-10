@@ -124,7 +124,11 @@ class TestTransformerEmbeddings(AllenNlpTestCase):
                 self.dropout = torch.nn.Dropout(dropout)
 
             def forward(
-                self, input_ids=None, token_type_ids=None, position_ids=None, inputs_embeds=None
+                self,
+                input_ids=None,
+                token_type_ids=None,
+                position_ids=None,
+                inputs_embeds=None,
             ):
                 if input_ids is not None:
                     input_shape = input_ids.size()
@@ -168,7 +172,9 @@ class TestTransformerEmbeddings(AllenNlpTestCase):
         token_type_ids = torch.tensor([[1, 0]], dtype=torch.long)
         position_ids = torch.tensor([[0, 1]])
         self.transformer_embeddings.forward(
-            input_ids=input_ids, token_type_ids=token_type_ids, position_ids=position_ids
+            input_ids=input_ids,
+            token_type_ids=token_type_ids,
+            position_ids=position_ids,
         )
 
     def test_output_size(self):
@@ -180,7 +186,9 @@ class TestTransformerEmbeddings(AllenNlpTestCase):
         params = Params(params)
         module = TransformerEmbeddings.from_params(params)
         output = module.forward(
-            input_ids=input_ids, token_type_ids=token_type_ids, position_ids=position_ids
+            input_ids=input_ids,
+            token_type_ids=token_type_ids,
+            position_ids=position_ids,
         )
 
         assert output.shape[-1] == 7
@@ -224,13 +232,17 @@ class TestTransformerEmbeddings(AllenNlpTestCase):
         torch.manual_seed(1234)
         embeddings = embeddings.eval()  # setting to eval mode to avoid non-deterministic dropout.
         output = embeddings.forward(
-            input_ids=input_ids, token_type_ids=token_type_ids, position_ids=position_ids
+            input_ids=input_ids,
+            token_type_ids=token_type_ids,
+            position_ids=position_ids,
         )
 
         torch.manual_seed(1234)
         hf_module = hf_module.eval()  # setting to eval mode to avoid non-deterministic dropout.
         hf_output = hf_module.forward(
-            input_ids=input_ids, token_type_ids=token_type_ids, position_ids=position_ids
+            input_ids=input_ids,
+            token_type_ids=token_type_ids,
+            position_ids=position_ids,
         )
 
         assert torch.allclose(output, hf_output)

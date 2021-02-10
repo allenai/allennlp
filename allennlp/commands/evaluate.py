@@ -27,17 +27,23 @@ class Evaluate(Subcommand):
     def add_subparser(self, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
         description = """Evaluate the specified model + dataset"""
         subparser = parser.add_parser(
-            self.name, description=description, help="Evaluate the specified model + dataset."
+            self.name,
+            description=description,
+            help="Evaluate the specified model + dataset.",
         )
 
         subparser.add_argument("archive_file", type=str, help="path to an archived trained model")
 
         subparser.add_argument(
-            "input_file", type=str, help="path to the file containing the evaluation data"
+            "input_file",
+            type=str,
+            help="path to the file containing the evaluation data",
         )
 
         subparser.add_argument(
-            "--output-file", type=str, help="optional path to write the metrics to as JSON"
+            "--output-file",
+            type=str,
+            help="optional path to write the metrics to as JSON",
         )
 
         subparser.add_argument(
@@ -47,7 +53,9 @@ class Evaluate(Subcommand):
         )
 
         subparser.add_argument(
-            "--weights-file", type=str, help="a path that overrides which weights file to use"
+            "--weights-file",
+            type=str,
+            help="a path that overrides which weights file to use",
         )
 
         cuda_device = subparser.add_mutually_exclusive_group(required=False)
@@ -68,7 +76,9 @@ class Evaluate(Subcommand):
         )
 
         subparser.add_argument(
-            "--batch-size", type=int, help="If non-empty, the batch size to use during evaluation."
+            "--batch-size",
+            type=int,
+            help="If non-empty, the batch size to use during evaluation.",
         )
 
         subparser.add_argument(

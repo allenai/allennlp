@@ -8,4 +8,3 @@ from allennlp.training.trainer import (
     TrackEpochCallback,
     TensorBoardCallback,
 )
-from allennlp.training.deepspeed import DeepspeedTrainer # TODO: make this optional

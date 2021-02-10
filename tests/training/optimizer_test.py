@@ -20,7 +20,12 @@ class TestOptimizer(AllenNlpTestCase):
                 "text_field_embedder": {
                     "token_embedders": {"tokens": {"type": "embedding", "embedding_dim": 5}}
                 },
-                "encoder": {"type": "lstm", "input_size": 5, "hidden_size": 7, "num_layers": 2},
+                "encoder": {
+                    "type": "lstm",
+                    "input_size": 5,
+                    "hidden_size": 7,
+                    "num_layers": 2,
+                },
             }
         )
         self.model = SimpleTagger.from_params(vocab=vocab, params=self.model_params)
@@ -90,10 +95,19 @@ class TestDenseSparseAdam(AllenNlpTestCase):
             {
                 "text_field_embedder": {
                     "token_embedders": {
-                        "tokens": {"type": "embedding", "embedding_dim": 5, "sparse": True}
+                        "tokens": {
+                            "type": "embedding",
+                            "embedding_dim": 5,
+                            "sparse": True,
+                        }
                     }
                 },
-                "encoder": {"type": "lstm", "input_size": 5, "hidden_size": 7, "num_layers": 2},
+                "encoder": {
+                    "type": "lstm",
+                    "input_size": 5,
+                    "hidden_size": 7,
+                    "num_layers": 2,
+                },
             }
         )
         self.model = SimpleTagger.from_params(vocab=self.vocab, params=self.model_params)

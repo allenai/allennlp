@@ -445,7 +445,9 @@ class Model(torch.nn.Module, Registrable):
         If `vocab` is given, we will extend the loaded model's vocabulary using the passed vocab
         object (including calling `extend_embedder_vocab`, which extends embedding layers).
         """
-        from allennlp.models.archival import load_archive  # here to avoid circular imports
+        from allennlp.models.archival import (
+            load_archive,
+        )  # here to avoid circular imports
 
         model = load_archive(archive_file).model
         if vocab:

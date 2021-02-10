@@ -109,7 +109,9 @@ class Conll2003DatasetReader(DatasetReader):
                 convert_to_coding_scheme = coding_scheme
 
         super().__init__(
-            manual_distributed_sharding=True, manual_multiprocess_sharding=True, **kwargs
+            manual_distributed_sharding=True,
+            manual_multiprocess_sharding=True,
+            **kwargs,
         )
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
         if tag_label is not None and tag_label not in self._VALID_LABELS:

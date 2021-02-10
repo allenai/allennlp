@@ -54,7 +54,8 @@ def train_fixture_gpu(config_prefix: str) -> None:
     # now copy back the weights and and archived model
     shutil.copy(os.path.join(tempdir, "best.th"), os.path.join(serialization_dir, "best_gpu.th"))
     shutil.copy(
-        os.path.join(tempdir, "model.tar.gz"), os.path.join(serialization_dir, "model_gpu.tar.gz")
+        os.path.join(tempdir, "model.tar.gz"),
+        os.path.join(serialization_dir, "model_gpu.tar.gz"),
     )
 
 

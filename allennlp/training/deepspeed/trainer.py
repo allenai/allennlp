@@ -1,11 +1,7 @@
-import datetime
 import logging
-import os
 import re
 import time
-import traceback
-from contextlib import contextmanager
-from typing import Any, Dict, Iterator, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Union
 from overrides import overrides
 
 import torch
@@ -17,21 +13,17 @@ from deepspeed.utils import logger as ds_logger
 from allennlp.common import Lazy, Tqdm
 from allennlp.common import util as common_util
 from allennlp.common.checks import ConfigurationError
-from allennlp.data import DataLoader
-from allennlp.data.dataloader import TensorDict
+from allennlp.data import DataLoader, TensorDict
 from allennlp.models.model import Model
 from allennlp.nn import util as nn_util
 from allennlp.training import util as training_util
 from allennlp.training.checkpointer import Checkpointer
 from allennlp.training.moving_average import MovingAverage
 from allennlp.training.optimizers import Optimizer
-from allennlp.training.tensorboard_writer import TensorboardWriter
 
 from allennlp.training.trainer import (
     Trainer,
     GradientDescentTrainer,
-    BatchCallback,
-    EpochCallback,
     TrainerCallback,
 )
 
@@ -57,12 +49,8 @@ class DeepspeedTrainer(GradientDescentTrainer):
         serialization_dir: Optional[str] = None,
         checkpointer: Checkpointer = None,
         cuda_device: Optional[Union[int, torch.device]] = None,
-        tensorboard_writer: TensorboardWriter = None,
         moving_average: Optional[MovingAverage] = None,
-        batch_callbacks: List[BatchCallback] = None,
-        epoch_callbacks: List[EpochCallback] = None,
-        end_callbacks: List[EpochCallback] = None,
-        trainer_callbacks: List[TrainerCallback] = None,
+        callbacks: List[TrainerCallback] = None,
         distributed: bool = False,
         local_rank: int = 0,
         world_size: int = 1,
@@ -78,14 +66,10 @@ class DeepspeedTrainer(GradientDescentTrainer):
             num_epochs=num_epochs,
             serialization_dir=serialization_dir,
             cuda_device=cuda_device,
-            tensorboard_writer=tensorboard_writer,
             checkpointer=checkpointer,
             moving_average=moving_average,
-            batch_callbacks=batch_callbacks,
-            epoch_callbacks=epoch_callbacks,
-            end_callbacks=end_callbacks,
-            trainer_callbacks=trainer_callbacks,
-            distributed=False, # Avoid DDP init
+            callbacks=callbacks,
+            distributed=False,  # Avoid DDP init
             local_rank=local_rank,
             world_size=world_size,
             num_gradient_accumulation_steps=num_gradient_accumulation_steps,
@@ -95,7 +79,6 @@ class DeepspeedTrainer(GradientDescentTrainer):
         self.model_engine = deepspeed_engine
         self._distributed = True
 
-        # serialization_dir = None
         if checkpointer is None and serialization_dir is not None:
             self._checkpointer = DeepspeedCheckpointer(serialization_dir)
 
@@ -160,7 +143,7 @@ class DeepspeedTrainer(GradientDescentTrainer):
 
         # Having multiple tqdm bars in case of distributed training will be a mess. Hence only the master's
         # progress is shown
-        if self._master:
+        if self._primary:
             batch_generator_tqdm = Tqdm.tqdm(batch_generator, total=num_training_batches)
         else:
             batch_generator_tqdm = batch_generator
@@ -175,8 +158,6 @@ class DeepspeedTrainer(GradientDescentTrainer):
             batches_this_epoch += 1
             self._batch_num_total += 1
             batch_num_total = self._batch_num_total
-            # if not self._master:
-            #     print(f'Rank {self._rank}: {batch_num_total}')
 
             batch_outputs = self.batch_outputs(batch, for_training=True)
 
@@ -194,20 +175,6 @@ class DeepspeedTrainer(GradientDescentTrainer):
             self.model_engine.backward(loss)
             self.model_engine.step()
 
-            param_updates = None
-            if self._tensorboard.should_log_histograms_this_batch() and self._master:
-                # Get the magnitude of parameter updates for logging.  We need to do some
-                # computation before and after the optimizer step, and it's expensive because of
-                # GPU/CPU copies (necessary for large models, and for shipping to tensorboard), so
-                # we don't do this every batch, only when it's requested.
-                param_updates = {
-                    name: param.detach().cpu().clone()
-                    for name, param in self.model.named_parameters()
-                }
-
-                for name, param in self.model.named_parameters():
-                    param_updates[name].sub_(param.detach().cpu())
-
             # Update moving averages
             if self._moving_average is not None:
                 self._moving_average.apply(batch_num_total)
@@ -224,43 +191,30 @@ class DeepspeedTrainer(GradientDescentTrainer):
                 cuda_device=self.cuda_device,
             )
 
-            if self._master:
+            if self._primary:
                 # Updating tqdm only for the master as the trainers wouldn't have one
                 description = training_util.description_from_metrics(metrics)
                 batch_generator_tqdm.set_description(description, refresh=False)
-                self._tensorboard.log_batch(
-                    self.model,
-                    self.optimizer,
-                    0.0,
-                    metrics,
-                    batch,
-                    param_updates,
-                )
 
-                # if self._checkpointer is not None:
-                #     self._checkpointer.maybe_save_checkpoint(self, epoch, batches_this_epoch)
+            if self._checkpointer is not None:
+                self._checkpointer.maybe_save_checkpoint(self, epoch, batches_this_epoch)
 
-            for callback in self._batch_callbacks:
-                callback(
+            for callback in self._callbacks:
+                callback.on_batch(
                     self,
                     batch,
-                    [batch_outputs],
+                    batch_outputs,
                     metrics,
                     epoch,
                     batches_this_epoch,
                     is_training=True,
-                    is_master=self._master,
+                    is_primary=self._primary,
+                    batch_grad_norm=None,  # not yet implemented for DeepspeedTrainer
                 )
-
-        # if not self._master:
-        #     print(f'Rank {self._rank}: {batches_this_epoch}')
 
         if self._distributed:
             dist.barrier()
 
-        # if not self._master:
-        #     print(f'Rank {self._rank}: Passed barrier')
-        
         metrics = training_util.get_metrics(
             self.model,
             train_loss,
@@ -277,168 +231,6 @@ class DeepspeedTrainer(GradientDescentTrainer):
             metrics["worker_" + str(worker) + "_memory_MB"] = memory / (1024 * 1024)
         for (gpu_num, memory) in gpu_memory_usage:
             metrics["gpu_" + str(gpu_num) + "_memory_MB"] = memory / (1024 * 1024)
-        return metrics
-
-    def __try_train(self) -> Dict[str, Any]:
-        try:
-            epoch_counter = self._restore_checkpoint()
-        except RuntimeError:
-            traceback.print_exc()
-            raise ConfigurationError(
-                "Could not recover training from the checkpoint.  Did you mean to output to "
-                "a different serialization directory or delete the existing serialization "
-                "directory?"
-            )
-
-        training_util.enable_gradient_clipping(self.model, self._grad_clipping)
-
-        logger.info("Beginning training.")
-
-        val_metrics: Dict[str, float] = {}
-        this_epoch_val_metric: float = 0.0
-        metrics: Dict[str, Any] = {}
-        epochs_trained = 0
-        training_start_time = time.time()
-
-        metrics["best_epoch"] = self._metric_tracker.best_epoch
-        for key, value in self._metric_tracker.best_epoch_metrics.items():
-            metrics["best_validation_" + key] = value
-
-        for callback in self._epoch_callbacks:
-            callback(self, metrics={}, epoch=-1, is_master=self._master)
-
-        for epoch in range(epoch_counter, self._num_epochs):
-            epoch_start_time = time.time()
-            logger.info("Training epoch.")
-            train_metrics = self._train_epoch(epoch)
-
-            # if self._master and self._checkpointer is not None:
-            if self._checkpointer is not None:
-                self._checkpointer.save_checkpoint(epoch, self, save_model_only=True)
-
-            # # Wait for the master to finish saving the model checkpoint
-            if self._distributed:
-                dist.barrier()
-            
-            # logger.info("Passed start of epoch checkpoint barrier.")
-
-            # get peak of memory usage
-            for key, value in train_metrics.items():
-                if key.startswith("gpu_") and key.endswith("_memory_MB"):
-                    metrics["peak_" + key] = max(metrics.get("peak_" + key, 0), value)
-                elif key.startswith("worker_") and key.endswith("_memory_MB"):
-                    metrics["peak_" + key] = max(metrics.get("peak_" + key, 0), value)
-
-            if self._validation_data_loader is not None:
-                with torch.no_grad():
-                    # We have a validation set, so compute all the metrics on it.
-                    val_loss, val_reg_loss, num_batches = self._validation_loss(epoch)
-
-                    # It is safe again to wait till the validation is done. This is
-                    # important to get the metrics right.
-                    if self._distributed:
-                        dist.barrier()
-
-                    # logger.info("Passed validation metrics barrier.")
-
-                    val_metrics = training_util.get_metrics(
-                        self.model,
-                        val_loss,
-                        val_reg_loss,
-                        batch_loss=None,
-                        batch_reg_loss=None,
-                        num_batches=num_batches,
-                        reset=True,
-                        world_size=self._world_size,
-                        cuda_device=self.cuda_device,
-                    )
-
-                    # Check validation metric for early stopping
-                    this_epoch_val_metric = val_metrics[self._validation_metric]
-                    self._metric_tracker.add_metric(this_epoch_val_metric)
-
-                    if self._metric_tracker.should_stop_early():
-                        logger.info("Ran out of patience.  Stopping training.")
-                        break
-
-            if self._master:
-                self._tensorboard.log_metrics(
-                    train_metrics, val_metrics=val_metrics, log_to_console=True, epoch=epoch + 1
-                )  # +1 because tensorboard doesn't like 0
-
-            # Create overall metrics dict
-            training_elapsed_time = time.time() - training_start_time
-            metrics["training_duration"] = str(datetime.timedelta(seconds=training_elapsed_time))
-            metrics["training_start_epoch"] = epoch_counter
-            metrics["training_epochs"] = epochs_trained
-            metrics["epoch"] = epoch
-
-            for key, value in train_metrics.items():
-                metrics["training_" + key] = value
-            for key, value in val_metrics.items():
-                metrics["validation_" + key] = value
-
-            if self._metric_tracker.is_best_so_far():
-                # Update all the best_ metrics.
-                # (Otherwise they just stay the same as they were.)
-                metrics["best_epoch"] = epoch
-                for key, value in val_metrics.items():
-                    metrics["best_validation_" + key] = value
-
-                self._metric_tracker.best_epoch_metrics = val_metrics
-
-            if self._serialization_dir and self._master:
-                common_util.dump_metrics(
-                    os.path.join(self._serialization_dir, f"metrics_epoch_{epoch}.json"),
-                    metrics,
-                )
-
-            # The Scheduler API is agnostic to whether your schedule requires a validation metric -
-            # if it doesn't, the validation metric passed here is ignored.
-            if self._learning_rate_scheduler:
-                self._learning_rate_scheduler.step(this_epoch_val_metric)
-            if self._momentum_scheduler:
-                self._momentum_scheduler.step(this_epoch_val_metric)
-
-            # if self._master and self._checkpointer is not None:
-            if self._checkpointer is not None:
-                self._checkpointer.save_checkpoint(
-                    epoch, self, is_best_so_far=self._metric_tracker.is_best_so_far()
-                )
-
-            # logger.info("Starting end of epoch checkpoint barrier...")
-            # Wait for the master to finish saving the checkpoint
-            if self._distributed:
-                dist.barrier()
-            
-            # logger.info("Passed end of epoch checkpoint barrier.")
-
-            for callback in self._epoch_callbacks:
-                callback(self, metrics=metrics, epoch=epoch, is_master=self._master)
-
-            epoch_elapsed_time = time.time() - epoch_start_time
-            logger.info("Epoch duration: %s", datetime.timedelta(seconds=epoch_elapsed_time))
-
-            if epoch < self._num_epochs - 1:
-                training_elapsed_time = time.time() - training_start_time
-                estimated_time_remaining = training_elapsed_time * (
-                    (self._num_epochs - epoch_counter) / float(epoch - epoch_counter + 1) - 1
-                )
-                formatted_time = str(datetime.timedelta(seconds=int(estimated_time_remaining)))
-                logger.info("Estimated training time remaining: %s", formatted_time)
-
-            epochs_trained += 1
-
-        for callback in self._end_callbacks:
-            callback(self, metrics=metrics, epoch=epoch, is_master=self._master)
-
-        # Load the best model state before returning
-        best_model_state = (
-            None if self._checkpointer is None else self._checkpointer.best_model_state()
-        )
-        if best_model_state:
-            self.model.load_state_dict(best_model_state)
-
         return metrics
 
     def _restore_checkpoint(self) -> int:
@@ -460,7 +252,11 @@ class DeepspeedTrainer(GradientDescentTrainer):
             return 0
 
         self._checkpointer: DeepspeedCheckpointer
-        checkpoint_id, model_state, training_state = self._checkpointer.restore_checkpoint()
+        (
+            checkpoint_id,
+            model_state,
+            training_state,
+        ) = self._checkpointer.restore_checkpoint()
 
         if not training_state:
             # No checkpoint to restore, start at 0
@@ -514,13 +310,10 @@ class DeepspeedTrainer(GradientDescentTrainer):
         optimizer: Lazy[Optimizer] = Lazy(Optimizer.default),
         deepspeed_optimizer: Dict[str, Any] = None,
         deepspeed_args: Lazy[DeepspeedArgs] = Lazy(DeepspeedArgs),
-        tensorboard_writer: Lazy[TensorboardWriter] = Lazy(TensorboardWriter),
         moving_average: Lazy[MovingAverage] = None,
         checkpointer: Lazy[Checkpointer] = Lazy(DeepspeedCheckpointer),
-        batch_callbacks: List[BatchCallback] = None,
-        epoch_callbacks: List[EpochCallback] = None,
-        end_callbacks: List[EpochCallback] = None,
-        trainer_callbacks: List[TrainerCallback] = None,
+        callbacks: List[Lazy[TrainerCallback]] = None,
+        trainer_callbacks: List[Lazy[TrainerCallback]] = None,
     ) -> "DeepspeedTrainer":
         if no_grad:
             for name, parameter in model.named_parameters():
@@ -535,7 +328,6 @@ class DeepspeedTrainer(GradientDescentTrainer):
         )
 
         checkpointer_ = checkpointer.construct(serialization_dir=serialization_dir)
-        tensorboard_writer_ = tensorboard_writer.construct(serialization_dir=serialization_dir)
 
         if deepspeed_config.optimizer:
             optim_ = None
@@ -546,17 +338,27 @@ class DeepspeedTrainer(GradientDescentTrainer):
             local_rank=local_rank
         )
 
-        if not hasattr(data_loader, 'batch_size'):
-            raise ConfigurationError("Please specify your batch size in Deepspeed config if not using AllennlpDataLoader.")
+        if not hasattr(data_loader, "batch_size"):
+            raise ConfigurationError(
+                "Please specify your batch size in Deepspeed config if not using AllennlpDataLoader."
+            )
 
         model_engine = DeepspeedTrainer._build_engine(
             model,
             optim_,
             deepspeed_config,
             deepspeed_args_,
-            data_loader.batch_size, # type: ignore
+            data_loader.batch_size,  # type: ignore
             num_gradient_accumulation_steps,
         )
+
+        callbacks = callbacks or trainer_callbacks or []
+
+        callbacks_: List[TrainerCallback] = []
+
+        for callback in callbacks:
+            callback_ = callback.construct(serialization_dir=serialization_dir)
+            callbacks_.append(callback_)
 
         return cls(
             model,
@@ -568,13 +370,9 @@ class DeepspeedTrainer(GradientDescentTrainer):
             num_epochs=num_epochs,
             serialization_dir=serialization_dir,
             cuda_device=cuda_device,
-            tensorboard_writer=tensorboard_writer_,
             checkpointer=checkpointer_,
             moving_average=moving_average_,
-            batch_callbacks=batch_callbacks,
-            epoch_callbacks=epoch_callbacks,
-            end_callbacks=end_callbacks,
-            trainer_callbacks=trainer_callbacks,
+            callbacks=callbacks_,
             distributed=False,
             local_rank=local_rank,
             world_size=world_size,
@@ -609,6 +407,7 @@ class DeepspeedTrainer(GradientDescentTrainer):
             config_params=config,
         )
         if hasattr(ds, "timers"):
+
             def mute_log(*args, **kwargs):
                 pass
 

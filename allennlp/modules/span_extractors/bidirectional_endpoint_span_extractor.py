@@ -96,7 +96,8 @@ class BidirectionalEndpointSpanExtractor(SpanExtractor):
         self._span_width_embedding: Optional[Embedding] = None
         if num_width_embeddings is not None and span_width_embedding_dim is not None:
             self._span_width_embedding = Embedding(
-                num_embeddings=num_width_embeddings, embedding_dim=span_width_embedding_dim
+                num_embeddings=num_width_embeddings,
+                embedding_dim=span_width_embedding_dim,
             )
         elif num_width_embeddings is not None or span_width_embedding_dim is not None:
             raise ConfigurationError(
@@ -229,11 +230,13 @@ class BidirectionalEndpointSpanExtractor(SpanExtractor):
         # respective combinations and concatenate these representations.
         # Shape (batch_size, num_spans, forward_combination_dim)
         forward_spans = util.combine_tensors(
-            self._forward_combination, [forward_start_embeddings, forward_end_embeddings]
+            self._forward_combination,
+            [forward_start_embeddings, forward_end_embeddings],
         )
         # Shape (batch_size, num_spans, backward_combination_dim)
         backward_spans = util.combine_tensors(
-            self._backward_combination, [backward_start_embeddings, backward_end_embeddings]
+            self._backward_combination,
+            [backward_start_embeddings, backward_end_embeddings],
         )
         # Shape (batch_size, num_spans, forward_combination_dim + backward_combination_dim)
         span_embeddings = torch.cat([forward_spans, backward_spans], -1)

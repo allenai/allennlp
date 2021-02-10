@@ -2,35 +2,8 @@ from typing import List, Tuple, Dict, Any
 
 import torch
 
-from deepspeed.ops.adam import DeepSpeedCPUAdam
 from deepspeed.ops.lamb import FusedLamb
-
-# from deepspeed.runtime.fp16.onebit_adam import OnebitAdam
-
 from allennlp.training.optimizers import Optimizer, make_parameter_groups
-
-
-# This does not currently work
-@Optimizer.register("cpu_adam")
-class DeepspeedCPUAdamOptimizer(Optimizer, DeepSpeedCPUAdam):
-    def __init__(
-        self,
-        model_parameters: List[Tuple[str, torch.nn.Parameter]],
-        parameter_groups: List[Tuple[List[str], Dict[str, Any]]] = None,
-        lr: float = 0.001,
-        betas: Tuple[float, float] = (0.9, 0.999),
-        eps: float = 1e-08,
-        weight_decay: float = 0.0,
-        amsgrad: bool = False,
-    ):
-        super().__init__(
-            model_params=make_parameter_groups(model_parameters, parameter_groups),
-            lr=lr,
-            betas=betas,
-            eps=eps,
-            weight_decay=weight_decay,
-            amsgrad=amsgrad,
-        )
 
 
 @Optimizer.register("fused_lamb")

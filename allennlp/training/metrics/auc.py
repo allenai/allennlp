@@ -78,10 +78,12 @@ class Auc(Metric):
         self._all_gold_labels = self._all_gold_labels.to(gold_labels.device)
 
         self._all_predictions = torch.cat(
-            [self._all_predictions, torch.masked_select(predictions, mask).float()], dim=0
+            [self._all_predictions, torch.masked_select(predictions, mask).float()],
+            dim=0,
         )
         self._all_gold_labels = torch.cat(
-            [self._all_gold_labels, torch.masked_select(gold_labels, mask).long()], dim=0
+            [self._all_gold_labels, torch.masked_select(gold_labels, mask).long()],
+            dim=0,
         )
 
         if is_distributed():
@@ -91,7 +93,8 @@ class Auc(Metric):
             # Check if batch lengths are equal.
             _all_batch_lengths = [torch.tensor(0) for i in range(world_size)]
             dist.all_gather(
-                _all_batch_lengths, torch.tensor(len(self._all_predictions), device=device)
+                _all_batch_lengths,
+                torch.tensor(len(self._all_predictions), device=device),
             )
             _all_batch_lengths = [batch_length.item() for batch_length in _all_batch_lengths]
 

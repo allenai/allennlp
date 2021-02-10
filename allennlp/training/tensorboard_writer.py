@@ -295,12 +295,25 @@ class TensorBoardWriter(FromParams):
             # And maybe log to console
             if log_to_console and val_metric is not None and train_metric is not None:
                 logger.info(
-                    dual_message_template, name.ljust(name_length), train_metric, val_metric
+                    dual_message_template,
+                    name.ljust(name_length),
+                    train_metric,
+                    val_metric,
                 )
             elif log_to_console and val_metric is not None:
-                logger.info(no_train_message_template, name.ljust(name_length), "N/A", val_metric)
+                logger.info(
+                    no_train_message_template,
+                    name.ljust(name_length),
+                    "N/A",
+                    val_metric,
+                )
             elif log_to_console and train_metric is not None:
-                logger.info(no_val_message_template, name.ljust(name_length), train_metric, "N/A")
+                logger.info(
+                    no_val_message_template,
+                    name.ljust(name_length),
+                    train_metric,
+                    "N/A",
+                )
 
     def enable_activation_logging(self, model: Model) -> None:
         if self._histogram_interval is not None:

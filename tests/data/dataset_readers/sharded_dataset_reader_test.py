@@ -1,13 +1,16 @@
+from collections import Counter
 import glob
 import os
 import tarfile
-from collections import Counter
 from typing import Tuple
+
+import pytest
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.dataset_readers import (
     SequenceTaggingDatasetReader,
     ShardedDatasetReader,
+    DatasetReader,
 )
 from allennlp.data.instance import Instance
 
@@ -22,12 +25,27 @@ def fingerprint(instance: Instance) -> Tuple[str, ...]:
     return text_tuple + labels_tuple
 
 
+def test_exception_raised_when_base_reader_implements_sharding():
+    class ManuallyShardedBaseReader(DatasetReader):
+        def __init__(self, **kwargs):
+            super().__init__(manual_distributed_sharding=True, **kwargs)
+
+        def _read(self, file_path: str):
+            pass
+
+        def text_to_instance(self, text: str):  # type: ignore
+            pass
+
+    with pytest.raises(ValueError, match="should not implement manual distributed sharding"):
+        ShardedDatasetReader(ManuallyShardedBaseReader())
+
+
 class TestShardedDatasetReader(AllenNlpTestCase):
     def setup_method(self) -> None:
         super().setup_method()
 
         # use SequenceTaggingDatasetReader as the base reader
-        self.base_reader = SequenceTaggingDatasetReader()
+        self.base_reader = SequenceTaggingDatasetReader(lazy=True)
         base_file_path = AllenNlpTestCase.FIXTURES_ROOT / "data" / "sequence_tagging.tsv"
 
         # Make 100 copies of the data

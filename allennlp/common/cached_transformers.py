@@ -66,7 +66,9 @@ def get(
                 }
                 if len(valid_keys) > 0:
                     logger.info(
-                        "Loading %d tensors from %s", len(valid_keys), override_weights_file
+                        "Loading %d tensors from %s",
+                        len(valid_keys),
+                        override_weights_file,
                     )
                 else:
                     raise ValueError(

@@ -1,7 +1,9 @@
 import torch
 
 from allennlp.training.learning_rate_schedulers import PolynomialDecay
-from allennlp.training.learning_rate_schedulers.learning_rate_scheduler import LearningRateScheduler
+from allennlp.training.learning_rate_schedulers.learning_rate_scheduler import (
+    LearningRateScheduler,
+)
 
 
 @LearningRateScheduler.register("linear_with_warmup")

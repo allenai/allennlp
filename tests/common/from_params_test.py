@@ -4,7 +4,12 @@ import pytest
 import torch
 
 from allennlp.common import Lazy, Params, Registrable
-from allennlp.common.from_params import FromParams, takes_arg, remove_optional, create_kwargs
+from allennlp.common.from_params import (
+    FromParams,
+    takes_arg,
+    remove_optional,
+    create_kwargs,
+)
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import DataLoader, DatasetReader, Tokenizer
 from allennlp.models import Model
@@ -344,7 +349,10 @@ class TestFromParams(AllenNlpTestCase):
         int_param_str = '{"a": 1}'
         import json
 
-        for expected_type, param_str in [(int, int_param_str), (float, float_param_str)]:
+        for expected_type, param_str in [
+            (int, int_param_str),
+            (float, float_param_str),
+        ]:
             for cls in [IntFloat, FloatInt]:
                 c = cls.from_params(Params(json.loads(param_str)))
                 assert type(c.a) == expected_type
@@ -382,7 +390,10 @@ class TestFromParams(AllenNlpTestCase):
         params = Params(
             {
                 "type": "d",
-                "items": {"first": {"type": "b", "size": 1}, "second": {"type": "b", "size": 2}},
+                "items": {
+                    "first": {"type": "b", "size": 1},
+                    "second": {"type": "b", "size": 2},
+                },
             }
         )
         d = C.from_params(params)
@@ -465,7 +476,10 @@ class TestFromParams(AllenNlpTestCase):
                 self.items = items
 
         params = Params(
-            {"type": "f", "items": [{"type": "b", "size": 1}, {"type": "d", "name": "item2"}]}
+            {
+                "type": "f",
+                "items": [{"type": "b", "size": 1}, {"type": "d", "name": "item2"}],
+            }
         )
         f = E.from_params(params)
 
@@ -832,7 +846,10 @@ class TestFromParams(AllenNlpTestCase):
         params = Params(
             {
                 "type": "d",
-                "items": {"first": {"type": "b", "size": 1}, "second": {"type": "b", "size": 2}},
+                "items": {
+                    "first": {"type": "b", "size": 1},
+                    "second": {"type": "b", "size": 2},
+                },
             }
         )
         d = C.from_params(params)
@@ -1018,7 +1035,8 @@ class TestFromParams(AllenNlpTestCase):
         assert foo.c is None
 
         foo = Bar.from_params(
-            params=Params({"type": "foo", "a": 2, "b": "hi", "c": {"2": "3"}}), extra="4"
+            params=Params({"type": "foo", "a": 2, "b": "hi", "c": {"2": "3"}}),
+            extra="4",
         )
         assert foo.a == 2
         assert foo.b == "hi"

@@ -121,13 +121,20 @@ class TestFileUtils(AllenNlpTestCase):
         url = "https://github.com/allenai/allennlp/blob/master/some-fake-resource"
 
         # We'll create two cached versions of this fake resource using two different etags.
-        etags = ['W/"3e5885bfcbf4c47bc4ee9e2f6e5ea916"', 'W/"3e5885bfcbf4c47bc4ee9e2f6e5ea918"']
+        etags = [
+            'W/"3e5885bfcbf4c47bc4ee9e2f6e5ea916"',
+            'W/"3e5885bfcbf4c47bc4ee9e2f6e5ea918"',
+        ]
         filenames = [
             os.path.join(self.TEST_DIR, _resource_to_filename(url, etag)) for etag in etags
         ]
         for filename, etag in zip(filenames, etags):
             meta = _Meta(
-                resource=url, cached_path=filename, creation_time=time.time(), etag=etag, size=2341
+                resource=url,
+                cached_path=filename,
+                creation_time=time.time(),
+                etag=etag,
+                size=2341,
             )
             meta.to_file()
             with open(filename, "w") as f:
@@ -216,7 +223,10 @@ class TestFileUtils(AllenNlpTestCase):
 
     def test_split_s3_path(self):
         # Test splitting good urls.
-        assert _split_s3_path("s3://my-bucket/subdir/file.txt") == ("my-bucket", "subdir/file.txt")
+        assert _split_s3_path("s3://my-bucket/subdir/file.txt") == (
+            "my-bucket",
+            "subdir/file.txt",
+        )
         assert _split_s3_path("s3://my-bucket/file.txt") == ("my-bucket", "file.txt")
 
         # Test splitting bad urls.
@@ -390,7 +400,9 @@ class TestFileUtils(AllenNlpTestCase):
         )
         self.create_cache_entry("http://other.fake.datastore.com/glove.txt.gz", "etag-4")
         self.create_cache_entry(
-            "http://other.fake.datastore.com/glove.txt.gz", "etag-5", as_extraction_dir=True
+            "http://other.fake.datastore.com/glove.txt.gz",
+            "etag-5",
+            as_extraction_dir=True,
         )
 
         reclaimed_space = remove_cache_entries(["http://fake.*"], cache_dir=self.TEST_DIR)
@@ -414,11 +426,13 @@ class TestCachedPathWithArchive(AllenNlpTestCase):
         super().setup_method()
         self.tar_file = self.TEST_DIR / "utf-8.tar.gz"
         shutil.copyfile(
-            self.FIXTURES_ROOT / "utf-8_sample" / "archives" / "utf-8.tar.gz", self.tar_file
+            self.FIXTURES_ROOT / "utf-8_sample" / "archives" / "utf-8.tar.gz",
+            self.tar_file,
         )
         self.zip_file = self.TEST_DIR / "utf-8.zip"
         shutil.copyfile(
-            self.FIXTURES_ROOT / "utf-8_sample" / "archives" / "utf-8.zip", self.zip_file
+            self.FIXTURES_ROOT / "utf-8_sample" / "archives" / "utf-8.zip",
+            self.zip_file,
         )
 
     def check_extracted(self, extracted: str):

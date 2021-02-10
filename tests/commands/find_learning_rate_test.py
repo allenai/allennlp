@@ -36,7 +36,12 @@ class TestFindLearningRate(AllenNlpTestCase):
                     "text_field_embedder": {
                         "token_embedders": {"tokens": {"type": "embedding", "embedding_dim": 5}}
                     },
-                    "encoder": {"type": "lstm", "input_size": 5, "hidden_size": 7, "num_layers": 2},
+                    "encoder": {
+                        "type": "lstm",
+                        "input_size": 5,
+                        "hidden_size": 7,
+                        "num_layers": 2,
+                    },
                 },
                 "dataset_reader": {"type": "sequence_tagging"},
                 "train_data_path": str(self.FIXTURES_ROOT / "data" / "sequence_tagging.tsv"),
@@ -111,7 +116,12 @@ class TestFindLearningRate(AllenNlpTestCase):
         FindLearningRate().add_subparser(subparsers)
 
         for serialization_arg in ["-s", "--serialization-dir"]:
-            raw_args = ["find-lr", "path/to/params", serialization_arg, "serialization_dir"]
+            raw_args = [
+                "find-lr",
+                "path/to/params",
+                serialization_arg,
+                "serialization_dir",
+            ]
 
             args = parser.parse_args(raw_args)
 
@@ -160,7 +170,12 @@ class TestSearchLearningRate(AllenNlpTestCase):
                     "text_field_embedder": {
                         "token_embedders": {"tokens": {"type": "embedding", "embedding_dim": 5}}
                     },
-                    "encoder": {"type": "lstm", "input_size": 5, "hidden_size": 7, "num_layers": 2},
+                    "encoder": {
+                        "type": "lstm",
+                        "input_size": 5,
+                        "hidden_size": 7,
+                        "num_layers": 2,
+                    },
                 },
                 "dataset_reader": {"type": "sequence_tagging"},
                 "train_data_path": str(self.FIXTURES_ROOT / "data" / "sequence_tagging.tsv"),

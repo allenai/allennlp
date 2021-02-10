@@ -12,7 +12,11 @@ import torch.multiprocessing as mp
 from allennlp.common.util import lazy_groups_of, shuffle_iterable
 from allennlp.common.tqdm import Tqdm
 from allennlp.data.instance import Instance
-from allennlp.data.data_loaders.data_loader import DataLoader, TensorDict, allennlp_collate
+from allennlp.data.data_loaders.data_loader import (
+    DataLoader,
+    TensorDict,
+    allennlp_collate,
+)
 from allennlp.data.dataset_readers import DatasetReader, WorkerInfo, DatasetReaderInput
 from allennlp.data.fields import TextField
 from allennlp.data.samplers import BatchSampler

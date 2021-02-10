@@ -163,7 +163,10 @@ class SampledSoftmaxLoss(torch.nn.Module):
             return self._forward_train(embeddings, targets, target_token_embedding)
 
     def _forward_train(
-        self, embeddings: torch.Tensor, targets: torch.Tensor, target_token_embedding: torch.Tensor
+        self,
+        embeddings: torch.Tensor,
+        targets: torch.Tensor,
+        target_token_embedding: torch.Tensor,
     ) -> torch.Tensor:
 
         # (target_token_embedding is only used in the tie_embeddings case,

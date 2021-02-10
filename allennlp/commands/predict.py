@@ -28,7 +28,9 @@ class Predict(Subcommand):
 
         description = """Run the specified model against a JSON-lines input file."""
         subparser = parser.add_parser(
-            self.name, description=description, help="Use a trained model to make predictions."
+            self.name,
+            description=description,
+            help="Use a trained model to make predictions.",
         )
 
         subparser.add_argument(
@@ -38,12 +40,17 @@ class Predict(Subcommand):
 
         subparser.add_argument("--output-file", type=str, help="path to output file")
         subparser.add_argument(
-            "--weights-file", type=str, help="a path that overrides which weights file to use"
+            "--weights-file",
+            type=str,
+            help="a path that overrides which weights file to use",
         )
 
         batch_size = subparser.add_mutually_exclusive_group(required=False)
         batch_size.add_argument(
-            "--batch-size", type=int, default=1, help="The batch size to use for processing"
+            "--batch-size",
+            type=int,
+            default=1,
+            help="The batch size to use for processing",
         )
 
         subparser.add_argument(
@@ -86,7 +93,9 @@ class Predict(Subcommand):
         )
 
         subparser.add_argument(
-            "--predictor", type=str, help="optionally specify a specific predictor to use"
+            "--predictor",
+            type=str,
+            help="optionally specify a specific predictor to use",
         )
 
         subparser.add_argument(

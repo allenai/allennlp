@@ -22,7 +22,8 @@ def parse_args():
     parser.add_argument("source_yaml", help="Path to the mkdocs skeleton config file.")
     parser.add_argument("docs_root", help="The root of the markdown docs folder.")
     parser.add_argument(
-        "api_docs_path", help="The root of the API docs within the markdown docs root folder."
+        "api_docs_path",
+        help="The root of the API docs within the markdown docs root folder.",
     )
     parser.add_argument("--docs-version", type=str, default=f"v{VERSION}")
     return parser.parse_args()

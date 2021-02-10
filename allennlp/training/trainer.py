@@ -752,8 +752,8 @@ class GradientDescentTrainer(Trainer):
                 description = training_util.description_from_metrics(metrics)
                 batch_group_generator_tqdm.set_description(description, refresh=False)
 
-                if self._checkpointer is not None:
-                    self._checkpointer.maybe_save_checkpoint(self, epoch, batches_this_epoch)
+            if self._checkpointer is not None:
+                self._checkpointer.maybe_save_checkpoint(self, epoch, batches_this_epoch)
 
             for callback in self._callbacks:
                 callback.on_batch(

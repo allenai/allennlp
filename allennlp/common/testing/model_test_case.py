@@ -54,7 +54,9 @@ class ModelTestCase(AllenNlpTestCase):
         self.vocab = vocab
         self.instances = instances
         self.model = Model.from_params(
-            vocab=self.vocab, params=params["model"], serialization_dir=serialization_dir
+            vocab=self.vocab,
+            params=params["model"],
+            serialization_dir=serialization_dir,
         )
 
         # TODO(joelgrus) get rid of these
@@ -149,13 +151,17 @@ class ModelTestCase(AllenNlpTestCase):
 
         print("Reading with original model")
         data_loader = DataLoader.from_params(
-            params=data_loader_params, reader=reader, data_path=params["validation_data_path"]
+            params=data_loader_params,
+            reader=reader,
+            data_path=params["validation_data_path"],
         )
         data_loader.index_with(model.vocab)
 
         print("Reading with loaded model")
         data_loader2 = DataLoader.from_params(
-            params=data_loader_params2, reader=reader, data_path=params["validation_data_path"]
+            params=data_loader_params2,
+            reader=reader,
+            data_path=params["validation_data_path"],
         )
         data_loader2.index_with(loaded_model.vocab)
 
@@ -193,7 +199,10 @@ class ModelTestCase(AllenNlpTestCase):
         # Both outputs should have the same keys and the values for these keys should be close.
         for key in model_predictions.keys():
             self.assert_fields_equal(
-                model_predictions[key], loaded_model_predictions[key], name=key, tolerance=tolerance
+                model_predictions[key],
+                loaded_model_predictions[key],
+                name=key,
+                tolerance=tolerance,
             )
 
         # Check loaded model's loss exists and we can compute gradients, for continuing training.
@@ -277,7 +286,10 @@ class ModelTestCase(AllenNlpTestCase):
             assert field1.keys() == field2.keys()
             for key in field1:
                 self.assert_fields_equal(
-                    field1[key], field2[key], tolerance=tolerance, name=name + "." + str(key)
+                    field1[key],
+                    field2[key],
+                    tolerance=tolerance,
+                    name=name + "." + str(key),
                 )
         elif isinstance(field1, (list, tuple)):
             assert len(field1) == len(field2)

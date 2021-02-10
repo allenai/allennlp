@@ -333,7 +333,10 @@ class AllenNlpRenderer(MarkdownRenderer):
             > 60
         ):
             signature_args = ",\n    ".join(
-                filter(lambda s: s.strip() not in ("", ","), (str(arg) for arg in func.args))
+                filter(
+                    lambda s: s.strip() not in ("", ","),
+                    (str(arg) for arg in func.args),
+                )
             )
             parts.append("(\n    " + signature_args + "\n)")
         else:

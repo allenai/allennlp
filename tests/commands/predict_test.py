@@ -85,7 +85,13 @@ class TestPredict(AllenNlpTestCase):
 
         assert len(results) == 2
         for result in results:
-            assert set(result.keys()) == {"label", "logits", "probs", "tokens", "token_ids"}
+            assert set(result.keys()) == {
+                "label",
+                "logits",
+                "probs",
+                "tokens",
+                "token_ids",
+            }
 
         shutil.rmtree(self.tempdir)
 
@@ -111,7 +117,14 @@ class TestPredict(AllenNlpTestCase):
 
         assert len(results) == 3
         for result in results:
-            assert set(result.keys()) == {"label", "logits", "loss", "probs", "tokens", "token_ids"}
+            assert set(result.keys()) == {
+                "label",
+                "logits",
+                "loss",
+                "probs",
+                "tokens",
+                "token_ids",
+            }
 
         shutil.rmtree(self.tempdir)
 
@@ -284,7 +297,13 @@ class TestPredict(AllenNlpTestCase):
 
         assert len(results) == 2
         for result in results:
-            assert set(result.keys()) == {"label", "logits", "probs", "tokens", "token_ids"}
+            assert set(result.keys()) == {
+                "label",
+                "logits",
+                "probs",
+                "tokens",
+                "token_ids",
+            }
 
         shutil.rmtree(self.tempdir)
 
@@ -458,7 +477,13 @@ class TestPredict(AllenNlpTestCase):
             assert len(results) == 2
             # Overridden predictor should output extra field
             for result in results:
-                assert set(result.keys()) == {"label", "logits", "probs", "tokens", "token_ids"}
+                assert set(result.keys()) == {
+                    "label",
+                    "logits",
+                    "probs",
+                    "tokens",
+                    "token_ids",
+                }
 
     def test_alternative_file_formats(self):
         @Predictor.register("classification-csv")

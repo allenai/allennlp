@@ -40,7 +40,10 @@ class Attention(torch.nn.Module, Registrable):
 
     @overrides
     def forward(
-        self, vector: torch.Tensor, matrix: torch.Tensor, matrix_mask: torch.BoolTensor = None
+        self,
+        vector: torch.Tensor,
+        matrix: torch.Tensor,
+        matrix_mask: torch.BoolTensor = None,
     ) -> torch.Tensor:
         similarities = self._forward_internal(vector, matrix)
         if self._normalize:

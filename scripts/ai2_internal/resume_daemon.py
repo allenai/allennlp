@@ -145,7 +145,12 @@ class BeakerWrapper:
         return status
 
     def resume(self, experiment_id: str) -> str:
-        command = ["beaker", "experiment", "resume", f"--experiment-name={experiment_id}"]
+        command = [
+            "beaker",
+            "experiment",
+            "resume",
+            f"--experiment-name={experiment_id}",
+        ]
         # Small delay to avoid thrashing Beaker.
         time.sleep(BEAKER_QUERY_INTERVAL_SECONDS)
         return subprocess.check_output(command, universal_newlines=True).strip()
@@ -206,7 +211,12 @@ def resume(connection: Connection, beaker: BeakerWrapper) -> None:
                     )
                     cursor.execute(
                         "INSERT INTO active_experiments VALUES (?, ?, ?, ?)",
-                        (new_experiment_id, original_id, max_resumes, current_resume + 1),
+                        (
+                            new_experiment_id,
+                            original_id,
+                            max_resumes,
+                            current_resume + 1,
+                        ),
                     )
                     connection.commit()
             else:

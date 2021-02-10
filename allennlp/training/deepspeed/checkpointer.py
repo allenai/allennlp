@@ -3,15 +3,11 @@ from typing import Union, Dict, Any, Tuple, Optional, Iterable
 import logging
 import os
 import shutil
-import time
 from overrides import overrides
 
 from pathlib import Path
 
-import torch
-
 import allennlp
-from allennlp.nn import util as nn_util
 from allennlp.training import Checkpointer
 
 logger = logging.getLogger(__name__)
@@ -28,14 +24,12 @@ class DeepspeedCheckpointer(Checkpointer):
     ) -> None:
         if self._serialization_dir is None:
             return
-        
+
         super().save_checkpoint(epoch, trainer, is_best_so_far, save_model_only)
 
         checkpoint_id = "deepspeed_epoch_{}".format(epoch)
-        model_path = os.path.join(self._serialization_dir, "model_state_epoch_{}".format(epoch))
-
         trainer.model_engine.save_checkpoint(self._serialization_dir, checkpoint_id)
-        if trainer._master and is_best_so_far:
+        if trainer._primary and is_best_so_far:
             engine_dir = os.path.join(self._serialization_dir, "best_deepspeed")
             shutil.rmtree(engine_dir, ignore_errors=True)  # in case no previous checkpoints
             shutil.copytree(os.path.join(self._serialization_dir, checkpoint_id), engine_dir)

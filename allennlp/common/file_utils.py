@@ -651,7 +651,10 @@ class CacheFile:
     """
 
     def __init__(
-        self, cache_filename: Union[PathLike, str], mode: str = "w+b", suffix: str = ".tmp"
+        self,
+        cache_filename: Union[PathLike, str],
+        mode: str = "w+b",
+        suffix: str = ".tmp",
     ) -> None:
         self.cache_filename = (
             cache_filename if isinstance(cache_filename, Path) else Path(cache_filename)
@@ -670,7 +673,9 @@ class CacheFile:
         if exc_value is None:
             # Success.
             logger.debug(
-                "Renaming temp file %s to cache at %s", self.temp_file.name, self.cache_filename
+                "Renaming temp file %s to cache at %s",
+                self.temp_file.name,
+                self.cache_filename,
             )
             # Rename the temp file to the actual cache filename.
             os.replace(self.temp_file.name, self.cache_filename)
@@ -921,7 +926,10 @@ def get_file_extension(path: str, dot=True, lower: bool = True):
 
 
 def open_compressed(
-    filename: Union[str, PathLike], mode: str = "rt", encoding: Optional[str] = "UTF-8", **kwargs
+    filename: Union[str, PathLike],
+    mode: str = "rt",
+    encoding: Optional[str] = "UTF-8",
+    **kwargs,
 ):
     if not isinstance(filename, str):
         filename = str(filename)

@@ -18,7 +18,17 @@ from allennlp.modules.token_embedders import Embedding
 from allennlp.nn import util
 from allennlp.predictors.predictor import Predictor
 
-DEFAULT_IGNORE_TOKENS = ["@@NULL@@", ".", ",", ";", "!", "?", "[MASK]", "[SEP]", "[CLS]"]
+DEFAULT_IGNORE_TOKENS = [
+    "@@NULL@@",
+    ".",
+    ",",
+    ";",
+    "!",
+    "?",
+    "[MASK]",
+    "[SEP]",
+    "[CLS]",
+]
 
 
 @Attacker.register("hotflip")
@@ -57,7 +67,10 @@ class Hotflip(Attacker):
     """
 
     def __init__(
-        self, predictor: Predictor, vocab_namespace: str = "tokens", max_tokens: int = 5000
+        self,
+        predictor: Predictor,
+        vocab_namespace: str = "tokens",
+        max_tokens: int = 5000,
     ) -> None:
         super().__init__(predictor)
         self.vocab = self.predictor._model.vocab
@@ -230,7 +243,11 @@ class Hotflip(Attacker):
             final_outputs.append(outputs)
 
         return sanitize(
-            {"final": final_tokens, "original": original_tokens, "outputs": final_outputs}
+            {
+                "final": final_tokens,
+                "original": original_tokens,
+                "outputs": final_outputs,
+            }
         )
 
     def attack_instance(

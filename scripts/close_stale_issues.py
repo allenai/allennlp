@@ -4,7 +4,12 @@ import os
 from github import Github
 
 
-LABELS_TO_EXEMPT = ["contributions welcome", "merge when ready", "under development", "help wanted"]
+LABELS_TO_EXEMPT = [
+    "contributions welcome",
+    "merge when ready",
+    "under development",
+    "help wanted",
+]
 
 
 def main():

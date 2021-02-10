@@ -124,7 +124,12 @@ class TransformerStack(TransformerModule, FromParams):
 
         return tuple(
             v
-            for v in [hidden_states, all_hidden_states, all_attentions, all_cross_attentions]
+            for v in [
+                hidden_states,
+                all_hidden_states,
+                all_attentions,
+                all_cross_attentions,
+            ]
             if v is not None
         )
 

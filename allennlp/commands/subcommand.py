@@ -39,7 +39,10 @@ class Subcommand(Registrable):
     @classmethod
     @overrides
     def register(
-        cls: Type[T], name: str, constructor: Optional[str] = None, exist_ok: bool = False
+        cls: Type[T],
+        name: str,
+        constructor: Optional[str] = None,
+        exist_ok: bool = False,
     ) -> Callable[[Type[T]], Type[T]]:
         super_register_fn = super().register(name, constructor=constructor, exist_ok=exist_ok)
 

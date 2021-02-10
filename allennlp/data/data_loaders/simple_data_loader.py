@@ -6,7 +6,11 @@ from overrides import overrides
 import torch
 
 from allennlp.common.util import lazy_groups_of
-from allennlp.data.data_loaders.data_loader import DataLoader, allennlp_collate, TensorDict
+from allennlp.data.data_loaders.data_loader import (
+    DataLoader,
+    allennlp_collate,
+    TensorDict,
+)
 from allennlp.data.dataset_readers import DatasetReader
 from allennlp.data.instance import Instance
 from allennlp.data.vocabulary import Vocabulary

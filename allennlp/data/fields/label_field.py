@@ -46,7 +46,10 @@ class LabelField(Field[torch.Tensor]):
     _already_warned_namespaces: Set[str] = set()
 
     def __init__(
-        self, label: Union[str, int], label_namespace: str = "labels", skip_indexing: bool = False
+        self,
+        label: Union[str, int],
+        label_namespace: str = "labels",
+        skip_indexing: bool = False,
     ) -> None:
         self.label = label
         self._label_namespace = label_namespace

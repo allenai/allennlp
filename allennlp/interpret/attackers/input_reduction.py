@@ -51,7 +51,11 @@ class InputReduction(Attacker):
         for instance in original_instances:
             final_tokens.append(
                 self._attack_instance(
-                    inputs, instance, input_field_to_attack, grad_input_field, ignore_tokens
+                    inputs,
+                    instance,
+                    input_field_to_attack,
+                    grad_input_field,
+                    ignore_tokens,
                 )
             )
         return sanitize({"final": final_tokens, "original": original_tokens})

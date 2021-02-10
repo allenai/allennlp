@@ -7,7 +7,8 @@ from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Token, Vocabulary, Instance
 from allennlp.data.fields import TextField, LabelField, ListField, IndexField, SequenceLabelField
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenCharactersIndexer
-from allennlp.data.data_loaders import SimpleDataLoader
+from allennlp.data.dataloader import PyTorchDataLoader
+from allennlp.data.dataset_readers.dataset_reader import AllennlpDataset
 from allennlp.data.tokenizers import SpacyTokenizer
 from allennlp.models import Model
 from allennlp.modules import Embedding
@@ -296,10 +297,11 @@ class TestListField(AllenNlpTestCase):
         instance.as_tensor_dict()
 
     def test_batch_with_some_empty_lists_works(self):
-        instances = [self.empty_instance, self.non_empty_instance]
+        dataset = AllennlpDataset([self.empty_instance, self.non_empty_instance], self.vocab)
+
         model = DummyModel(self.vocab)
         model.eval()
-        loader = SimpleDataLoader(instances, 2, vocab=self.vocab)
+        loader = PyTorchDataLoader(dataset, batch_size=2)
         batch = next(iter(loader))
         model.forward(**batch)
 
@@ -310,10 +312,11 @@ class TestListField(AllenNlpTestCase):
     # makes a whole lot more sense to just have a minimally-sized tensor that
     # gets entirely masked and has no effect on the rest of the model.
     def test_batch_of_entirely_empty_lists_works(self):
-        instances = [self.empty_instance, self.empty_instance]
+        dataset = AllennlpDataset([self.empty_instance, self.empty_instance], self.vocab)
+
         model = DummyModel(self.vocab)
         model.eval()
-        loader = SimpleDataLoader(instances, 2, vocab=self.vocab)
+        loader = PyTorchDataLoader(dataset, batch_size=2)
         batch = next(iter(loader))
         model.forward(**batch)
 

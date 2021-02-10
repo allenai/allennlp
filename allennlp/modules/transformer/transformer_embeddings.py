@@ -71,7 +71,10 @@ class ImageFeatureEmbeddings(Embeddings):
         image_embeddings = torch.nn.Linear(feature_size, embedding_size)
         location_embeddings = torch.nn.Linear(4, embedding_size)
         embeddings = torch.nn.ModuleDict(
-            {"image_embeddings": image_embeddings, "location_embeddings": location_embeddings}
+            {
+                "image_embeddings": image_embeddings,
+                "location_embeddings": location_embeddings,
+            }
         )
         super().__init__(embeddings, embedding_size, dropout)
 

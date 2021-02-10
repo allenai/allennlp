@@ -48,7 +48,10 @@ class TransformerModule(torch.nn.Module):
 
     @classmethod
     def _get_mapped_submodules(
-        cls, pretrained_module, source="huggingface", mapping: Optional[Dict[str, str]] = None
+        cls,
+        pretrained_module,
+        source="huggingface",
+        mapping: Optional[Dict[str, str]] = None,
     ):
         """
         Subclasses overload this method, and provide appropriate name mapping based on the source.

@@ -3,7 +3,10 @@ from typing import Optional, Dict, Any
 from overrides import overrides
 import torch
 
-from allennlp.modules.token_embedders import PretrainedTransformerEmbedder, TokenEmbedder
+from allennlp.modules.token_embedders import (
+    PretrainedTransformerEmbedder,
+    TokenEmbedder,
+)
 from allennlp.nn import util
 
 
@@ -105,7 +108,10 @@ class PretrainedTransformerMismatchedEmbedder(TokenEmbedder):
         """
         # Shape: [batch_size, num_wordpieces, embedding_size].
         embeddings = self._matched_embedder(
-            token_ids, wordpiece_mask, type_ids=type_ids, segment_concat_mask=segment_concat_mask
+            token_ids,
+            wordpiece_mask,
+            type_ids=type_ids,
+            segment_concat_mask=segment_concat_mask,
         )
 
         # span_embeddings: (batch_size, num_orig_tokens, max_span_length, embedding_size)

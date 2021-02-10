@@ -5,7 +5,9 @@ import numpy
 import torch
 
 from allennlp.common.util import JsonDict, sanitize
-from allennlp.interpret.saliency_interpreters.saliency_interpreter import SaliencyInterpreter
+from allennlp.interpret.saliency_interpreters.saliency_interpreter import (
+    SaliencyInterpreter,
+)
 from allennlp.nn import util
 
 
