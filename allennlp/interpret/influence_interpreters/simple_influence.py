@@ -14,8 +14,9 @@ from allennlp.interpret.influence_interpreters.influence_interpreter import (
 )
 from allennlp.predictors import Predictor
 from allennlp.models.model import Model
-from allennlp.data import DatasetReader
+from allennlp.data import DatasetReader, Batch
 from allennlp.data.data_loaders import DataLoader, MultiProcessDataLoader
+from allennlp.nn import util
 
 
 @InfluenceInterpreter.register("simple-influence")
@@ -69,9 +70,12 @@ class SimpleInfluence(InfluenceInterpreter):
         :return:
         """
         output_content = []
-        for test_idx, test_batch in enumerate(tqdm(self._test_loader, desc="Test set index")):
+        for test_idx, test_instance in enumerate(tqdm(self._test_loader._instances, desc="Test set index")):
+            dataset = Batch([test_instance])
+            dataset.index_instances(self.vocab)
             self.model.eval()
-            test_output_dict = self.model(**test_batch)
+            dataset_tensor_dict = util.move_to_device(dataset.as_tensor_dict(), self._device)
+            test_output_dict = self.model(**dataset_tensor_dict)
 
             # get test example's gradient
             test_loss = test_output_dict["loss"]
