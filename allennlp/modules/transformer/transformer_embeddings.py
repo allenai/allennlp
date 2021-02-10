@@ -119,14 +119,14 @@ class TransformerEmbeddings(Embeddings):
         dropout: float = 0.1,
         output_size: Optional[int] = None,
     ):
-
         embedding_dict = {}
 
         word_embeddings = torch.nn.Embedding(vocab_size, embedding_size, padding_idx=pad_token_id)
         embedding_dict["word_embeddings"] = word_embeddings
 
-        position_embeddings = torch.nn.Embedding(max_position_embeddings, embedding_size)
-        embedding_dict["position_embeddings"] = position_embeddings
+        if max_position_embeddings > 0:
+            position_embeddings = torch.nn.Embedding(max_position_embeddings, embedding_size)
+            embedding_dict["position_embeddings"] = position_embeddings
 
         if type_vocab_size > 0:
             token_type_embeddings = torch.nn.Embedding(type_vocab_size, embedding_size)
@@ -163,16 +163,15 @@ class TransformerEmbeddings(Embeddings):
 
         embedding_inputs = [input_ids]
 
-        if position_ids is None:
-            position_ids = torch.arange(seq_length, dtype=torch.long, device=device)
-            position_ids = position_ids.unsqueeze(0).expand(input_shape)
+        if "position_embeddings" in self.embeddings:
+            if position_ids is None:
+                position_ids = torch.arange(seq_length, dtype=torch.long, device=device)
+                position_ids = position_ids.unsqueeze(0).expand(input_shape)
+            embedding_inputs.append(position_ids)
 
-        embedding_inputs.append(position_ids)
-
-        if token_type_ids is None:
-            token_type_ids = torch.zeros(input_shape, dtype=torch.long, device=device)
-
-        if len(self.embeddings) == 3:
+        if "token_type_embeddings" in self.embeddings:
+            if token_type_ids is None:
+                token_type_ids = torch.zeros(input_shape, dtype=torch.long, device=device)
             embedding_inputs.append(token_type_ids)
 
         embeddings = super().forward(*embedding_inputs)
