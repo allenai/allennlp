@@ -1,7 +1,7 @@
-# import math
+import math
 import json
 
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Tuple
 import numpy as np
 from torch import Tensor
 from tqdm import tqdm
@@ -9,6 +9,7 @@ import torch
 import torch.autograd as autograd
 from torch.nn import Parameter
 
+from allennlp.common.util import JsonDict, sanitize, get_frozen_and_tunable_parameter_names
 from allennlp.interpret.influence_interpreters.influence_interpreter import (
     InfluenceInterpreter,
 )
@@ -16,6 +17,8 @@ from allennlp.predictors import Predictor
 from allennlp.models.model import Model
 from allennlp.data import DatasetReader
 from allennlp.data.data_loaders import DataLoader, MultiProcessDataLoader
+from allennlp.data.batch import Batch
+from allennlp.nn import util
 
 
 @InfluenceInterpreter.register("simple-influence")
@@ -30,44 +33,53 @@ class SimpleInfluence(InfluenceInterpreter):
         train_filepath: str,
         test_filepath: str,
         train_dataset_reader: DatasetReader,
-        test_dataset_reader: Optional[DatasetReader] = None,
-        params_to_freeze: Optional[List[str]] = None,
+        test_dataset_reader: DatasetReader = None,
+        train_batch_size: int = 8,
         k: int = 20,
         device: int = -1,
-        lissa_batch_size: int = 8,
         damping: float = 3e-3,
         num_samples: int = 1,
-        recur_depth: Optional[Union[float, int]] = 0.25,
+        recur_depth: float = 0.25,
         scale: float = 1e4,
     ) -> None:
         super().__init__(
-            predictor=predictor,
-            train_dataset_reader=train_dataset_reader,
-            test_dataset_reader=test_dataset_reader,
-            train_filepath=train_filepath,
-            test_filepath=test_filepath,
-            params_to_freeze=params_to_freeze,
-            k=k,
-            device=device,
+            predictor,
+            train_dataset_reader,
+            test_dataset_reader,
+            train_filepath,
+            test_filepath,
+            train_batch_size,
+            k,
+            device,
         )
-        self._lissa_batch_size = lissa_batch_size
+        self._train_batch_size = train_batch_size
         self._lissa_dataloader = MultiProcessDataLoader(
-            self.train_dataset_reader, train_filepath, batch_size=self._lissa_batch_size
+            self.train_dataset_reader, train_filepath, batch_size=self._train_batch_size
         )
         self._lissa_dataloader.set_target_device(self._device)
         self._lissa_dataloader.index_with(self.vocab)
 
+        # TODO: make the following loader to be deterministic? 
+        # think how to reuse train_set
+        self._train_loader = MultiProcessDataLoader(
+            self.train_dataset_reader, train_filepath, batch_size=1
+        )
+        self._train_loader.set_target_device(self._device)
+        self._train_loader.index_with(self.vocab)
+
+        self._test_loader = MultiProcessDataLoader(
+            self.test_dataset_reader, test_filepath, batch_size=1
+        )
+        self._test_loader.set_target_device(self._device)
+        self._test_loader.index_with(self.vocab)
+
+        self._k = min(self._k, len(self._train_loader))
         self.num_samples = num_samples
         self.damping = damping
         self.recur_depth = recur_depth
         self.scale = scale
 
     def calculate_inflence_and_save(self, output_file):
-        """
-
-        :param output_file:
-        :return:
-        """
         output_content = []
         for test_idx, test_batch in enumerate(tqdm(self._test_loader, desc="Test set index")):
             self.model.eval()
@@ -92,13 +104,9 @@ class SimpleInfluence(InfluenceInterpreter):
             assert len(test_grads) == len(self._used_params)
 
             # Approximate the inverse of Hessian-Vector Product through LiSSA algorithm
-            recursion_depth = self.recur_depth
-            if type(recursion_depth) is float:
-                recursion_depth = int(
-                    len(self._lissa_dataloader)
-                    * self._lissa_dataloader.batch_size
-                    * recursion_depth
-                )
+            recursion_depth = int(
+                len(self._lissa_dataloader) * self._lissa_dataloader.batch_size * self.recur_depth
+            )
             inv_hvp = self.get_inverse_hvp_lissa(
                 vs=test_grads,
                 model=self.model,
@@ -131,10 +139,8 @@ class SimpleInfluence(InfluenceInterpreter):
             # We record information about the test instance
             per_test_output = {
                 "test_instance": {
-                    "tokens": [
-                        str(t.item()) for t in test_batch["tokens"]["tokens"]["token_ids"][0]
-                    ],
-                    "label": test_batch["label"].item(),
+                    "tokens": " ".join(str(t) for t in test_batch["tokens"].tokens[0]),
+                    "label": test_batch["label"].label,
                     "loss": test_output_dict["loss"].item(),
                 }
             }
@@ -149,7 +155,7 @@ class SimpleInfluence(InfluenceInterpreter):
                     {
                         "tokens": " ".join(str(t) for t in train_instance["tokens"].tokens),
                         "label": train_instance["label"].label,
-                        "loss": train_output["loss"].item(),
+                        "loss": train_output["loss"],
                     }
                 )
             per_test_output[f"top_{self._k}_train_instances"] = top_k_train_instances
@@ -186,8 +192,6 @@ class SimpleInfluence(InfluenceInterpreter):
         """
         inverse_hvps = [0 for _ in vs]
         for _ in range(num_samples):  # i.e. number of recursion
-            # See a explanation at "Stochastic estimation" paragraph in [https://arxiv.org/pdf/1703.04730.pdf]
-            # initialize \tilde{H}^{−1}_0 v = v
             cur_estimates = vs
             lissa_data_iterator = iter(lissa_dataloader)
             for j in range(recursion_depth):
@@ -201,28 +205,25 @@ class SimpleInfluence(InfluenceInterpreter):
                 train_output_dict = model(**training_batch)
 
                 # sample a batch and calculate the gradient
-                # Hessian of loss @ \tilde{H}^{−1}_{j - 1} v
                 hvps = SimpleInfluence.get_hessian_vector_product(
                     train_output_dict["loss"], used_params, cur_estimates
                 )
 
-                # this is the recursive step
-                # cur_estimate = \tilde{H}^{−1}_{j - 1} v (i.e. Hessian-Vector Product estimate from last iteration)
+                # this is the recursive step in the LiSSA (algo. 1) [https://arxiv.org/pdf/1602.03943.pdf]
+                # See a explanation at "Stochastic estimation" paragraph in [https://arxiv.org/pdf/1703.04730.pdf]
                 # v + (I - Hessian_at_x) * cur_estimate = v + cur_estimate - Hessian_at_x * cur_estimate
-                # Updating for \tilde{H}^{−1}_j v
                 cur_estimates = [
                     v + (1 - damping) * cur_estimate - hvp / scale
                     for v, cur_estimate, hvp in zip(vs, cur_estimates, hvps)
                 ]
                 # Manually checking if it converges
                 if (j % 200 == 0) or (j == recursion_depth - 1):
-                    # I manually check, the norm does converge (though slowly)
                     print(
                         f"Recursion at depth {j}: norm is "
                         f"{np.linalg.norm(SimpleInfluence.flatten_tensors(cur_estimates).cpu().numpy())}"
                     )
 
-            # accumulating X_{[i,S_2]}  (notation from the LiSSA (algo. 1) [https://arxiv.org/pdf/1602.03943.pdf]
+            # accumulating X_{[i,S_2]}
             inverse_hvps = [
                 inverse_hvp + cur_estimate / scale
                 for inverse_hvp, cur_estimate in zip(inverse_hvps, cur_estimates)
@@ -232,7 +233,7 @@ class SimpleInfluence(InfluenceInterpreter):
         return return_ihvp
 
     @staticmethod
-    def flatten_tensors(tensors: Union[Tuple[torch.Tensor], List[torch.Tensor]]) -> torch.Tensor:
+    def flatten_tensors(tensors: List[torch.Tensor]) -> torch.Tensor:
         """
         Un-wraps a list of parameters gradients
 
@@ -252,7 +253,9 @@ class SimpleInfluence(InfluenceInterpreter):
 
     @staticmethod
     def get_hessian_vector_product(
-        loss: torch.Tensor, params: List[Parameter], vectors: List[torch.Tensor]
+        loss: torch.Tensor,
+        params: List[Parameter],
+        vectors: List[torch.Tensor]
     ) -> Tuple[torch.Tensor]:
         """
         Get a Hessian-Vector Product (HVP) from the loss of a model. This is equivalent to:
