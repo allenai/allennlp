@@ -26,6 +26,7 @@ The available activation functions are
 * ["tanhshrink"](https://pytorch.org/docs/master/nn.html#torch.nn.Tanhshrink)
 * ["selu"](https://pytorch.org/docs/master/nn.html#torch.nn.SELU)
 """
+import math
 from typing import Callable
 
 import torch
@@ -87,6 +88,13 @@ Registrable._registry[Activation] = {
     "relu6": (torch.nn.ReLU6, None),
     "elu": (torch.nn.ELU, None),
     "gelu": (torch.nn.GELU, None),
+    "gelu_fast": (  # type: ignore
+        lambda: _ActivationLambda(
+            lambda x: 0.5 * x * (1.0 + torch.tanh(x * 0.7978845608 * (1.0 + 0.044715 * x * x))),
+            "GeluFast",
+        ),
+        None,
+    ),
     "prelu": (torch.nn.PReLU, None),
     "leaky_relu": (torch.nn.LeakyReLU, None),
     "threshold": (torch.nn.Threshold, None),
@@ -100,3 +108,23 @@ Registrable._registry[Activation] = {
     "tanhshrink": (torch.nn.Tanhshrink, None),
     "selu": (torch.nn.SELU, None),
 }
+
+
+@Activation.register("gelu_new")
+class GeluNew(Activation):
+    """
+    Implementation of the GELU activation function currently in Google BERT repo (identical to OpenAI GPT). Also
+    see the Gaussian Error Linear Units paper: https://arxiv.org/abs/1606.08415
+    """
+
+    def __call__(self, tensor: torch.Tensor) -> torch.Tensor:
+        return (
+            0.5
+            * tensor
+            * (
+                1.0
+                + torch.tanh(
+                    math.sqrt(2.0 / math.pi) * (tensor + 0.044715 * torch.pow(tensor, 3.0))
+                )
+            )
+        )
