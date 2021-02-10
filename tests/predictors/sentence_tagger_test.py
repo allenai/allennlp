@@ -13,6 +13,7 @@ class TestSentenceTaggerPredictor(AllenNlpTestCase):
         predictor = Predictor.from_archive(archive, "sentence_tagger")
 
         instance = predictor._json_to_instance(inputs)
+        predictor._dataset_reader.apply_token_indexers(instance)
         outputs = predictor._model.forward_on_instance(instance)
         new_instances = predictor.predictions_to_labeled_instances(instance, outputs)
         assert len(new_instances) > 1

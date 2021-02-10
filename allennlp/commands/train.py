@@ -266,15 +266,15 @@ def train_model(
             )
         check_for_gpu(device_ids)
 
-        master_addr = distributed_params.pop("master_address", "127.0.0.1")
-        if master_addr in ("127.0.0.1", "0.0.0.0", "localhost"):
+        primary_addr = distributed_params.pop("primary_address", "127.0.0.1")
+        if primary_addr in ("127.0.0.1", "0.0.0.0", "localhost"):
             # If running locally, we can automatically find an open port if one is not specified.
-            master_port = (
-                distributed_params.pop("master_port", None) or common_util.find_open_port()
+            primary_port = (
+                distributed_params.pop("primary_port", None) or common_util.find_open_port()
             )
         else:
             # Otherwise we require that the port be specified.
-            master_port = distributed_params.pop("master_port")
+            primary_port = distributed_params.pop("primary_port")
 
         num_procs = len(device_ids)
         world_size = num_nodes * num_procs
@@ -300,7 +300,7 @@ def train_model(
 
         logging.info(
             "Switching to distributed training mode since multiple GPUs are configured | "
-            f"Master is at: {master_addr}:{master_port} | Rank of this node: {node_rank} | "
+            f"Primary is at: {primary_addr}:{primary_port} | Rank of this node: {node_rank} | "
             f"Number of workers in this node: {num_procs} | Number of nodes: {num_nodes} | "
             f"World size: {world_size}"
         )
@@ -313,8 +313,8 @@ def train_model(
                 include_package,
                 dry_run,
                 node_rank,
-                master_addr,
-                master_port,
+                primary_addr,
+                primary_port,
                 world_size,
                 device_ids,
                 file_friendly_logging,
@@ -337,8 +337,8 @@ def _train_worker(
     include_package: List[str] = None,
     dry_run: bool = False,
     node_rank: int = 0,
-    master_addr: str = "127.0.0.1",
-    master_port: int = 29500,
+    primary_addr: str = "127.0.0.1",
+    primary_port: int = 29500,
     world_size: int = 1,
     distributed_device_ids: List[int] = None,
     file_friendly_logging: bool = False,
@@ -366,10 +366,10 @@ def _train_worker(
         information.
     node_rank : `int`, optional
         Rank of the node.
-    master_addr : `str`, optional (default=`"127.0.0.1"`)
-        Address of the master node for distributed training.
-    master_port : `str`, optional (default=`"29500"`)
-        Port of the master node for distributed training.
+    primary_addr : `str`, optional (default=`"127.0.0.1"`)
+        Address of the primary node for distributed training.
+    primary_port : `str`, optional (default=`"29500"`)
+        Port of the primary node for distributed training.
     world_size : `int`, optional
         The number of processes involved in distributed training.
     distributed_device_ids: `List[str]`, optional
@@ -396,7 +396,7 @@ def _train_worker(
 
     distributed = world_size > 1
 
-    master = process_rank == 0
+    primary = process_rank == 0
 
     include_package = include_package or []
 
@@ -416,7 +416,7 @@ def _train_worker(
         global_rank = node_rank * num_procs_per_node + process_rank
 
         # Number of processes per node is useful to know if a process
-        # is a master in the local node(node in which it is running)
+        # is a primary in the local node(node in which it is running)
         os.environ["ALLENNLP_PROCS_PER_NODE"] = str(num_procs_per_node)
 
         # In distributed training, the configured device is always going to be a list.
@@ -434,14 +434,14 @@ def _train_worker(
             torch.cuda.set_device(int(gpu_id))
             dist.init_process_group(
                 backend="nccl",
-                init_method=f"tcp://{master_addr}:{master_port}",
+                init_method=f"tcp://{primary_addr}:{primary_port}",
                 world_size=world_size,
                 rank=global_rank,
             )
         else:
             dist.init_process_group(
                 backend="gloo",
-                init_method=f"tcp://{master_addr}:{master_port}",
+                init_method=f"tcp://{primary_addr}:{primary_port}",
                 world_size=world_size,
                 rank=global_rank,
             )
@@ -466,7 +466,7 @@ def _train_worker(
         metrics = train_loop.run()
     except KeyboardInterrupt:
         # if we have completed an epoch, try to create a model archive.
-        if master and os.path.exists(os.path.join(serialization_dir, _DEFAULT_WEIGHTS)):
+        if primary and os.path.exists(os.path.join(serialization_dir, _DEFAULT_WEIGHTS)):
             logging.info(
                 "Training interrupted by the user. Attempting to create "
                 "a model archive using the current best epoch weights."
@@ -474,7 +474,7 @@ def _train_worker(
             archive_model(serialization_dir, include_in_archive=include_in_archive)
         raise
 
-    if master:
+    if primary:
         train_loop.finish(metrics)
 
     if not distributed:
@@ -554,16 +554,16 @@ class TrainModel(Registrable):
         serialization_dir: str,
         local_rank: int,
         dataset_reader: DatasetReader,
-        train_data_path: str,
+        train_data_path: Any,
         model: Lazy[Model],
         data_loader: Lazy[DataLoader],
         trainer: Lazy[Trainer],
         vocabulary: Lazy[Vocabulary] = Lazy(Vocabulary),
         datasets_for_vocab_creation: List[str] = None,
         validation_dataset_reader: DatasetReader = None,
-        validation_data_path: str = None,
+        validation_data_path: Any = None,
         validation_data_loader: Lazy[DataLoader] = None,
-        test_data_path: str = None,
+        test_data_path: Any = None,
         evaluate_on_test: bool = False,
         batch_weight_key: str = "",
     ) -> "TrainModel":
@@ -602,57 +602,97 @@ class TrainModel(Registrable):
 
         dataset_reader: `DatasetReader`
             The `DatasetReader` that will be used for training and (by default) for validation.
+
         train_data_path: `str`
             The file (or directory) that will be passed to `dataset_reader.read()` to construct the
             training data.
+
         model: `Lazy[Model]`
             The model that we will train.  This is lazy because it depends on the `Vocabulary`;
             after constructing the vocabulary we call `model.construct(vocab=vocabulary)`.
+
         data_loader: `Lazy[DataLoader]`
             The data_loader we use to batch instances from the dataset reader at training and (by
             default) validation time. This is lazy because it takes a dataset in it's constructor.
+
         trainer: `Lazy[Trainer]`
             The `Trainer` that actually implements the training loop.  This is a lazy object because
             it depends on the model that's going to be trained.
+
         vocabulary: `Lazy[Vocabulary]`, optional (default=`Lazy(Vocabulary)`)
             The `Vocabulary` that we will use to convert strings in the data to integer ids (and
             possibly set sizes of embedding matrices in the `Model`).  By default we construct the
             vocabulary from the instances that we read.
+
         datasets_for_vocab_creation: `List[str]`, optional (default=`None`)
             If you pass in more than one dataset but don't want to use all of them to construct a
             vocabulary, you can pass in this key to limit it.  Valid entries in the list are
             "train", "validation" and "test".
+
         validation_dataset_reader: `DatasetReader`, optional (default=`None`)
             If given, we will use this dataset reader for the validation data instead of
             `dataset_reader`.
+
         validation_data_path: `str`, optional (default=`None`)
             If given, we will use this data for computing validation metrics and early stopping.
+
         validation_data_loader: `Lazy[DataLoader]`, optional (default=`None`)
             If given, the data_loader we use to batch instances from the dataset reader at
             validation and test time. This is lazy because it takes a dataset in it's constructor.
+
         test_data_path: `str`, optional (default=`None`)
             If given, we will use this as test data.  This makes it available for vocab creation by
             default, but nothing else.
+
         evaluate_on_test: `bool`, optional (default=`False`)
             If given, we will evaluate the final model on this data at the end of training.  Note
             that we do not recommend using this for actual test data in every-day experimentation;
             you should only very rarely evaluate your model on actual test data.
+
         batch_weight_key: `str`, optional (default=`""`)
             The name of metric used to weight the loss on a per-batch basis.  This is only used
             during evaluation on final test data, if you've specified `evaluate_on_test=True`.
         """
+        # Train data loader.
+        data_loaders: Dict[str, DataLoader] = {
+            "train": data_loader.construct(reader=dataset_reader, data_path=train_data_path)
+        }
 
-        datasets = training_util.read_all_datasets(
-            train_data_path=train_data_path,
-            dataset_reader=dataset_reader,
-            validation_dataset_reader=validation_dataset_reader,
-            validation_data_path=validation_data_path,
-            test_data_path=test_data_path,
-        )
+        # Validation data loader.
+        if validation_data_path is not None:
+            validation_dataset_reader = validation_dataset_reader or dataset_reader
+            if validation_data_loader is not None:
+                data_loaders["validation"] = validation_data_loader.construct(
+                    reader=validation_dataset_reader, data_path=validation_data_path
+                )
+            else:
+                data_loaders["validation"] = data_loader.construct(
+                    reader=validation_dataset_reader, data_path=validation_data_path
+                )
+                if getattr(data_loaders["validation"], "batches_per_epoch", None) is not None:
+                    warnings.warn(
+                        "Using 'data_loader' params to construct validation data loader since "
+                        "'validation_data_loader' params not specified, but you have "
+                        "'data_loader.batches_per_epoch' set which may result in different "
+                        "validation datasets for each epoch.",
+                        UserWarning,
+                    )
+
+        # Test data loader.
+        if test_data_path is not None:
+            test_dataset_reader = validation_dataset_reader or dataset_reader
+            if validation_data_loader is not None:
+                data_loaders["test"] = validation_data_loader.construct(
+                    reader=test_dataset_reader, data_path=test_data_path
+                )
+            else:
+                data_loaders["test"] = data_loader.construct(
+                    reader=test_dataset_reader, data_path=test_data_path
+                )
 
         if datasets_for_vocab_creation:
             for key in datasets_for_vocab_creation:
-                if key not in datasets:
+                if key not in data_loaders:
                     raise ConfigurationError(f"invalid 'dataset_for_vocab_creation' {key}")
 
             logger.info(
@@ -662,9 +702,9 @@ class TrainModel(Registrable):
 
         instance_generator = (
             instance
-            for key, dataset in datasets.items()
+            for key, data_loader in data_loaders.items()
             if datasets_for_vocab_creation is None or key in datasets_for_vocab_creation
-            for instance in dataset
+            for instance in data_loader.iter_instances()
         )
 
         vocabulary_ = vocabulary.construct(instances=instance_generator)
@@ -672,49 +712,24 @@ class TrainModel(Registrable):
         model_ = model.construct(vocab=vocabulary_, serialization_dir=serialization_dir)
 
         # Initializing the model can have side effect of expanding the vocabulary.
-        # Save the vocab only in the master. In the degenerate non-distributed
-        # case, we're trivially the master. In the distributed case this is safe
+        # Save the vocab only in the primary. In the degenerate non-distributed
+        # case, we're trivially the primary. In the distributed case this is safe
         # to do without worrying about race conditions since saving and loading
         # the vocab involves acquiring a file lock.
         if local_rank == 0:
             vocabulary_path = os.path.join(serialization_dir, "vocabulary")
             vocabulary_.save_to_files(vocabulary_path)
 
-        for dataset in datasets.values():
-            dataset.index_with(model_.vocab)
-
-        data_loader_ = data_loader.construct(dataset=datasets["train"])
-        validation_data = datasets.get("validation")
-        validation_data_loader_: Optional[DataLoader] = None
-        if validation_data is not None:
-            if validation_data_loader is None:
-                validation_data_loader_ = data_loader.construct(dataset=validation_data)
-                if getattr(validation_data_loader_, "_batches_per_epoch", None) is not None:
-                    warnings.warn(
-                        "Using 'data_loader' params to construct validation data loader since "
-                        "'validation_data_loader' params not specified, but you have "
-                        "'data_loader.batches_per_epoch' set which may result in different "
-                        "validation datasets for each epoch.",
-                        UserWarning,
-                    )
-            else:
-                validation_data_loader_ = validation_data_loader.construct(dataset=validation_data)
-
-        test_data = datasets.get("test")
-        test_data_loader: Optional[DataLoader] = None
-        if test_data is not None:
-            if validation_data_loader is None:
-                test_data_loader = data_loader.construct(dataset=test_data)
-            else:
-                test_data_loader = validation_data_loader.construct(dataset=test_data)
+        for data_loader_ in data_loaders.values():
+            data_loader_.index_with(model_.vocab)
 
         # We don't need to pass serialization_dir and local_rank here, because they will have been
         # passed through the trainer by from_params already, because they were keyword arguments to
         # construct this class in the first place.
         trainer_ = trainer.construct(
             model=model_,
-            data_loader=data_loader_,
-            validation_data_loader=validation_data_loader_,
+            data_loader=data_loaders["train"],
+            validation_data_loader=data_loaders.get("validation"),
         )
         assert trainer_ is not None
 
@@ -722,7 +737,7 @@ class TrainModel(Registrable):
             serialization_dir=serialization_dir,
             model=model_,
             trainer=trainer_,
-            evaluation_data_loader=test_data_loader,
+            evaluation_data_loader=data_loaders.get("test"),
             evaluate_on_test=evaluate_on_test,
             batch_weight_key=batch_weight_key,
         )

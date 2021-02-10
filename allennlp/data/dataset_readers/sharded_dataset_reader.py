@@ -1,13 +1,11 @@
 import glob
 import logging
 import os
-import torch
 from typing import Iterable
 
-from allennlp.common import util
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path
-from allennlp.data.dataset_readers.dataset_reader import DatasetReader
+from allennlp.data.dataset_readers.dataset_reader import DatasetReader, PathOrStr
 from allennlp.data.instance import Instance
 
 
@@ -26,13 +24,11 @@ class ShardedDatasetReader(DatasetReader):
     files within the archive.
 
     The order the files are processed in is deterministic to enable the
-    instances to be filtered according to worker rank in the distributed case.
+    instances to be filtered according to worker rank in the distributed training or multi-process
+    data loading scenarios. In either case, the number of file shards should ideally be a multiple
+    of the number of workers, and each file should produce roughly the same number of instances.
 
     Registered as a `DatasetReader` with name "sharded".
-
-    This class accepts all additional parameters of any `DatasetReader` class via `**kwargs`.
-    We give priority to the values set in the constructor for the instance of this class.
-    Optionally, we will automatically inherit attributes from the `base_reader` when required.
 
     # Parameters
 
@@ -41,33 +37,14 @@ class ShardedDatasetReader(DatasetReader):
     """
 
     def __init__(self, base_reader: DatasetReader, **kwargs) -> None:
-        # ShardedDatasetReader is a wrapper for the original base_reader so some of the parameters like 'lazy'
-        # can be safely inherited. However, ShardedDatasetReader is a class instance of a DatasetReader as well.
-        # So we give priority to the parameters for the current instance stored in 'kwargs'.
-        # If not present, we check the ones in the base reader
-        kwargs["lazy"] = kwargs.get("lazy", base_reader.lazy)
-
-        super().__init__(manual_distributed_sharding=True, **kwargs)
-
-        if util.is_distributed():
-            self._rank = torch.distributed.get_rank()
-            self._world_size = torch.distributed.get_world_size()
-        else:
-            self._rank = 0
-            self._world_size = 1
-
+        super().__init__(
+            manual_distributed_sharding=True, manual_multiprocess_sharding=True, **kwargs
+        )
         self.reader = base_reader
-        # We have to check that the base reader doesn't implement manual distributed
-        # sharding itself, because if it does, then only a fraction of the instances
-        # will be read.
-        if getattr(self.reader, "manual_distributed_sharding", False):
-            raise ValueError(
-                "The base reader of a sharded dataset reader should not implement "
-                "manual distributed sharding itself."
-            )
-        # However we still need to set this flag to `True` after the fact so that
-        # all of the instances within each shard are used.
-        self.reader.manual_distributed_sharding = True
+        # We have to make the base reader think that it's the only worker so that it doesn't
+        # do any of its own filtering.
+        self.reader._set_worker_info(None)
+        self.reader._set_distributed_info(None)
 
     def text_to_instance(self, *args, **kwargs) -> Instance:
         """
@@ -75,7 +52,7 @@ class ShardedDatasetReader(DatasetReader):
         """
         return self.reader.text_to_instance(*args, **kwargs)  # type: ignore
 
-    def _read(self, file_path: str) -> Iterable[Instance]:
+    def _read(self, file_path: PathOrStr) -> Iterable[Instance]:
         try:
             maybe_extracted_archive = cached_path(file_path, extract_archive=True)
             if not os.path.isdir(maybe_extracted_archive):
@@ -90,15 +67,14 @@ class ShardedDatasetReader(DatasetReader):
                 raise ConfigurationError(f"No files found in {file_path}")
         except FileNotFoundError:
             # Not a local or remote archive, so treat as a glob.
-            shards = glob.glob(file_path)
+            shards = glob.glob(str(file_path))
             if not shards:
                 raise ConfigurationError(f"No files found matching {file_path}")
 
         # Ensure a consistent order.
         shards.sort()
 
-        for i, shard in enumerate(shards):
-            if i % self._world_size == self._rank:
-                logger.info(f"reading instances from {shard}")
-                for instance in self.reader.read(shard):
-                    yield instance
+        for shard in self.shard_iterable(shards):
+            logger.info(f"reading instances from {shard}")
+            for instance in self.reader.read(shard):
+                yield instance

@@ -1,5 +1,6 @@
+from allennlp.common.params import Params
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.common.model_card import ModelCard, IntendedUse
+from allennlp.common.model_card import ModelCard, ModelUsage, IntendedUse, Paper
 from allennlp.models import Model
 
 
@@ -9,13 +10,12 @@ class TestPretrainedModelConfiguration(AllenNlpTestCase):
             id="fake_name",
             display_name="Fake Name",
             model_details="Model's description",
-            archive_file="fake.tar.gz",
-            overrides={},
+            model_usage=ModelUsage(**{"archive_file": "fake.tar.gz", "overrides": {}}),
         )
 
         assert model_card.id == "fake_name"
         assert model_card.display_name == "Fake Name"
-        assert model_card.archive_file == ModelCard._storage_location + "fake.tar.gz"
+        assert model_card.model_usage.archive_file == ModelUsage._storage_location + "fake.tar.gz"
         assert model_card.model_details.description == "Model's description"
 
     def test_init_registered_model(self):
@@ -118,3 +118,40 @@ class TestPretrainedModelConfiguration(AllenNlpTestCase):
                 assert key in model_card_dict
             else:
                 assert key not in model_card_dict
+
+    def test_nested_json(self):
+        @Model.register("fake-model-4")
+        class FakeModel(Model):
+            """
+            This is a fake model with a docstring.
+
+            # Parameters
+
+            fake_param1: str
+            fake_param2: int
+            """
+
+            def forward(self, **kwargs):
+                return {}
+
+        model_card = ModelCard.from_params(
+            Params(
+                {
+                    "id": "this-fake-model",
+                    "registered_model_name": "fake-model-4",
+                    "model_details": {
+                        "description": "This is the fake model trained on a dataset.",
+                        "paper": {
+                            "title": "paper name",
+                            "url": "paper link",
+                            "citation": "test citation",
+                        },
+                    },
+                    "training_data": {"dataset": {"name": "dataset 1", "url": "dataset url"}},
+                }
+            )
+        )
+
+        assert isinstance(model_card.model_details.paper, Paper)
+        assert model_card.model_details.paper.url == "paper link"
+        assert model_card.training_data.dataset.name == "dataset 1"

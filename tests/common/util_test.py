@@ -57,6 +57,10 @@ class TestCommonUtils(AllenNlpTestCase):
 
         assert util.sanitize(Sanitizable()) == {"sanitizable": True}
 
+        x = util.sanitize({1, 2, 3})
+        assert isinstance(x, list)
+        assert len(x) == 3
+
     def test_import_submodules(self):
         (self.TEST_DIR / "mymodule").mkdir()
         (self.TEST_DIR / "mymodule" / "__init__.py").touch()
@@ -135,6 +139,27 @@ class TestCommonUtils(AllenNlpTestCase):
         for ptb_string, expected in test_cases:
             actual = util.sanitize_ptb_tokenized_string(ptb_string)
             assert actual == expected
+
+    def test_cycle_iterator_function(self):
+        global cycle_iterator_function_calls
+        cycle_iterator_function_calls = 0
+
+        def one_and_two():
+            global cycle_iterator_function_calls
+            cycle_iterator_function_calls += 1
+            for i in [1, 2]:
+                yield i
+
+        iterator = iter(util.cycle_iterator_function(one_and_two))
+
+        # Function calls should be lazy.
+        assert cycle_iterator_function_calls == 0
+
+        values = [next(iterator) for _ in range(5)]
+        assert values == [1, 2, 1, 2, 1]
+        # This is the difference between cycle_iterator_function and itertools.cycle.  We'd only see
+        # 1 here with itertools.cycle.
+        assert cycle_iterator_function_calls == 3
 
 
 @pytest.mark.parametrize(

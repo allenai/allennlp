@@ -8,7 +8,7 @@ import pytest
 
 from allennlp.commands.evaluate import evaluate_from_args, Evaluate, evaluate
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.data.dataloader import TensorDict
+from allennlp.data.data_loaders import TensorDict
 from allennlp.models import Model
 
 
@@ -22,6 +22,9 @@ class DummyDataLoader:
 
     def __len__(self):
         return len(self._outputs)
+
+    def set_target_device(self, _):
+        pass
 
 
 class DummyModel(Model):
