@@ -1143,12 +1143,20 @@ class TestTrainer(TrainerTestBase):
             data_loader,
             num_epochs=2,
             serialization_dir=self.TEST_DIR,
-            tensorboard_writer=TensorboardWriter(
-                serialization_dir=self.TEST_DIR,
-                histogram_interval=2,
-                should_log_inputs=True,
-                should_log_inputs_to_console=True,
-            ),
+            callbacks=[
+                TensorBoardCallback.from_params(
+                    Params(
+                        {
+                            "tensorboard_writer": {
+                                "histogram_interval": 2,
+                                "should_log_inputs": True,
+                                "should_log_inputs_to_console": True,
+                            }
+                        }
+                    ),
+                    serialization_dir=self.TEST_DIR,
+                )
+            ],
         )
         trainer.train()
 
