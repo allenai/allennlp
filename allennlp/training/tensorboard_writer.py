@@ -1,4 +1,5 @@
 from typing import Any, Callable, Dict, List, Optional, Set
+from numbers import Number
 import logging
 import os
 
@@ -50,6 +51,13 @@ class TensorboardWriter(FromParams):
         gradients).
     should_log_learning_rate : `bool`, optional (default = `False`)
         Whether to log (parameter-specific) learning rate.
+    should_log_inputs : `bool`, optional (default = `False`)
+        Whether to log model inputs. Setting it to `True` will log inputs
+        on the tensorboard only. Logging on console will require setting
+        `should_log_inputs_to_console` to `True`.
+    should_log_inputs_to_console : `bool`, optional (default = `False`)
+        Whether to log model inputs to console. `should_log_inputs` needs
+        to be `True` for this to work.
     get_batch_num_total : `Callable[[], int]`, optional (default = `None`)
         A thunk that returns the number of batches so far. Most likely this will
         be a closure around an instance variable in your `Trainer` class.  Because of circular
@@ -65,6 +73,8 @@ class TensorboardWriter(FromParams):
         batch_size_interval: Optional[int] = None,
         should_log_parameter_statistics: bool = True,
         should_log_learning_rate: bool = False,
+        should_log_inputs: bool = False,
+        should_log_inputs_to_console: bool = False,
         get_batch_num_total: Callable[[], int] = None,
     ) -> None:
         if serialization_dir is not None:
@@ -84,6 +94,8 @@ class TensorboardWriter(FromParams):
         self._batch_size_interval = batch_size_interval
         self._should_log_parameter_statistics = should_log_parameter_statistics
         self._should_log_learning_rate = should_log_learning_rate
+        self._should_log_inputs = should_log_inputs
+        self._should_log_inputs_to_console = should_log_inputs_to_console
         self.get_batch_num_total = get_batch_num_total
 
         self._cumulative_batch_group_size = 0
@@ -129,6 +141,7 @@ class TensorboardWriter(FromParams):
             assert param_updates is not None
             self.log_histograms(model)
             self.log_gradient_updates(model, param_updates)
+            self.log_inputs(batch_group)
 
         if self._batch_size_interval:
             # We're assuming here that `log_batch` will get called every batch, and only every
@@ -143,6 +156,44 @@ class TensorboardWriter(FromParams):
                 logger.info(f"current batch size: {batch_group_size} mean batch size: {average}")
                 self.add_train_scalar("current_batch_size", batch_group_size)
                 self.add_train_scalar("mean_batch_size", average)
+
+    def _log_fields(self, fields: Dict, log_prefix: str = ""):
+
+        for key, val in fields.items():
+            if isinstance(val, dict):
+                self._log_fields(val, log_prefix + "/" + key)
+            elif isinstance(val, torch.Tensor):
+                self.add_train_histogram(log_prefix + "/" + key, val)
+                if self._should_log_inputs_to_console:
+                    logger.info(
+                        f"Field : \"{key}\" : (Shape : {' x '.join([str(x) for x in val.shape])})"
+                    )
+                    torch.set_printoptions(threshold=2)
+                    logger.info(f"{val}")
+                    torch.set_printoptions(threshold=1000)
+            elif isinstance(val, Number):
+                # This is helpful for a field like `FlagField`.
+                self.add_train_scalar(log_prefix + "/" + key, val)  # type: ignore
+                if self._should_log_inputs_to_console:
+                    logger.info(f'Field : "{key}"')
+                    logger.info(f"{val}")
+            elif isinstance(val, List):
+                if self._should_log_inputs_to_console:
+                    logger.info(f'Field : "{key}" : (Length : {len(val)} of type "{type(val[0])}")')
+            elif isinstance(val, str):
+                if self._should_log_inputs_to_console:
+                    logger.info(f'Field : "{key}"')
+                    logger.info("{:20.20} ...".format(val))
+            else:
+                # We do not want to log about the absence of a histogram
+                # for this field every single time.
+
+                pass
+
+    def log_inputs(self, batch_group: List[List[TensorDict]]):
+        if self._should_log_inputs:
+            for b, batch in enumerate(batch_group):
+                self._log_fields(batch, log_prefix="batch_input")  # type: ignore
 
     def reset_epoch(self) -> None:
         self._cumulative_batch_group_size = 0

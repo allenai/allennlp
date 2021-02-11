@@ -689,12 +689,7 @@ class GradientDescentTrainer(Trainer):
                 description = training_util.description_from_metrics(metrics)
                 batch_group_generator_tqdm.set_description(description, refresh=False)
                 self._tensorboard.log_batch(
-                    self.model,
-                    self.optimizer,
-                    batch_grad_norm,
-                    metrics,
-                    batch_group,
-                    param_updates,
+                    self.model, self.optimizer, batch_grad_norm, metrics, batch_group, param_updates
                 )
 
                 if self._checkpointer is not None:

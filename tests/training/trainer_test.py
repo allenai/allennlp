@@ -17,7 +17,9 @@ from allennlp.common.params import Params
 from allennlp.common.testing import AllenNlpTestCase, requires_gpu, requires_multi_gpu
 from allennlp.data import Vocabulary
 from allennlp.data.data_loaders import MultiProcessDataLoader, SimpleDataLoader, TensorDict
-from allennlp.data.dataset_readers import SequenceTaggingDatasetReader
+from allennlp.data.dataset_readers import SequenceTaggingDatasetReader, DatasetReader
+from allennlp.data.token_indexers import SingleIdTokenIndexer
+from allennlp.data import Token, Instance
 from allennlp.models.model import Model
 from allennlp.models.simple_tagger import SimpleTagger
 from allennlp.training import (
@@ -31,6 +33,17 @@ from allennlp.training.learning_rate_schedulers import CosineWithRestarts
 from allennlp.training.learning_rate_schedulers import ExponentialLearningRateScheduler
 from allennlp.training.momentum_schedulers import MomentumScheduler
 from allennlp.training.moving_average import ExponentialMovingAverage
+from allennlp.data.fields import (
+    TextField,
+    IndexField,
+    MetadataField,
+    LabelField,
+    MultiLabelField,
+    SpanField,
+    FlagField,
+    AdjacencyField,
+    TensorField,
+)
 
 
 class TrainerTestBase(AllenNlpTestCase):
@@ -1031,6 +1044,73 @@ class TestTrainer(TrainerTestBase):
         metrics = trainer.train()
 
         assert metrics["training_loss"] == float(sum(trainer.batch_losses) / batches_per_epoch)
+
+    def test_trainer_can_log_batch_inputs(self):
+        total_instances = 1000
+        batch_size = 25
+
+        class FakeDatasetReader(DatasetReader):
+            def _read(self, file_path):
+                for i in range(total_instances):
+                    yield self.text_to_instance(i, "label")
+
+            def text_to_instance(self, index: int, field_type: str):  # type: ignore
+                field = TextField(
+                    [Token(t) for t in ["The", "number", "is", str(index), "."]],
+                    token_indexers={"words": SingleIdTokenIndexer("words")},
+                )
+
+                return Instance(
+                    {
+                        "text": field,
+                        "label": LabelField(index, skip_indexing=True),
+                        "flag": FlagField(23),
+                        "index": IndexField(index % batch_size, field),
+                        "metadata": MetadataField(
+                            {"some_key": "This will not be logged as a histogram."}
+                        ),
+                        "adjacency": AdjacencyField([(0, 1), (1, 2)], field),
+                        "multilabel": MultiLabelField(["l1", "l2"]),
+                        "span": SpanField(2, 3, field),
+                        "tensor": TensorField(torch.randn(2, 3)),
+                    }
+                )
+
+        class FakeModel(Model):
+            def __init__(self, vocab):
+                super().__init__(vocab)
+                self.lin = torch.nn.Linear(1, 2)
+                self.loss_fn = torch.nn.MSELoss()
+
+            def forward(self, **kwargs):
+                out = kwargs["label"].sum().unsqueeze(-1)
+                out = out.type(torch.FloatTensor)
+                out = self.lin(out)
+                loss = out.sum()
+                return {"loss": loss}
+
+        reader = FakeDatasetReader()
+        data_loader = SimpleDataLoader.from_dataset_reader(reader, "fake_path", batch_size=25)
+        instances = list(data_loader.iter_instances())
+        vocab = Vocabulary.from_instances(instances)
+        data_loader.index_with(vocab)
+        model = FakeModel(vocab)
+        optimizer = torch.optim.SGD(model.parameters(), 0.01, momentum=0.9)
+
+        trainer = GradientDescentTrainer(
+            model,
+            optimizer,
+            data_loader,
+            num_epochs=2,
+            serialization_dir=self.TEST_DIR,
+            tensorboard_writer=TensorboardWriter(
+                serialization_dir=self.TEST_DIR,
+                histogram_interval=2,
+                should_log_inputs=True,
+                should_log_inputs_to_console=True,
+            ),
+        )
+        trainer.train()
 
 
 @requires_gpu
