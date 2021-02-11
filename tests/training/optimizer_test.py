@@ -76,6 +76,69 @@ class TestOptimizer(AllenNlpTestCase):
         # the recurrent connections left in the default group
         assert len(param_groups[2]["params"]) == 2
 
+class TestRegexOptimizer(AllenNlpTestCase):
+    def setup_method(self):
+        super().setup_method()
+        self.instances = SequenceTaggingDatasetReader().read(
+            self.FIXTURES_ROOT / "data" / "sequence_tagging.tsv"
+        )
+
+        vocab = Vocabulary.from_instances(self.instances)
+        self.model_params = Params(
+            {
+                "text_field_embedder": {
+                    "token_embedders": {"tokens": {"type": "embedding", "embedding_dim": 5}}
+                },
+                "encoder": {"type": "lstm", "input_size": 5, "hidden_size": 7, "num_layers": 2},
+            }
+        )
+        self.model = SimpleTagger.from_params(vocab=vocab, params=self.model_params)
+
+    def test_multiple_optimizers(self):
+        optimizer_params = Params({
+                                    "type": "regex",
+                                    "optimizers": [
+                                        {"name": "default", "type": "adam", "lr": 1},
+                                        {"name": "embedder", "type": "adam", "lr": 2},
+                                        {"name": "encoder", "type": "adam", "lr": 3},
+                                    ],
+                                    "parameter_groups": [
+                                        [["^text_field_embedder"], {"name": "embedder", "betas": (0.9, 0.98), "lr": 2, "weight_decay": 0.01}],
+                                        [["^encoder.*bias"], {"name": "encoder", "lr": 0.001}],
+                                        [["^encoder.*weight"], {"name": "encoder", "lr": 0.002}],
+                                        [["^tag_projection_layer.*.weight$"], {"lr": 5}]
+                                    ],
+                                    })
+        
+        parameters = [[n, p] for n, p in self.model.named_parameters() if p.requires_grad]
+        optimizer = Optimizer.from_params(model_parameters=parameters, params=optimizer_params)
+        
+        for i, (name, optimizer) in enumerate(optimizer._grouped_optimizers.items()):
+            if i == 0:
+                assert name == "default"
+                param_groups = optimizer.param_groups
+                # Default group gets assigned any group without a 'name' parameter in `parameter_groups`
+                # as well as any parameters which didn't match one of the given regexes.
+                assert len(param_groups) == 2
+            elif i == 1:
+                assert name == "embedder"
+                param_groups = optimizer.param_groups
+                assert len(param_groups) == 1
+                for param_group in param_groups:
+                    assert param_group["betas"] == (0.9, 0.98)
+                    assert param_group["lr"] == 2
+                    assert param_group["weight_decay"] == 0.01
+            elif i == 2:
+                assert name == "encoder"
+                param_groups = optimizer.param_groups
+                # The optimizer can have sub-groups with different options.
+                assert len(param_groups) == 2
+                for i, param_group in enumerate(param_groups):
+                    if i == 0:
+                        assert param_group["lr"] == 0.001
+                    elif i == 1:
+                        assert param_group["lr"] == 0.002
+
 
 class TestDenseSparseAdam(AllenNlpTestCase):
     def setup_method(self):

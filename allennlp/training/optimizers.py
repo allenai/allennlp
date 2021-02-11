@@ -81,8 +81,6 @@ def make_parameter_groups(
     (for the "params" key), or anything else (typically a float) for the other keys.
     """
     # The RegexOptimizer passes in the `groups` argument as False so this function is a no op.
-    # By default, when an optimizer is initialized, this function is called but in the RegexOptimizer,
-    # we have already called this function to create our parameter groups so this avoids us calling it again.
     if groups is False:
         return model_parameters
 
@@ -210,17 +208,33 @@ class Optimizer(torch.optim.Optimizer, Registrable):
 @Optimizer.register("regex")
 class RegexOptimizer(Optimizer):
     """
-    This `Optimizer` takes in a list of optimizers and their keyword arguments which also have a `name` parameter.
-    `parameter_groups` are then passed which uses certain regexes and a `name` parameter to match the group to its own optimizer.
-    You can also override the optimizer options for a certain parameter group. If no `name` is given for a parameter group, it will be
-    assigned to a default group.
-    The RegexOptimizer creates an object `self._grouped_optimizers` which is a dictionary mapping a `name` to an optimizer.
-    We then override the optimizer methods in a PyTorch optimizer to recursively call them on each sub-optimizer.
+    A `RegexOptimizer` creates a dictionary of `Optimizer`s keyed on some 'name'.
+    Each Optimizer contains its own set of parameters which are obtained using
+    regex matches for certain model parameters.
+    
+    This optimizer works by taking in a parameter `optimizers` which contains a list of `Optimizers`
+    with their keyword arguments, and a parameter `parameter_groups`, which contains regexes and their
+    corresponding optimizer and optional non-default optimizer options for this group. 
+    The regexes in parameter groups are assigned to their optimizer based on the 'name' argument
+    where the 'name' value should be the same for the optimizer and parameter group.
+    You should specify a default optimizer with 'name': 'default' which will be used for all 
+    parameters which didn't have a regex match or when your parameter group doesn't contain a 'name' 
+    parameter.
+
+    # Parameters
 
     optimizers: `List[Dict[str, Any]]`
-        A list of optimizers to use. Each entry in the list is a dictionary of keyword arguments. A `name` keyword argument should 
-        be given which will serve as the key to match optimizers with parameter groups. You should also supply an entry for the default
-        parameter group, e.g. "name": "default".
+        A list of optimizers to use. Each entry in the list is a dictionary of keyword arguments. A 'name' 
+        keyword argument should be given which will serve as the key to match optimizers with parameter groups.
+        You should also supply an entry for the default parameter group, e.g. "name": "default".
+
+    parameter_groups:  `List[Tuple[List[str], Dict[str, Any]]`, optional (default = `None`)
+        See the docstring of `make_parameter_groups` for what this parameter should look like. It
+        should follow the same format as there, except an additional 'name' argument should be provided
+        to match this group to its own optimizer. Optimizer options can also be set for this group which
+        will override the default options. We allow this to be `None` here, in which case all parameters
+        will be assigned to the 'default' optimizer but really you only want to use this class if you have
+        different groups which will be assigned their own optimizer.
     """
     def __init__(self,
                 model_parameters: List[Tuple[str, torch.nn.Parameter]],
@@ -246,18 +260,20 @@ class RegexOptimizer(Optimizer):
         parameter_groups = make_parameter_groups(self.model_parameters, self.parameter_groups)
         self._populate_optimizer_groups(parameter_groups, optimizer_groups)
 
-        # Check to see if the parameters are empty.
+        # Check to see if an optimizer didn't receive any parameters.
         for optimizer_key, optimizer_parameters in optimizer_groups.items():
             if len(optimizer_parameters[0]) == 0:
                raise ValueError(
-                    f"Optimizer '{optimizer_key}' did not receive any parameters!"
-                    " If you are using `parameter_groups`, please make sure that the regexes you have provided there match the desired model parameters,"
-                    " or that the `name` value of this optimizer matches that of the parameter group you are trying to assign to it."
-                    " Alternatively, you can remove this optimizer from the provided `optimizers` if it is not relevant to a particular parameter group."
+                    f"Optimizer '{optimizer_key}' did not receive any parameters."
+                    " If you are using `parameter_groups`, please make sure that the regexes you have provided"
+                    " there match the desired model parameters, or that the `name` value of this optimizer "
+                    " matches that of the parameter group you are trying to assign to it."
+                    " Alternatively, you can remove this optimizer from the provided `optimizers`"
+                    " if it is not relevant to a particular parameter group."
                     )
 
         # We have already created our parameter_groups so we set `parameter_groups` to False, which is a no op in `make_parameter_groups`.
-        # This is so that we don't have to change any of the code when initialising individual optimizers.
+        # This is so that we don't have to change any of the code when initializing individual optimizers.
         for optimizer_name, (params, optimizer_kwargs) in optimizer_groups.items():
             self._grouped_optimizers[optimizer_name] = Optimizer.from_params(model_parameters=params, parameter_groups=False, params=Params(optimizer_kwargs))
         
@@ -266,8 +282,8 @@ class RegexOptimizer(Optimizer):
     def _make_optimizer_groups(self, optimizer):
         """
         Creates a tuple which is in the format for initializing an optimizer.
-        The first element of the tuple is an iterable which will contain the model parameters, 
-        or `dict`s in the case that you want to set group parameter options.
+        The first element of the tuple is an iterable which stores the model parameters or
+        `dict`s containing model parameters with group-specific options.
         The second element of the tuple is a dictionary with the keyword arguments for the optimizer, which
         will be used as optimizer defaults when not being overriden by a particular group.
         """
