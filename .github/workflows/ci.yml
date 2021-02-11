@@ -472,7 +472,7 @@ jobs:
     name: PyPI
     needs: [check_core, check_models, gpu_checks, build_package, test_package, docker, docs]
     # Only publish to PyPI on releases and nightly builds to "allenai/allennlp" (not forks).
-    if: github.repository == 'allenai/allennlp' && (github.event_name == 'release' || github.event == 'schedule')
+    if: github.repository == 'allenai/allennlp' && (github.event_name == 'release' || github.event_name == 'schedule')
     runs-on: ubuntu-latest
 
     steps:

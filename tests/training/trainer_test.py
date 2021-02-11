@@ -4,7 +4,7 @@ import json
 import os
 import re
 import time
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import math
 import pytest
@@ -25,9 +25,9 @@ from allennlp.models.simple_tagger import SimpleTagger
 from allennlp.training import (
     GradientDescentTrainer,
     Checkpointer,
-    TensorboardWriter,
     TrainerCallback,
     TrackEpochCallback,
+    TensorBoardCallback,
 )
 from allennlp.training.learning_rate_schedulers import CosineWithRestarts
 from allennlp.training.learning_rate_schedulers import ExponentialLearningRateScheduler
@@ -44,6 +44,7 @@ from allennlp.data.fields import (
     AdjacencyField,
     TensorField,
 )
+from allennlp.training.optimizers import Optimizer
 
 
 class TrainerTestBase(AllenNlpTestCase):
@@ -570,6 +571,32 @@ class TestTrainer(TrainerTestBase):
         )
         trainer.train()
 
+    def test_trainer_sends_metric_to_lr_scheduler(self):
+        from allennlp.training.learning_rate_schedulers import ReduceOnPlateauLearningRateScheduler
+
+        class RecordMetricLearningRateScheduler(ReduceOnPlateauLearningRateScheduler):
+            def __init__(self, optimizer: Optimizer):
+                super(RecordMetricLearningRateScheduler, self).__init__(optimizer)
+                self.recordings: List[float] = []
+
+            def step(self, metric: float = None) -> None:
+                self.recordings.append(metric)
+                super().step(metric)
+
+        lr_scheduler = RecordMetricLearningRateScheduler(self.optimizer)
+        trainer = GradientDescentTrainer(
+            model=self.model,
+            optimizer=self.optimizer,
+            data_loader=self.data_loader,
+            learning_rate_scheduler=lr_scheduler,
+            validation_metric="-loss",
+            validation_data_loader=self.validation_data_loader,
+            num_epochs=2,
+        )
+        trainer.train()
+
+        assert all([value != 0 for value in lr_scheduler.recordings])
+
     def test_trainer_can_resume_with_lr_scheduler(self):
         lr_scheduler = CosineWithRestarts(self.optimizer, t_initial=5)
         trainer = GradientDescentTrainer(
@@ -624,9 +651,12 @@ class TestTrainer(TrainerTestBase):
             self.data_loader,
             num_epochs=3,
             serialization_dir=self.TEST_DIR,
-            tensorboard_writer=TensorboardWriter(
-                serialization_dir=self.TEST_DIR, histogram_interval=2
-            ),
+            callbacks=[
+                TensorBoardCallback.from_params(
+                    Params({"tensorboard_writer": {"histogram_interval": 2}}),
+                    serialization_dir=self.TEST_DIR,
+                )
+            ],
         )
         trainer.train()
 
@@ -721,11 +751,19 @@ class TestTrainer(TrainerTestBase):
             data_loader,
             num_epochs=2,
             serialization_dir=self.TEST_DIR,
-            tensorboard_writer=TensorboardWriter(
-                serialization_dir=self.TEST_DIR,
-                should_log_learning_rate=True,
-                summary_interval=2,
-            ),
+            callbacks=[
+                TensorBoardCallback.from_params(
+                    Params(
+                        {
+                            "tensorboard_writer": {
+                                "summary_interval": 2,
+                                "should_log_learning_rate": True,
+                            }
+                        }
+                    ),
+                    serialization_dir=self.TEST_DIR,
+                )
+            ],
         )
 
         trainer.train()
@@ -950,6 +988,7 @@ class TestTrainer(TrainerTestBase):
                 batch_number: int,
                 is_training: bool,
                 is_primary: bool = True,
+                batch_grad_norm: Optional[float] = None,
                 **kwargs,
             ) -> None:
                 if not hasattr(trainer, "start_callback_is_fired_first"):
@@ -1028,6 +1067,7 @@ class TestTrainer(TrainerTestBase):
                 batch_number: int,
                 is_training: bool,
                 is_primary: bool = True,
+                batch_grad_norm: Optional[float] = None,
                 **kwargs,
             ) -> None:
                 if not hasattr(trainer, "batch_losses"):

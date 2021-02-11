@@ -5,14 +5,49 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-
 ## Unreleased
+
+### Changed
+
+- `coding_scheme` parameter is now deprecated in `Conll2003DatasetReader`, please use `convert_to_coding_scheme` instead.
+
+### Added
+
+- Added `ModelUsage` to `ModelCard` class.
+- Added a way to specify extra parameters to the predictor in an `allennlp predict` call.
+- Added a way to initialize a `Vocabulary` from transformers models.
+
+### Fixed
+
+- Learning rate schedulers that rely on metrics from the validation set were broken in v2.0.0. This
+  brings that functionality back.
+- Fixed a bug where the `MultiProcessDataLoading` would crash when `num_workers > 0`, `start_method = "spawn"`, `max_instances_in_memory not None`, and `batches_per_epoch not None`.
+
+
+## [v2.0.1](https://github.com/allenai/allennlp/releases/tag/v2.0.1) - 2021-01-29
+
+### Added
+
+- Added `tokenizer_kwargs` and `transformer_kwargs` arguments to `PretrainedTransformerBackbone`
+- Resize transformers word embeddings layer for `additional_special_tokens`
+
+### Changed
+
+- GradientDescentTrainer makes `serialization_dir` when it's instantiated, if it doesn't exist.
+
+### Fixed
+
+- `common.util.sanitize` now handles sets.
+
+
+## [v2.0.0](https://github.com/allenai/allennlp/releases/tag/v2.0.0) - 2021-01-27
 
 ### Added
 
 - The `TrainerCallback` constructor accepts `serialization_dir` provided by `Trainer`. This can be useful for `Logger` callbacks those need to store files in the run directory.
 - The `TrainerCallback.on_start()` is fired at the start of the training.
 - The `TrainerCallback` event methods now accept `**kwargs`. This may be useful to maintain backwards-compability of callbacks easier in the future. E.g. we may decide to pass the exception/traceback object in case of failure to `on_end()` and this older callbacks may simply ignore the argument instead of raising a `TypeError`.
+- Added a `TensorBoardCallback` which wraps the `TensorBoardWriter`.
 
 ### Changed
 
@@ -21,11 +56,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `TensorBoardBatchMemoryUsage` is converted from `BatchCallback` into `TrainerCallback`.
 - `TrackEpochCallback` is converted from `EpochCallback` into `TrainerCallback`.
 - `Trainer` can accept callbacks simply with name `callbacks` instead of `trainer_callbacks`.
+- `TensorboardWriter` renamed to `TensorBoardWriter`, and removed as an argument to the `GradientDescentTrainer`.
+  In order to enable TensorBoard logging during training, you should utilize the `TensorBoardCallback` instead.
 
 ### Removed
 
 - Removed `EpochCallback`, `BatchCallback` in favour of `TrainerCallback`.
   The metaclass-wrapping implementation is removed as well.
+- Removed the `tensorboard_writer` parameter to `GradientDescentTrainer`. You should use the `TensorBoardCallback` now instead.
 
 ### Fixed
 
