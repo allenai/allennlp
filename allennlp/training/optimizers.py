@@ -254,6 +254,13 @@ class RegexOptimizer(Optimizer):
            )
 
         parameter_groups = make_parameter_groups(self.model_parameters, self.parameter_groups)
+        # manually set optimizer kwargs for the default group, so things like learning_rate_schedulers know the 'lr'
+        # for this parameter group.
+        if len(list(parameter_groups[-1].keys())) == 1:
+            for i, optimizer in enumerate(self.optimizers):
+                if optimizer["name"] == "default":
+                    parameter_groups[-1].update(optimizer)
+
         optimizer_groups = self._populate_optimizer_groups(parameter_groups)
         self._set_optimizer_kwargs(optimizer_groups, self.optimizers)
 
@@ -290,26 +297,19 @@ class RegexOptimizer(Optimizer):
                 optimizer_groups["default"][0].append(param)
         else:
             for parameter_group in parameter_groups:
-                # Create a group to be passed to the optimizer.
-                group = {}
                 # Check to see what optimizer this group should be assigned to.
                 if "name" in list(parameter_group.keys()):
                     optimizer_key = parameter_group["name"]
                     if not optimizer_key in optimizer_groups:
                         optimizer_groups[optimizer_key] = ([], {})
-
-                    for key in parameter_group.keys():
-                        if key != "name":
-                            group[key] = parameter_group[key]
-                    # Pass this group to its optimizer.
+                    
+                    group = {key: value for key, value in parameter_group.items() if key != "name"}
                     optimizer_groups[optimizer_key][0].append(group)
                 # If no optimizer name is given, assign this group to the default group.
                 else:
                     if not "default" in optimizer_groups:
                         optimizer_groups["default"] = ([], {})
-                    
-                    for key in parameter_group.keys():
-                        group[key] = parameter_group[key]
+                    group = {key: value for key, value in parameter_group.items()}                    
                     optimizer_groups["default"][0].append(group)
         
         return optimizer_groups
