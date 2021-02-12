@@ -76,6 +76,7 @@ class TestOptimizer(AllenNlpTestCase):
         # the recurrent connections left in the default group
         assert len(param_groups[2]["params"]) == 2
 
+
 class TestRegexOptimizer(AllenNlpTestCase):
     def setup_method(self):
         super().setup_method()
@@ -115,21 +116,15 @@ class TestRegexOptimizer(AllenNlpTestCase):
         
         for i, (name, optimizer) in enumerate(optimizer._grouped_optimizers.items()):
             if i == 0:
-                assert name == "default"
-                param_groups = optimizer.param_groups
-                # Default group gets assigned any group without a 'name' parameter in `parameter_groups`
-                # as well as any parameters which didn't match one of the given regexes.
-                assert len(param_groups) == 2
-            elif i == 1:
-                assert name == "embedder"
+                assert name == "embedder", "Optimizers were not initialized in the same order as parameter groups."
                 param_groups = optimizer.param_groups
                 assert len(param_groups) == 1
                 for param_group in param_groups:
                     assert param_group["betas"] == (0.9, 0.98)
                     assert param_group["lr"] == 2
                     assert param_group["weight_decay"] == 0.01
-            elif i == 2:
-                assert name == "encoder"
+            elif i == 1:
+                assert name == "encoder", "Optimizers were not initialized in the same order as parameter groups."
                 param_groups = optimizer.param_groups
                 # The optimizer can have sub-groups with different options.
                 assert len(param_groups) == 2
@@ -137,7 +132,56 @@ class TestRegexOptimizer(AllenNlpTestCase):
                     if i == 0:
                         assert param_group["lr"] == 0.001
                     elif i == 1:
-                        assert param_group["lr"] == 0.002
+                        assert param_group["lr"] == 0.002    
+            elif i == 2:
+                assert name == "default", "Optimizers were not initialized in the same order as parameter groups."
+                param_groups = optimizer.param_groups
+                # Default group gets assigned any group without a 'name' parameter in `parameter_groups`
+                # as well as any parameters which didn't match one of the given regexes.
+                assert len(param_groups) == 2
+
+    def test_optimizer_params(self):
+        optimizer_params = Params({
+                                    "type": "regex",
+                                    "optimizers": [
+                                        {"name": "default", "type": "adam", "lr": 1},
+                                        {"name": "embedder", "type": "adam", "lr": 2},
+                                        {"name": "encoder", "type": "adam", "lr": 3},        
+                                    ],
+                                    "parameter_groups": [
+                                        [["^text_field_embedder"], {"name": "embedder", "betas": (0.9, 0.98), "lr": 2, "weight_decay": 0.01}],
+                                        [["^encoder.*bias"], {"name": "encoder", "lr": 0.001}],
+                                        [["^encoder.*weight"], {"name": "encoder", "lr": 0.002}],
+                                        [["^tag_projection_layer.*.weight$"], {"lr": 5}]
+                                    ],
+                                    })
+        import torch
+       
+        parameters = [[n, p] for n, p in self.model.named_parameters() if p.requires_grad]
+        optimizer = Optimizer.from_params(model_parameters=parameters, params=optimizer_params)
+
+        # When the RegexOptimizer is initialized, `optimizer.param_groups` stores the parameter groups.
+        # These parameter groups are assigned to their own optimizer by the RegexOptimizer.
+        # Check that changes to the parameters in optimizer.param_groups affect the parameters in optimizer._grouped_optimizers.
+        regex_optimizer_params = []
+        regex_optimizer_grouped_optimizer_params = []
+
+        for param_group in optimizer.param_groups:
+            params = param_group["params"]
+            for param in params:
+                param.data.zero_()
+                regex_optimizer_params.append(id(param))
+
+        # Check that the parameters of the sub-optimizers were also changed.
+        for optimizer in optimizer._grouped_optimizers.values():
+            for param_group in optimizer.param_groups:
+                params = param_group["params"]
+                for param in params:
+                    regex_optimizer_grouped_optimizer_params.append(id(param))
+                    assert param.sum() == 0, "Param has non-zero values."
+
+        # As the optimizers are created in accordance with the order of groups in `parameter_groups`, the order of parameters should be deterministic.
+        assert regex_optimizer_params == regex_optimizer_grouped_optimizer_params
 
 
 class TestDenseSparseAdam(AllenNlpTestCase):
