@@ -12,7 +12,12 @@ import math
 import numpy
 import torch
 import torch.distributed as dist
-from torch.distributed import ReduceOp
+
+if dist.is_available():
+    from torch.distributed import ReduceOp
+else:
+    class ReduceOp(object):
+        SUM = None
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import int_to_device, is_distributed
