@@ -17,6 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Updated `Paper` and `Dataset` classes in `ModelCard`.
 
+## Fixed
+
+- Fixed documentation and validation checks for `FBetaMultiLabelMetric`.
+
 
 ## [v1.4.1](https://github.com/allenai/allennlp/releases/tag/v1.4.1) - 2021-01-29
 
