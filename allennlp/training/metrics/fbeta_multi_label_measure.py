@@ -109,7 +109,7 @@ class FBetaMultiLabelMeasure(FBetaMeasure):
             self._total_sum = torch.zeros(num_classes, device=predictions.device)
 
         if mask is None:
-            mask = torch.ones_like(gold_labels).bool()
+            mask = torch.ones_like(gold_labels, dtype=torch.bool)
         gold_labels = gold_labels.float()
 
         # If the prediction tensor is all zeros, the record is not classified to any of the labels.
