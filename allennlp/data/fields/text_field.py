@@ -203,4 +203,3 @@ class TextField(SequenceField[TextFieldTensors]):
     @overrides
     def to_json(self, human_readable: bool = True):
         return [str(t) for t in self.tokens]
-

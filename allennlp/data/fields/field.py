@@ -59,8 +59,9 @@ class Field(Generic[DataArray]):
         use case includes example-based explanation, where it's better to have a output file
         rather than printing or logging.
 
-        For example, if the field is LabelField, then we just output, field.label
-                     if the field is TextField, then we just output, field.tokens (preferrably un-numericalized tokens)
+        For example, - if the field is LabelField, then we just output, field.label
+                     - if the field is TextField, then we just output, field.tokens
+                       (preferrably un-numericalized tokens)
         Since this is hard to deal with in higher level usage -- e.g. judging instance contains which fields
         and how to convert -- it's better to do it in the lower level.
 
