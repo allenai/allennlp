@@ -1,6 +1,5 @@
 from typing import Any, Dict, List, Tuple, Union
 
-import pytest
 import torch
 
 from allennlp.common.testing import (
