@@ -60,3 +60,7 @@ class TestLabelField(AllenNlpTestCase):
     def test_printing_doesnt_crash(self):
         label = LabelField("label", label_namespace="namespace")
         print(label)
+
+    def test_to_json(self):
+        label = LabelField("label", label_namespace="namespace")
+        assert label.to_json() == "label"

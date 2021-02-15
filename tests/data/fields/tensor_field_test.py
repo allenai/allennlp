@@ -113,3 +113,8 @@ class TestTensorField(AllenNlpTestCase):
         assert array1 != array2
         assert array1 != array3
         assert array1 == array4
+
+    def test_to_json(self):
+        array = TensorField(numpy.asarray([1, 1, 1]))
+        assert array.to_json() is None
+        assert (array.to_json(human_readable=False) == numpy.asarray([1, 1, 1])).all()

@@ -1,6 +1,7 @@
+import numpy
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Instance
-from allennlp.data.fields import TextField, LabelField
+from allennlp.data.fields import TextField, LabelField, TensorField
 from allennlp.data.token_indexers import PretrainedTransformerIndexer
 from allennlp.data.tokenizers import Token
 
@@ -40,3 +41,16 @@ class TestInstance(AllenNlpTestCase):
         instance.add_field("labels", LabelField("some_label"))
         assert "labels" not in other.fields
         assert other != instance  # sanity check on the '__eq__' method.
+
+    def test_to_json(self):
+        words_field = TextField([Token("hello")], {})
+        label_field = LabelField(1, skip_indexing=True)
+        instance1 = Instance({"words": words_field, "labels": label_field})
+
+        assert type(instance1.to_json()) is dict
+        assert instance1.to_json() == {"words": ["hello"], "labels": 1}
+
+        array = TensorField(numpy.asarray([1, 1, 1]))
+        instance2 = Instance({"words": words_field, "labels": label_field, "tensor": array})
+        assert instance1.to_json() == instance2.to_json()
+        assert instance1.to_json(human_readable=False) != instance2.to_json(human_readable=False)
