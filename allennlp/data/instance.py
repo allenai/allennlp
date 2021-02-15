@@ -2,6 +2,7 @@ from typing import Dict, MutableMapping, Mapping
 
 from allennlp.data.fields.field import DataArray, Field
 from allennlp.data.vocabulary import Vocabulary
+from allennlp.common.util import JsonDict
 
 
 class Instance(Mapping[str, Field]):
@@ -111,3 +112,24 @@ class Instance(Mapping[str, Field]):
         new = Instance({k: field.duplicate() for k, field in self.fields.items()})
         new.indexed = self.indexed
         return new
+
+    def to_json(self, human_readable: bool = True) -> JsonDict:
+        """
+        This function facilitate saving formated instances to json files for human readability,
+        use case includes example-based explanation, where it's better to have a output file
+        rather than printing or logging.
+
+        For example, if the field is LabelField, then we just output, field.label
+                     if the field is TextField, then we just output, field.tokens (preferrably un-numericalized tokens)
+        Since this is hard to deal with in higher level usage -- e.g. judging instance contains which fields
+        and how to convert -- it's better to do it in the lower level.
+
+        """
+        ret = {}
+        for key, field in self.fields.items():
+            to_json = field.to_json(human_readable)
+            if to_json is None:
+                continue
+            ret[key] = to_json
+
+        return ret

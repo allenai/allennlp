@@ -76,3 +76,9 @@ class TensorField(Field[torch.Tensor]):
     def array(self):
         """This is a compatibility method that returns the underlying tensor as a numpy array."""
         return self.tensor.numpy()
+
+    @overrides
+    def to_json(self, human_readable: bool = True):
+        if not human_readable:
+            return self.tensor.numpy()
+        return None

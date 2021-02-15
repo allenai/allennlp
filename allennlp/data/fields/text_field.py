@@ -199,3 +199,8 @@ class TextField(SequenceField[TextFieldTensors]):
             new = TextField(deepcopy(self.tokens))
         new._indexed_tokens = deepcopy(self._indexed_tokens)
         return new
+
+    @overrides
+    def to_json(self, human_readable: bool = True):
+        return [str(t) for t in self.tokens]
+

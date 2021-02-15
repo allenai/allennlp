@@ -53,6 +53,26 @@ class Field(Generic[DataArray]):
         """
         pass
 
+    def to_json(self, human_readable: bool = True):
+        """
+        This function facilitate saving formated instances to json files for human readability,
+        use case includes example-based explanation, where it's better to have a output file
+        rather than printing or logging.
+
+        For example, if the field is LabelField, then we just output, field.label
+                     if the field is TextField, then we just output, field.tokens (preferrably un-numericalized tokens)
+        Since this is hard to deal with in higher level usage -- e.g. judging instance contains which fields
+        and how to convert -- it's better to do it in the lower level.
+
+        # Parameters
+        human_readable: a flag to control the json output of the field.
+                        For example, If the field is TensorField, then it makes less sense to
+                        output it for human readabilty. But still, if the user
+                        really want to output it, we still allows it. In contrast, if it's label field,
+                        then, simply outputing it seems fine.
+        """
+        raise NotImplementedError
+
     def index(self, vocab: Vocabulary):
         """
         Given a :class:`Vocabulary`, converts all strings in this field into (typically) integers.
