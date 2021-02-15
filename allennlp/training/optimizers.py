@@ -215,32 +215,33 @@ class RegexOptimizer(Optimizer):
     This optimizer works by taking in a parameter `optimizers` which contains a list of `Optimizers`
     with their keyword arguments, and a parameter `parameter_groups`, which contains regexes and their
     corresponding optimizer and optional non-default optimizer options for this group. 
-    The regexes in parameter groups are assigned to their optimizer based on the 'name' argument
+    The regexes in the parameter groups are assigned to their optimizer based on the 'name' argument
     where the 'name' value should be the same for the optimizer and parameter group.
     You should specify a default optimizer with 'name': 'default' which will be used for all 
-    parameters which didn't have a regex match or when your parameter group doesn't contain a 'name' 
+    parameters which didn't obtain a regex match or when your parameter group doesn't contain a 'name' 
     parameter.
 
     # Parameters
 
     optimizers: `List[Dict[str, Any]]`
         A list of optimizers to use. Each entry in the list is a dictionary of keyword arguments. A 'name' 
-        keyword argument should be given which will serve as the key to match optimizers with parameter groups.
-        You should also supply an entry for the default parameter group, e.g. "name": "default".
+        keyword argument should be given which will serve as the key to match the optimizer with a 
+        specific parameter group. You should also supply an entry for the default parameter group, 
+        e.g. 'name': 'default'.
 
     parameter_groups:  `List[Tuple[List[str], Dict[str, Any]]`, optional (default = `None`)
         See the docstring of `make_parameter_groups` for what this parameter should look like. It
         should follow the same format as there, except an additional 'name' argument should be provided
         to match this group to its own optimizer. Optimizer options can also be set for this group which
-        will override the default options. We allow this to be `None` here, in which case all parameters
-        will be assigned to the 'default' optimizer but really you only want to use this class if you have
-        different groups which will be assigned their own optimizer.
+        will override the default options.
     """
-    def __init__(self,
-                model_parameters: List[Tuple[str, torch.nn.Parameter]],
-                optimizers: List[Dict[str, Any]],
-                parameter_groups: List[Tuple[List[str], Dict[str, Any]]] = None,
-                ):
+
+    def __init__(
+        self,
+        model_parameters: List[Tuple[str, torch.nn.Parameter]],
+        optimizers: List[Dict[str, Any]],
+        parameter_groups: List[Tuple[List[str], Dict[str, Any]]],
+    ):
         self.model_parameters = model_parameters
         self.optimizers = optimizers
         self.parameter_groups = parameter_groups
@@ -254,10 +255,10 @@ class RegexOptimizer(Optimizer):
            )
 
         parameter_groups = make_parameter_groups(self.model_parameters, self.parameter_groups)
-        # manually set optimizer kwargs for the default group, so things like learning_rate_schedulers know the 'lr'
-        # for this parameter group.
+        # Manually set optimizer kwargs for the default group, so certain schedulers are able
+        # to know the options for this group.
         if len(list(parameter_groups[-1].keys())) == 1:
-            for i, optimizer in enumerate(self.optimizers):
+            for optimizer in self.optimizers:
                 if optimizer["name"] == "default":
                     parameter_groups[-1].update(optimizer)
 
@@ -270,13 +271,13 @@ class RegexOptimizer(Optimizer):
                raise ValueError(
                     f"Optimizer '{optimizer_key}' did not receive any parameters."
                     " If you are using `parameter_groups`, please make sure that the regexes you have provided"
-                    " there match the desired model parameters, or that the `name` value of this optimizer "
+                    " match the desired model parameters, or that the `name` value of this optimizer "
                     " matches that of the parameter group you are trying to assign to it."
                     " Alternatively, you can remove this optimizer from the provided `optimizers`"
                     " if it is not relevant to a particular parameter group."
                     )
 
-        # We have already created our parameter_groups so we set `parameter_groups` to False, which is a no-op in `make_parameter_groups`.
+        # We have already created our parameter groups so we set `parameter_groups` to False, which is a no-op in `make_parameter_groups`.
         # This is so that we don't have to change any of the code when initializing individual optimizers.
         for optimizer_name, (params, optimizer_kwargs) in optimizer_groups.items():
             self._grouped_optimizers[optimizer_name] = Optimizer.from_params(model_parameters=params, parameter_groups=False, params=Params(optimizer_kwargs))
@@ -285,38 +286,32 @@ class RegexOptimizer(Optimizer):
 
     def _populate_optimizer_groups(self, parameter_groups):
         """
-        For each parameter group in `parameter_groups`, assign it to the
+        Assigns each parameter group in `parameter_groups` to the
         appropriate optimizer or to the 'default' optimizer.
         """
         optimizer_groups = {}
-        
-        # No parameter_groups were specified originally, so assign all parameters to the default group.
-        if self.parameter_groups is None:
-            optimizer_groups["default"] = ([], {})
-            for param in parameter_groups:
-                optimizer_groups["default"][0].append(param)
-        else:
-            for parameter_group in parameter_groups:
-                # Check to see what optimizer this group should be assigned to.
-                if "name" in list(parameter_group.keys()):
-                    optimizer_key = parameter_group["name"]
-                    if not optimizer_key in optimizer_groups:
-                        optimizer_groups[optimizer_key] = ([], {})
-                    
-                    group = {key: value for key, value in parameter_group.items() if key != "name"}
-                    optimizer_groups[optimizer_key][0].append(group)
-                # If no optimizer name is given, assign this group to the default group.
-                else:
-                    if not "default" in optimizer_groups:
-                        optimizer_groups["default"] = ([], {})
-                    group = {key: value for key, value in parameter_group.items()}                    
-                    optimizer_groups["default"][0].append(group)
+
+        for parameter_group in parameter_groups:
+            # Check to see what optimizer this group should be assigned to.
+            if "name" in list(parameter_group.keys()):
+                optimizer_key = parameter_group["name"]
+                if not optimizer_key in optimizer_groups:
+                    optimizer_groups[optimizer_key] = ([], {})
+                
+                group = {key: value for key, value in parameter_group.items() if key != "name"}
+                optimizer_groups[optimizer_key][0].append(group)
+            # If no optimizer name is given, assign this group to the default group.
+            else:
+                if not "default" in optimizer_groups:
+                    optimizer_groups["default"] = ([], {})
+                group = {key: value for key, value in parameter_group.items()}            
+                optimizer_groups["default"][0].append(group)
         
         return optimizer_groups
 
     def _set_optimizer_kwargs(self, optimizer_groups, optimizers):
         """
-        Sets the keyword arguments for each optimizer.
+        Sets the optimizer keyword arguments for each optimizer.
         """
         for optimizer in optimizers:
             optimizer_key = optimizer["name"]
@@ -336,11 +331,13 @@ class RegexOptimizer(Optimizer):
     @overrides
     def state_dict(self):
         """
-        Creates `optimizer_state_dict`, which is a dictionary mapping an optimizer key to its `state_dict`.
-        This dictionary is used as the value for 'optimizer' in the 'training_states' dictionary,
-        e.g. "optimizer" : { "regex1_optimizer" : `regex1_state_dict`, "regex2_optimizer" : `regex2_state_dict`}.
+        Creates an object `optimizer_state_dict`, which is a dictionary mapping an optimizer key to its `state_dict`.
+        This dictionary is used as the value for 'optimizer' in the 'training_states' dictionary in the `gradient_descent`
+        `Trainer`, e.g. "optimizer" : {"optimizer1": `optimizer1_state_dict`, "optimizer2" : `optimizer2_state_dict`}.
         """
-        optimizer_state_dict = {f"{optimizer_key}_optimizer": optimizer.state_dict() for optimizer_key, optimizer in self._grouped_optimizers.items()}
+        optimizer_state_dict = {
+            f"{optimizer_key}_optimizer": optimizer.state_dict() for optimizer_key, optimizer in self._grouped_optimizers.items()
+        }
         
         return optimizer_state_dict
 

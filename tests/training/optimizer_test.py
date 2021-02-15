@@ -167,6 +167,9 @@ class TestRegexOptimizer(AllenNlpTestCase):
         regex_optimizer_grouped_optimizer_params = []
 
         for param_group in optimizer.param_groups:
+            # Each param_group should have optimizer options visible so they can be used by schedulers.
+            lr = param_group["lr"]
+            assert lr > 0
             params = param_group["params"]
             for param in params:
                 param.data.zero_()
