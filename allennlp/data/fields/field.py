@@ -65,7 +65,8 @@ class Field(Generic[DataArray]):
         and how to convert -- it's better to do it in the lower level.
 
         # Parameters
-        human_readable: a flag to control the json output of the field.
+        human_readable : `bool`
+                        a flag to control the json output of the field.
                         For example, If the field is TensorField, then it makes less sense to
                         output it for human readabilty. But still, if the user
                         really want to output it, we still allows it. In contrast, if it's label field,
