@@ -28,6 +28,7 @@ from allennlp.training import (
     TrainerCallback,
     TrackEpochCallback,
     TensorBoardCallback,
+    ConsoleLogCallback,
 )
 from allennlp.training.learning_rate_schedulers import CosineWithRestarts
 from allennlp.training.learning_rate_schedulers import ExponentialLearningRateScheduler
@@ -1150,10 +1151,29 @@ class TestTrainer(TrainerTestBase):
                             "tensorboard_writer": {
                                 "histogram_interval": 2,
                                 "should_log_inputs": True,
-                                "should_log_inputs_to_console": True,
                             }
                         }
                     ),
+                    serialization_dir=self.TEST_DIR,
+                )
+            ],
+        )
+        trainer.train()
+
+    def test_console_log_callback(self):
+        # enable activation logging
+        for module in self.model.modules():
+            module.should_log_activations = True
+
+        trainer = GradientDescentTrainer(
+            self.model,
+            self.optimizer,
+            self.data_loader,
+            num_epochs=3,
+            serialization_dir=self.TEST_DIR,
+            callbacks=[
+                ConsoleLogCallback.from_params(
+                    Params({"console_writer": {"histogram_interval": 2}}),
                     serialization_dir=self.TEST_DIR,
                 )
             ],

@@ -30,6 +30,8 @@ from allennlp.training.momentum_schedulers import MomentumScheduler
 from allennlp.training.moving_average import MovingAverage
 from allennlp.training.optimizers import Optimizer
 from allennlp.training.tensorboard_writer import TensorBoardWriter
+from allennlp.training.console_writer import ConsoleWriter
+from allennlp.training.log_writer import LogWriter
 
 logger = logging.getLogger(__name__)
 
@@ -117,7 +119,7 @@ class TrainerCallback(Registrable):
     and saving its own files next to the config/checkpoints/logs/etc.
     """
 
-    def __init__(self, serialization_dir: str) -> None:
+    def __init__(self, serialization_dir: Optional[str] = None) -> None:
         self.serialization_dir = serialization_dir
         self.trainer: Optional["GradientDescentTrainer"] = None
 
@@ -177,20 +179,19 @@ class TrainerCallback(Registrable):
 TrainerCallback.register("null")(TrainerCallback)
 
 
-@TrainerCallback.register("tensorboard")
-class TensorBoardCallback(TrainerCallback):
+class LogCallback(TrainerCallback):
     """
-    Log training statistics and metrics to TensorBoard using the `TensorBoardWriter`.
+    Log training statistics and metrics using a `LogWriter`.
     """
 
     def __init__(
         self,
-        serialization_dir: str,
-        tensorboard_writer: Lazy[TensorBoardWriter] = Lazy(TensorBoardWriter),
+        serialization_dir: Optional[str] = None,
+        log_writer: Lazy[LogWriter] = Lazy(LogWriter),
     ) -> None:
         super().__init__(serialization_dir=serialization_dir)
-        self._tensorboard_constructor = tensorboard_writer
-        self._tensorboard: Optional[TensorBoardWriter] = None
+        self._log_writer_constructor = log_writer
+        self._log_writer: Optional[LogWriter] = None
         self._param_updates: Optional[Dict[str, torch.Tensor]] = None
 
     def on_start(
@@ -198,13 +199,13 @@ class TensorBoardCallback(TrainerCallback):
     ) -> None:
         self.trainer = trainer
         if is_primary:
-            self._tensorboard = self._tensorboard_constructor.construct(
+            self._log_writer = self._log_writer_constructor.construct(
                 serialization_dir=self.serialization_dir
             )
-            self._tensorboard.get_batch_num_total = (
+            self._log_writer.get_batch_num_total = (
                 lambda: self.trainer._batch_num_total  # type: ignore[union-attr]
             )
-            self._tensorboard.enable_activation_logging(self.trainer.model)
+            self._log_writer.enable_activation_logging(self.trainer.model)
 
     def on_batch(
         self,
@@ -226,17 +227,17 @@ class TensorBoardCallback(TrainerCallback):
 
         if not is_primary:
             return None
-        assert self._tensorboard is not None
+        assert self._log_writer is not None
 
-        if self._tensorboard.should_log_histograms_this_batch():
+        if self._log_writer.should_log_histograms_this_batch():
             assert self._param_updates is not None
             for name, param in trainer.model.named_parameters():
                 self._param_updates[name].sub_(param.detach().cpu())
         else:
             self._param_updates = None
 
-        self._tensorboard.log_memory_usage(cpu_memory_usage, gpu_memory_usage)
-        self._tensorboard.log_batch(
+        self._log_writer.log_memory_usage(cpu_memory_usage, gpu_memory_usage)
+        self._log_writer.log_batch(
             trainer.model,
             trainer.optimizer,  # type: ignore[arg-type]
             batch_grad_norm,
@@ -245,7 +246,7 @@ class TensorBoardCallback(TrainerCallback):
             self._param_updates,
         )
 
-        if self._tensorboard.should_log_histograms_next_batch():
+        if self._log_writer.should_log_histograms_next_batch():
             self._param_updates = {
                 name: param.detach().cpu().clone()
                 for name, param in trainer.model.named_parameters()
@@ -261,7 +262,7 @@ class TensorBoardCallback(TrainerCallback):
     ) -> None:
         if not is_primary:
             return None
-        assert self._tensorboard is not None
+        assert self._log_writer is not None
 
         train_metrics: Dict[str, Any] = {}
         val_metrics: Dict[str, Any] = {}
@@ -274,10 +275,9 @@ class TensorBoardCallback(TrainerCallback):
                 key = key.replace("validation_", "", 1)
                 val_metrics[key] = value
 
-        self._tensorboard.log_metrics(
+        self._log_writer.log_metrics(
             train_metrics,
             val_metrics=val_metrics,
-            log_to_console=True,
             epoch=epoch + 1,  # +1 because tensorboard doesn't like 0
         )
 
@@ -290,8 +290,36 @@ class TensorBoardCallback(TrainerCallback):
         **kwargs,
     ) -> None:
         if is_primary:
-            assert self._tensorboard is not None
-            self._tensorboard.close()
+            assert self._log_writer is not None
+            self._log_writer.close()
+
+
+@TrainerCallback.register("tensorboard")
+class TensorBoardCallback(LogCallback):
+    """
+    Log training statistics and metrics to TensorBoard using the `TensorBoardWriter`.
+    """
+
+    def __init__(
+        self,
+        serialization_dir: str,
+        tensorboard_writer: Lazy[TensorBoardWriter] = Lazy(TensorBoardWriter),
+    ) -> None:
+        super().__init__(serialization_dir=serialization_dir, log_writer=tensorboard_writer)  # type: ignore
+
+
+@TrainerCallback.register("console")
+class ConsoleLogCallback(LogCallback):
+    """
+    Log training statistics and metrics to console using the `ConsoleWriter`.
+    """
+
+    def __init__(
+        self,
+        serialization_dir: str,
+        console_writer: Lazy[ConsoleWriter] = Lazy(ConsoleWriter),
+    ) -> None:
+        super().__init__(serialization_dir=serialization_dir, log_writer=console_writer)  # type: ignore
 
 
 @TrainerCallback.register("track_epoch_callback")
