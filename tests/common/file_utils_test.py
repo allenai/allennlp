@@ -8,7 +8,7 @@ import shutil
 from filelock import Timeout
 import pytest
 import responses
-from requests.exceptions import ConnectionError
+from requests.exceptions import ConnectionError, HTTPError
 
 from allennlp.common import file_utils
 from allennlp.common.file_utils import (
@@ -302,6 +302,22 @@ class TestFileUtils(AllenNlpTestCase):
         )
         with open(filename, "r") as f:
             assert f.read().startswith("I mean, ")
+
+    @responses.activate
+    def test_cached_path_http_err_handling(self):
+        url_404 = "http://fake.datastore.com/does-not-exist"
+        byt = b"Does not exist"
+        for method in (responses.GET, responses.HEAD):
+            responses.add(
+                method,
+                url_404,
+                body=byt,
+                status=404,
+                headers={"Content-Length": str(len(byt))},
+            )
+
+        with pytest.raises(HTTPError):
+            cached_path(url_404, cache_dir=self.TEST_DIR)
 
     def test_extract_with_external_symlink(self):
         dangerous_file = self.FIXTURES_ROOT / "common" / "external_symlink.tar.gz"

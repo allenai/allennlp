@@ -434,6 +434,7 @@ def _http_etag(url: str) -> Optional[str]:
 def _http_get(url: str, temp_file: IO) -> None:
     with _session_with_backoff() as session:
         req = session.get(url, stream=True)
+        req.raise_for_status()
         content_length = req.headers.get("Content-Length")
         total = int(content_length) if content_length is not None else None
         progress = Tqdm.tqdm(unit="B", total=total, desc="downloading")
