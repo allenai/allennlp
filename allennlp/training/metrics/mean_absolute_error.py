@@ -66,7 +66,6 @@ class MeanAbsoluteError(Metric):
         mean_absolute_error = self._absolute_error / self._total_count
         if reset:
             self.reset()
-        assert isinstance(mean_absolute_error, float)
         return {"mae": mean_absolute_error}
 
     @overrides
