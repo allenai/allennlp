@@ -26,6 +26,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   brings that functionality back.
 - Fixed a bug where the `MultiProcessDataLoading` would crash when `num_workers > 0`, `start_method = "spawn"`, `max_instances_in_memory not None`, and `batches_per_epoch not None`.
 - Fixed documentation and validation checks for `FBetaMultiLabelMetric`.
+- Fixed handling of HTTP errors when fetching remote resources with `cached_path()`. Previously the content would be cached even when
+  certain errors - like 404s - occurred. Now an `HTTPError` will be raised whenever the HTTP response is not OK.
 
 
 ## [v2.0.1](https://github.com/allenai/allennlp/releases/tag/v2.0.1) - 2021-01-29
