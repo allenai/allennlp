@@ -100,12 +100,19 @@ class TensorBoardWriter(LogWriter):
         if self._train_log is not None:
             self._train_log.add_scalar(name, self._item(value), timestep)
 
-    def add_train_histogram(self, name: str, values: torch.Tensor) -> None:
+    def add_train_tensor(self, name: str, values: torch.Tensor) -> None:
         assert self.get_batch_num_total is not None
         if self._train_log is not None:
             if isinstance(values, torch.Tensor):
                 values_to_write = values.cpu().data.numpy().flatten()
                 self._train_log.add_histogram(name, values_to_write, self.get_batch_num_total())
+
+    def add_train_histogram(self, name: str, values: torch.Tensor) -> None:
+        """
+        This function is added for backwards compatibility, and simply calls
+        `add_train_tensor`.
+        """
+        self.add_train_tensor(name, values)
 
     def _log_fields(self, fields: Dict, log_prefix: str = ""):
 
@@ -113,7 +120,7 @@ class TensorBoardWriter(LogWriter):
             if isinstance(val, dict):
                 self._log_fields(val, log_prefix + "/" + key)
             elif isinstance(val, torch.Tensor):
-                self.add_train_histogram(log_prefix + "/" + key, val)
+                self.add_train_tensor(log_prefix + "/" + key, val)
             elif isinstance(val, Number):
                 # This is helpful for a field like `FlagField`.
                 self.add_train_scalar(log_prefix + "/" + key, val)  # type: ignore
@@ -173,15 +180,15 @@ class TensorBoardWriter(LogWriter):
     def log_activation_histogram(self, outputs, log_prefix: str) -> None:
         if isinstance(outputs, torch.Tensor):
             log_name = log_prefix
-            self.add_train_histogram(log_name, outputs)
+            self.add_train_tensor(log_name, outputs)
         elif isinstance(outputs, (list, tuple)):
             for i, output in enumerate(outputs):
                 log_name = "{0}_{1}".format(log_prefix, i)
-                self.add_train_histogram(log_name, output)
+                self.add_train_tensor(log_name, output)
         elif isinstance(outputs, dict):
             for k, tensor in outputs.items():
                 log_name = "{0}_{1}".format(log_prefix, k)
-                self.add_train_histogram(log_name, tensor)
+                self.add_train_tensor(log_name, tensor)
         else:
             # skip it
             pass

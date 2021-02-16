@@ -108,12 +108,18 @@ class LogWriter(FromParams):
         )
 
     def add_train_scalar(self, name: str, value: float, timestep: int = None):
+        """
+        This function is for how scalar values should be logged.
+        """
         return NotImplementedError
 
     def add_validation_scalar(self, name: str, value: float, timestep: int = None):
         return NotImplementedError
 
-    def add_train_histogram(self, name: str, values: torch.Tensor):
+    def add_train_tensor(self, name: str, values: torch.Tensor):
+        """
+        This function is for how tensor values should be logged.
+        """
         return NotImplementedError
 
     def log_metrics(
@@ -200,7 +206,7 @@ class LogWriter(FromParams):
             )
         for name, param in model.named_parameters():
             if name in self._histogram_parameters:
-                self.add_train_histogram("parameter_histogram/" + name, param)
+                self.add_train_tensor("parameter_histogram/" + name, param)
 
     def log_parameter_and_gradient_statistics(
         self, model: Model, batch_grad_norm: float = None

@@ -17,7 +17,7 @@ class ConsoleWriter(LogWriter):
         # header_template = "%s |  %-10s"
         logger.info(f'"{name}" : "{value}" (timestep {timestep})')
 
-    def add_train_histogram(self, name: str, values: torch.Tensor) -> None:
+    def add_train_tensor(self, name: str, values: torch.Tensor) -> None:
         logger.info(f"\"{name}\" (Shape : {' x '.join([str(x) for x in values.shape])})")
         torch.set_printoptions(threshold=2)
         logger.info(f"{values}")
@@ -29,7 +29,7 @@ class ConsoleWriter(LogWriter):
             if isinstance(val, dict):
                 self._log_fields(val, log_prefix + "/" + key)
             elif isinstance(val, torch.Tensor):
-                self.add_train_histogram(log_prefix + "/" + key, val)
+                self.add_train_tensor(log_prefix + "/" + key, val)
             elif isinstance(val, Number):
                 # This is helpful for a field like `FlagField`.
                 self.add_train_scalar(log_prefix + "/" + key, val)  # type: ignore
