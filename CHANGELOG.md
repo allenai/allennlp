@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Unreleased
 
 ### Added
+-  Adding new function for example-based interpretation methods --- `SimpleInfluence`
+
+### Added
 -  New functionality `to_json()` to support outputing instances to files
 
 ### Changed
