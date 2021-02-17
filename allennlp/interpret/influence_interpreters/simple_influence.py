@@ -56,11 +56,11 @@ class SimpleInfluence(InfluenceInterpreter):
         A damping termed added in case the approximated Hessian (during LiSSA algorithm) has
         negative eigenvalues. This is a hyperparameter.
     num_samples: int = 1,
-        Optional. This is a hyperparameter for LiSSA algorithm that we determine how many rounds of recursion process
-        we would like to run for approxmation.
+        Optional. This is a hyperparameter for LiSSA algorithm that we
+        determine how many rounds of recursion process we would like to run for approxmation.
     recur_depth: Optional[Union[float, int]] = 0.25,
-        Optional. This is a hyperparameter for LiSSA algorithm that we determine the recursion depth we would like to
-        go through.
+        Optional. This is a hyperparameter for LiSSA algorithm that we
+        determine the recursion depth we would like to go through.
     scale: float = 1e4,
         Optional. This is a hyperparameter for LiSSA algorithm to tune such that the Taylor expansion converges.
     """
@@ -108,8 +108,8 @@ class SimpleInfluence(InfluenceInterpreter):
         This is the "main" function of influence score calcualtion. This function will go through
         example by example in the provided test set, and run the LiSSA algorithm to
         approximate the inverse Hessian for each test examples. Then, it will use this inverse
-        to calculate the score for each train examples. As a result, we will output `k` examples with the highest
-        and `k` examples with the lowest influence scores for the informativeness.
+        to calculate the score for each train examples. As a result, we will output
+        `k` examples with the highest and `k` examples with the lowest influence scores.
         The output file contains lines of dictionary (one per line). Each line looks like:
             {
                 "test_instance": {<input and output field in human readble form>, "loss": ...}
@@ -281,7 +281,8 @@ class SimpleInfluence(InfluenceInterpreter):
                 )
 
                 # this is the recursive step
-                # cur_estimate = \tilde{H}^{−1}_{j - 1} v (i.e. Hessian-Vector Product estimate from last iteration)
+                # cur_estimate = \tilde{H}^{−1}_{j - 1} v
+                # (i.e. Hessian-Vector Product estimate from last iteration)
                 # v + (I - Hessian_at_x) * cur_estimate = v + cur_estimate - Hessian_at_x * cur_estimate
                 # Updating for \tilde{H}^{−1}_j v
                 cur_estimates = [

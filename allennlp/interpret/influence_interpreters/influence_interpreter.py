@@ -108,5 +108,5 @@ class InfluenceInterpreter(Registrable):
             trainable_param_names = [n for n, p in model.named_parameters() if p.requires_grad]
             print(
                 f"Params Trainable: {num_trainable_params}\n\t"
-                + f"\n\t".join(trainable_param_names)
+                + "\n\t".join(trainable_param_names)
             )
