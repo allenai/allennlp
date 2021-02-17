@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 import torch
 
@@ -19,10 +19,10 @@ class InfluenceInterpreter(Registrable):
     def __init__(
         self,
         predictor: Predictor,
-        train_dataset_reader: DatasetReader,
-        test_dataset_reader: DatasetReader,
         train_filepath: str,
         test_filepath: str,
+        train_dataset_reader: DatasetReader,
+        test_dataset_reader: Optional[DatasetReader] = None,
         params_to_freeze: List[str] = None,
         k: int = 20,
         device: int = -1,
@@ -107,6 +107,5 @@ class InfluenceInterpreter(Registrable):
             )
             trainable_param_names = [n for n, p in model.named_parameters() if p.requires_grad]
             print(
-                f"Params Trainable: {num_trainable_params}\n\t"
-                + "\n\t".join(trainable_param_names)
+                f"Params Trainable: {num_trainable_params}\n\t" + "\n\t".join(trainable_param_names)
             )
