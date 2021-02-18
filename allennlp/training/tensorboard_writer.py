@@ -26,7 +26,7 @@ class TensorBoardWriter(LogWriter):
         "tensorboard_writer", it gets passed in separately.
     summary_interval : `int`, optional (default = `100`)
         Most statistics will be written out only every this many batches.
-    histogram_interval : `int`, optional (default = `None`)
+    distribution_interval : `int`, optional (default = `None`)
         If provided, activation histograms will be written out every this many batches.
         If None, activation histograms will not be written out.
         When this parameter is specified, the following additional logging is enabled:
@@ -41,6 +41,8 @@ class TensorBoardWriter(LogWriter):
         slow, so we recommend logging histograms relatively infrequently.
         Note: only Modules that return tensors, tuples of tensors or dicts
         with tensors as values currently support activation logging.
+    histogram_interval : `int`, optional (default = `None`)
+        This is the same as `distribution_interval` and is kept for backwards compatibility.
     batch_size_interval : `int`, optional, (default = `None`)
         If defined, how often to log the average batch size.
     should_log_parameter_statistics : `bool`, optional (default = `True`)
@@ -62,6 +64,7 @@ class TensorBoardWriter(LogWriter):
         self,
         serialization_dir: Optional[str] = None,
         summary_interval: int = 100,
+        distribution_interval: int = None,
         histogram_interval: int = None,
         batch_size_interval: Optional[int] = None,
         should_log_parameter_statistics: bool = True,
@@ -70,10 +73,19 @@ class TensorBoardWriter(LogWriter):
         get_batch_num_total: Callable[[], int] = None,
     ) -> None:
 
+        if distribution_interval is not None and histogram_interval is not None:
+            logger.warning(
+                f"`histogram_interval`=`{histogram_interval}` will be ignored "
+                f"in favor of `distribution_interval`=`{distribution_interval}`"
+            )
+
+        if distribution_interval is None:
+            distribution_interval = histogram_interval
+
         super().__init__(
             serialization_dir,
             summary_interval,
-            histogram_interval,
+            distribution_interval,
             batch_size_interval,
             should_log_parameter_statistics,
             should_log_learning_rate,
@@ -159,7 +171,7 @@ class TensorBoardWriter(LogWriter):
                 self.add_validation_scalar(name, val_metric, timestep=epoch)
 
     def enable_activation_logging(self, model: Model) -> None:
-        if self._histogram_interval is not None:
+        if self._distribution_interval is not None:
             # To log activation histograms to the forward pass, we register
             # a hook on forward to capture the output tensors.
             # This uses a closure to determine whether to log the activations,
@@ -172,12 +184,12 @@ class TensorBoardWriter(LogWriter):
                 def hook(module_, inputs, outputs):
 
                     log_prefix = "activation_histogram/{0}".format(module_.__class__)
-                    if self.should_log_histograms_this_batch():
-                        self.log_activation_histogram(outputs, log_prefix)
+                    if self.should_log_distributions_this_batch():
+                        self.log_activation_distribution(outputs, log_prefix)
 
                 module.register_forward_hook(hook)
 
-    def log_activation_histogram(self, outputs, log_prefix: str) -> None:
+    def log_activation_distribution(self, outputs, log_prefix: str) -> None:
         if isinstance(outputs, torch.Tensor):
             log_name = log_prefix
             self.add_train_tensor(log_name, outputs)

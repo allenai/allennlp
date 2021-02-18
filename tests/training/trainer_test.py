@@ -1173,7 +1173,7 @@ class TestTrainer(TrainerTestBase):
             serialization_dir=self.TEST_DIR,
             callbacks=[
                 ConsoleLogCallback.from_params(
-                    Params({"console_writer": {"histogram_interval": 2}}),
+                    Params({"console_writer": {"distribution_interval": 2}}),
                     serialization_dir=self.TEST_DIR,
                 )
             ],

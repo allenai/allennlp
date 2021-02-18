@@ -229,7 +229,7 @@ class LogCallback(TrainerCallback):
             return None
         assert self._log_writer is not None
 
-        if self._log_writer.should_log_histograms_this_batch():
+        if self._log_writer.should_log_distributions_this_batch():
             assert self._param_updates is not None
             for name, param in trainer.model.named_parameters():
                 self._param_updates[name].sub_(param.detach().cpu())
@@ -246,7 +246,7 @@ class LogCallback(TrainerCallback):
             self._param_updates,
         )
 
-        if self._log_writer.should_log_histograms_next_batch():
+        if self._log_writer.should_log_distributions_next_batch():
             self._param_updates = {
                 name: param.detach().cpu().clone()
                 for name, param in trainer.model.named_parameters()

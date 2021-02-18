@@ -21,19 +21,17 @@ class LogWriter(FromParams):
 
     summary_interval : `int`, optional (default = `100`)
         Most statistics will be written out only every this many batches.
-    histogram_interval : `int`, optional (default = `None`)
-        If provided, activation histograms will be written out every this many batches.
-        If None, activation histograms will not be written out.
+    distribution_interval : `int`, optional (default = `None`)
+        If provided, activation distributions will be written out every this many batches.
+        If None, activation distributions will not be written out.
         When this parameter is specified, the following additional logging is enabled:
-            * Histograms of model parameters
+            * distributions of model parameters
             * The ratio of parameter update norm to parameter norm
-            * Histogram of layer activations
-        We log histograms of the parameters returned by
-        `model.get_parameters_for_histogram_tensorboard_logging`.
+            * Distribution of layer activations
         The layer activations are logged for any modules in the `Model` that have
         the attribute `should_log_activations` set to `True`.  Logging
-        histograms requires a number of GPU-CPU copies during training and is typically
-        slow, so we recommend logging histograms relatively infrequently.
+        distributions requires a number of GPU-CPU copies during training and is typically
+        slow, so we recommend logging distributions relatively infrequently.
         Note: only Modules that return tensors, tuples of tensors or dicts
         with tensors as values currently support activation logging.
     batch_size_interval : `int`, optional, (default = `None`)
@@ -56,7 +54,7 @@ class LogWriter(FromParams):
         self,
         serialization_dir: Optional[str] = None,
         summary_interval: int = 100,
-        histogram_interval: int = None,
+        distribution_interval: int = None,
         batch_size_interval: Optional[int] = None,
         should_log_parameter_statistics: bool = True,
         should_log_learning_rate: bool = False,
@@ -66,7 +64,7 @@ class LogWriter(FromParams):
     ):
         self._serialization_dir = serialization_dir
         self._summary_interval = summary_interval
-        self._histogram_interval = histogram_interval
+        self._distribution_interval = distribution_interval
         self._batch_size_interval = batch_size_interval
         self._should_log_parameter_statistics = should_log_parameter_statistics
         self._should_log_learning_rate = should_log_learning_rate
@@ -75,7 +73,7 @@ class LogWriter(FromParams):
 
         self._cumulative_batch_group_size = 0
         self._batches_this_epoch = 0
-        self._histogram_parameters: Optional[Set[str]] = None
+        self._distribution_parameters: Optional[Set[str]] = None
 
     @staticmethod
     def _item(value: Any):
@@ -93,18 +91,18 @@ class LogWriter(FromParams):
         assert self.get_batch_num_total is not None
         return self.get_batch_num_total() % self._summary_interval == 0
 
-    def should_log_histograms_next_batch(self) -> bool:
+    def should_log_distributions_next_batch(self) -> bool:
         assert self.get_batch_num_total is not None
         return (
-            self._histogram_interval is not None
-            and (self.get_batch_num_total() + 1) % self._histogram_interval == 0
+            self._distribution_interval is not None
+            and (self.get_batch_num_total() + 1) % self._distribution_interval == 0
         )
 
-    def should_log_histograms_this_batch(self) -> bool:
+    def should_log_distributions_this_batch(self) -> bool:
         assert self.get_batch_num_total is not None
         return (
-            self._histogram_interval is not None
-            and self.get_batch_num_total() % self._histogram_interval == 0
+            self._distribution_interval is not None
+            and self.get_batch_num_total() % self._distribution_interval == 0
         )
 
     def add_train_scalar(self, name: str, value: float, timestep: int = None):
@@ -136,7 +134,7 @@ class LogWriter(FromParams):
     def enable_activation_logging(self, model: Model):
         return NotImplementedError
 
-    def log_activation_histogram(self, outputs, log_prefix: str):
+    def log_activation_distribution(self, outputs, log_prefix: str):
         return NotImplementedError
 
     def _log_fields(self, fields: Dict, log_prefix: str = ""):
@@ -174,9 +172,9 @@ class LogWriter(FromParams):
             self.add_train_scalar("loss/loss_train", metrics["loss"])
             self.log_metrics({"epoch_metrics/" + k: v for k, v in metrics.items()})
 
-        if self.should_log_histograms_this_batch():
+        if self.should_log_distributions_this_batch():
             assert param_updates is not None
-            self.log_histograms(model)
+            self.log_distributions(model)
             self.log_gradient_updates(model, param_updates)
             self.log_inputs(batch_group)
 
@@ -194,18 +192,18 @@ class LogWriter(FromParams):
                 self.add_train_scalar("current_batch_size", batch_group_size)
                 self.add_train_scalar("mean_batch_size", average)
 
-    def log_histograms(self, model: Model) -> None:
+    def log_distributions(self, model: Model) -> None:
         """
-        Send histograms of parameters to tensorboard.
+        Send distributions of parameters to tensorboard.
         """
-        if not self._histogram_parameters:
+        if not self._distribution_parameters:
             # Avoiding calling this every batch.  If we ever use two separate models with a single
             # writer, this is wrong, but I doubt that will ever happen.
-            self._histogram_parameters = set(
+            self._distribution_parameters = set(
                 model.get_parameters_for_histogram_tensorboard_logging()
             )
         for name, param in model.named_parameters():
-            if name in self._histogram_parameters:
+            if name in self._distribution_parameters:
                 self.add_train_tensor("parameter_histogram/" + name, param)
 
     def log_parameter_and_gradient_statistics(

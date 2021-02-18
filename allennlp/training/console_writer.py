@@ -39,7 +39,7 @@ class ConsoleWriter(LogWriter):
                 logger.info(f'Field : "{key}"')
                 logger.info("{:20.20} ...".format(val))
             else:
-                # We do not want to log about the absence of a histogram
+                # We do not want to log about the absence of a distribution
                 # for this field every single time.
                 pass
 
@@ -78,7 +78,7 @@ class ConsoleWriter(LogWriter):
                 logger.info(no_val_message_template, name.ljust(name_length), train_metric, "N/A")
 
     def enable_activation_logging(self, model: Model) -> None:
-        if self._histogram_interval is not None:
+        if self._distribution_interval is not None:
             logger.info("Activation logging is not available for ConsoleWriter.")
 
     def log_activation_histogram(self, outputs, log_prefix: str) -> None:
