@@ -16,8 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `ModelUsage` to `ModelCard` class.
 - Added a way to specify extra parameters to the predictor in an `allennlp predict` call.
 - Added a way to initialize a `Vocabulary` from transformers models.
-- Added `LogWriter` class. `TensorBoardWriter` and `ConsoleWriter` inherit from this. 
-- Added `LogCallback` class. `TensorBoardCallback` and `ConsoleLogCallback` inherit from this.
+- Added `LogWriter` and `ConsoleWriter` classes. `TensorBoardWriter` and `ConsoleWriter` both inherit from `LogWriter`.
+- Added `LogCallback` and `ConsoleLogCallback` classes. `TensorBoardCallback` and `ConsoleLogCallback` both inherit from `LogCallback`.
 
 ### Fixed
 

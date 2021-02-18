@@ -25,7 +25,7 @@ class LogWriter(FromParams):
         If provided, activation distributions will be written out every this many batches.
         If None, activation distributions will not be written out.
         When this parameter is specified, the following additional logging is enabled:
-            * distributions of model parameters
+            * Distributions of model parameters
             * The ratio of parameter update norm to parameter norm
             * Distribution of layer activations
         The layer activations are logged for any modules in the `Model` that have
@@ -54,7 +54,7 @@ class LogWriter(FromParams):
         self,
         serialization_dir: Optional[str] = None,
         summary_interval: int = 100,
-        distribution_interval: int = None,
+        distribution_interval: Optional[int] = None,
         batch_size_interval: Optional[int] = None,
         should_log_parameter_statistics: bool = True,
         should_log_learning_rate: bool = False,

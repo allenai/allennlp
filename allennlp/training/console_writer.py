@@ -11,6 +11,32 @@ logger = logging.getLogger(__name__)
 
 
 class ConsoleWriter(LogWriter):
+    """
+    Class that handles console logging.
+
+    # Parameters
+
+    summary_interval : `int`, optional (default = `100`)
+        Most statistics will be written out only every this many batches.
+    distribution_interval : `int`, optional (default = `None`)
+        If provided, distributions of model parameters will be written out
+        every this many batches.
+    batch_size_interval : `int`, optional, (default = `None`)
+        If defined, how often to log the average batch size.
+    should_log_parameter_statistics : `bool`, optional (default = `True`)
+        Whether to log parameter statistics (mean and standard deviation of parameters and
+        gradients).
+    should_log_learning_rate : `bool`, optional (default = `False`)
+        Whether to log (parameter-specific) learning rate.
+    should_log_inputs : `bool`, optional (default = `False`)
+        Whether to log model inputs.
+    get_batch_num_total : `Callable[[], int]`, optional (default = `None`)
+        A thunk that returns the number of batches so far. Most likely this will
+        be a closure around an instance variable in your `Trainer` class.  Because of circular
+        dependencies in constructing this object and the `Trainer`, this is typically `None` when
+        you construct the object, but it gets set inside the constructor of our `Trainer`.
+    """
+
     def add_train_scalar(self, name: str, value: float, timestep: int = None) -> None:
         assert self.get_batch_num_total is not None
         timestep = timestep or self.get_batch_num_total()
@@ -81,5 +107,5 @@ class ConsoleWriter(LogWriter):
         if self._distribution_interval is not None:
             logger.info("Activation logging is not available for ConsoleWriter.")
 
-    def log_activation_histogram(self, outputs, log_prefix: str) -> None:
+    def log_activation_distribution(self, outputs, log_prefix: str) -> None:
         logger.info("Activation logging is not available for ConsoleWriter.")
