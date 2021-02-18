@@ -1,5 +1,5 @@
 from overrides import overrides
-from typing import Type
+from typing import Type, List, Dict
 
 from allennlp.common import JsonDict
 from allennlp.data import DatasetReader, Instance
@@ -19,6 +19,11 @@ class MultiTaskPredictor(Predictor):
         "MultitaskPredictor is designed to work with MultiTaskDatasetReader. "
         + "If you have a different DatasetReader, you have to write your own "
         + "Predictor, but you can use MultitaskPredictor as a starting point."
+    )
+
+    _WRONG_FIELD_ERROR = (
+        "MultiTaskPredictor expects instances that have a MetadataField "
+        + "with the name 'task', containing the name of the task the instance is for."
     )
 
     def __init__(self, model: Model, dataset_reader: DatasetReader) -> None:
@@ -51,12 +56,9 @@ class MultiTaskPredictor(Predictor):
         from allennlp.data.dataset_readers import MultiTaskDatasetReader
         from allennlp.common.checks import ConfigurationError
 
-        task_field = instance.get("task")
+        task_field = instance["task"]
         if not isinstance(task_field, MetadataField):
-            raise ValueError(
-                "MultiTaskPredictor expects instances that have a MetadataField "
-                "with the name 'task', containing the name of the task the instance is for."
-            )
+            raise ValueError(self._WRONG_FIELD_ERROR)
         task: str = task_field.metadata
         if not isinstance(self._dataset_reader, MultiTaskDatasetReader):
             raise ConfigurationError(self._WRONG_READER_ERROR)
@@ -74,3 +76,27 @@ class MultiTaskPredictor(Predictor):
         instance = predictor._json_to_instance(json_dict)
         instance.add_field("task", MetadataField(task))
         return instance
+
+    @overrides
+    def predict_batch_instance(self, instances: List[Instance]) -> List[JsonDict]:
+        import collections
+        from allennlp.data.fields import MetadataField
+        from allennlp.common.checks import ConfigurationError
+        from allennlp.data.dataset_readers import MultiTaskDatasetReader
+
+        task_to_instances: Dict[str, List[Instance]] = collections.defaultdict(lambda: [])
+        for instance in instances:
+            task_field = instance["task"]
+            if not isinstance(task_field, MetadataField):
+                raise ValueError(self._WRONG_FIELD_ERROR)
+            task: str = task_field.metadata
+            if not isinstance(self._dataset_reader, MultiTaskDatasetReader):
+                raise ConfigurationError(self._WRONG_READER_ERROR)
+            self._dataset_reader.readers[task].apply_token_indexers(instance)
+            task_to_instances[task].append(instance)
+
+        outputs = []
+        for task, instances in task_to_instances.items():
+            outputs.extend(super().predict_batch_instance(instances))
+
+        return outputs
