@@ -158,10 +158,14 @@ class TransformerLayer(TransformerModule, FromParams):
             )
 
         self.intermediate = ActivationLayer(
-            hidden_size=hidden_size, intermediate_size=intermediate_size, activation=activation
+            hidden_size=hidden_size,
+            intermediate_size=intermediate_size,
+            activation=activation,
         )
         self.output = OutputLayer(
-            input_size=intermediate_size, hidden_size=hidden_size, dropout=hidden_dropout
+            input_size=intermediate_size,
+            hidden_size=hidden_size,
+            dropout=hidden_dropout,
         )
 
     def forward(

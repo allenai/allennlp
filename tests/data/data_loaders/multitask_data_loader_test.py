@@ -9,7 +9,10 @@ from allennlp.data.fields import LabelField
 from allennlp.data.dataset_readers import MultiTaskDatasetReader
 from allennlp.data.data_loaders.multitask_data_loader import MultiTaskDataLoader
 from allennlp.data.data_loaders.multitask_scheduler import RoundRobinScheduler
-from allennlp.data.data_loaders.multitask_epoch_sampler import UniformSampler, WeightedSampler
+from allennlp.data.data_loaders.multitask_epoch_sampler import (
+    UniformSampler,
+    WeightedSampler,
+)
 
 
 class FakeDatasetReaderA(DatasetReader):

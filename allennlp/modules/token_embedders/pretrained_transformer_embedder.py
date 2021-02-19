@@ -194,7 +194,10 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         # We call this with kwargs because some of the huggingface models don't have the
         # token_type_ids parameter and fail even when it's given as None.
         # Also, as of transformers v2.5.1, they are taking FloatTensor masks.
-        parameters = {"input_ids": token_ids, "attention_mask": transformer_mask.float()}
+        parameters = {
+            "input_ids": token_ids,
+            "attention_mask": transformer_mask.float(),
+        }
         if type_ids is not None:
             parameters["token_type_ids"] = type_ids
 
@@ -214,7 +217,10 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
 
         if fold_long_sequences:
             embeddings = self._unfold_long_sequences(
-                embeddings, segment_concat_mask, batch_size, num_segment_concat_wordpieces
+                embeddings,
+                segment_concat_mask,
+                batch_size,
+                num_segment_concat_wordpieces,
             )
 
         return embeddings
@@ -264,7 +270,11 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
             # Shape: [batch_size * num_segments, self._max_length]
             return tensor.reshape(-1, self._max_length)
 
-        return fold(token_ids), fold(mask), fold(type_ids) if type_ids is not None else None
+        return (
+            fold(token_ids),
+            fold(mask),
+            fold(type_ids) if type_ids is not None else None,
+        )
 
     def _unfold_long_sequences(
         self,
@@ -338,7 +348,10 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
 
         embeddings = embeddings.reshape(batch_size, num_segments, self._max_length, embedding_size)
         embeddings = embeddings[
-            :, :, self._num_added_start_tokens : embeddings.size(2) - self._num_added_end_tokens, :
+            :,
+            :,
+            self._num_added_start_tokens : embeddings.size(2) - self._num_added_end_tokens,
+            :,
         ]  # truncate segment-level start/end tokens
         embeddings = embeddings.reshape(batch_size, -1, embedding_size)  # flatten
 
@@ -358,7 +371,9 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         embeddings = torch.cat([embeddings, torch.zeros_like(end_token_embeddings)], 1)
         # Add end token embeddings back
         embeddings.scatter_(
-            1, end_token_indices.unsqueeze(-1).expand_as(end_token_embeddings), end_token_embeddings
+            1,
+            end_token_indices.unsqueeze(-1).expand_as(end_token_embeddings),
+            end_token_embeddings,
         )
 
         # Now put back start tokens. We can do this before putting back end tokens, but then

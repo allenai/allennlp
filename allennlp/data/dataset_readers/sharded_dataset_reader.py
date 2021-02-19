@@ -38,7 +38,9 @@ class ShardedDatasetReader(DatasetReader):
 
     def __init__(self, base_reader: DatasetReader, **kwargs) -> None:
         super().__init__(
-            manual_distributed_sharding=True, manual_multiprocess_sharding=True, **kwargs
+            manual_distributed_sharding=True,
+            manual_multiprocess_sharding=True,
+            **kwargs,
         )
         self.reader = base_reader
         # We have to make the base reader think that it's the only worker so that it doesn't

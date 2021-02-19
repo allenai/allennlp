@@ -71,7 +71,9 @@ class RoundRobinScheduler(MultiTaskScheduler):
         self, epoch_instances: Dict[str, Iterable[Instance]]
     ) -> Iterable[List[Instance]]:
         return _chunked_iterator(
-            more_itertools.roundrobin(*epoch_instances.values()), self.batch_size, self.drop_last
+            more_itertools.roundrobin(*epoch_instances.values()),
+            self.batch_size,
+            self.drop_last,
         )
 
     def count_batches(self, dataset_counts: Dict[str, int]) -> int:

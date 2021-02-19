@@ -170,7 +170,9 @@ class BiMpmMatching(nn.Module, FromParams):
             torch.nn.init.kaiming_normal_(param)
             return param
 
-        def share_or_create(weights_to_share):  # utility function to create or share the weights
+        def share_or_create(
+            weights_to_share,
+        ):  # utility function to create or share the weights
             return weights_to_share if share_weights_between_directions else create_parameter()
 
         output_dim = (
@@ -322,10 +324,14 @@ class BiMpmMatching(nn.Module, FromParams):
                 matching_vector_max, mask_2.unsqueeze(-2).unsqueeze(-1), dim=2
             )
             matching_vector_2_max = masked_max(
-                matching_vector_max.permute(0, 2, 1, 3), mask_1.unsqueeze(-2).unsqueeze(-1), dim=2
+                matching_vector_max.permute(0, 2, 1, 3),
+                mask_1.unsqueeze(-2).unsqueeze(-1),
+                dim=2,
             )
             matching_vector_2_mean = masked_mean(
-                matching_vector_max.permute(0, 2, 1, 3), mask_1.unsqueeze(-2).unsqueeze(-1), dim=2
+                matching_vector_max.permute(0, 2, 1, 3),
+                mask_1.unsqueeze(-2).unsqueeze(-1),
+                dim=2,
             )
 
             matching_vector_1.extend([matching_vector_1_max, matching_vector_1_mean])

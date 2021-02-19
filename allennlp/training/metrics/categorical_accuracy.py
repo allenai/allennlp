@@ -85,7 +85,8 @@ class CategoricalAccuracy(Metric):
             # ith entry in gold_labels points to index (0-num_classes) for ith row in max_predictions
             # For each row check if index pointed by gold_label is was 1 or not (among max scored classes)
             correct = max_predictions_mask[
-                torch.arange(gold_labels.numel(), device=gold_labels.device).long(), gold_labels
+                torch.arange(gold_labels.numel(), device=gold_labels.device).long(),
+                gold_labels,
             ].float()
             tie_counts = max_predictions_mask.sum(-1)
             correct /= tie_counts.float()
@@ -95,7 +96,7 @@ class CategoricalAccuracy(Metric):
             correct *= mask.view(-1, 1)
             _total_count = mask.sum()
         else:
-            _total_count = torch.tensor(gold_labels.numel())
+            _total_count = torch.tensor(gold_labels.numel(), device=gold_labels.device)
         _correct_count = correct.sum()
 
         if is_distributed():

@@ -50,7 +50,9 @@ class ArgumentParserWithDefaults(argparse.ArgumentParser):
         super().add_argument(*args, **kwargs)
 
 
-def parse_args(prog: Optional[str] = None) -> Tuple[argparse.ArgumentParser, argparse.Namespace]:
+def parse_args(
+    prog: Optional[str] = None,
+) -> Tuple[argparse.ArgumentParser, argparse.Namespace]:
     """
     Creates the argument parser for the main program and uses it to parse the args.
     """

@@ -135,7 +135,9 @@ class AdjacencyField(Field[torch.Tensor]):
         # The empty_list here is needed for mypy
         empty_list: List[Tuple[int, int]] = []
         adjacency_field = AdjacencyField(
-            empty_list, self.sequence_field.empty_field(), padding_value=self._padding_value
+            empty_list,
+            self.sequence_field.empty_field(),
+            padding_value=self._padding_value,
         )
         return adjacency_field
 

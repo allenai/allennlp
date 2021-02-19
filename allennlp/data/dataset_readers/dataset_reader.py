@@ -383,7 +383,10 @@ class DatasetReader(Registrable):
                     UserWarning,
                 )
                 sharded_slice = itertools.islice(
-                    sharded_slice, self._worker_info.id, None, self._worker_info.num_workers
+                    sharded_slice,
+                    self._worker_info.id,
+                    None,
+                    self._worker_info.num_workers,
                 )
 
         if max_instances is not None:

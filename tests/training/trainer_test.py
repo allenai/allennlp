@@ -16,7 +16,11 @@ from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
 from allennlp.common.testing import AllenNlpTestCase, requires_gpu, requires_multi_gpu
 from allennlp.data import Vocabulary
-from allennlp.data.data_loaders import MultiProcessDataLoader, SimpleDataLoader, TensorDict
+from allennlp.data.data_loaders import (
+    MultiProcessDataLoader,
+    SimpleDataLoader,
+    TensorDict,
+)
 from allennlp.data.dataset_readers import SequenceTaggingDatasetReader
 from allennlp.models.model import Model
 from allennlp.models.simple_tagger import SimpleTagger
@@ -52,7 +56,12 @@ class TrainerTestBase(AllenNlpTestCase):
                 "text_field_embedder": {
                     "token_embedders": {"tokens": {"type": "embedding", "embedding_dim": 5}}
                 },
-                "encoder": {"type": "lstm", "input_size": 5, "hidden_size": 7, "num_layers": 2},
+                "encoder": {
+                    "type": "lstm",
+                    "input_size": 5,
+                    "hidden_size": 7,
+                    "num_layers": 2,
+                },
             }
         )
         self.model = SimpleTagger.from_params(vocab=self.vocab, params=self.model_params)
@@ -559,7 +568,9 @@ class TestTrainer(TrainerTestBase):
         trainer.train()
 
     def test_trainer_sends_metric_to_lr_scheduler(self):
-        from allennlp.training.learning_rate_schedulers import ReduceOnPlateauLearningRateScheduler
+        from allennlp.training.learning_rate_schedulers import (
+            ReduceOnPlateauLearningRateScheduler,
+        )
 
         class RecordMetricLearningRateScheduler(ReduceOnPlateauLearningRateScheduler):
             def __init__(self, optimizer: Optimizer):
@@ -960,7 +971,10 @@ class TestTrainer(TrainerTestBase):
     def test_trainer_callback_is_called_everywhere(self):
         class FakeTrainerCallback(TrainerCallback):
             def on_start(
-                self, trainer: "GradientDescentTrainer", is_primary: bool = True, **kwargs
+                self,
+                trainer: "GradientDescentTrainer",
+                is_primary: bool = True,
+                **kwargs,
             ) -> None:
                 if not hasattr(trainer, "start_callback_is_fired_first"):
                     trainer.start_callback_is_fired_first = True  # type: ignore

@@ -466,7 +466,10 @@ def int_to_device(device: Union[int, torch.device]) -> torch.device:
 
 
 def log_frozen_and_tunable_parameter_names(model: torch.nn.Module) -> None:
-    frozen_parameter_names, tunable_parameter_names = get_frozen_and_tunable_parameter_names(model)
+    (
+        frozen_parameter_names,
+        tunable_parameter_names,
+    ) = get_frozen_and_tunable_parameter_names(model)
 
     logger.info("The following parameters are Frozen (without gradient):")
     for name in frozen_parameter_names:

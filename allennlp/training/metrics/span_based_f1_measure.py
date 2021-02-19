@@ -265,7 +265,9 @@ class SpanBasedF1Measure(Metric):
         all_metrics = {}
         for tag in all_tags:
             precision, recall, f1_measure = self._compute_metrics(
-                self._true_positives[tag], self._false_positives[tag], self._false_negatives[tag]
+                self._true_positives[tag],
+                self._false_positives[tag],
+                self._false_negatives[tag],
             )
             precision_key = "precision" + "-" + tag
             recall_key = "recall" + "-" + tag

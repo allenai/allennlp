@@ -127,7 +127,13 @@ class TestEvaluate(AllenNlpTestCase):
         embedding_sources_mapping = json.dumps(
             {"_text_field_embedder.token_embedder_tokens": embeddings_filename}
         )
-        kebab_args = ["evaluate", archive_path, evaluate_data_path, "--cuda-device", "-1"]
+        kebab_args = [
+            "evaluate",
+            archive_path,
+            evaluate_data_path,
+            "--cuda-device",
+            "-1",
+        ]
 
         # TODO(mattg): the unawarded_embeddings.gz file above doesn't exist, but this test still
         # passes.  This suggests that vocab extension in evaluate isn't currently doing anything,

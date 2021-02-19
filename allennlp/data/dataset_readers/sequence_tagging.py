@@ -50,7 +50,9 @@ class SequenceTaggingDatasetReader(DatasetReader):
         **kwargs,
     ) -> None:
         super().__init__(
-            manual_distributed_sharding=True, manual_multiprocess_sharding=True, **kwargs
+            manual_distributed_sharding=True,
+            manual_multiprocess_sharding=True,
+            **kwargs,
         )
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
         self._word_tag_delimiter = word_tag_delimiter

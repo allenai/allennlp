@@ -28,7 +28,12 @@ class ResidualBlock(torch.nn.Module):
             if len(layer) == 2:
                 # no dilation
                 conv = torch.nn.Conv1d(
-                    last_dim, layer[1] * 2, layer[0], stride=1, padding=layer[0] - 1, bias=True
+                    last_dim,
+                    layer[1] * 2,
+                    layer[0],
+                    stride=1,
+                    padding=layer[0] - 1,
+                    bias=True,
                 )
             elif len(layer) == 3:
                 # a dilation

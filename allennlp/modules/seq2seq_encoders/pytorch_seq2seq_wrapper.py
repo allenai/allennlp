@@ -69,7 +69,10 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
 
     @overrides
     def forward(
-        self, inputs: torch.Tensor, mask: torch.BoolTensor, hidden_state: torch.Tensor = None
+        self,
+        inputs: torch.Tensor,
+        mask: torch.BoolTensor,
+        hidden_state: torch.Tensor = None,
     ) -> torch.Tensor:
 
         if self.stateful and mask is None:
@@ -82,9 +85,11 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
 
         batch_size, total_sequence_length = mask.size()
 
-        packed_sequence_output, final_states, restoration_indices = self.sort_and_run_forward(
-            self._module, inputs, mask, hidden_state
-        )
+        (
+            packed_sequence_output,
+            final_states,
+            restoration_indices,
+        ) = self.sort_and_run_forward(self._module, inputs, mask, hidden_state)
 
         unpacked_sequence_tensor, _ = pad_packed_sequence(packed_sequence_output, batch_first=True)
 
@@ -116,7 +121,9 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
         sequence_length_difference = total_sequence_length - unpacked_sequence_tensor.size(1)
         if sequence_length_difference > 0:
             zeros = unpacked_sequence_tensor.new_zeros(
-                batch_size, sequence_length_difference, unpacked_sequence_tensor.size(-1)
+                batch_size,
+                sequence_length_difference,
+                unpacked_sequence_tensor.size(-1),
             )
             unpacked_sequence_tensor = torch.cat([unpacked_sequence_tensor, zeros], 1)
 

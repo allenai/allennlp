@@ -27,7 +27,10 @@ class Scheduler:
     """
 
     def __init__(
-        self, optimizer: torch.optim.Optimizer, param_group_field: str, last_epoch: int = -1
+        self,
+        optimizer: torch.optim.Optimizer,
+        param_group_field: str,
+        last_epoch: int = -1,
     ) -> None:
         self.optimizer = optimizer
         self.param_group_field = param_group_field

@@ -3,7 +3,8 @@ import torch
 
 
 def apply_mask(
-    values: torch.FloatTensor, mask: Union[torch.BoolTensor, torch.IntTensor, torch.FloatTensor]
+    values: torch.FloatTensor,
+    mask: Union[torch.BoolTensor, torch.IntTensor, torch.FloatTensor],
 ) -> torch.FloatTensor:
     """
     # Parameters

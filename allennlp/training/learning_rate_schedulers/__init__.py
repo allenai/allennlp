@@ -22,9 +22,15 @@ from allennlp.training.learning_rate_schedulers.learning_rate_scheduler import (
     ExponentialLearningRateScheduler,
     ReduceOnPlateauLearningRateScheduler,
 )
-from allennlp.training.learning_rate_schedulers.combined import CombinedLearningRateScheduler
+from allennlp.training.learning_rate_schedulers.combined import (
+    CombinedLearningRateScheduler,
+)
 from allennlp.training.learning_rate_schedulers.cosine import CosineWithRestarts
 from allennlp.training.learning_rate_schedulers.noam import NoamLR
-from allennlp.training.learning_rate_schedulers.slanted_triangular import SlantedTriangular
+from allennlp.training.learning_rate_schedulers.slanted_triangular import (
+    SlantedTriangular,
+)
 from allennlp.training.learning_rate_schedulers.polynomial_decay import PolynomialDecay
-from allennlp.training.learning_rate_schedulers.linear_with_warmup import LinearWithWarmup
+from allennlp.training.learning_rate_schedulers.linear_with_warmup import (
+    LinearWithWarmup,
+)

@@ -66,7 +66,8 @@ class SpearmanCorrelation(Metric):
             # Check if batch lengths are equal.
             _all_batch_lengths = [torch.tensor(0) for i in range(world_size)]
             dist.all_gather(
-                _all_batch_lengths, torch.tensor(self.total_predictions.shape[0], device=device)
+                _all_batch_lengths,
+                torch.tensor(self.total_predictions.shape[0], device=device),
             )
             _all_batch_lengths = [batch_length.item() for batch_length in _all_batch_lengths]
 

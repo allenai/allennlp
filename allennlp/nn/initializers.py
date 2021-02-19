@@ -245,7 +245,10 @@ class KaimingUniformInitializer(_InitializerWrapper):
 
     def __init__(self, a: float = 0.0, mode: str = "fan_in", nonlinearity: str = "leaky_relu"):
         super().__init__(
-            init_function=torch.nn.init.kaiming_uniform_, a=a, mode=mode, nonlinearity=nonlinearity
+            init_function=torch.nn.init.kaiming_uniform_,
+            a=a,
+            mode=mode,
+            nonlinearity=nonlinearity,
         )
 
 
@@ -257,7 +260,10 @@ class KaimingNormalInitializer(_InitializerWrapper):
 
     def __init__(self, a: float = 0.0, mode: str = "fan_in", nonlinearity: str = "leaky_relu"):
         super().__init__(
-            init_function=torch.nn.init.kaiming_normal_, a=a, mode=mode, nonlinearity=nonlinearity
+            init_function=torch.nn.init.kaiming_normal_,
+            a=a,
+            mode=mode,
+            nonlinearity=nonlinearity,
         )
 
 
@@ -463,7 +469,9 @@ class InitializerApplicator(FromParams):
     """
 
     def __init__(
-        self, regexes: List[Tuple[str, Initializer]] = None, prevent_regexes: List[str] = None
+        self,
+        regexes: List[Tuple[str, Initializer]] = None,
+        prevent_regexes: List[str] = None,
     ) -> None:
         self._initializers = regexes or []
         self._prevent_regex = None

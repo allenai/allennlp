@@ -108,7 +108,13 @@ class TestMain(AllenNlpTestCase):
             serialization_dir = self.TEST_DIR / "serialization"
 
             # Run train with using the non-allennlp module.
-            sys.argv = ["allennlp", "train", str(config_path), "-s", str(serialization_dir)]
+            sys.argv = [
+                "allennlp",
+                "train",
+                str(config_path),
+                "-s",
+                str(serialization_dir),
+            ]
 
             # Shouldn't be able to find the model.
             with pytest.raises(ConfigurationError):

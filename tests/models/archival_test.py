@@ -43,7 +43,12 @@ class ArchivalTest(AllenNlpTestCase):
                     "text_field_embedder": {
                         "token_embedders": {"tokens": {"type": "embedding", "embedding_dim": 5}}
                     },
-                    "encoder": {"type": "lstm", "input_size": 5, "hidden_size": 7, "num_layers": 2},
+                    "encoder": {
+                        "type": "lstm",
+                        "input_size": 5,
+                        "hidden_size": 7,
+                        "num_layers": 2,
+                    },
                 },
                 "dataset_reader": {"type": "sequence_tagging"},
                 "train_data_path": str(self.FIXTURES_ROOT / "data" / "sequence_tagging.tsv"),
@@ -90,7 +95,8 @@ class ArchivalTest(AllenNlpTestCase):
         train_model(self.params, serialization_dir=serialization_dir)
         # Use a new path.
         archive_model(
-            serialization_dir=serialization_dir, archive_path=serialization_dir / "new_path.tar.gz"
+            serialization_dir=serialization_dir,
+            archive_path=serialization_dir / "new_path.tar.gz",
         )
         archive = load_archive(serialization_dir / "new_path.tar.gz")
         assert archive

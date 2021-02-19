@@ -23,7 +23,10 @@ class SentenceTaggerPredictor(Predictor):
     """
 
     def __init__(
-        self, model: Model, dataset_reader: DatasetReader, language: str = "en_core_web_sm"
+        self,
+        model: Model,
+        dataset_reader: DatasetReader,
+        language: str = "en_core_web_sm",
     ) -> None:
         super().__init__(model, dataset_reader)
         self._tokenizer = SpacyTokenizer(language=language, pos_tags=True)

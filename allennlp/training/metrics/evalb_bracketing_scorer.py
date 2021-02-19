@@ -19,7 +19,11 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_EVALB_DIR = os.path.abspath(
     os.path.join(
-        os.path.dirname(os.path.realpath(__file__)), os.pardir, os.pardir, "tools", "EVALB"
+        os.path.dirname(os.path.realpath(__file__)),
+        os.pardir,
+        os.pardir,
+        "tools",
+        "EVALB",
     )
 )
 

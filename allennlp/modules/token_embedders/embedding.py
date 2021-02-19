@@ -14,7 +14,11 @@ from torch.nn.functional import embedding
 
 from allennlp.common import Tqdm
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.file_utils import cached_path, get_file_extension, is_url_or_existing_file
+from allennlp.common.file_utils import (
+    cached_path,
+    get_file_extension,
+    is_url_or_existing_file,
+)
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.modules.time_distributed import TimeDistributed
 from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
@@ -308,7 +312,10 @@ class Embedding(TokenEmbedder):
             # It's easiest to just reload the embeddings for the entire vocab,
             # then only keep the ones we need.
             whole_weight = _read_pretrained_embeddings_file(
-                extension_pretrained_file, embedding_dim, extended_vocab, vocab_namespace
+                extension_pretrained_file,
+                embedding_dim,
+                extended_vocab,
+                vocab_namespace,
             )
             extra_weight = whole_weight[self.num_embeddings :, :]
 
@@ -441,18 +448,24 @@ def _read_embeddings_from_text_file(
             num_tokens_found += 1
         else:
             logger.debug(
-                "Token %s was not found in the embedding file. Initialising randomly.", token
+                "Token %s was not found in the embedding file. Initialising randomly.",
+                token,
             )
 
     logger.info(
-        "Pretrained embeddings were found for %d out of %d tokens", num_tokens_found, vocab_size
+        "Pretrained embeddings were found for %d out of %d tokens",
+        num_tokens_found,
+        vocab_size,
     )
 
     return embedding_matrix
 
 
 def _read_embeddings_from_hdf5(
-    embeddings_filename: str, embedding_dim: int, vocab: Vocabulary, namespace: str = "tokens"
+    embeddings_filename: str,
+    embedding_dim: int,
+    vocab: Vocabulary,
+    namespace: str = "tokens",
 ) -> torch.FloatTensor:
     """
     Reads from a hdf5 formatted file. The embedding matrix is assumed to

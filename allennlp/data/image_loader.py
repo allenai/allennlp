@@ -69,7 +69,9 @@ class ImageLoader(Registrable):
             size = cast(
                 IntTensor,
                 torch.tensor(
-                    [image.shape[-2], image.shape[-1]], dtype=torch.int32, device=self.device
+                    [image.shape[-2], image.shape[-1]],
+                    dtype=torch.int32,
+                    device=self.device,
                 ),
             )
             images.append(image)

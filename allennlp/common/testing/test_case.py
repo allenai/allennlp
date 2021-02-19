@@ -23,7 +23,8 @@ class AllenNlpTestCase:
 
     def setup_method(self):
         logging.basicConfig(
-            format="%(asctime)s - %(levelname)s - %(name)s - %(message)s", level=logging.DEBUG
+            format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
+            level=logging.DEBUG,
         )
         # Disabling some of the more verbose logging statements that typically aren't very helpful
         # in tests.

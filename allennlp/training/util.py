@@ -113,7 +113,9 @@ def data_loaders_from_params(
         train_data_path = params.pop("train_data_path")
         logger.info("Reading training data from %s", train_data_path)
         data_loaders["train"] = DataLoader.from_params(
-            data_loader_params.duplicate(), reader=dataset_reader, data_path=train_data_path
+            data_loader_params.duplicate(),
+            reader=dataset_reader,
+            data_path=train_data_path,
         )
 
     if not validation and not test:
@@ -419,7 +421,9 @@ def description_from_metrics(metrics: Dict[str, float]) -> str:
 
 
 def make_vocab_from_params(
-    params: Params, serialization_dir: Union[str, PathLike], print_statistics: bool = False
+    params: Params,
+    serialization_dir: Union[str, PathLike],
+    print_statistics: bool = False,
 ) -> Vocabulary:
     vocab_params = params.pop("vocabulary", {})
     os.makedirs(serialization_dir, exist_ok=True)
@@ -435,7 +439,10 @@ def make_vocab_from_params(
     )
     # Do a quick sanity check here. There's no need to load any datasets if the vocab
     # type is "empty" or "from_files".
-    if datasets_for_vocab_creation is None and vocab_params.get("type") in {"empty", "from_files"}:
+    if datasets_for_vocab_creation is None and vocab_params.get("type") in {
+        "empty",
+        "from_files",
+    }:
         datasets_for_vocab_creation = []
 
     data_loaders: Dict[str, DataLoader]

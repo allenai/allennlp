@@ -86,7 +86,9 @@ def is_base_registrable(cls) -> bool:
     Checks whether this is a class that directly inherits from Registrable, or is a subclass of such
     a class.
     """
-    from allennlp.common.registrable import Registrable  # import here to avoid circular imports
+    from allennlp.common.registrable import (
+        Registrable,
+    )  # import here to avoid circular imports
 
     if not issubclass(cls, Registrable):
         return False
@@ -148,7 +150,10 @@ def infer_params(
     else:
         super_parameters = {}
 
-    return {**super_parameters, **parameters}  # Subclass parameters overwrite superclass ones
+    return {
+        **super_parameters,
+        **parameters,
+    }  # Subclass parameters overwrite superclass ones
 
 
 def create_kwargs(
@@ -245,7 +250,12 @@ def create_extras(cls: Type[T], extras: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def pop_and_construct_arg(
-    class_name: str, argument_name: str, annotation: Type, default: Any, params: Params, **extras
+    class_name: str,
+    argument_name: str,
+    annotation: Type,
+    default: Any,
+    params: Params,
+    **extras,
 ) -> Any:
     """
     Does the work of actually constructing an individual argument for
@@ -261,7 +271,9 @@ def pop_and_construct_arg(
     `inspect.Parameter` object directly, so that we can handle `Union` types using recursion on
     this method, trying the different annotation types in the union in turn.
     """
-    from allennlp.models.archival import load_archive  # import here to avoid circular imports
+    from allennlp.models.archival import (
+        load_archive,
+    )  # import here to avoid circular imports
 
     # We used `argument_name` as the method argument to avoid conflicts with 'name' being a key in
     # `extras`, which isn't _that_ unlikely.  Now that we are inside the method, we can switch back
@@ -536,7 +548,9 @@ class FromParams:
         constructor (because you inspect `__init__`, but call `cls()`).
         """
 
-        from allennlp.common.registrable import Registrable  # import here to avoid circular imports
+        from allennlp.common.registrable import (
+            Registrable,
+        )  # import here to avoid circular imports
 
         logger.debug(
             f"instantiating class {cls} from params {getattr(params, 'params', params)} "

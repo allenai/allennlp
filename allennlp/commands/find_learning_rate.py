@@ -39,7 +39,9 @@ class FindLearningRate(Subcommand):
         )
 
         subparser.add_argument(
-            "param_path", type=str, help="path to parameter file describing the model to be trained"
+            "param_path",
+            type=str,
+            help="path to parameter file describing the model to be trained",
         )
         subparser.add_argument(
             "-s",
@@ -60,10 +62,16 @@ class FindLearningRate(Subcommand):
             ),
         )
         subparser.add_argument(
-            "--start-lr", type=float, default=1e-5, help="learning rate to start the search"
+            "--start-lr",
+            type=float,
+            default=1e-5,
+            help="learning rate to start the search",
         )
         subparser.add_argument(
-            "--end-lr", type=float, default=10, help="learning rate up to which search is done"
+            "--end-lr",
+            type=float,
+            default=10,
+            help="learning rate up to which search is done",
         )
         subparser.add_argument(
             "--num-batches",

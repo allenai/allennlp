@@ -70,6 +70,8 @@ class LinearMatrixAttention(MatrixAttention):
     @overrides
     def forward(self, matrix_1: torch.Tensor, matrix_2: torch.Tensor) -> torch.Tensor:
         combined_tensors = util.combine_tensors_and_multiply(
-            self._combination, [matrix_1.unsqueeze(2), matrix_2.unsqueeze(1)], self._weight_vector
+            self._combination,
+            [matrix_1.unsqueeze(2), matrix_2.unsqueeze(1)],
+            self._weight_vector,
         )
         return self._activation(combined_tensors + self._bias)

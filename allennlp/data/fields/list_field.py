@@ -86,7 +86,9 @@ class ListField(SequenceField[DataArray]):
     @overrides
     def as_tensor(self, padding_lengths: Dict[str, int]) -> DataArray:
         padded_field_list = pad_sequence_to_length(
-            self.field_list, padding_lengths["num_fields"], self.field_list[0].empty_field
+            self.field_list,
+            padding_lengths["num_fields"],
+            self.field_list[0].empty_field,
         )
         # Here we're removing the scoping on the padding length keys that we added in
         # `get_padding_lengths`; see the note there for more detail.

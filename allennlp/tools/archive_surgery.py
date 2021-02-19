@@ -46,7 +46,10 @@ def main():
         help="overwrite the input file with the modified configuration",
     )
     parser.add_argument(
-        "-f", "--force", action="store_true", help="overwrite the output file if it exists"
+        "-f",
+        "--force",
+        action="store_true",
+        help="overwrite the output file if it exists",
     )
 
     args = parser.parse_args()

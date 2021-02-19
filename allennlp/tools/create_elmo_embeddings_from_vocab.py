@@ -108,13 +108,19 @@ if __name__ == "__main__":
         help="A path to a vocabulary file to generate representations for.",
     )
     parser.add_argument(
-        "--elmo_config", type=str, help="The path to a directory containing an ELMo config file."
+        "--elmo_config",
+        type=str,
+        help="The path to a directory containing an ELMo config file.",
     )
     parser.add_argument(
-        "--elmo_weights", type=str, help="The path to a directory containing an ELMo weight file."
+        "--elmo_weights",
+        type=str,
+        help="The path to a directory containing an ELMo weight file.",
     )
     parser.add_argument(
-        "--output_dir", type=str, help="The output directory to store the serialised embeddings."
+        "--output_dir",
+        type=str,
+        help="The output directory to store the serialised embeddings.",
     )
     parser.add_argument("--batch_size", type=int, default=64, help="The batch size to use.")
     parser.add_argument("--device", type=int, default=-1, help="The device to run on.")

@@ -73,6 +73,7 @@ setup(
         "lmdb",
         "more-itertools",
     ],
+    extras_require={"deepspeed": ["deepspeed>=0.3.7,<=0.3.8"]},
     entry_points={"console_scripts": ["allennlp=allennlp.__main__:run"]},
     include_package_data=True,
     python_requires=">=3.6.1",

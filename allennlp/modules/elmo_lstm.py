@@ -126,11 +126,18 @@ class ElmoLstm(_EncoderBase):
             where the num_layers dimension represents the LSTM output from that layer.
         """
         batch_size, total_sequence_length = mask.size()
-        stacked_sequence_output, final_states, restoration_indices = self.sort_and_run_forward(
-            self._lstm_forward, inputs, mask
-        )
+        (
+            stacked_sequence_output,
+            final_states,
+            restoration_indices,
+        ) = self.sort_and_run_forward(self._lstm_forward, inputs, mask)
 
-        num_layers, num_valid, returned_timesteps, encoder_dim = stacked_sequence_output.size()
+        (
+            num_layers,
+            num_valid,
+            returned_timesteps,
+            encoder_dim,
+        ) = stacked_sequence_output.size()
         # Add back invalid rows which were removed in the call to sort_and_run_forward.
         if num_valid < batch_size:
             zeros = stacked_sequence_output.new_zeros(

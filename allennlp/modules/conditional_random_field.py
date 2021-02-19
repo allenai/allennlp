@@ -34,7 +34,10 @@ def allowed_transitions(constraint_type: str, labels: Dict[int, str]) -> List[Tu
     num_labels = len(labels)
     start_tag = num_labels
     end_tag = num_labels + 1
-    labels_with_boundaries = list(labels.items()) + [(start_tag, "START"), (end_tag, "END")]
+    labels_with_boundaries = list(labels.items()) + [
+        (start_tag, "START"),
+        (end_tag, "END"),
+    ]
 
     allowed = []
     for from_label_index, from_label in labels_with_boundaries:

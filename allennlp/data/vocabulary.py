@@ -10,7 +10,17 @@ import os
 import re
 from collections import defaultdict
 from transformers import PreTrainedTokenizer
-from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Union, TYPE_CHECKING
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Iterable,
+    List,
+    Optional,
+    Set,
+    Union,
+    TYPE_CHECKING,
+)
 
 from allennlp.common import Registrable
 from allennlp.common.file_utils import cached_path, FileLock

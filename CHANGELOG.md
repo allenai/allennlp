@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+- Added `DeepspeedTrainer` and `FusedLambOptimizer`.
+
 ### Fixed
 
 - Ensured that `MeanAbsoluteError` always returns a `float` metric value instead of a `Tensor`.

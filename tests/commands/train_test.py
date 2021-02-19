@@ -13,10 +13,15 @@ from typing import Optional, List, Dict, Any
 import pytest
 import torch
 
-from allennlp.commands.train import Train, train_model, train_model_from_args, TrainModel
+from allennlp.commands.train import (
+    Train,
+    train_model,
+    train_model_from_args,
+    TrainModel,
+)
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.testing import AllenNlpTestCase, cpu_or_gpu
+from allennlp.common.testing import AllenNlpTestCase, cpu_or_gpu, requires_multi_gpu
 from allennlp.data import Vocabulary
 from allennlp.data.data_loaders import TensorDict
 from allennlp.models import load_archive, Model
@@ -82,7 +87,12 @@ class TestTrain(AllenNlpTestCase):
                 "text_field_embedder": {
                     "token_embedders": {"tokens": {"type": "embedding", "embedding_dim": 5}}
                 },
-                "encoder": {"type": "lstm", "input_size": 5, "hidden_size": 7, "num_layers": 2},
+                "encoder": {
+                    "type": "lstm",
+                    "input_size": 5,
+                    "hidden_size": 7,
+                    "num_layers": 2,
+                },
             },
             "dataset_reader": {"type": "sequence_tagging"},
             "train_data_path": SEQUENCE_TAGGING_DATA_PATH,
@@ -115,7 +125,10 @@ class TestTrain(AllenNlpTestCase):
 
         # It's also not OK if serialization dir is a real serialization dir:
         with pytest.raises(ConfigurationError):
-            train_model(params(), serialization_dir=os.path.join(self.TEST_DIR, "test_train_model"))
+            train_model(
+                params(),
+                serialization_dir=os.path.join(self.TEST_DIR, "test_train_model"),
+            )
 
         # But it's OK if serialization dir exists and --recover is specified:
         train_model(
@@ -126,7 +139,9 @@ class TestTrain(AllenNlpTestCase):
 
         # It's ok serialization dir exists and --force is specified (it will be deleted):
         train_model(
-            params(), serialization_dir=os.path.join(self.TEST_DIR, "test_train_model"), force=True
+            params(),
+            serialization_dir=os.path.join(self.TEST_DIR, "test_train_model"),
+            force=True,
         )
 
         # But --force and --recover cannot both be specified
@@ -167,7 +182,10 @@ class TestTrain(AllenNlpTestCase):
         _seen_training_devices.clear()
         if torch.cuda.device_count() == 0:
             with pytest.raises(ConfigurationError):
-                train_model(params, serialization_dir=os.path.join(self.TEST_DIR, "test_force_gpu"))
+                train_model(
+                    params,
+                    serialization_dir=os.path.join(self.TEST_DIR, "test_force_gpu"),
+                )
         else:
             train_model(params, serialization_dir=os.path.join(self.TEST_DIR, "test_force_gpu"))
             assert len(_seen_training_devices) == 1
@@ -203,13 +221,81 @@ class TestTrain(AllenNlpTestCase):
                     "text_field_embedder": {
                         "token_embedders": {"tokens": {"type": "embedding", "embedding_dim": 5}}
                     },
-                    "encoder": {"type": "lstm", "input_size": 5, "hidden_size": 7, "num_layers": 2},
+                    "encoder": {
+                        "type": "lstm",
+                        "input_size": 5,
+                        "hidden_size": 7,
+                        "num_layers": 2,
+                    },
                 },
                 "dataset_reader": {"type": "sequence_tagging"},
                 "train_data_path": SEQUENCE_TAGGING_DATA_PATH,
                 "validation_data_path": SEQUENCE_TAGGING_DATA_PATH,
                 "data_loader": {"batch_size": 2},
                 "trainer": {"num_epochs": 2, "optimizer": "adam"},
+                "distributed": {"cuda_devices": devices},
+            }
+        )
+
+        out_dir = os.path.join(self.TEST_DIR, "test_distributed_train")
+        train_model(params(), serialization_dir=out_dir)
+
+        # Check that some logs specific to distributed
+        # training are where we expect.
+        serialized_files = os.listdir(out_dir)
+        assert "out_worker0.log" in serialized_files
+        assert "out_worker1.log" in serialized_files
+        assert "model.tar.gz" in serialized_files
+        assert "metrics.json" in serialized_files
+
+        # Make sure the metrics look right.
+        with open(os.path.join(out_dir, "metrics.json")) as f:
+            metrics = json.load(f)
+            assert metrics["peak_worker_0_memory_MB"] > 0
+            assert metrics["peak_worker_1_memory_MB"] > 0
+            if torch.cuda.device_count() >= 2:
+                assert metrics["peak_gpu_0_memory_MB"] > 0
+                assert metrics["peak_gpu_1_memory_MB"] > 0
+
+        # Check we can load the serialized model
+        assert load_archive(out_dir).model
+
+    @requires_multi_gpu
+    def test_train_model_deepspeed(self):
+        if torch.cuda.device_count() >= 2:
+            devices = [0, 1]
+        else:
+            devices = [-1, -1]
+
+        params = lambda: Params(
+            {
+                "model": {
+                    "type": "simple_tagger",
+                    "text_field_embedder": {
+                        "token_embedders": {"tokens": {"type": "embedding", "embedding_dim": 5}}
+                    },
+                    "encoder": {
+                        "type": "lstm",
+                        "input_size": 5,
+                        "hidden_size": 7,
+                        "num_layers": 2,
+                    },
+                },
+                "dataset_reader": {"type": "sequence_tagging"},
+                "train_data_path": SEQUENCE_TAGGING_DATA_PATH,
+                "validation_data_path": SEQUENCE_TAGGING_DATA_PATH,
+                "data_loader": {"batch_size": 2},
+                "trainer": {
+                    "type": "deepspeed",
+                    "deepspeed_config": {
+                        "zero_optimization": {"stage": 2},
+                        "fp16": {
+                            "enabled": True,
+                        },
+                    },
+                    "num_epochs": 2,
+                    "optimizer": "adam",
+                },
                 "distributed": {"cuda_devices": devices},
             }
         )
@@ -252,9 +338,17 @@ class TestTrain(AllenNlpTestCase):
                     "text_field_embedder": {
                         "token_embedders": {"tokens": {"type": "embedding", "embedding_dim": 5}}
                     },
-                    "encoder": {"type": "lstm", "input_size": 5, "hidden_size": 7, "num_layers": 2},
+                    "encoder": {
+                        "type": "lstm",
+                        "input_size": 5,
+                        "hidden_size": 7,
+                        "num_layers": 2,
+                    },
                 },
-                "dataset_reader": {"type": "sharded", "base_reader": {"type": "sequence_tagging"}},
+                "dataset_reader": {
+                    "type": "sharded",
+                    "base_reader": {"type": "sequence_tagging"},
+                },
                 "train_data_path": SEQUENCE_TAGGING_SHARDS_PATH,
                 "validation_data_path": SEQUENCE_TAGGING_SHARDS_PATH,
                 "data_loader": {
@@ -341,7 +435,12 @@ class TestTrain(AllenNlpTestCase):
                     "text_field_embedder": {
                         "token_embedders": {"tokens": {"type": "embedding", "embedding_dim": 5}}
                     },
-                    "encoder": {"type": "lstm", "input_size": 5, "hidden_size": 7, "num_layers": 2},
+                    "encoder": {
+                        "type": "lstm",
+                        "input_size": 5,
+                        "hidden_size": 7,
+                        "num_layers": 2,
+                    },
                 },
                 "dataset_reader": {"type": "sequence_tagging"},
                 "train_data_path": SEQUENCE_TAGGING_DATA_PATH,
@@ -423,7 +522,12 @@ class TestTrain(AllenNlpTestCase):
                     "text_field_embedder": {
                         "token_embedders": {"tokens": {"type": "embedding", "embedding_dim": 5}}
                     },
-                    "encoder": {"type": "lstm", "input_size": 5, "hidden_size": 7, "num_layers": 2},
+                    "encoder": {
+                        "type": "lstm",
+                        "input_size": 5,
+                        "hidden_size": 7,
+                        "num_layers": 2,
+                    },
                 },
                 "dataset_reader": {"type": "sequence_tagging"},
                 "train_data_path": SEQUENCE_TAGGING_DATA_PATH,
@@ -434,7 +538,10 @@ class TestTrain(AllenNlpTestCase):
             }
         )
         with pytest.raises(ConfigurationError):
-            train_model(params, serialization_dir=os.path.join(self.TEST_DIR, "test_train_model"))
+            train_model(
+                params,
+                serialization_dir=os.path.join(self.TEST_DIR, "test_train_model"),
+            )
 
     def test_train_saves_all_keys_in_config(self):
         params = Params(
@@ -444,7 +551,12 @@ class TestTrain(AllenNlpTestCase):
                     "text_field_embedder": {
                         "token_embedders": {"tokens": {"type": "embedding", "embedding_dim": 5}}
                     },
-                    "encoder": {"type": "lstm", "input_size": 5, "hidden_size": 7, "num_layers": 2},
+                    "encoder": {
+                        "type": "lstm",
+                        "input_size": 5,
+                        "hidden_size": 7,
+                        "num_layers": 2,
+                    },
                 },
                 "pytorch_seed": 42,
                 "numpy_seed": 42,
@@ -476,7 +588,12 @@ class TestTrain(AllenNlpTestCase):
                     "text_field_embedder": {
                         "token_embedders": {"tokens": {"type": "embedding", "embedding_dim": 5}}
                     },
-                    "encoder": {"type": "lstm", "input_size": 5, "hidden_size": 7, "num_layers": 2},
+                    "encoder": {
+                        "type": "lstm",
+                        "input_size": 5,
+                        "hidden_size": 7,
+                        "num_layers": 2,
+                    },
                 },
                 "dataset_reader": {"type": "sequence_tagging"},
                 "train_data_path": "test_fixtures/data/sequence_tagging.tsv",
@@ -491,7 +608,10 @@ class TestTrain(AllenNlpTestCase):
         )
 
         with pytest.raises(ConfigurationError, match="Experiment specified"):
-            train_model(params, serialization_dir=os.path.join(self.TEST_DIR, "test_train_model"))
+            train_model(
+                params,
+                serialization_dir=os.path.join(self.TEST_DIR, "test_train_model"),
+            )
 
     def test_train_with_test_set(self):
         params = Params(
@@ -501,7 +621,12 @@ class TestTrain(AllenNlpTestCase):
                     "text_field_embedder": {
                         "token_embedders": {"tokens": {"type": "embedding", "embedding_dim": 5}}
                     },
-                    "encoder": {"type": "lstm", "input_size": 5, "hidden_size": 7, "num_layers": 2},
+                    "encoder": {
+                        "type": "lstm",
+                        "input_size": 5,
+                        "hidden_size": 7,
+                        "num_layers": 2,
+                    },
                 },
                 "dataset_reader": {"type": "sequence_tagging"},
                 "train_data_path": SEQUENCE_TAGGING_DATA_PATH,
@@ -555,7 +680,12 @@ class TestTrain(AllenNlpTestCase):
                     "text_field_embedder": {
                         "token_embedders": {"tokens": {"type": "embedding", "embedding_dim": 5}}
                     },
-                    "encoder": {"type": "lstm", "input_size": 5, "hidden_size": 7, "num_layers": 2},
+                    "encoder": {
+                        "type": "lstm",
+                        "input_size": 5,
+                        "hidden_size": 7,
+                        "num_layers": 2,
+                    },
                 },
                 "dataset_reader": {"type": "sequence_tagging"},
                 "train_data_path": SEQUENCE_TAGGING_DATA_PATH,
@@ -572,7 +702,8 @@ class TestTrain(AllenNlpTestCase):
             }
         )
         train_model(
-            params.duplicate(), serialization_dir=os.path.join(self.TEST_DIR, "train_normal")
+            params.duplicate(),
+            serialization_dir=os.path.join(self.TEST_DIR, "train_normal"),
         )
         assert batch_callback_counter == last_num_steps_per_epoch * number_of_epochs
         batch_callback_counter = 0
@@ -581,7 +712,8 @@ class TestTrain(AllenNlpTestCase):
         original_batch_size = params["data_loader"]["batch_size"]
         params["data_loader"]["batch_size"] = 1
         train_model(
-            params.duplicate(), serialization_dir=os.path.join(self.TEST_DIR, "train_with_bs1")
+            params.duplicate(),
+            serialization_dir=os.path.join(self.TEST_DIR, "train_with_bs1"),
         )
         assert batch_callback_counter == last_num_steps_per_epoch * number_of_epochs
         batch_callback_counter = 0
@@ -600,7 +732,12 @@ class TestTrain(AllenNlpTestCase):
         Train().add_subparser(subparsers)
 
         for serialization_arg in ["-s", "--serialization-dir"]:
-            raw_args = ["train", "path/to/params", serialization_arg, "serialization_dir"]
+            raw_args = [
+                "train",
+                "path/to/params",
+                serialization_arg,
+                "serialization_dir",
+            ]
 
             args = parser.parse_args(raw_args)
 
@@ -623,7 +760,10 @@ class TestTrain(AllenNlpTestCase):
 
         # Can instantiate from base class params
         TrainModel.from_params(
-            params=params, serialization_dir=self.TEST_DIR, local_rank=0, batch_weight_key=""
+            params=params,
+            serialization_dir=self.TEST_DIR,
+            local_rank=0,
+            batch_weight_key="",
         )
 
     def test_train_can_fine_tune_model_from_archive(self):
@@ -631,7 +771,10 @@ class TestTrain(AllenNlpTestCase):
             self.FIXTURES_ROOT / "basic_classifier" / "experiment_from_archive.jsonnet"
         )
         train_loop = TrainModel.from_params(
-            params=params, serialization_dir=self.TEST_DIR, local_rank=0, batch_weight_key=""
+            params=params,
+            serialization_dir=self.TEST_DIR,
+            local_rank=0,
+            batch_weight_key="",
         )
         train_loop.run()
 
@@ -652,7 +795,12 @@ class TestTrain(AllenNlpTestCase):
                     "text_field_embedder": {
                         "token_embedders": {"tokens": {"type": "embedding", "embedding_dim": 5}}
                     },
-                    "encoder": {"type": "lstm", "input_size": 5, "hidden_size": 7, "num_layers": 2},
+                    "encoder": {
+                        "type": "lstm",
+                        "input_size": 5,
+                        "hidden_size": 7,
+                        "num_layers": 2,
+                    },
                 },
                 "dataset_reader": {"type": "sequence_tagging"},
                 "train_data_path": SEQUENCE_TAGGING_DATA_PATH,
@@ -662,7 +810,11 @@ class TestTrain(AllenNlpTestCase):
             }
         )
         serialization_dir = os.path.join(self.TEST_DIR, "test_train_nograd")
-        regex_lists = [[], [".*text_field_embedder.*"], [".*text_field_embedder.*", ".*encoder.*"]]
+        regex_lists = [
+            [],
+            [".*text_field_embedder.*"],
+            [".*text_field_embedder.*", ".*encoder.*"],
+        ]
         for regex_list in regex_lists:
             params = params_get()
             params["trainer"]["no_grad"] = regex_list
@@ -694,7 +846,12 @@ class TestDryRun(AllenNlpTestCase):
                     "text_field_embedder": {
                         "token_embedders": {"tokens": {"type": "embedding", "embedding_dim": 5}}
                     },
-                    "encoder": {"type": "lstm", "input_size": 5, "hidden_size": 7, "num_layers": 2},
+                    "encoder": {
+                        "type": "lstm",
+                        "input_size": 5,
+                        "hidden_size": 7,
+                        "num_layers": 2,
+                    },
                 },
                 "dataset_reader": {"type": "sequence_tagging"},
                 "train_data_path": str(self.FIXTURES_ROOT / "data" / "sequence_tagging.tsv"),
@@ -731,7 +888,16 @@ class TestDryRun(AllenNlpTestCase):
             tokens = [line.strip() for line in f]
 
         tokens.sort()
-        assert tokens == [".", "@@UNKNOWN@@", "animals", "are", "birds", "cats", "dogs", "snakes"]
+        assert tokens == [
+            ".",
+            "@@UNKNOWN@@",
+            "animals",
+            "are",
+            "birds",
+            "cats",
+            "dogs",
+            "snakes",
+        ]
 
         with open(vocab_path / "labels.txt") as f:
             labels = [line.strip() for line in f]

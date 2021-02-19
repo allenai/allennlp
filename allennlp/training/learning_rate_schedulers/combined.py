@@ -4,7 +4,9 @@ from overrides import overrides
 import torch
 
 from allennlp.common.lazy import Lazy
-from allennlp.training.learning_rate_schedulers.learning_rate_scheduler import LearningRateScheduler
+from allennlp.training.learning_rate_schedulers.learning_rate_scheduler import (
+    LearningRateScheduler,
+)
 
 
 @LearningRateScheduler.register("combined")

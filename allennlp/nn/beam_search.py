@@ -68,7 +68,10 @@ class Sampler(Registrable):
     default_implementation = "deterministic"
 
     def init_state(
-        self, start_class_log_probabilities: torch.Tensor, batch_size: int, num_classes: int
+        self,
+        start_class_log_probabilities: torch.Tensor,
+        batch_size: int,
+        num_classes: int,
     ) -> StateType:
         return {}
 
@@ -192,7 +195,9 @@ class TopKSampler(Sampler):
         # NOTE: These indices are not indices into `log_probs`, they are indices into `top_k_log_probs`.
         # shape: (batch_size, per_node_beam_size)
         sampled_indices = torch.multinomial(
-            normalized_top_k_probs, per_node_beam_size, replacement=self.with_replacement
+            normalized_top_k_probs,
+            per_node_beam_size,
+            replacement=self.with_replacement,
         )
 
         # Convert `sampled_indices` back to indices in the original `log_probs` tensor.
@@ -279,7 +284,9 @@ class TopPSampler(Sampler):
         # NOTE: These indices are not indices into `log_probs`, they are indices into `log_probs_descending`.
         # shape: (batch_size, per_node_beam_size)
         sampled_indices = torch.multinomial(
-            filtered_probabilities, per_node_beam_size, replacement=self.with_replacement
+            filtered_probabilities,
+            per_node_beam_size,
+            replacement=self.with_replacement,
         )
 
         # Convert `sampled_indices` back to indices in the original `log_probs` tensor.
@@ -311,7 +318,10 @@ class GumbelSampler(Sampler):
 
     @overrides
     def init_state(
-        self, start_class_log_probabilities: torch.Tensor, batch_size: int, num_classes: int
+        self,
+        start_class_log_probabilities: torch.Tensor,
+        batch_size: int,
+        num_classes: int,
     ) -> StateType:
         # shape: (batch_size, num_classes)
         zeros = start_class_log_probabilities.new_zeros((batch_size, num_classes))
@@ -400,7 +410,11 @@ class GumbelSampler(Sampler):
         # shape: (batch_size * beam_size,)
         phi_S = selected_log_probs.reshape(batch_size * beam_size)
 
-        return selected_log_probs, selected_indices, {"G_phi_S": G_phi_S_new, "phi_S": phi_S}
+        return (
+            selected_log_probs,
+            selected_indices,
+            {"G_phi_S": G_phi_S_new, "phi_S": phi_S},
+        )
 
     def gumbel(self, phi) -> torch.Tensor:
         """
@@ -579,7 +593,9 @@ class BeamSearch(FromParams):
             old_step = cast(StepFunctionTypeNoTimestep, step)
 
             def new_step(
-                last_predictions: torch.Tensor, state: Dict[str, torch.Tensor], time_step: int
+                last_predictions: torch.Tensor,
+                state: Dict[str, torch.Tensor],
+                time_step: int,
             ):
                 return old_step(last_predictions, state)
 
@@ -692,7 +708,7 @@ class BeamSearch(FromParams):
             )
 
             # shape (both): (batch_size * beam_size, per_node_beam_size)
-            top_log_probabilities, predicted_classes, sampler_state = self.sampler.sample_nodes(
+            (top_log_probabilities, predicted_classes, sampler_state,) = self.sampler.sample_nodes(
                 cleaned_log_probabilities, self.per_node_beam_size, sampler_state
             )
 

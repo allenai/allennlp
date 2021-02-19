@@ -38,7 +38,8 @@ class ScalarMix(torch.nn.Module):
         self.scalar_parameters = ParameterList(
             [
                 Parameter(
-                    torch.FloatTensor([initial_scalar_parameters[i]]), requires_grad=trainable
+                    torch.FloatTensor([initial_scalar_parameters[i]]),
+                    requires_grad=trainable,
                 )
                 for i in range(mixture_size)
             ]

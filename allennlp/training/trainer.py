@@ -752,8 +752,8 @@ class GradientDescentTrainer(Trainer):
                 description = training_util.description_from_metrics(metrics)
                 batch_group_generator_tqdm.set_description(description, refresh=False)
 
-                if self._checkpointer is not None:
-                    self._checkpointer.maybe_save_checkpoint(self, epoch, batches_this_epoch)
+            if self._checkpointer is not None:
+                self._checkpointer.maybe_save_checkpoint(self, epoch, batches_this_epoch)
 
             for callback in self._callbacks:
                 callback.on_batch(
@@ -961,7 +961,7 @@ class GradientDescentTrainer(Trainer):
             epoch_start_time = time.time()
             train_metrics = self._train_epoch(epoch)
 
-            if self._primary and self._checkpointer is not None:
+            if self._checkpointer is not None:
                 self._checkpointer.save_checkpoint(epoch, self, save_model_only=True)
 
             # Wait for the primary process to finish saving the model checkpoint
@@ -1039,7 +1039,7 @@ class GradientDescentTrainer(Trainer):
             if self._momentum_scheduler:
                 self._momentum_scheduler.step(this_epoch_val_metric)
 
-            if self._primary and self._checkpointer is not None:
+            if self._checkpointer is not None:
                 self._checkpointer.save_checkpoint(
                     epoch, self, is_best_so_far=self._metric_tracker.is_best_so_far()
                 )

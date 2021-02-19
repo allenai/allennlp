@@ -65,7 +65,10 @@ class TestParams(AllenNlpTestCase):
     def test_unflatten(self):
         flattened = {"a.b.c": 1, "a.b.d": 0, "a.e.f.g.h": 2, "b": 3}
         unflattened = unflatten(flattened)
-        assert unflattened == {"a": {"b": {"c": 1, "d": 0}, "e": {"f": {"g": {"h": 2}}}}, "b": 3}
+        assert unflattened == {
+            "a": {"b": {"c": 1, "d": 0}, "e": {"f": {"g": {"h": 2}}}},
+            "b": 3,
+        }
 
         # should do nothing to a non-flat dictionary
         assert unflatten(unflattened) == unflattened

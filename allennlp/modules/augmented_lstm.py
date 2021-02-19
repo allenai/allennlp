@@ -38,7 +38,11 @@ class AugmentedLSTMCell(torch.nn.Module):
     """
 
     def __init__(
-        self, embed_dim: int, lstm_dim: int, use_highway: bool = True, use_bias: bool = True
+        self,
+        embed_dim: int,
+        lstm_dim: int,
+        use_highway: bool = True,
+        use_bias: bool = True,
     ):
         super().__init__()
         self.embed_dim = embed_dim
@@ -121,7 +125,13 @@ class AugmentedLSTMCell(torch.nn.Module):
         if self.use_highway:
             fused_op = projected_input[:, : 5 * self.lstm_dim] + projected_state
             fused_chunked = torch.chunk(fused_op, 5, 1)
-            (input_gate, forget_gate, memory_init, output_gate, highway_gate) = fused_chunked
+            (
+                input_gate,
+                forget_gate,
+                memory_init,
+                output_gate,
+                highway_gate,
+            ) = fused_chunked
             highway_gate = torch.sigmoid(highway_gate)
         else:
             fused_op = projected_input + projected_state
@@ -199,7 +209,9 @@ class AugmentedLstm(torch.nn.Module):
         )
 
     def forward(
-        self, inputs: PackedSequence, states: Optional[Tuple[torch.Tensor, torch.Tensor]] = None
+        self,
+        inputs: PackedSequence,
+        states: Optional[Tuple[torch.Tensor, torch.Tensor]] = None,
     ) -> Tuple[PackedSequence, Tuple[torch.Tensor, torch.Tensor]]:
         """
         Warning: Would be better to use the BiAugmentedLstm class in a regular model
@@ -385,7 +397,9 @@ class BiAugmentedLstm(torch.nn.Module):
         self.representation_dim = lstm_embed_dim
 
     def forward(
-        self, inputs: torch.Tensor, states: Optional[Tuple[torch.Tensor, torch.Tensor]] = None
+        self,
+        inputs: torch.Tensor,
+        states: Optional[Tuple[torch.Tensor, torch.Tensor]] = None,
     ) -> Tuple[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
         """
         Given an input batch of sequential data such as word embeddings, produces
@@ -423,7 +437,9 @@ class BiAugmentedLstm(torch.nn.Module):
         return self._forward_unidirectional(inputs, states)
 
     def _forward_bidirectional(
-        self, inputs: PackedSequence, states: Optional[Tuple[torch.Tensor, torch.Tensor]]
+        self,
+        inputs: PackedSequence,
+        states: Optional[Tuple[torch.Tensor, torch.Tensor]],
     ):
         output_sequence = inputs
         final_h = []
@@ -439,7 +455,8 @@ class BiAugmentedLstm(torch.nn.Module):
         else:
             hidden_states = list(
                 zip(  # type: ignore
-                    states[0].chunk(self.num_layers, 0), states[1].chunk(self.num_layers, 0)
+                    states[0].chunk(self.num_layers, 0),
+                    states[1].chunk(self.num_layers, 0),
                 )
             )
         for i, state in enumerate(hidden_states):
@@ -473,7 +490,9 @@ class BiAugmentedLstm(torch.nn.Module):
         return output_sequence, final_state_tuple
 
     def _forward_unidirectional(
-        self, inputs: PackedSequence, states: Optional[Tuple[torch.Tensor, torch.Tensor]]
+        self,
+        inputs: PackedSequence,
+        states: Optional[Tuple[torch.Tensor, torch.Tensor]],
     ):
         output_sequence = inputs
         final_h = []
@@ -489,7 +508,8 @@ class BiAugmentedLstm(torch.nn.Module):
         else:
             hidden_states = list(
                 zip(  # type: ignore
-                    states[0].chunk(self.num_layers, 0), states[1].chunk(self.num_layers, 0)
+                    states[0].chunk(self.num_layers, 0),
+                    states[1].chunk(self.num_layers, 0),
                 )  # type: ignore
             )
 
