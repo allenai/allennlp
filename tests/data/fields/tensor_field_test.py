@@ -115,6 +115,6 @@ class TestTensorField(AllenNlpTestCase):
         assert array1 == array4
 
     def test_human_readable_dict(self):
-        array = TensorField(numpy.asarray([1., 1, 1]))
+        array = TensorField(numpy.asarray([1.0, 1, 1]))
         ans = {"size": [3], "element_ave": 1.0, "element_std": 0}
         assert array.human_readable_dict() == ans
