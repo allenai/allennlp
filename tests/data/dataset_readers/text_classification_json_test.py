@@ -1,6 +1,8 @@
 import pytest
 from typing import List
 
+import spacy
+
 from allennlp.data.dataset_readers import TextClassificationJsonReader
 from allennlp.common.util import ensure_list
 from allennlp.common.testing import AllenNlpTestCase
@@ -51,8 +53,8 @@ class TestTextClassificationJsonReader:
             / "text_classification_json"
             / "ag_news_corpus.jsonl"
         )
-        instances = reader.read(ag_path)
-        instances = ensure_list(instances)
+        instances = list(reader.read(ag_path))
+        is_version_3 = spacy.__version__ >= "3.0"
 
         instance1 = {
             "tokens": [
@@ -106,6 +108,61 @@ class TestTextClassificationJsonReader:
             ],
             "label": "2",
         }
+        instance1_v3 = {
+            "tokens": [
+                "Memphis",
+                "Rout",
+                "Still",
+                "Stings",
+                "for",
+                "No",
+                ".",
+                "14",
+                "Louisville",
+                ";",
+                "Coach",
+                "Petrino",
+                "Vows",
+                "to",
+                "Have",
+                "Team",
+                "Better",
+                "Prepared",
+                ".",
+                "NASHVILLE",
+                ",",
+                "Tenn.",
+                "Nov",
+                "3",
+                ",",
+                "2004",
+                "-",
+                "Louisville",
+                "#",
+                "39;s",
+                "30",
+                "-",
+                "point",
+                "loss",
+                "at",
+                "home",
+                "to",
+                "Memphis",
+                "last",
+                "season",
+                "is",
+                "still",
+                "a",
+                "painful",
+                "memory",
+                "for",
+                "the",
+                "Cardinals",
+                ".",
+            ],
+            "label": "2",
+        }
+
         instance2 = {
             "tokens": [
                 "AP",
@@ -172,7 +229,10 @@ class TestTextClassificationJsonReader:
 
         assert len(instances) == 3
         fields = instances[0].fields
-        assert [t.text for t in fields["tokens"].tokens] == instance1["tokens"]
+        if is_version_3:
+            assert [t.text for t in fields["tokens"].tokens] == instance1_v3["tokens"]
+        else:
+            assert [t.text for t in fields["tokens"].tokens] == instance1["tokens"]
         assert fields["label"].label == instance1["label"]
         fields = instances[1].fields
         assert [t.text for t in fields["tokens"].tokens] == instance2["tokens"]
