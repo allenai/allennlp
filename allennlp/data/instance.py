@@ -113,7 +113,7 @@ class Instance(Mapping[str, Field]):
         new.indexed = self.indexed
         return new
 
-    def to_json(self, human_readable: bool = True) -> JsonDict:
+    def human_readable_dict(self) -> JsonDict:
         """
         This function facilitate saving formated instances to json files for human readability,
         use case includes example-based explanation, where it's better to have a output file
@@ -127,7 +127,7 @@ class Instance(Mapping[str, Field]):
         """
         ret = {}
         for key, field in self.fields.items():
-            to_json = field.to_json(human_readable)
+            to_json = field.human_readable_dict()
             if to_json is None:
                 continue
             ret[key] = to_json

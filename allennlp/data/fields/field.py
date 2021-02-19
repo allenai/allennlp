@@ -53,7 +53,7 @@ class Field(Generic[DataArray]):
         """
         pass
 
-    def to_json(self, human_readable: bool = True):
+    def human_readable_dict(self):
         """
         This function facilitate saving formated instances to json files for human readability,
         use case includes example-based explanation, where it's better to have a output file

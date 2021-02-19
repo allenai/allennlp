@@ -78,7 +78,10 @@ class TensorField(Field[torch.Tensor]):
         return self.tensor.numpy()
 
     @overrides
-    def to_json(self, human_readable: bool = True):
-        if not human_readable:
-            return self.tensor.numpy()
-        return None
+    def human_readable_dict(self):
+        size = list(self.tensor.shape)
+        std = torch.std(self.tensor.float()).item()
+        ave = torch.mean(self.tensor.float()).item()
+
+        return {"size": size, "element_std": std, "element_ave": ave}
+
