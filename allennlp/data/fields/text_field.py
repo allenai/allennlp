@@ -12,6 +12,7 @@ from spacy.tokens import Token as SpacyToken
 import torch
 
 from allennlp.common.checks import ConfigurationError
+from allennlp.common.util import JsonDict
 from allennlp.data.fields.sequence_field import SequenceField
 from allennlp.data.tokenizers import Token
 from allennlp.data.token_indexers.token_indexer import TokenIndexer, IndexedTokenList
@@ -201,5 +202,5 @@ class TextField(SequenceField[TextFieldTensors]):
         return new
 
     @overrides
-    def human_readable_dict(self):
-        return [str(t) for t in self.tokens]
+    def human_readable_dict(self) -> JsonDict:
+        return {"tokens": [str(t) for t in self.tokens]}

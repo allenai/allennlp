@@ -83,4 +83,4 @@ class TensorField(Field[torch.Tensor]):
         std = torch.std(self.tensor.float()).item()
         ave = torch.mean(self.tensor.float()).item()
 
-        return {"size": size, "element_std": std, "element_ave": ave}
+        return {"tensor": {"size": size, "element_std": std, "element_ave": ave}}

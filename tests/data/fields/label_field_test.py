@@ -63,4 +63,4 @@ class TestLabelField(AllenNlpTestCase):
 
     def test_human_readable_dict(self):
         label = LabelField("label", label_namespace="namespace")
-        assert label.human_readable_dict() == "label"
+        assert label.human_readable_dict() == {"label": "label"}

@@ -3,6 +3,7 @@ from typing import Dict, MutableMapping, Mapping
 from allennlp.data.fields.field import DataArray, Field
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.common.util import JsonDict
+from copy import deepcopy
 
 
 class Instance(Mapping[str, Field]):
@@ -115,21 +116,31 @@ class Instance(Mapping[str, Field]):
 
     def human_readable_dict(self) -> JsonDict:
         """
-        This function facilitate saving formated instances to json files for human readability,
-        use case includes example-based explanation, where it's better to have a output file
+        This function help to save formated instances to json files or print for human readability.
+        Use case includes example-based explanation, where it's better to have a output file or
         rather than printing or logging.
 
-        For example, - if the field is LabelField, then we just output, field.label
-                     - if the field is TextField, then we just output, field.tokens
-                       (preferrably un-numericalized tokens)
-                     - the instances output then is {`label`: `field.label`, `tokens`: `field.tokens`}
+        For example, - if the field is LabelField, then we just output, {"label": `field.label` (string)}
+                     - if the field is TextField, then we just output,
+                     {"tokens": `field.tokens` (preferrably un-numericalized tokens)}
+                     - the instances output then is {"label": `field.label`, "tokens": `field.tokens`}
+
+        If the field's key in the instance is different from the field's default, we will use the
+        key in the instance rather than the field's default.
+
+        For example, - if instance is {"hahah": `TextField`}
+                     - output from this function will be {"hahah": `field.tokens`} rather than
+                     {"tokens" (`TextField` default key): `field.tokens`}
 
         """
         ret = {}
         for key, field in self.fields.items():
-            to_json = field.human_readable_dict()
-            if to_json is None:
-                continue
-            ret[key] = to_json
+            human_readable_dict = field.human_readable_dict()
+            assert len(human_readable_dict) == 1  # each field (as dict) has its default key
+            key_in_dict = list(human_readable_dict.keys())[0]
+            if key != key_in_dict:
+                human_readable_dict[key] = deepcopy(human_readable_dict[key_in_dict])
+                del human_readable_dict[key_in_dict]
+            ret.update(human_readable_dict)
 
         return ret
