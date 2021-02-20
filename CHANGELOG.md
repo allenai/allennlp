@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - `coding_scheme` parameter is now deprecated in `Conll2003DatasetReader`, please use `convert_to_coding_scheme` instead.
+- Support spaCy v3
 
 ### Added
 
@@ -17,9 +18,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added a way to specify extra parameters to the predictor in an `allennlp predict` call.
 - Added a way to initialize a `Vocabulary` from transformers models.
 - New functionality `to_json()` to support outputing instances to files
+- Added an example for fields of type `ListField[TextField]` to `apply_token_indexers` API docs.
 
 ### Fixed
 
+- Ensured that `MeanAbsoluteError` always returns a `float` metric value instead of a `Tensor`.
 - Learning rate schedulers that rely on metrics from the validation set were broken in v2.0.0. This
   brings that functionality back.
 - Fixed a bug where the `MultiProcessDataLoading` would crash when `num_workers > 0`, `start_method = "spawn"`, `max_instances_in_memory not None`, and `batches_per_epoch not None`.
