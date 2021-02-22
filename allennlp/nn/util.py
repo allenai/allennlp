@@ -12,7 +12,6 @@ import math
 import numpy
 import torch
 import torch.distributed as dist
-from torch.distributed import ReduceOp
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import int_to_device, is_distributed
@@ -2019,8 +2018,13 @@ def tiny_value_of_dtype(dtype: torch.dtype):
 
 _V = TypeVar("_V", int, float)
 
+# NOTE: we don't add the type hint `dist.ReduceOp` to the `reduce_op` parameter of `dist_reduce` below
+# because on some systems PyTorch's distributed framework may not be available, in which
+# case the `torch.distributed` module is empty, so the type hint would cause an error
+# when the source code is loaded.
 
-def dist_reduce(value: _V, reduce_op: ReduceOp, **kwargs) -> _V:
+
+def dist_reduce(value: _V, reduce_op, **kwargs) -> _V:
     """
     Reduces the given `value` across all distributed worker nodes according the given
     reduction operation.
@@ -2031,8 +2035,9 @@ def dist_reduce(value: _V, reduce_op: ReduceOp, **kwargs) -> _V:
 
     value : `_V`
         The value to reduce across distributed nodes.
-    reduce_op : `ReduceOp`
-        The reduction operation to use.
+    reduce_op : `torch.distributed.ReduceOp`
+        The [reduction operation](https://pytorch.org/docs/stable/distributed.html#torch.distributed.ReduceOp)
+        to use.
     **kwargs : `Any`
         Additional arguments used to construct the tensor that will wrap `value`.
 
