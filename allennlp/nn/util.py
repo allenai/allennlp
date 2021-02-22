@@ -2,6 +2,8 @@
 Assorted utilities for working with neural networks in AllenNLP.
 """
 
+from __future__ import annotations
+
 import copy
 import json
 import logging
@@ -2018,13 +2020,8 @@ def tiny_value_of_dtype(dtype: torch.dtype):
 
 _V = TypeVar("_V", int, float)
 
-# NOTE: we don't add the type hint `dist.ReduceOp` to the `reduce_op` parameter of `dist_reduce` below
-# because on some systems PyTorch's distributed framework may not be available, in which
-# case the `torch.distributed` module is empty, so the type hint would cause an error
-# when the source code is loaded.
 
-
-def dist_reduce(value: _V, reduce_op, **kwargs) -> _V:
+def dist_reduce(value: _V, reduce_op: dist.ReduceOp = dist.ReduceOp.SUM, **kwargs) -> _V:
     """
     Reduces the given `value` across all distributed worker nodes according the given
     reduction operation.
@@ -2035,7 +2032,7 @@ def dist_reduce(value: _V, reduce_op, **kwargs) -> _V:
 
     value : `_V`
         The value to reduce across distributed nodes.
-    reduce_op : `torch.distributed.ReduceOp`
+    reduce_op : `torch.distributed.ReduceOp`, optional (default = `ReduceOp.SUM`)
         The [reduction operation](https://pytorch.org/docs/stable/distributed.html#torch.distributed.ReduceOp)
         to use.
     **kwargs : `Any`
