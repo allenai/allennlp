@@ -1,13 +1,13 @@
 import itertools
 import random
 from collections import OrderedDict
-from typing import NamedTuple, Optional, List, Tuple
+from typing import List, NamedTuple, Optional, Tuple
 
 import torch
-from torch import nn, FloatTensor, IntTensor, Tensor
 import torch.nn.functional as F
 import torchvision
 import torchvision.ops.boxes as box_ops
+from torch import FloatTensor, IntTensor, Tensor, nn
 
 from allennlp.common import Registrable
 

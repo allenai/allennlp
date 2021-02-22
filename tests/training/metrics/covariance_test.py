@@ -2,11 +2,9 @@ import numpy as np
 import torch
 from torch.testing import assert_allclose
 
-from allennlp.common.testing import (
+from allennlp.common.testing import (  # global_distributed_metric,; run_distributed_test,
     AllenNlpTestCase,
     multi_device,
-    # global_distributed_metric,
-    # run_distributed_test,
 )
 from allennlp.training.metrics import Covariance
 

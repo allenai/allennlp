@@ -2,7 +2,7 @@ import numpy
 import torch
 
 from allennlp.common.testing.test_case import AllenNlpTestCase
-from allennlp.data.fields import TensorField, ListField
+from allennlp.data.fields import ListField, TensorField
 
 
 class TestTensorField(AllenNlpTestCase):

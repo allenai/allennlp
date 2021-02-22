@@ -1,7 +1,6 @@
+import numpy
 import pytest
 import torch
-
-import numpy
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.modules import GatedSum

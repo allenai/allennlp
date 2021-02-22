@@ -1,14 +1,13 @@
-from typing import Dict, List, Optional, Tuple, Any
 import logging
-import torch
-from allennlp.common.util import pad_sequence_to_length
+from typing import Any, Dict, List, Optional, Tuple
 
+import torch
 from overrides import overrides
 
+from allennlp.common.util import pad_sequence_to_length
+from allennlp.data.token_indexers.token_indexer import IndexedTokenList, TokenIndexer
+from allennlp.data.tokenizers import PretrainedTransformerTokenizer, Token
 from allennlp.data.vocabulary import Vocabulary
-from allennlp.data.tokenizers import Token, PretrainedTransformerTokenizer
-from allennlp.data.token_indexers.token_indexer import TokenIndexer, IndexedTokenList
-
 
 logger = logging.getLogger(__name__)
 

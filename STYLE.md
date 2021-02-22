@@ -26,7 +26,7 @@ any docstring on the constructor itself.  For model / module constructors and me
 
 ## Code format
 
-We use `flake8`, `black` and `mypy` to enforce some basic consistency in formatting.  Those
+We use `flake8`, `black`, `isort`, and `mypy` to enforce some basic consistency in formatting.  Those
 formatting guidelines roughly follow [Google's python style
 guide](https://google.github.io/styleguide/pyguide.html#Python_Style_Rules), with a few notable
 exceptions.  In particular, because we use type annotations and descriptive variable names, we use

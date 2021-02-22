@@ -4,7 +4,10 @@ import torch
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
-from allennlp.modules.span_extractors import BidirectionalEndpointSpanExtractor, SpanExtractor
+from allennlp.modules.span_extractors import (
+    BidirectionalEndpointSpanExtractor,
+    SpanExtractor,
+)
 from allennlp.nn.util import batched_index_select
 
 

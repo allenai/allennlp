@@ -1,8 +1,9 @@
 import math
 
 import torch
-from torch.nn import Parameter
 from overrides import overrides
+from torch.nn import Parameter
+
 from allennlp.modules.attention.attention import Attention
 from allennlp.nn import util
 from allennlp.nn.activations import Activation

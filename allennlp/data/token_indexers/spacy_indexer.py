@@ -1,14 +1,14 @@
 from typing import Dict, List
 
+import numpy
+import torch
 from overrides import overrides
 from spacy.tokens import Token as SpacyToken
-import torch
-import numpy
 
 from allennlp.common.util import pad_sequence_to_length
-from allennlp.data.vocabulary import Vocabulary
+from allennlp.data.token_indexers.token_indexer import IndexedTokenList, TokenIndexer
 from allennlp.data.tokenizers import Token
-from allennlp.data.token_indexers.token_indexer import TokenIndexer, IndexedTokenList
+from allennlp.data.vocabulary import Vocabulary
 
 
 @TokenIndexer.register("spacy")

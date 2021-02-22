@@ -9,8 +9,8 @@ from allennlp.data import Instance, Token
 from allennlp.data.fields import TextField
 from allennlp.data.token_indexers import (
     ELMoTokenCharactersIndexer,
-    TokenCharactersIndexer,
     SingleIdTokenIndexer,
+    TokenCharactersIndexer,
 )
 from allennlp.interpret.attackers import utils
 from allennlp.interpret.attackers.attacker import Attacker

@@ -8,18 +8,17 @@ import traceback
 from contextlib import contextmanager
 from typing import Any, Dict, Iterator, List, Optional, Tuple, Union
 
-from allennlp.common.util import int_to_device
-
 import torch
 import torch.distributed as dist
-from torch.cuda import amp
 import torch.optim.lr_scheduler
+from torch.cuda import amp
 from torch.nn.parallel import DistributedDataParallel
 from torch.nn.utils import clip_grad_norm_
 
 from allennlp.common import Lazy, Registrable, Tqdm
 from allennlp.common import util as common_util
 from allennlp.common.checks import ConfigurationError, check_for_gpu
+from allennlp.common.util import int_to_device
 from allennlp.data import DataLoader, TensorDict
 from allennlp.models.model import Model
 from allennlp.training import util as training_util

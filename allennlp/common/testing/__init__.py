@@ -1,19 +1,17 @@
 """
 Utilities and helpers for writing tests.
 """
-from typing import Dict, Any, Optional, Union, Tuple, List
+from typing import Any, Dict, List, Optional, Tuple, Union
+
+import pytest
 import torch
 from torch.testing import assert_allclose
-import pytest
 
-from allennlp.common.testing.test_case import AllenNlpTestCase
-from allennlp.common.testing.model_test_case import ModelTestCase
 from allennlp.common.testing.distributed_test import run_distributed_test
-
+from allennlp.common.testing.model_test_case import ModelTestCase
+from allennlp.common.testing.test_case import AllenNlpTestCase
 from allennlp.modules.transformer import TransformerModule
-
 from allennlp.training.metrics import Metric
-
 
 _available_devices = ["cpu"] + (["cuda:0"] if torch.cuda.is_available() else [])
 

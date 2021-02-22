@@ -1,10 +1,11 @@
 import re
+
 import torch
 
 from allennlp.common.params import Params
-from allennlp.nn import InitializerApplicator, Initializer
-from allennlp.nn.regularizers import L1Regularizer, L2Regularizer, RegularizerApplicator
 from allennlp.common.testing import AllenNlpTestCase
+from allennlp.nn import Initializer, InitializerApplicator
+from allennlp.nn.regularizers import L1Regularizer, L2Regularizer, RegularizerApplicator
 
 
 class TestRegularizers(AllenNlpTestCase):

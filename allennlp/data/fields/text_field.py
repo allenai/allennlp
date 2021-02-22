@@ -2,19 +2,19 @@
 A `TextField` represents a string of text, the kind that you might want to represent with
 standard word vectors, or pass through an LSTM.
 """
+import textwrap
 from collections import defaultdict
 from copy import deepcopy
-from typing import Dict, List, Optional, Iterator
-import textwrap
+from typing import Dict, Iterator, List, Optional
 
+import torch
 from overrides import overrides
 from spacy.tokens import Token as SpacyToken
-import torch
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.data.fields.sequence_field import SequenceField
+from allennlp.data.token_indexers.token_indexer import IndexedTokenList, TokenIndexer
 from allennlp.data.tokenizers import Token
-from allennlp.data.token_indexers.token_indexer import TokenIndexer, IndexedTokenList
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.nn import util
 

@@ -1,14 +1,13 @@
-from inspect import signature
-from typing import List, Callable, Tuple, Dict, cast, TypeVar
 import warnings
+from inspect import signature
+from typing import Callable, Dict, List, Tuple, TypeVar, cast
 
-from overrides import overrides
 import torch
+from overrides import overrides
 
 from allennlp.common import FromParams, Registrable
 from allennlp.common.checks import ConfigurationError
 from allennlp.nn.util import min_value_of_dtype
-
 
 StateType = Dict[str, torch.Tensor]
 StepFunctionTypeWithTimestep = Callable[

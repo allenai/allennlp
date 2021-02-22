@@ -1,5 +1,5 @@
-from typing import Dict
 import inspect
+from typing import Dict
 
 import torch
 from overrides import overrides
@@ -8,8 +8,8 @@ from allennlp.common.checks import ConfigurationError
 from allennlp.data.fields.text_field import TextFieldTensors
 from allennlp.modules.text_field_embedders.text_field_embedder import TextFieldEmbedder
 from allennlp.modules.time_distributed import TimeDistributed
-from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
 from allennlp.modules.token_embedders import EmptyEmbedder
+from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
 
 
 @TextFieldEmbedder.register("basic")

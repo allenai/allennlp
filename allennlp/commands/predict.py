@@ -4,21 +4,21 @@ or dataset to JSON predictions using a trained model and its
 [`Predictor`](../predictors/predictor.md#predictor) wrapper.
 """
 
-from typing import List, Iterator, Optional
 import argparse
-import sys
 import json
+import sys
+from typing import Iterator, List, Optional
 
 from overrides import overrides
 
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common import logging as common_logging
-from allennlp.common.checks import check_for_gpu, ConfigurationError
+from allennlp.common.checks import ConfigurationError, check_for_gpu
 from allennlp.common.file_utils import cached_path
 from allennlp.common.util import lazy_groups_of
-from allennlp.models.archival import load_archive
-from allennlp.predictors.predictor import Predictor, JsonDict
 from allennlp.data import Instance
+from allennlp.models.archival import load_archive
+from allennlp.predictors.predictor import JsonDict, Predictor
 
 
 @Subcommand.register("predict")

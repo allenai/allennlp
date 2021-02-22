@@ -1,7 +1,7 @@
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.models.archival import load_archive
-from allennlp.predictors import Predictor
 from allennlp.nn import util
+from allennlp.predictors import Predictor
 
 
 class TestPredictor(AllenNlpTestCase):

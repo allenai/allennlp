@@ -1,5 +1,5 @@
-from datetime import datetime as dt
 import os
+from datetime import datetime as dt
 
 from github import Github
 

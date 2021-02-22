@@ -16,10 +16,10 @@ from allennlp.data.fields import TextField
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenCharactersIndexer
 from allennlp.data.tokenizers import CharacterTokenizer
 from allennlp.data.vocabulary import (
-    _NamespaceDependentDefaultDict,
-    _read_pretrained_tokens,
     DEFAULT_OOV_TOKEN,
     Vocabulary,
+    _NamespaceDependentDefaultDict,
+    _read_pretrained_tokens,
 )
 from allennlp.modules.token_embedders.embedding import format_embeddings_file_uri
 

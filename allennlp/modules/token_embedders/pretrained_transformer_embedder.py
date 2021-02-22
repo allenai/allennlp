@@ -1,11 +1,10 @@
 import logging
 import math
-from typing import Optional, Tuple, Dict, Any
-
-from overrides import overrides
+from typing import Any, Dict, Optional, Tuple
 
 import torch
 import torch.nn.functional as F
+from overrides import overrides
 from transformers import XLNetConfig
 
 from allennlp.data.tokenizers import PretrainedTransformerTokenizer

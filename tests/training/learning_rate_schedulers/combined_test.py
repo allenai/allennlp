@@ -1,10 +1,10 @@
 import torch
 
-from allennlp.common.testing import AllenNlpTestCase
 from allennlp.common.params import Params
+from allennlp.common.testing import AllenNlpTestCase
 from allennlp.training.learning_rate_schedulers import (
-    LearningRateScheduler,
     CombinedLearningRateScheduler,
+    LearningRateScheduler,
     PolynomialDecay,
 )
 from allennlp.training.optimizers import Optimizer

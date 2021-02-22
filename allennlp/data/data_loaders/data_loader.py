@@ -1,12 +1,11 @@
-from typing import List, Dict, Union, Iterator
+from typing import Dict, Iterator, List, Union
 
 import torch
 
 from allennlp.common.registrable import Registrable
-from allennlp.data.instance import Instance
 from allennlp.data.batch import Batch
+from allennlp.data.instance import Instance
 from allennlp.data.vocabulary import Vocabulary
-
 
 TensorDict = Dict[str, Union[torch.Tensor, Dict[str, torch.Tensor]]]
 """

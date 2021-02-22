@@ -1,10 +1,7 @@
 from overrides import overrides
 
 from allennlp.commands import Subcommand
-from allennlp.common.plugins import (
-    discover_plugins,
-    import_plugins,
-)
+from allennlp.common.plugins import discover_plugins, import_plugins
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.common.util import pushd
 

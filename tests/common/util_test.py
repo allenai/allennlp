@@ -1,6 +1,6 @@
-from datetime import timedelta
 import sys
 from collections import OrderedDict
+from datetime import timedelta
 
 import pytest
 import torch

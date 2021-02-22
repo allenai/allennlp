@@ -1,14 +1,12 @@
-from typing import Union, Optional, Dict
+from typing import Dict, Optional, Union
 
 import torch
 
 from allennlp.common import FromParams
-
-from allennlp.modules.transformer.transformer_module import TransformerModule
-
 from allennlp.modules.transformer.activation_layer import ActivationLayer
-from allennlp.modules.transformer.self_attention import SelfAttention
 from allennlp.modules.transformer.output_layer import OutputLayer
+from allennlp.modules.transformer.self_attention import SelfAttention
+from allennlp.modules.transformer.transformer_module import TransformerModule
 
 
 class AttentionLayer(TransformerModule, FromParams):

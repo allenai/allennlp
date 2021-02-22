@@ -1,6 +1,6 @@
+import torch
 from numpy.testing import assert_almost_equal
 from overrides import overrides
-import torch
 from torch.nn import Embedding, Module, Parameter
 
 from allennlp.common.testing import AllenNlpTestCase

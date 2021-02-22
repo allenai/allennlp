@@ -1,11 +1,15 @@
-import torch
 import numpy
-from overrides import overrides
 import pytest
+import torch
+from overrides import overrides
 
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.modules.seq2seq_encoders import ComposeEncoder, FeedForwardEncoder, Seq2SeqEncoder
 from allennlp.modules import FeedForward
+from allennlp.modules.seq2seq_encoders import (
+    ComposeEncoder,
+    FeedForwardEncoder,
+    Seq2SeqEncoder,
+)
 
 
 class MockSeq2SeqEncoder(Seq2SeqEncoder):

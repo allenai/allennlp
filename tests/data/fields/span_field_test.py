@@ -3,7 +3,7 @@ import pytest
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Token
-from allennlp.data.fields import TextField, SpanField
+from allennlp.data.fields import SpanField, TextField
 from allennlp.data.token_indexers import SingleIdTokenIndexer
 
 

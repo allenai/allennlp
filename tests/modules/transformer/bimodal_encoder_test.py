@@ -1,10 +1,10 @@
 import copy
+
 import torch
-from allennlp.common import Params
-from allennlp.common import cached_transformers
-from allennlp.common.testing import assert_equal_parameters
+
+from allennlp.common import Params, cached_transformers
+from allennlp.common.testing import AllenNlpTestCase, assert_equal_parameters
 from allennlp.modules.transformer import BiModalEncoder
-from allennlp.common.testing import AllenNlpTestCase
 
 
 class TestBiModalEncoder(AllenNlpTestCase):

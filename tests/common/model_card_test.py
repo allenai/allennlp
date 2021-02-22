@@ -1,6 +1,6 @@
+from allennlp.common.model_card import IntendedUse, ModelCard, ModelUsage, Paper
 from allennlp.common.params import Params
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.common.model_card import ModelCard, ModelUsage, IntendedUse, Paper
 from allennlp.models import Model
 
 

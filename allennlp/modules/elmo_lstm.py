@@ -2,7 +2,7 @@
 A stacked bidirectional LSTM with skip connections between layers.
 """
 import warnings
-from typing import List, Optional, Tuple, Any
+from typing import Any, List, Optional, Tuple
 
 import numpy
 import torch

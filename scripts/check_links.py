@@ -5,15 +5,14 @@
 Goes through all the inline-links in markdown files and reports the breakages.
 """
 
+import os
+import pathlib
 import re
 import sys
-import pathlib
-import os
 from multiprocessing.dummy import Pool
-from typing import Tuple, NamedTuple, Optional
+from typing import NamedTuple, Optional, Tuple
 
 import requests
-
 
 OK_STATUS_CODES = (
     200,

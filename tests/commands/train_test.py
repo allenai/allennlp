@@ -1,27 +1,31 @@
 import argparse
 import copy
 import json
-
 import logging
 import math
 import os
 import re
 import shutil
-from collections import OrderedDict, Counter
-from typing import Optional, List, Dict, Any
+from collections import Counter, OrderedDict
+from typing import Any, Dict, List, Optional
 
 import pytest
 import torch
 
-from allennlp.commands.train import Train, train_model, train_model_from_args, TrainModel
+from allennlp.commands.train import (
+    Train,
+    TrainModel,
+    train_model,
+    train_model_from_args,
+)
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase, cpu_or_gpu
 from allennlp.data import Vocabulary
 from allennlp.data.data_loaders import TensorDict
-from allennlp.models import load_archive, Model
+from allennlp.models import Model, load_archive
 from allennlp.models.archival import CONFIG_NAME
-from allennlp.training import TrainerCallback, GradientDescentTrainer
+from allennlp.training import GradientDescentTrainer, TrainerCallback
 from allennlp.training.learning_rate_schedulers import (
     ExponentialLearningRateScheduler,
     LearningRateScheduler,

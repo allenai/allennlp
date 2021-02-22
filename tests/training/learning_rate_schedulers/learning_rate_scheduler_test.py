@@ -1,11 +1,11 @@
-import torch
 import pytest
+import torch
 
 from allennlp.common.checks import ConfigurationError
-from allennlp.training.optimizers import Optimizer
+from allennlp.common.params import Params
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.training.learning_rate_schedulers import LearningRateScheduler
-from allennlp.common.params import Params
+from allennlp.training.optimizers import Optimizer
 
 
 class LearningRateSchedulersTest(AllenNlpTestCase):

@@ -8,7 +8,11 @@ from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Token, Vocabulary
 from allennlp.data.fields import TextField
-from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenCharactersIndexer, TokenIndexer
+from allennlp.data.token_indexers import (
+    SingleIdTokenIndexer,
+    TokenCharactersIndexer,
+    TokenIndexer,
+)
 
 
 class DictReturningTokenIndexer(TokenIndexer):

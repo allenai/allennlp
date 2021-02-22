@@ -1,14 +1,14 @@
 import numpy
-from numpy.testing import assert_almost_equal
 import pytest
 import torch
-from torch.nn import LSTM, GRU
+from numpy.testing import assert_almost_equal
+from torch.nn import GRU, LSTM
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.modules.seq2seq_encoders import PytorchSeq2SeqWrapper
-from allennlp.nn.util import sort_batch_by_length, get_lengths_from_binary_sequence_mask
+from allennlp.nn.util import get_lengths_from_binary_sequence_mask, sort_batch_by_length
 
 
 class TestPytorchSeq2SeqWrapper(AllenNlpTestCase):

@@ -18,8 +18,8 @@ The available optimizers are
 """
 
 import logging
-import re
 import math
+import re
 from typing import Any, Dict, List, Tuple, Union
 
 import torch

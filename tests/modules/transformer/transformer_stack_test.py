@@ -1,20 +1,17 @@
 import copy
-import torch
+
 import pytest
-
-from allennlp.common import Params
-from allennlp.common import cached_transformers
-
-from allennlp.common.testing import assert_equal_parameters
-from allennlp.modules.transformer import TransformerStack, TransformerLayer
-from allennlp.common.testing import AllenNlpTestCase
-
+import torch
 from transformers.models.bert.configuration_bert import BertConfig
 from transformers.models.bert.modeling_bert import BertEncoder
-from transformers.models.roberta.configuration_roberta import RobertaConfig
-from transformers.models.roberta.modeling_roberta import RobertaEncoder
 from transformers.models.electra.configuration_electra import ElectraConfig
 from transformers.models.electra.modeling_electra import ElectraEncoder
+from transformers.models.roberta.configuration_roberta import RobertaConfig
+from transformers.models.roberta.modeling_roberta import RobertaEncoder
+
+from allennlp.common import Params, cached_transformers
+from allennlp.common.testing import AllenNlpTestCase, assert_equal_parameters
+from allennlp.modules.transformer import TransformerLayer, TransformerStack
 
 PARAMS_DICT = {
     "num_hidden_layers": 3,

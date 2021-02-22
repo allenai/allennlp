@@ -5,8 +5,8 @@ the task definition. Thus, it is helpful to separate the information
 in the model card that comes from specifically the task itself.
 """
 
-from typing import Dict, List, Optional, Union
 from dataclasses import dataclass
+from typing import Dict, List, Optional, Union
 
 from allennlp.common.from_params import FromParams
 

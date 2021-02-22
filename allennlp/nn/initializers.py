@@ -22,16 +22,16 @@ The available initialization functions are
 * ["uniform_unit_scaling"](./initializers.md#uniform_unit_scaling)
 * ["pretrained"](./initializers.md#PretrainedModelInitializer)
 """
-import logging
-import re
-import math
-from typing import Callable, List, Tuple, Dict
 import itertools
-from overrides import overrides
+import logging
+import math
+import re
 import tarfile
+from typing import Callable, Dict, List, Tuple
 
 import torch
 import torch.nn.init
+from overrides import overrides
 
 from allennlp.common import FromParams, Registrable
 from allennlp.common.checks import ConfigurationError
@@ -385,10 +385,10 @@ class PretrainedModelInitializer(Initializer):
     def __init__(
         self, weights_file_path: str, parameter_name_overrides: Dict[str, str] = None
     ) -> None:
-        from allennlp.models.archival import (
+        from allennlp.models.archival import (  # import here to avoid circular imports
             extracted_archive,
             get_weights_path,
-        )  # import here to avoid circular imports
+        )
 
         self.weights: Dict[str, torch.Tensor]
         if tarfile.is_tarfile(weights_file_path):

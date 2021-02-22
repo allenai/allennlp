@@ -3,10 +3,11 @@
 global defaults for certain tqdm parameters.
 """
 import logging
-from allennlp.common import logging as common_logging
 import sys
 from time import time
 from typing import Optional
+
+from allennlp.common import logging as common_logging
 
 try:
     SHELL = str(type(get_ipython()))  # type:ignore # noqa: F821

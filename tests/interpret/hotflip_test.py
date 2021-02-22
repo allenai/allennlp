@@ -1,19 +1,18 @@
-from pytest import raises
 import torch
+from pytest import raises
 
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.data.token_indexers import TokenCharactersIndexer
-from allennlp.interpret.attackers import Hotflip
-from allennlp.models.archival import load_archive
-from allennlp.modules.token_embedders import EmptyEmbedder
-from allennlp.predictors import Predictor, TextClassifierPredictor
-from allennlp.data.dataset_readers import TextClassificationJsonReader
-from allennlp.data.vocabulary import Vocabulary
-
 from allennlp.common.testing.interpret_test import (
     FakeModelForTestingInterpret,
     FakePredictorForTestingInterpret,
 )
+from allennlp.data.dataset_readers import TextClassificationJsonReader
+from allennlp.data.token_indexers import TokenCharactersIndexer
+from allennlp.data.vocabulary import Vocabulary
+from allennlp.interpret.attackers import Hotflip
+from allennlp.models.archival import load_archive
+from allennlp.modules.token_embedders import EmptyEmbedder
+from allennlp.predictors import Predictor, TextClassifierPredictor
 
 
 class TestHotflip(AllenNlpTestCase):

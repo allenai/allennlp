@@ -16,8 +16,8 @@ import logging
 import os
 import shutil
 import subprocess
-import tempfile
 import tarfile
+import tempfile
 
 from allennlp.common.file_utils import cached_path
 from allennlp.models.archival import CONFIG_NAME

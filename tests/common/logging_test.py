@@ -1,5 +1,5 @@
-import os
 import logging
+import os
 import random
 
 from allennlp.common.logging import AllenNlpLogger

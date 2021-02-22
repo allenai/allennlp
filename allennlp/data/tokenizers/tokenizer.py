@@ -1,9 +1,8 @@
-from typing import List, Optional
 import logging
+from typing import List, Optional
 
 from allennlp.common import Registrable
 from allennlp.data.tokenizers.token_class import Token
-
 
 logger = logging.getLogger(__name__)
 

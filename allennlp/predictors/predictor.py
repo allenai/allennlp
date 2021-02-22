@@ -1,15 +1,14 @@
-from typing import List, Iterator, Dict, Tuple, Any, Type, Union, Optional
-import logging
 import json
+import logging
 import re
 from contextlib import contextmanager
 from pathlib import Path
+from typing import Any, Dict, Iterator, List, Optional, Tuple, Type, Union
 
 import numpy
 import torch
+from torch import Tensor, backends
 from torch.utils.hooks import RemovableHandle
-from torch import Tensor
-from torch import backends
 
 from allennlp.common import Registrable, plugins
 from allennlp.common.util import JsonDict, sanitize

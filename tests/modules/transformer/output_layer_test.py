@@ -1,9 +1,10 @@
 import copy
+
 import torch
 
 from allennlp.common import Params
-from allennlp.modules.transformer import OutputLayer
 from allennlp.common.testing import AllenNlpTestCase
+from allennlp.modules.transformer import OutputLayer
 
 
 class TestOutputLayer(AllenNlpTestCase):

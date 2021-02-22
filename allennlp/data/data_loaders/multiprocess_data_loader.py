@@ -1,24 +1,27 @@
-from collections import deque
 import logging
-from multiprocessing.process import BaseProcess
 import random
 import traceback
-from typing import List, Iterator, Optional, Iterable, Union
+from collections import deque
+from multiprocessing.process import BaseProcess
+from typing import Iterable, Iterator, List, Optional, Union
 
-from overrides import overrides
 import torch
 import torch.multiprocessing as mp
+from overrides import overrides
 
-from allennlp.common.util import lazy_groups_of, shuffle_iterable
+import allennlp.nn.util as nn_util
 from allennlp.common.tqdm import Tqdm
-from allennlp.data.instance import Instance
-from allennlp.data.data_loaders.data_loader import DataLoader, TensorDict, allennlp_collate
-from allennlp.data.dataset_readers import DatasetReader, WorkerInfo, DatasetReaderInput
+from allennlp.common.util import lazy_groups_of, shuffle_iterable
+from allennlp.data.data_loaders.data_loader import (
+    DataLoader,
+    TensorDict,
+    allennlp_collate,
+)
+from allennlp.data.dataset_readers import DatasetReader, DatasetReaderInput, WorkerInfo
 from allennlp.data.fields import TextField
+from allennlp.data.instance import Instance
 from allennlp.data.samplers import BatchSampler
 from allennlp.data.vocabulary import Vocabulary
-import allennlp.nn.util as nn_util
-
 
 logger = logging.getLogger(__name__)
 

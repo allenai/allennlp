@@ -1,11 +1,10 @@
 from typing import Union
+
 import torch
+from transformers.models.bert.modeling_bert import ACT2FN
 
 from allennlp.common import FromParams
-
 from allennlp.modules.transformer.transformer_module import TransformerModule
-
-from transformers.models.bert.modeling_bert import ACT2FN
 
 
 class ActivationLayer(TransformerModule, FromParams):

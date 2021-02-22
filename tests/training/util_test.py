@@ -6,12 +6,11 @@ import pytest
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.data.instance import Instance
 from allennlp.data.dataset_readers import DatasetReader
 from allennlp.data.fields import LabelField
+from allennlp.data.instance import Instance
 from allennlp.models import Model
-from allennlp.training.util import make_vocab_from_params, get_metrics
-
+from allennlp.training.util import get_metrics, make_vocab_from_params
 
 logger = logging.getLogger(__name__)
 

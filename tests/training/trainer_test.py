@@ -1,14 +1,13 @@
 import copy
 import glob
 import json
+import math
 import os
 import re
 import time
 from typing import Any, Dict, List, Optional
 
-import math
 import pytest
-
 import torch
 from torch.nn.utils import clip_grad_norm_
 
@@ -16,19 +15,25 @@ from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
 from allennlp.common.testing import AllenNlpTestCase, requires_gpu, requires_multi_gpu
 from allennlp.data import Vocabulary
-from allennlp.data.data_loaders import MultiProcessDataLoader, SimpleDataLoader, TensorDict
+from allennlp.data.data_loaders import (
+    MultiProcessDataLoader,
+    SimpleDataLoader,
+    TensorDict,
+)
 from allennlp.data.dataset_readers import SequenceTaggingDatasetReader
 from allennlp.models.model import Model
 from allennlp.models.simple_tagger import SimpleTagger
 from allennlp.training import (
-    GradientDescentTrainer,
     Checkpointer,
-    TrainerCallback,
-    TrackEpochCallback,
+    GradientDescentTrainer,
     TensorBoardCallback,
+    TrackEpochCallback,
+    TrainerCallback,
 )
-from allennlp.training.learning_rate_schedulers import CosineWithRestarts
-from allennlp.training.learning_rate_schedulers import ExponentialLearningRateScheduler
+from allennlp.training.learning_rate_schedulers import (
+    CosineWithRestarts,
+    ExponentialLearningRateScheduler,
+)
 from allennlp.training.momentum_schedulers import MomentumScheduler
 from allennlp.training.moving_average import ExponentialMovingAverage
 from allennlp.training.optimizers import Optimizer
@@ -559,7 +564,9 @@ class TestTrainer(TrainerTestBase):
         trainer.train()
 
     def test_trainer_sends_metric_to_lr_scheduler(self):
-        from allennlp.training.learning_rate_schedulers import ReduceOnPlateauLearningRateScheduler
+        from allennlp.training.learning_rate_schedulers import (
+            ReduceOnPlateauLearningRateScheduler,
+        )
 
         class RecordMetricLearningRateScheduler(ReduceOnPlateauLearningRateScheduler):
             def __init__(self, optimizer: Optimizer):

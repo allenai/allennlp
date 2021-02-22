@@ -1,13 +1,13 @@
-from collections import defaultdict
 import logging
+from collections import defaultdict
 
-import pytest
 import numpy
+import pytest
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Token, Vocabulary
-from allennlp.data.fields import TextField, SequenceLabelField
+from allennlp.data.fields import SequenceLabelField, TextField
 from allennlp.data.token_indexers import SingleIdTokenIndexer
 
 

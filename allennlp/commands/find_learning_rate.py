@@ -5,19 +5,19 @@ which to write the results.
 """
 
 import argparse
+import itertools
 import logging
 import math
 import os
 import re
 from typing import List, Tuple
-import itertools
 
 from overrides import overrides
 
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common import Params, Tqdm
 from allennlp.common import logging as common_logging
-from allennlp.common.checks import check_for_gpu, ConfigurationError
+from allennlp.common.checks import ConfigurationError, check_for_gpu
 from allennlp.common.util import prepare_environment
 from allennlp.data import Vocabulary
 from allennlp.models import Model

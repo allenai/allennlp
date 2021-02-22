@@ -7,16 +7,16 @@ We do this with PydocMarkdown, using custom processors and renderers defined her
 """
 
 import argparse
+import logging
+import os
+import re
+import sys
 from collections import OrderedDict
 from dataclasses import dataclass
 from enum import Enum
-import logging
 from multiprocessing import Pool, cpu_count
-import os
 from pathlib import Path
-import re
-import sys
-from typing import Optional, Tuple, List
+from typing import List, Optional, Tuple
 
 from nr.databind.core import Struct
 from nr.interface import implements, override
@@ -24,8 +24,7 @@ from pydoc_markdown import PydocMarkdown
 from pydoc_markdown.contrib.loaders.python import PythonLoader
 from pydoc_markdown.contrib.renderers.markdown import MarkdownRenderer
 from pydoc_markdown.interfaces import Processor, Renderer
-from pydoc_markdown.reflection import Argument, Module, Function, Class, Data
-
+from pydoc_markdown.reflection import Argument, Class, Data, Function, Module
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("py2md")

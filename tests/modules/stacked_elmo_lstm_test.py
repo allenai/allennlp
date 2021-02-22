@@ -1,8 +1,8 @@
 import numpy
 import torch
 
-from allennlp.modules.elmo_lstm import ElmoLstm
 from allennlp.common.testing import AllenNlpTestCase
+from allennlp.modules.elmo_lstm import ElmoLstm
 
 
 class TestElmoLstmCell(AllenNlpTestCase):

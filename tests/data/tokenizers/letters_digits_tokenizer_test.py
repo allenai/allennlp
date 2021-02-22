@@ -1,5 +1,5 @@
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.data.tokenizers import Token, LettersDigitsTokenizer
+from allennlp.data.tokenizers import LettersDigitsTokenizer, Token
 
 
 class TestLettersDigitsTokenizer(AllenNlpTestCase):

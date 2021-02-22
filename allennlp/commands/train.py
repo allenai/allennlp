@@ -7,9 +7,9 @@ which to write the results.
 import argparse
 import logging
 import os
+import warnings
 from os import PathLike
 from typing import Any, Dict, List, Optional, Union
-import warnings
 
 import torch
 import torch.distributed as dist
@@ -17,17 +17,20 @@ import torch.multiprocessing as mp
 from overrides import overrides
 
 from allennlp.commands.subcommand import Subcommand
-from allennlp.common import Params, Registrable, Lazy
-from allennlp.common.checks import check_for_gpu, ConfigurationError
+from allennlp.common import Lazy, Params, Registrable
 from allennlp.common import logging as common_logging
 from allennlp.common import util as common_util
+from allennlp.common.checks import ConfigurationError, check_for_gpu
 from allennlp.common.plugins import import_plugins
-from allennlp.data import DatasetReader, Vocabulary
-from allennlp.data import DataLoader
-from allennlp.models.archival import archive_model, CONFIG_NAME, verify_include_in_archive
+from allennlp.data import DataLoader, DatasetReader, Vocabulary
+from allennlp.models.archival import (
+    CONFIG_NAME,
+    archive_model,
+    verify_include_in_archive,
+)
 from allennlp.models.model import _DEFAULT_WEIGHTS, Model
-from allennlp.training.trainer import Trainer
 from allennlp.training import util as training_util
+from allennlp.training.trainer import Trainer
 
 logger = logging.getLogger(__name__)
 

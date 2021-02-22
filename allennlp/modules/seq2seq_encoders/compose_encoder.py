@@ -1,6 +1,7 @@
-from overrides import overrides
-import torch
 from typing import List
+
+import torch
+from overrides import overrides
 
 from allennlp.modules.seq2seq_encoders.seq2seq_encoder import Seq2SeqEncoder
 

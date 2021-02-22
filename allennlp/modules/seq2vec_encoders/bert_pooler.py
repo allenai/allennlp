@@ -1,9 +1,8 @@
-from typing import Optional, Dict, Any
-
-from overrides import overrides
+from typing import Any, Dict, Optional
 
 import torch
 import torch.nn
+from overrides import overrides
 
 from allennlp.modules.seq2vec_encoders.seq2vec_encoder import Seq2VecEncoder
 

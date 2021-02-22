@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import Any, Dict, Iterable, Union, List, Mapping
+from typing import Any, Dict, Iterable, List, Mapping, Union
 
 import more_itertools
 

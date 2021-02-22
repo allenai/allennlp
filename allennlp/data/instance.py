@@ -1,4 +1,4 @@
-from typing import Dict, MutableMapping, Mapping
+from typing import Dict, Mapping, MutableMapping
 
 from allennlp.data.fields.field import DataArray, Field
 from allennlp.data.vocabulary import Vocabulary

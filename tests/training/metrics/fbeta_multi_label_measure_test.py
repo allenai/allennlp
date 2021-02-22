@@ -1,7 +1,10 @@
-from typing import Dict, List, Tuple, Union, Any
+from typing import Any, Dict, List, Tuple, Union
 
 import pytest
 import torch
+from sklearn.metrics import precision_recall_fscore_support
+from torch.testing import assert_allclose
+
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import (
     AllenNlpTestCase,
@@ -9,9 +12,6 @@ from allennlp.common.testing import (
     multi_device,
     run_distributed_test,
 )
-from sklearn.metrics import precision_recall_fscore_support
-from torch.testing import assert_allclose
-
 from allennlp.training.metrics import FBetaMultiLabelMeasure
 
 

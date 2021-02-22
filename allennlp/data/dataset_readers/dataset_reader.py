@@ -1,16 +1,15 @@
-from dataclasses import dataclass
 import itertools
-from os import PathLike
-from typing import Iterable, Iterator, Optional, Union, TypeVar, Dict, List
 import logging
 import warnings
+from dataclasses import dataclass
+from os import PathLike
+from typing import Dict, Iterable, Iterator, List, Optional, TypeVar, Union
 
 import torch.distributed as dist
 
-from allennlp.data.instance import Instance
 from allennlp.common import util
 from allennlp.common.registrable import Registrable
-
+from allennlp.data.instance import Instance
 
 logger = logging.getLogger(__name__)
 

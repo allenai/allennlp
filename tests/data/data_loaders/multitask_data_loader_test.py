@@ -5,11 +5,14 @@ import torch
 
 from allennlp.common.util import cycle_iterator_function
 from allennlp.data import DatasetReader, Instance, Vocabulary
-from allennlp.data.fields import LabelField
-from allennlp.data.dataset_readers import MultiTaskDatasetReader
 from allennlp.data.data_loaders.multitask_data_loader import MultiTaskDataLoader
+from allennlp.data.data_loaders.multitask_epoch_sampler import (
+    UniformSampler,
+    WeightedSampler,
+)
 from allennlp.data.data_loaders.multitask_scheduler import RoundRobinScheduler
-from allennlp.data.data_loaders.multitask_epoch_sampler import UniformSampler, WeightedSampler
+from allennlp.data.dataset_readers import MultiTaskDatasetReader
+from allennlp.data.fields import LabelField
 
 
 class FakeDatasetReaderA(DatasetReader):

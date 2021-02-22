@@ -1,14 +1,14 @@
-from collections import defaultdict
 import inspect
-from typing import Any, Dict, List, Set, Union, Mapping
+from collections import defaultdict
+from typing import Any, Dict, List, Mapping, Set, Union
 
-from overrides import overrides
 import torch
+from overrides import overrides
 
 from allennlp.data import Vocabulary
-from allennlp.modules import Backbone
-from allennlp.models.model import Model
 from allennlp.models.heads import Head
+from allennlp.models.model import Model
+from allennlp.modules import Backbone
 from allennlp.nn import InitializerApplicator
 
 

@@ -10,7 +10,6 @@ from overrides import overrides
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common.params import Params
 
-
 logger = logging.getLogger(__name__)
 
 

@@ -1,13 +1,13 @@
-from flaky import flaky
 import numpy
 import pytest
 import torch
+from flaky import flaky
 
-from allennlp.common.testing import ModelTestCase
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
-from allennlp.data.dataset_readers import DatasetReader
+from allennlp.common.testing import ModelTestCase
 from allennlp.data.data_loaders import DataLoader, SimpleDataLoader
+from allennlp.data.dataset_readers import DatasetReader
 from allennlp.models import Model
 from allennlp.training import GradientDescentTrainer, Trainer
 

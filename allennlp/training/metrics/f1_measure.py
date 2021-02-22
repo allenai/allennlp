@@ -1,7 +1,7 @@
 from typing import Dict
 
-from allennlp.training.metrics.metric import Metric
 from allennlp.training.metrics.fbeta_measure import FBetaMeasure
+from allennlp.training.metrics.metric import Metric
 
 
 @Metric.register("f1")

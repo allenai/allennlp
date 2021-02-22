@@ -1,8 +1,8 @@
-import torch
 import pytest
+import torch
 
 from allennlp.common.testing.test_case import AllenNlpTestCase
-from allennlp.models import load_archive, Model
+from allennlp.models import Model, load_archive
 from allennlp.nn.regularizers import RegularizerApplicator
 
 

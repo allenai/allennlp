@@ -1,5 +1,6 @@
 import datetime
-from typing import List, Dict, Any, Tuple, Callable
+from typing import Any, Callable, Dict, List, Tuple
+
 import torch
 import torch.distributed as dist
 import torch.multiprocessing as mp

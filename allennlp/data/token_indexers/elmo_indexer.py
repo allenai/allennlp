@@ -1,11 +1,11 @@
 from typing import Dict, List
 
-from overrides import overrides
 import torch
+from overrides import overrides
 
 from allennlp.common.util import pad_sequence_to_length
+from allennlp.data.token_indexers.token_indexer import IndexedTokenList, TokenIndexer
 from allennlp.data.tokenizers import Token
-from allennlp.data.token_indexers.token_indexer import TokenIndexer, IndexedTokenList
 from allennlp.data.vocabulary import Vocabulary
 
 

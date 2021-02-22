@@ -1,6 +1,6 @@
 import copy
 import logging
-from typing import Any, Dict, List, Optional, Tuple, Iterable
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 from overrides import overrides
 from transformers import PreTrainedTokenizer

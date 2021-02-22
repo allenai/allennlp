@@ -7,12 +7,12 @@ import pytest
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import (
-    infer_and_cast,
     Params,
+    infer_and_cast,
     parse_overrides,
+    remove_keys_from_params,
     unflatten,
     with_fallback,
-    remove_keys_from_params,
 )
 from allennlp.common.testing import AllenNlpTestCase
 

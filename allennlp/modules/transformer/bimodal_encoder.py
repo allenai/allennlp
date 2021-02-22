@@ -1,13 +1,12 @@
-from typing import Optional, Dict, List, Union
+from typing import Dict, List, Optional, Union
+
 import torch
 
 from allennlp.common import FromParams
-
-from allennlp.modules.util import replicate_layers
-
-from allennlp.modules.transformer.transformer_layer import TransformerLayer
 from allennlp.modules.transformer.bimodal_connection_layer import BiModalConnectionLayer
+from allennlp.modules.transformer.transformer_layer import TransformerLayer
 from allennlp.modules.transformer.transformer_module import TransformerModule
+from allennlp.modules.util import replicate_layers
 
 
 class BiModalEncoder(TransformerModule, FromParams):

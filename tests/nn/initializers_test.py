@@ -2,16 +2,16 @@ import json
 import logging
 import math
 
+import _jsonnet
 import numpy
 import pytest
 import torch
-import _jsonnet
 
-from allennlp.nn import InitializerApplicator, Initializer
-from allennlp.nn.initializers import block_orthogonal, uniform_unit_scaling
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.testing import AllenNlpTestCase
 from allennlp.common.params import Params
+from allennlp.common.testing import AllenNlpTestCase
+from allennlp.nn import Initializer, InitializerApplicator
+from allennlp.nn.initializers import block_orthogonal, uniform_unit_scaling
 
 
 class TestInitializers(AllenNlpTestCase):

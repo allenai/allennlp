@@ -1,9 +1,9 @@
 import pytest
 
-from allennlp.data.dataset_readers.conll2003 import Conll2003DatasetReader
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.util import ensure_list
 from allennlp.common.testing import AllenNlpTestCase
+from allennlp.common.util import ensure_list
+from allennlp.data.dataset_readers.conll2003 import Conll2003DatasetReader
 
 
 class TestConll2003Reader:

@@ -1,5 +1,5 @@
-from allennlp.common.testing import AllenNlpTestCase
 from allennlp.common.task_card import TaskCard
+from allennlp.common.testing import AllenNlpTestCase
 
 
 class TestTaskCard(AllenNlpTestCase):

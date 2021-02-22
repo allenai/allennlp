@@ -1,15 +1,15 @@
 from copy import deepcopy
 
 import numpy
-from numpy.testing import assert_almost_equal
 import torch
+from numpy.testing import assert_almost_equal
 
 from allennlp.common import Params
+from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Vocabulary
 from allennlp.modules import Seq2VecEncoder
 from allennlp.modules.token_embedders import Embedding, TokenCharactersEncoder
-from allennlp.nn import InitializerApplicator, Initializer
-from allennlp.common.testing import AllenNlpTestCase
+from allennlp.nn import Initializer, InitializerApplicator
 
 
 class TestTokenCharactersEncoder(AllenNlpTestCase):

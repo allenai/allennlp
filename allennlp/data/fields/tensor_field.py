@@ -1,7 +1,7 @@
-from typing import Dict, Any, Union, Optional
+from typing import Any, Dict, Optional, Union
 
-import torch
 import numpy as np
+import torch
 from overrides import overrides
 
 from allennlp.data.fields.field import Field

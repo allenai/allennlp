@@ -1,19 +1,17 @@
 import copy
-import torch
+
 import pytest
-
-from allennlp.common import Params
-from allennlp.common import cached_transformers
-from allennlp.common.testing import assert_equal_parameters
-from allennlp.modules.transformer import AttentionLayer, TransformerLayer
-from allennlp.common.testing import AllenNlpTestCase
-
+import torch
 from transformers.models.bert.configuration_bert import BertConfig
 from transformers.models.bert.modeling_bert import BertAttention, BertLayer
-from transformers.models.roberta.configuration_roberta import RobertaConfig
-from transformers.models.roberta.modeling_roberta import RobertaAttention, RobertaLayer
 from transformers.models.electra.configuration_electra import ElectraConfig
 from transformers.models.electra.modeling_electra import ElectraAttention, ElectraLayer
+from transformers.models.roberta.configuration_roberta import RobertaConfig
+from transformers.models.roberta.modeling_roberta import RobertaAttention, RobertaLayer
+
+from allennlp.common import Params, cached_transformers
+from allennlp.common.testing import AllenNlpTestCase, assert_equal_parameters
+from allennlp.modules.transformer import AttentionLayer, TransformerLayer
 
 ATTENTION_PARAMS_DICT = {
     "hidden_size": 6,

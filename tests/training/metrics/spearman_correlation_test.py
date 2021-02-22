@@ -1,12 +1,13 @@
 import math
+
 import pytest
 import torch
 from torch.testing import assert_allclose
 
 from allennlp.common.testing import (
     AllenNlpTestCase,
-    multi_device,
     global_distributed_metric,
+    multi_device,
     run_distributed_test,
 )
 from allennlp.training.metrics import SpearmanCorrelation

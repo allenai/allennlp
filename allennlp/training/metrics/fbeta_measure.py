@@ -4,8 +4,8 @@ import torch
 import torch.distributed as dist
 from overrides import overrides
 
-from allennlp.common.util import is_distributed, nan_safe_tensor_divide
 from allennlp.common.checks import ConfigurationError
+from allennlp.common.util import is_distributed, nan_safe_tensor_divide
 from allennlp.training.metrics.metric import Metric
 
 

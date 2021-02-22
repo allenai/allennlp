@@ -1,7 +1,7 @@
 from allennlp.data import Instance, Token
+from allennlp.data.data_loaders import MultiProcessDataLoader
 from allennlp.data.fields import TextField
 from allennlp.data.samplers import MaxTokensBatchSampler
-from allennlp.data.data_loaders import MultiProcessDataLoader
 
 from .sampler_test import SamplerTest
 

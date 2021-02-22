@@ -1,13 +1,12 @@
 import logging
 import math
-from typing import List, Iterable, Tuple, Sequence, Optional
 import random
+from typing import Iterable, List, Optional, Sequence, Tuple
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import lazy_groups_of
 from allennlp.data.instance import Instance
 from allennlp.data.samplers.batch_sampler import BatchSampler
-
 
 logger = logging.getLogger(__name__)
 

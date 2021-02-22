@@ -1,5 +1,5 @@
-from typing import Dict, Mapping, Iterable, Union
 import json
+from typing import Dict, Iterable, Mapping, Union
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader, PathOrStr

@@ -1,8 +1,8 @@
-from numpy.testing import assert_almost_equal
 import torch
+from numpy.testing import assert_almost_equal
 
-from allennlp.modules import Highway
 from allennlp.common.testing import AllenNlpTestCase
+from allennlp.modules import Highway
 
 
 class TestHighway(AllenNlpTestCase):

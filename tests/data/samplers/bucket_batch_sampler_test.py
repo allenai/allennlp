@@ -1,8 +1,8 @@
 from allennlp.common import Params
-from allennlp.data import Instance, Token, Batch
+from allennlp.data import Batch, Instance, Token
+from allennlp.data.data_loaders import MultiProcessDataLoader
 from allennlp.data.fields import TextField
 from allennlp.data.samplers import BucketBatchSampler
-from allennlp.data.data_loaders import MultiProcessDataLoader
 
 from .sampler_test import SamplerTest
 

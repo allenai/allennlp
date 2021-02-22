@@ -8,7 +8,6 @@ from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader, PathOrStr
 from allennlp.data.instance import Instance
 
-
 logger = logging.getLogger(__name__)
 
 

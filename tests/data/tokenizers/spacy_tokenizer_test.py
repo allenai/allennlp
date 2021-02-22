@@ -1,7 +1,7 @@
 import spacy
 
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.data.tokenizers import Token, SpacyTokenizer
+from allennlp.data.tokenizers import SpacyTokenizer, Token
 
 
 class TestSpacyTokenizer(AllenNlpTestCase):

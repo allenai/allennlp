@@ -1,6 +1,6 @@
 from allennlp.data.data_loaders.multitask_scheduler import (
-    RoundRobinScheduler,
     HomogeneousRoundRobinScheduler,
+    RoundRobinScheduler,
 )
 
 

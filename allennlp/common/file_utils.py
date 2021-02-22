@@ -2,57 +2,57 @@
 Utilities for working with the local dataset cache.
 """
 
-from contextlib import contextmanager
 import glob
 import io
-import os
-import logging
-import tempfile
 import json
-from abc import ABC
-from collections import defaultdict
-from dataclasses import dataclass, asdict
-from datetime import timedelta
-from fnmatch import fnmatch
-from os import PathLike
-from urllib.parse import urlparse
-from pathlib import Path
-from typing import (
-    Optional,
-    Tuple,
-    Union,
-    IO,
-    Callable,
-    Set,
-    List,
-    Iterator,
-    Iterable,
-    Dict,
-    NamedTuple,
-    MutableMapping,
-)
-from hashlib import sha256
-from functools import wraps
-from weakref import WeakValueDictionary
-from zipfile import ZipFile, is_zipfile
-import tarfile
-import shutil
+import logging
+import os
 import pickle
+import shutil
+import tarfile
+import tempfile
 import time
 import warnings
+from abc import ABC
+from collections import defaultdict
+from contextlib import contextmanager
+from dataclasses import asdict, dataclass
+from datetime import timedelta
+from fnmatch import fnmatch
+from functools import wraps
+from hashlib import sha256
+from os import PathLike
+from pathlib import Path
+from typing import (
+    IO,
+    Callable,
+    Dict,
+    Iterable,
+    Iterator,
+    List,
+    MutableMapping,
+    NamedTuple,
+    Optional,
+    Set,
+    Tuple,
+    Union,
+)
+from urllib.parse import urlparse
+from weakref import WeakValueDictionary
+from zipfile import ZipFile, is_zipfile
 
 import boto3
 import botocore
+import lmdb
+import numpy as np
+import requests
 import torch
 from botocore.exceptions import ClientError, EndpointConnectionError
 from filelock import FileLock as _FileLock
-import numpy as np
 from overrides import overrides
-import requests
 from requests.adapters import HTTPAdapter
 from requests.exceptions import ConnectionError
 from requests.packages.urllib3.util.retry import Retry
-import lmdb
 from torch import Tensor
 
 from allennlp.common.tqdm import Tqdm
@@ -1038,7 +1038,7 @@ def inspect_cache(patterns: List[str] = None, cache_dir: Union[str, Path] = None
     """
     Print out useful information about the cache directory.
     """
-    from allennlp.common.util import format_timedelta, format_size
+    from allennlp.common.util import format_size, format_timedelta
 
     cache_dir = os.path.expanduser(cache_dir or CACHE_DIRECTORY)
 

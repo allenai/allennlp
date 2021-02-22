@@ -1,5 +1,5 @@
-from allennlp.data.dataset_readers import SequenceTaggingDatasetReader
 from allennlp.common.testing import AllenNlpTestCase
+from allennlp.data.dataset_readers import SequenceTaggingDatasetReader
 
 
 class TestSequenceTaggingDatasetReader:

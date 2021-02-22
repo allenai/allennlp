@@ -1,7 +1,7 @@
 import copy
 import os
-import tempfile
 import tarfile
+import tempfile
 
 import pytest
 import torch
@@ -11,7 +11,7 @@ from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.dataset_readers import DatasetReader
-from allennlp.models.archival import archive_model, load_archive, CONFIG_NAME
+from allennlp.models.archival import CONFIG_NAME, archive_model, load_archive
 
 
 def assert_models_equal(model, model2):

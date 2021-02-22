@@ -1,8 +1,8 @@
 from collections import OrderedDict
 from typing import Tuple
 
-from torch import nn, FloatTensor, IntTensor
 import torchvision
+from torch import FloatTensor, IntTensor, nn
 
 from allennlp.common.registrable import Registrable
 

@@ -1,20 +1,19 @@
 import copy
 import json
-from os import PathLike
 import random
+from os import PathLike
 from typing import Any, Dict, Iterable, Set, Union
 
-import torch
 import numpy
+import torch
 from numpy.testing import assert_allclose
 
 from allennlp.commands.train import train_model_from_file
 from allennlp.common import Params
 from allennlp.common.testing.test_case import AllenNlpTestCase
-from allennlp.data import DatasetReader, Vocabulary
-from allennlp.data import DataLoader
+from allennlp.data import DataLoader, DatasetReader, Vocabulary
 from allennlp.data.batch import Batch
-from allennlp.models import load_archive, Model
+from allennlp.models import Model, load_archive
 from allennlp.training import GradientDescentTrainer
 
 

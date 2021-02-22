@@ -1,12 +1,12 @@
 import json
 import random
-from typing import NamedTuple, Any
+from typing import Any, NamedTuple
 
 import numpy
-from numpy.testing import assert_array_almost_equal, assert_almost_equal
-import torch
 import pytest
+import torch
 from flaky import flaky
+from numpy.testing import assert_almost_equal, assert_array_almost_equal
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
@@ -15,11 +15,11 @@ from allennlp.data import Token, Vocabulary
 from allennlp.data.fields import TextField
 from allennlp.data.token_indexers import (
     ELMoTokenCharactersIndexer,
-    TokenCharactersIndexer,
     SingleIdTokenIndexer,
+    TokenCharactersIndexer,
 )
-from allennlp.nn import util
 from allennlp.models import load_archive
+from allennlp.nn import util
 
 
 class TestNnUtil(AllenNlpTestCase):

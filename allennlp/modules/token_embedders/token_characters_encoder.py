@@ -1,8 +1,8 @@
 import torch
 
-from allennlp.modules.token_embedders.embedding import Embedding
 from allennlp.modules.seq2vec_encoders.seq2vec_encoder import Seq2VecEncoder
 from allennlp.modules.time_distributed import TimeDistributed
+from allennlp.modules.token_embedders.embedding import Embedding
 from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
 
 

@@ -1,7 +1,6 @@
 import os
 
-from allennlp.common.file_utils import CACHE_DIRECTORY
-from allennlp.common.file_utils import filename_to_url
+from allennlp.common.file_utils import CACHE_DIRECTORY, filename_to_url
 
 
 def main():

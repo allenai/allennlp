@@ -1,8 +1,8 @@
 import numpy
 import torch
 
-from allennlp.modules.lstm_cell_with_projection import LstmCellWithProjection
 from allennlp.common.testing import AllenNlpTestCase
+from allennlp.modules.lstm_cell_with_projection import LstmCellWithProjection
 
 
 class TestLstmCellWithProjection(AllenNlpTestCase):

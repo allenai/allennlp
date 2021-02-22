@@ -1,8 +1,7 @@
-from datetime import datetime as dt
 import os
+from datetime import datetime as dt
 
 from github import Github
-
 
 LABELS_TO_EXEMPT = ["contributions welcome", "merge when ready", "under development", "help wanted"]
 

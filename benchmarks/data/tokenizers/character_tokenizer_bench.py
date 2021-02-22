@@ -1,6 +1,5 @@
 from allennlp.data.tokenizers import CharacterTokenizer
 
-
 tokenizer = CharacterTokenizer()
 passage = (
     "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor "

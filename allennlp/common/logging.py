@@ -1,10 +1,9 @@
 import logging
-from logging import Filter
 import os
+import sys
+from logging import Filter
 from os import PathLike
 from typing import Union
-
-import sys
 
 
 class AllenNlpLogger(logging.Logger):

@@ -1,5 +1,5 @@
-import torch
 import numpy
+import torch
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.modules.seq2seq_encoders import PassThroughEncoder

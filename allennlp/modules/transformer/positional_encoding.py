@@ -1,8 +1,9 @@
 import math
+
 import torch
 
 from allennlp.common import FromParams
-from allennlp.nn.util import get_range_vector, get_device_of
+from allennlp.nn.util import get_device_of, get_range_vector
 
 
 class SinusoidalPositionalEncoding(torch.nn.Module, FromParams):

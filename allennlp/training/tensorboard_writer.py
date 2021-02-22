@@ -1,16 +1,16 @@
-from typing import Any, Callable, Dict, List, Optional, Set
 import logging
 import os
+from typing import Any, Callable, Dict, List, Optional, Set
 
-from tensorboardX import SummaryWriter
 import torch
+from tensorboardX import SummaryWriter
 
 from allennlp.common.from_params import FromParams
 from allennlp.data import TensorDict
-from allennlp.nn import util as nn_util
-from allennlp.training.optimizers import Optimizer
-from allennlp.training import util as training_util
 from allennlp.models.model import Model
+from allennlp.nn import util as nn_util
+from allennlp.training import util as training_util
+from allennlp.training.optimizers import Optimizer
 
 logger = logging.getLogger(__name__)
 

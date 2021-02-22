@@ -7,9 +7,9 @@ Based on PyText version (that was based on a previous AllenNLP version)
 from typing import Optional, Tuple
 
 import torch
-from allennlp.common.checks import ConfigurationError
 from torch.nn.utils.rnn import PackedSequence, pack_padded_sequence, pad_packed_sequence
 
+from allennlp.common.checks import ConfigurationError
 from allennlp.nn.initializers import block_orthogonal
 from allennlp.nn.util import get_dropout_mask
 

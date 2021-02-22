@@ -1,11 +1,11 @@
-from typing import List, Dict
+from typing import Dict, List
 
-from overrides import overrides
 import numpy
+from overrides import overrides
 
 from allennlp.common.util import JsonDict
 from allennlp.data import DatasetReader, Instance
-from allennlp.data.fields import FlagField, TextField, SequenceLabelField
+from allennlp.data.fields import FlagField, SequenceLabelField, TextField
 from allennlp.data.tokenizers.spacy_tokenizer import SpacyTokenizer
 from allennlp.models import Model
 from allennlp.predictors.predictor import Predictor

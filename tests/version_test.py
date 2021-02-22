@@ -4,7 +4,6 @@ import pytest
 
 from allennlp.version import VERSION
 
-
 # Regex to check that the current version set in `allennlp.version` adheres to
 # PEP 440, as well as some of our own internal conventions, such as the `.dev`
 # suffix being used only for nightly builds.

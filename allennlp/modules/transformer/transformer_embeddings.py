@@ -1,9 +1,8 @@
-from typing import Optional, Dict
+from typing import Dict, Optional
 
 import torch
 
 from allennlp.common import FromParams
-
 from allennlp.modules.transformer.transformer_module import TransformerModule
 
 

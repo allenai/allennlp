@@ -1,23 +1,20 @@
-import pytest
 import copy
+
+import pytest
 import torch
 from torch.testing import assert_allclose
-
-from allennlp.common import Params, FromParams
-from allennlp.common import cached_transformers
-
-from transformers.models.bert.configuration_bert import BertConfig
-from transformers.models.bert.modeling_bert import BertEmbeddings
 from transformers.models.albert.configuration_albert import AlbertConfig
 from transformers.models.albert.modeling_albert import AlbertEmbeddings
+from transformers.models.bert.configuration_bert import BertConfig
+from transformers.models.bert.modeling_bert import BertEmbeddings
 
-from allennlp.common.testing import assert_equal_parameters
+from allennlp.common import FromParams, Params, cached_transformers
+from allennlp.common.testing import AllenNlpTestCase, assert_equal_parameters
 from allennlp.modules.transformer import (
-    TransformerEmbeddings,
     ImageFeatureEmbeddings,
+    TransformerEmbeddings,
     TransformerModule,
 )
-from allennlp.common.testing import AllenNlpTestCase
 
 PARAMS_DICT = {
     "vocab_size": 20,

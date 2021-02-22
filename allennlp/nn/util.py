@@ -5,10 +5,10 @@ Assorted utilities for working with neural networks in AllenNLP.
 import copy
 import json
 import logging
+import math
 from collections import defaultdict
 from typing import Any, Dict, List, Optional, Sequence, Tuple, TypeVar, Union
 
-import math
 import numpy
 import torch
 import torch.distributed as dist
@@ -1742,7 +1742,9 @@ def find_text_field_embedder(model: torch.nn.Module) -> torch.nn.Module:
     first one, as it's very rare to have more than one.  If there isn't a `TextFieldEmbedder` in the
     given `Model`, we raise a `ValueError`.
     """
-    from allennlp.modules.text_field_embedders.text_field_embedder import TextFieldEmbedder
+    from allennlp.modules.text_field_embedders.text_field_embedder import (
+        TextFieldEmbedder,
+    )
 
     for module in model.modules():
         if isinstance(module, TextFieldEmbedder):
@@ -1760,13 +1762,16 @@ def find_embedding_layer(model: torch.nn.Module) -> torch.nn.Module:
     """
     # We'll look for a few special cases in a first pass, then fall back to just finding a
     # TextFieldEmbedder in a second pass if we didn't find a special case.
-    from transformers.models.gpt2.modeling_gpt2 import GPT2Model
-    from transformers.models.bert.modeling_bert import BertEmbeddings
     from transformers.models.albert.modeling_albert import AlbertEmbeddings
+    from transformers.models.bert.modeling_bert import BertEmbeddings
+    from transformers.models.gpt2.modeling_gpt2 import GPT2Model
     from transformers.models.roberta.modeling_roberta import RobertaEmbeddings
-    from allennlp.modules.text_field_embedders.text_field_embedder import TextFieldEmbedder
+
     from allennlp.modules.text_field_embedders.basic_text_field_embedder import (
         BasicTextFieldEmbedder,
+    )
+    from allennlp.modules.text_field_embedders.text_field_embedder import (
+        TextFieldEmbedder,
     )
     from allennlp.modules.token_embedders.embedding import Embedding
 

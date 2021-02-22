@@ -1,10 +1,10 @@
-from numpy.testing import assert_almost_equal
 import torch
+from numpy.testing import assert_almost_equal
 from torch.nn.parameter import Parameter
 
 from allennlp.common import Params
-from allennlp.modules.attention import BilinearAttention
 from allennlp.common.testing import AllenNlpTestCase
+from allennlp.modules.attention import BilinearAttention
 
 
 class TestBilinearAttention(AllenNlpTestCase):

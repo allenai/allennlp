@@ -1,9 +1,9 @@
 from typing import Optional
 
-from overrides import overrides
+import scipy.stats as stats
 import torch
 import torch.distributed as dist
-import scipy.stats as stats
+from overrides import overrides
 
 from allennlp.common.util import is_distributed
 from allennlp.training.metrics.metric import Metric

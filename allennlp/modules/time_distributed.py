@@ -6,8 +6,8 @@ and then rolls the time dimension back up.
 
 from typing import List
 
-from overrides import overrides
 import torch
+from overrides import overrides
 
 
 class TimeDistributed(torch.nn.Module):

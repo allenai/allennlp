@@ -1,6 +1,7 @@
-from allennlp.predictors import TextClassifierPredictor
-from allennlp.models.model import Model
 import torch
+
+from allennlp.models.model import Model
+from allennlp.predictors import TextClassifierPredictor
 
 
 class FakeModelForTestingInterpret(Model):

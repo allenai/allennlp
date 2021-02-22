@@ -1,4 +1,4 @@
-from typing import Dict, Iterable, Optional, Any
+from typing import Any, Dict, Iterable, Optional
 
 import torch
 

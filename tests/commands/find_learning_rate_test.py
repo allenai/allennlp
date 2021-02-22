@@ -3,17 +3,17 @@ import os
 
 import pytest
 
-from allennlp.common import Params
-from allennlp.data import Vocabulary
-from allennlp.models import Model
-from allennlp.common.checks import ConfigurationError
-from allennlp.common.testing import AllenNlpTestCase, requires_multi_gpu
 from allennlp.commands.find_learning_rate import (
-    search_learning_rate,
+    FindLearningRate,
     find_learning_rate_from_args,
     find_learning_rate_model,
-    FindLearningRate,
+    search_learning_rate,
 )
+from allennlp.common import Params
+from allennlp.common.checks import ConfigurationError
+from allennlp.common.testing import AllenNlpTestCase, requires_multi_gpu
+from allennlp.data import Vocabulary
+from allennlp.models import Model
 from allennlp.training import Trainer
 from allennlp.training.util import data_loaders_from_params
 

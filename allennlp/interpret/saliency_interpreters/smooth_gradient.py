@@ -1,12 +1,14 @@
 import math
-from typing import Dict, Any
+from typing import Any, Dict
 
 import numpy
 import torch
 
 from allennlp.common.util import JsonDict, sanitize
 from allennlp.data import Instance
-from allennlp.interpret.saliency_interpreters.saliency_interpreter import SaliencyInterpreter
+from allennlp.interpret.saliency_interpreters.saliency_interpreter import (
+    SaliencyInterpreter,
+)
 from allennlp.predictors import Predictor
 
 

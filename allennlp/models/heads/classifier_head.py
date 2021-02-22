@@ -1,7 +1,7 @@
 from typing import Dict, Optional
 
-from overrides import overrides
 import torch
+from overrides import overrides
 
 from allennlp.data import Vocabulary
 from allennlp.models.heads.head import Head

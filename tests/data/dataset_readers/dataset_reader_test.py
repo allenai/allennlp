@@ -1,17 +1,13 @@
 from itertools import islice
-from typing import Optional, List, Set
+from typing import List, Optional, Set
 
 import pytest
 import torch.distributed as dist
 
 from allennlp.common import util as common_util
 from allennlp.data import Instance
-from allennlp.data.dataset_readers import (
-    DatasetReader,
-    WorkerInfo,
-)
+from allennlp.data.dataset_readers import DatasetReader, WorkerInfo
 from allennlp.data.fields import LabelField
-
 
 TOTAL_INSTANCES = 100
 

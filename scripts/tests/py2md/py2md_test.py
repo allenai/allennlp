@@ -3,7 +3,7 @@ from typing import Optional
 import pytest
 
 from allennlp.common.testing import AllenNlpTestCase
-from scripts.py2md import py2md, Param, DocstringError
+from scripts.py2md import DocstringError, Param, py2md
 
 
 class TestPy2md(AllenNlpTestCase):

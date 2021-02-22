@@ -1,15 +1,19 @@
-import pytest
 import numpy
+import pytest
 import torch
 import torch.nn.init
 from torch.nn.modules.rnn import LSTM
-from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
+from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.modules.augmented_lstm import AugmentedLstm, AugmentedLSTMCell, BiAugmentedLstm
-from allennlp.nn import InitializerApplicator, Initializer
+from allennlp.modules.augmented_lstm import (
+    AugmentedLstm,
+    AugmentedLSTMCell,
+    BiAugmentedLstm,
+)
+from allennlp.nn import Initializer, InitializerApplicator
 from allennlp.nn.util import sort_batch_by_length
 
 

@@ -1,7 +1,7 @@
-from typing import List, Iterable, Dict, Union
+from typing import Dict, Iterable, List, Union
 
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.data import Vocabulary, Instance, Token, Batch, DatasetReader
+from allennlp.data import Batch, DatasetReader, Instance, Token, Vocabulary
 from allennlp.data.fields import TextField
 from allennlp.data.token_indexers import SingleIdTokenIndexer
 

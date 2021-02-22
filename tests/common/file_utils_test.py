@@ -1,32 +1,32 @@
-from collections import Counter
+import json
 import os
 import pathlib
-import json
-import time
 import shutil
+import time
+from collections import Counter
 
-from filelock import Timeout
 import pytest
 import responses
 import torch
+from filelock import Timeout
 from requests.exceptions import ConnectionError, HTTPError
 
 from allennlp.common import file_utils
 from allennlp.common.file_utils import (
-    FileLock,
-    _resource_to_filename,
-    filename_to_url,
-    get_from_cache,
-    cached_path,
-    _split_s3_path,
-    open_compressed,
     CacheFile,
-    _Meta,
-    _find_entries,
-    inspect_cache,
-    remove_cache_entries,
+    FileLock,
     LocalCacheResource,
     TensorCache,
+    _find_entries,
+    _Meta,
+    _resource_to_filename,
+    _split_s3_path,
+    cached_path,
+    filename_to_url,
+    get_from_cache,
+    inspect_cache,
+    open_compressed,
+    remove_cache_entries,
 )
 from allennlp.common.testing import AllenNlpTestCase
 

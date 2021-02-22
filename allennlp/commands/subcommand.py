@@ -9,7 +9,6 @@ from overrides import overrides
 
 from allennlp.common import Registrable
 
-
 T = TypeVar("T", bound="Subcommand")
 
 

@@ -1,13 +1,14 @@
 import argparse
 import logging
 import sys
-from typing import Any, Optional, Tuple, Set
+from typing import Any, Optional, Set, Tuple
 
 from overrides import overrides
 
 from allennlp import __version__
 from allennlp.commands.build_vocab import BuildVocab
 from allennlp.commands.cached_path import CachedPath
+from allennlp.commands.count_instances import CountInstances
 from allennlp.commands.evaluate import Evaluate
 from allennlp.commands.find_learning_rate import FindLearningRate
 from allennlp.commands.predict import Predict
@@ -15,7 +16,6 @@ from allennlp.commands.print_results import PrintResults
 from allennlp.commands.subcommand import Subcommand
 from allennlp.commands.test_install import TestInstall
 from allennlp.commands.train import Train
-from allennlp.commands.count_instances import CountInstances
 from allennlp.common.plugins import import_plugins
 from allennlp.common.util import import_module_and_submodules
 

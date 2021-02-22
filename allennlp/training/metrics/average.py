@@ -1,7 +1,7 @@
 from overrides import overrides
 
+from allennlp.nn.util import ReduceOp, dist_reduce
 from allennlp.training.metrics.metric import Metric
-from allennlp.nn.util import dist_reduce, ReduceOp
 
 
 @Metric.register("average")

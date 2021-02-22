@@ -1,9 +1,9 @@
-import os
-import json
-import sys
-import pathlib
-import tempfile
 import io
+import json
+import os
+import pathlib
+import sys
+import tempfile
 from contextlib import redirect_stdout
 
 from allennlp.commands import main

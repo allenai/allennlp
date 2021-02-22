@@ -6,7 +6,7 @@ import zlib
 from collections import OrderedDict
 from collections.abc import MutableMapping
 from os import PathLike
-from typing import Any, Dict, List, Union, Optional
+from typing import Any, Dict, List, Optional, Union
 
 from overrides import overrides
 

@@ -1,13 +1,12 @@
+import sys
 from typing import Optional
 
-import sys
-
-from overrides import overrides
 import torch
 import torch.distributed as dist
+from overrides import overrides
 
-from allennlp.common.util import is_distributed
 from allennlp.common.checks import ConfigurationError
+from allennlp.common.util import is_distributed
 from allennlp.training.metrics.metric import Metric
 
 

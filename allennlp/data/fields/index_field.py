@@ -1,11 +1,11 @@
 from typing import Dict
 
-from overrides import overrides
 import torch
+from overrides import overrides
 
+from allennlp.common.checks import ConfigurationError
 from allennlp.data.fields.field import Field
 from allennlp.data.fields.sequence_field import SequenceField
-from allennlp.common.checks import ConfigurationError
 
 
 class IndexField(Field[torch.Tensor]):

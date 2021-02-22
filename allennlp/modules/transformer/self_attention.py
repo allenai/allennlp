@@ -1,4 +1,5 @@
-from typing import Optional, Dict
+from typing import Dict, Optional
+
 import torch
 
 from allennlp.common import FromParams

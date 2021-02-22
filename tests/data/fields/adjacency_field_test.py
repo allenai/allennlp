@@ -1,10 +1,11 @@
-import pytest
 import numpy
+import pytest
+
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
+from allennlp.data import Token, Vocabulary
 from allennlp.data.fields import AdjacencyField, TextField
 from allennlp.data.token_indexers import SingleIdTokenIndexer
-from allennlp.data import Vocabulary, Token
 
 
 class TestAdjacencyField(AllenNlpTestCase):

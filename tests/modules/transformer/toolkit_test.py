@@ -3,11 +3,10 @@ from overrides import overrides
 from transformers.models.albert.modeling_albert import AlbertEmbeddings
 
 from allennlp.common import cached_transformers
-from allennlp.common.testing import assert_equal_parameters
+from allennlp.common.testing import AllenNlpTestCase, assert_equal_parameters
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.modules.token_embedders import Embedding, TokenEmbedder
-from allennlp.modules.transformer import TransformerStack, TransformerEmbeddings
-from allennlp.common.testing import AllenNlpTestCase
+from allennlp.modules.transformer import TransformerEmbeddings, TransformerStack
 
 
 class TestTransformerToolkit(AllenNlpTestCase):

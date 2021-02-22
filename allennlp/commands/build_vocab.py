@@ -16,7 +16,6 @@ from allennlp.common.file_utils import CacheFile
 from allennlp.common.params import Params
 from allennlp.training.util import make_vocab_from_params
 
-
 logger = logging.getLogger(__name__)
 
 

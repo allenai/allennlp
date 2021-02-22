@@ -1,16 +1,15 @@
 from pytest import approx, raises
+
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.models.archival import load_archive
-from allennlp.interpret.saliency_interpreters import IntegratedGradient
-
-from allennlp.predictors import Predictor, TextClassifierPredictor
-from allennlp.data.dataset_readers import TextClassificationJsonReader
-from allennlp.data.vocabulary import Vocabulary
-
 from allennlp.common.testing.interpret_test import (
     FakeModelForTestingInterpret,
     FakePredictorForTestingInterpret,
 )
+from allennlp.data.dataset_readers import TextClassificationJsonReader
+from allennlp.data.vocabulary import Vocabulary
+from allennlp.interpret.saliency_interpreters import IntegratedGradient
+from allennlp.models.archival import load_archive
+from allennlp.predictors import Predictor, TextClassifierPredictor
 
 
 class TestIntegratedGradient(AllenNlpTestCase):

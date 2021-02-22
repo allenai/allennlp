@@ -1,9 +1,10 @@
 from typing import List
+
 import pytest
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.dataset_readers.dataset_utils import span_utils
-from allennlp.data.tokenizers import Token, SpacyTokenizer
+from allennlp.data.tokenizers import SpacyTokenizer, Token
 
 
 class SpanUtilsTest(AllenNlpTestCase):

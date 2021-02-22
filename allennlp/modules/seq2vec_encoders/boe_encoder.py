@@ -1,6 +1,5 @@
-from overrides import overrides
-
 import torch
+from overrides import overrides
 
 from allennlp.modules.seq2vec_encoders.seq2vec_encoder import Seq2VecEncoder
 from allennlp.nn.util import get_lengths_from_binary_sequence_mask

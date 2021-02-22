@@ -2,17 +2,17 @@
 Various utilities that don't fit anywhere else.
 """
 import hashlib
-import io
-import pickle
-from datetime import timedelta
 import importlib
+import io
 import json
 import logging
 import os
+import pickle
 import pkgutil
 import random
 import sys
 from contextlib import contextmanager
+from datetime import timedelta
 from itertools import islice, zip_longest
 from pathlib import Path
 from typing import (
@@ -24,10 +24,10 @@ from typing import (
     Iterator,
     List,
     Optional,
+    Sequence,
     Tuple,
     TypeVar,
     Union,
-    Sequence,
 )
 
 import numpy

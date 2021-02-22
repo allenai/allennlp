@@ -1,12 +1,12 @@
-from numpy.testing import assert_almost_equal
 import pytest
 import torch
+from numpy.testing import assert_almost_equal
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
-from allennlp.modules import Maxout
-from allennlp.nn import InitializerApplicator, Initializer
 from allennlp.common.testing import AllenNlpTestCase
+from allennlp.modules import Maxout
+from allennlp.nn import Initializer, InitializerApplicator
 
 
 class TestMaxout(AllenNlpTestCase):

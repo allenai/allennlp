@@ -1,7 +1,7 @@
 from typing import List
 
 import torch
-from torch.nn import ParameterList, Parameter
+from torch.nn import Parameter, ParameterList
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.nn import util

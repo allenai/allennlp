@@ -50,6 +50,12 @@ lint :
 .PHONY : format
 format :
 	black --check .
+	isort --check .
+
+.PHONY : fix-format
+fix-format :
+	black .
+	isort .
 
 .PHONY : typecheck
 typecheck :

@@ -14,14 +14,14 @@ it should not be filled for the sake of being filled. If
 the information cannot be inferred, it should be left empty.
 """
 
-import os
 import logging
+import os
 from dataclasses import dataclass
-from typing import Optional, Union, Dict, Any, Callable
-from allennlp.common.from_params import FromParams
+from typing import Any, Callable, Dict, Optional, Union
 
-from allennlp.models import Model
 from allennlp.common.checks import ConfigurationError
+from allennlp.common.from_params import FromParams
+from allennlp.models import Model
 
 logger = logging.getLogger(__name__)
 

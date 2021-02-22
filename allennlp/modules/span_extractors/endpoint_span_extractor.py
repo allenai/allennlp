@@ -1,13 +1,13 @@
 from typing import Optional
 
 import torch
-from torch.nn.parameter import Parameter
 from overrides import overrides
+from torch.nn.parameter import Parameter
 
+from allennlp.common.checks import ConfigurationError
 from allennlp.modules.span_extractors.span_extractor import SpanExtractor
 from allennlp.modules.token_embedders.embedding import Embedding
 from allennlp.nn import util
-from allennlp.common.checks import ConfigurationError
 
 
 @SpanExtractor.register("endpoint")

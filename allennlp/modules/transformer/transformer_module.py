@@ -1,6 +1,6 @@
-from typing import Optional, Dict, Union, List
-import logging
 import inspect
+import logging
+from typing import Dict, List, Optional, Union
 
 import torch
 

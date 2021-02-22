@@ -1,16 +1,20 @@
 import math
 import random
-from typing import Optional, List, Iterator
+from typing import Iterator, List, Optional
 
-from overrides import overrides
 import torch
+from overrides import overrides
 
+import allennlp.nn.util as nn_util
 from allennlp.common.util import lazy_groups_of
-from allennlp.data.data_loaders.data_loader import DataLoader, allennlp_collate, TensorDict
+from allennlp.data.data_loaders.data_loader import (
+    DataLoader,
+    TensorDict,
+    allennlp_collate,
+)
 from allennlp.data.dataset_readers import DatasetReader
 from allennlp.data.instance import Instance
 from allennlp.data.vocabulary import Vocabulary
-import allennlp.nn.util as nn_util
 
 
 @DataLoader.register("simple", constructor="from_dataset_reader")

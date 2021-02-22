@@ -1,9 +1,9 @@
 from os import PathLike
-from typing import Union, Sequence, Tuple, List, cast
+from typing import List, Sequence, Tuple, Union, cast
 
-from overrides import overrides
 import torch
 import torchvision
+from overrides import overrides
 from torch import FloatTensor, IntTensor
 
 from allennlp.common.file_utils import cached_path

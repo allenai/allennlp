@@ -1,8 +1,8 @@
 import pytest
 
 from allennlp.common import Params
-from allennlp.data.dataset_readers import BabiReader
 from allennlp.common.testing import AllenNlpTestCase
+from allennlp.data.dataset_readers import BabiReader
 
 
 class TestBAbIReader:

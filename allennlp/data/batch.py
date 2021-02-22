@@ -4,7 +4,7 @@ through a model.
 """
 
 import logging
-from collections import defaultdict, Counter
+from collections import Counter, defaultdict
 from typing import Dict, Iterable, Iterator, List, Union
 
 import numpy

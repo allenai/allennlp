@@ -1,12 +1,12 @@
 import pytest
 
 from allennlp.common.testing import ModelTestCase
-from allennlp.data import Instance, Vocabulary, Batch
-from allennlp.data.fields import LabelField, TextField, MetadataField
+from allennlp.data import Batch, Instance, Vocabulary
+from allennlp.data.fields import LabelField, MetadataField, TextField
 from allennlp.data.token_indexers import PretrainedTransformerIndexer
 from allennlp.data.tokenizers import PretrainedTransformerTokenizer
-from allennlp.models.heads import ClassifierHead
 from allennlp.models import MultiTaskModel
+from allennlp.models.heads import ClassifierHead
 from allennlp.modules.backbones import PretrainedTransformerBackbone
 from allennlp.modules.seq2vec_encoders import ClsPooler
 

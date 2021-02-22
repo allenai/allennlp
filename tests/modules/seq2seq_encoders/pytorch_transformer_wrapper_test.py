@@ -1,6 +1,7 @@
 from typing import Optional
-import torch
+
 import pytest
+import torch
 
 from allennlp.modules.seq2seq_encoders import PytorchTransformer
 

@@ -1,9 +1,10 @@
 import copy
+
 import torch
 
 from allennlp.common import Params
-from allennlp.modules.transformer import BiModalAttention
 from allennlp.common.testing import AllenNlpTestCase
+from allennlp.modules.transformer import BiModalAttention
 
 
 class TestBiModalAttention(AllenNlpTestCase):

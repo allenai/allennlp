@@ -4,12 +4,17 @@ import pytest
 import torch
 
 from allennlp.common import Lazy, Params, Registrable
-from allennlp.common.from_params import FromParams, takes_arg, remove_optional, create_kwargs
+from allennlp.common.checks import ConfigurationError
+from allennlp.common.from_params import (
+    FromParams,
+    create_kwargs,
+    remove_optional,
+    takes_arg,
+)
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import DataLoader, DatasetReader, Tokenizer
 from allennlp.models import Model
 from allennlp.models.archival import load_archive
-from allennlp.common.checks import ConfigurationError
 
 
 class MyClass(FromParams):

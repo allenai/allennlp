@@ -1,4 +1,4 @@
-from typing import List, Iterable, Sequence, Optional
+from typing import Iterable, List, Optional, Sequence
 
 from allennlp.common.registrable import Registrable
 from allennlp.data.instance import Instance

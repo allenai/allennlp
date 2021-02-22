@@ -1,11 +1,10 @@
 import logging
 import random
-from typing import List, Iterable, Iterator, TypeVar, Sequence
+from typing import Iterable, Iterator, List, Sequence, TypeVar
 
 from allennlp.data.instance import Instance
 from allennlp.data.samplers.batch_sampler import BatchSampler
 from allennlp.data.samplers.bucket_batch_sampler import BucketBatchSampler
-
 
 logger = logging.getLogger(__name__)
 

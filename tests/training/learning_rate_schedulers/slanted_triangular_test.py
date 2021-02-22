@@ -2,15 +2,18 @@ from collections import OrderedDict
 from copy import deepcopy
 from typing import Any, Dict, List, Tuple
 
-import torch
 import pytest
+import torch
 
 from allennlp.common import Lazy, Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.data_loaders import SimpleDataLoader
 from allennlp.training import Trainer
-from allennlp.training.learning_rate_schedulers import LearningRateScheduler, SlantedTriangular
+from allennlp.training.learning_rate_schedulers import (
+    LearningRateScheduler,
+    SlantedTriangular,
+)
 from allennlp.training.optimizers import Optimizer
 
 

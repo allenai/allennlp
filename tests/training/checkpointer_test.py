@@ -3,8 +3,8 @@ import re
 import time
 from contextlib import contextmanager
 
-from allennlp.common.testing import AllenNlpTestCase
 from allennlp.common.params import Params
+from allennlp.common.testing import AllenNlpTestCase
 from allennlp.training import Checkpointer, Trainer
 
 

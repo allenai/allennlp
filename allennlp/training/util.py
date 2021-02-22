@@ -2,27 +2,26 @@
 Helper functions for Trainers
 """
 import datetime
+import json
 import logging
 import os
 import shutil
-import json
-from os import PathLike
-from typing import Any, Dict, Iterable, Optional, Union, Tuple, Set, List
 from collections import Counter
+from os import PathLike
+from typing import Any, Dict, Iterable, List, Optional, Set, Tuple, Union
 
 import torch
 from torch.nn.utils import clip_grad_norm_
 
-from allennlp.common.checks import check_for_gpu, ConfigurationError
+from allennlp.common.checks import ConfigurationError, check_for_gpu
 from allennlp.common.params import Params
 from allennlp.common.tqdm import Tqdm
-from allennlp.common.util import dump_metrics, sanitize, int_to_device
-from allennlp.data import Instance, Vocabulary, Batch, DataLoader
+from allennlp.common.util import dump_metrics, int_to_device, sanitize
+from allennlp.data import Batch, DataLoader, Instance, Vocabulary
 from allennlp.data.dataset_readers import DatasetReader
 from allennlp.models.archival import CONFIG_NAME
 from allennlp.models.model import Model
 from allennlp.nn import util as nn_util
-
 
 logger = logging.getLogger(__name__)
 

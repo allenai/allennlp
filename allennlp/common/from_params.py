@@ -1,10 +1,11 @@
 import collections.abc
+import inspect
+import logging
 from copy import deepcopy
 from pathlib import Path
 from typing import (
     Any,
     Callable,
-    cast,
     Dict,
     Iterable,
     List,
@@ -14,9 +15,8 @@ from typing import (
     Type,
     TypeVar,
     Union,
+    cast,
 )
-import inspect
-import logging
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.lazy import Lazy
@@ -86,7 +86,9 @@ def is_base_registrable(cls) -> bool:
     Checks whether this is a class that directly inherits from Registrable, or is a subclass of such
     a class.
     """
-    from allennlp.common.registrable import Registrable  # import here to avoid circular imports
+    from allennlp.common.registrable import (
+        Registrable,  # import here to avoid circular imports
+    )
 
     if not issubclass(cls, Registrable):
         return False
@@ -261,7 +263,9 @@ def pop_and_construct_arg(
     `inspect.Parameter` object directly, so that we can handle `Union` types using recursion on
     this method, trying the different annotation types in the union in turn.
     """
-    from allennlp.models.archival import load_archive  # import here to avoid circular imports
+    from allennlp.models.archival import (
+        load_archive,  # import here to avoid circular imports
+    )
 
     # We used `argument_name` as the method argument to avoid conflicts with 'name' being a key in
     # `extras`, which isn't _that_ unlikely.  Now that we are inside the method, we can switch back
@@ -536,7 +540,9 @@ class FromParams:
         constructor (because you inspect `__init__`, but call `cls()`).
         """
 
-        from allennlp.common.registrable import Registrable  # import here to avoid circular imports
+        from allennlp.common.registrable import (
+            Registrable,  # import here to avoid circular imports
+        )
 
         logger.debug(
             f"instantiating class {cls} from params {getattr(params, 'params', params)} "

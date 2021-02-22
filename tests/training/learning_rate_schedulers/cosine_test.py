@@ -1,8 +1,8 @@
 from copy import deepcopy
-from typing import Dict, Any
+from typing import Any, Dict
 
-import torch
 import pytest
+import torch
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError

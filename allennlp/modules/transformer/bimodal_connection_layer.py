@@ -1,9 +1,7 @@
 from allennlp.common import FromParams
-
 from allennlp.modules.transformer.activation_layer import ActivationLayer
-from allennlp.modules.transformer.output_layer import OutputLayer
 from allennlp.modules.transformer.bimodal_attention import BiModalAttention
-
+from allennlp.modules.transformer.output_layer import OutputLayer
 from allennlp.modules.transformer.transformer_module import TransformerModule
 
 

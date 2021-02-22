@@ -1,16 +1,16 @@
 """
 Helper functions for archiving models and restoring archived models.
 """
-from os import PathLike
-from typing import NamedTuple, Union, Dict, Any, List, Optional
+import glob
 import logging
 import os
-import tempfile
-import tarfile
 import shutil
-from pathlib import Path
+import tarfile
+import tempfile
 from contextlib import contextmanager
-import glob
+from os import PathLike
+from pathlib import Path
+from typing import Any, Dict, List, NamedTuple, Optional, Union
 
 from torch.nn import Module
 
@@ -18,7 +18,7 @@ from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path
 from allennlp.common.params import Params
 from allennlp.data.dataset_readers import DatasetReader
-from allennlp.models.model import Model, _DEFAULT_WEIGHTS
+from allennlp.models.model import _DEFAULT_WEIGHTS, Model
 
 logger = logging.getLogger(__name__)
 

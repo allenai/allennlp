@@ -3,10 +3,10 @@
 any base class with a named registry for its subclasses and a decorator
 for registering them.
 """
-from collections import defaultdict
-from typing import TypeVar, Type, Callable, Dict, List, Optional, Tuple
 import importlib
 import logging
+from collections import defaultdict
+from typing import Callable, Dict, List, Optional, Tuple, Type, TypeVar
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.from_params import FromParams

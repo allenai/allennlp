@@ -1,8 +1,7 @@
 import inspect
-from typing import Callable, Generic, TypeVar, Type, Union
+from typing import Callable, Generic, Type, TypeVar, Union
 
 from allennlp.common.params import Params
-
 
 T = TypeVar("T")
 

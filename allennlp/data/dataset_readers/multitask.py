@@ -1,8 +1,8 @@
 from os import PathLike
 from typing import Dict, Iterator, Union
 
-from allennlp.data.instance import Instance
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
+from allennlp.data.instance import Instance
 
 
 @DatasetReader.register("multitask")

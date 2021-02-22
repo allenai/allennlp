@@ -1,5 +1,5 @@
-from overrides import overrides
 import torch
+from overrides import overrides
 from torch.nn.utils.rnn import pad_packed_sequence
 
 from allennlp.common.checks import ConfigurationError

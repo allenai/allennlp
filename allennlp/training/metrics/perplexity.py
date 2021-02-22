@@ -1,5 +1,6 @@
-from overrides import overrides
 import math
+
+from overrides import overrides
 
 from allennlp.training.metrics.average import Average
 from allennlp.training.metrics.metric import Metric

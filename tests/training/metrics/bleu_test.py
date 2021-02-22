@@ -1,18 +1,18 @@
-from typing import Any, Dict, List, Tuple, Union
 import math
 from collections import Counter
+from typing import Any, Dict, List, Tuple, Union
 
 import torch
 from torch.testing import assert_allclose
 
 from allennlp.common.testing import (
     AllenNlpTestCase,
-    multi_device,
     global_distributed_metric,
+    multi_device,
     run_distributed_test,
 )
 from allennlp.training.metrics import BLEU
-from allennlp.training.util import ngrams, get_valid_tokens_mask
+from allennlp.training.util import get_valid_tokens_mask, ngrams
 
 
 class BleuTest(AllenNlpTestCase):

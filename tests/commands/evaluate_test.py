@@ -1,12 +1,12 @@
 import argparse
 import json
-from typing import Iterator, List, Dict
+from typing import Dict, Iterator, List
 
+import pytest
 import torch
 from flaky import flaky
-import pytest
 
-from allennlp.commands.evaluate import evaluate_from_args, Evaluate, evaluate
+from allennlp.commands.evaluate import Evaluate, evaluate, evaluate_from_args
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.data_loaders import TensorDict
 from allennlp.models import Model

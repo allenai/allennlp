@@ -1,11 +1,12 @@
 from typing import Any, Dict, List, Tuple, Union
+
 import torch
 
 from allennlp.common.testing import (
     AllenNlpTestCase,
+    global_distributed_metric,
     multi_device,
     run_distributed_test,
-    global_distributed_metric,
 )
 from allennlp.training.metrics import AttachmentScores
 

@@ -1,6 +1,7 @@
-import torch
-from torch import nn, FloatTensor, IntTensor
 from typing import List
+
+import torch
+from torch import FloatTensor, IntTensor, nn
 
 from allennlp.common.registrable import Registrable
 

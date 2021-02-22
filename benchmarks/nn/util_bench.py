@@ -1,7 +1,7 @@
 import torch
 
-from allennlp.nn import util
 from allennlp.common.testing import requires_gpu
+from allennlp.nn import util
 
 
 @requires_gpu

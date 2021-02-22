@@ -1,11 +1,11 @@
 import numpy
-from numpy.testing import assert_almost_equal
 import torch
+from numpy.testing import assert_almost_equal
 
 from allennlp.common import Params
-from allennlp.modules.seq2vec_encoders import CnnEncoder
-from allennlp.nn import InitializerApplicator, Initializer
 from allennlp.common.testing import AllenNlpTestCase
+from allennlp.modules.seq2vec_encoders import CnnEncoder
+from allennlp.nn import Initializer, InitializerApplicator
 
 
 class TestCnnEncoder(AllenNlpTestCase):

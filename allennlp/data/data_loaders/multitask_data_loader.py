@@ -1,21 +1,24 @@
-from typing import Any, Dict, Iterable, Iterator, Union, Optional
 import itertools
 import math
+from typing import Any, Dict, Iterable, Iterator, Optional, Union
 
 import torch
 from overrides import overrides
 
+import allennlp.nn.util as nn_util
 from allennlp.common import util
-from allennlp.data.dataset_readers.dataset_reader import DatasetReader, DatasetReaderInput
 from allennlp.data.batch import Batch
 from allennlp.data.data_loaders.data_loader import DataLoader, TensorDict
 from allennlp.data.data_loaders.multiprocess_data_loader import MultiProcessDataLoader
-from allennlp.data.data_loaders.multitask_scheduler import MultiTaskScheduler
 from allennlp.data.data_loaders.multitask_epoch_sampler import MultiTaskEpochSampler
+from allennlp.data.data_loaders.multitask_scheduler import MultiTaskScheduler
+from allennlp.data.dataset_readers.dataset_reader import (
+    DatasetReader,
+    DatasetReaderInput,
+)
 from allennlp.data.dataset_readers.multitask import MultiTaskDatasetReader
 from allennlp.data.instance import Instance
 from allennlp.data.vocabulary import Vocabulary
-import allennlp.nn.util as nn_util
 
 
 def maybe_shuffle_instances(loader: DataLoader, shuffle: bool) -> Iterable[Instance]:

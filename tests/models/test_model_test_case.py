@@ -1,4 +1,5 @@
 import json
+
 import pytest
 
 from allennlp.common.testing import ModelTestCase

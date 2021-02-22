@@ -1,11 +1,13 @@
+import numpy
 import torch
 from numpy.testing import assert_almost_equal
-import numpy
 
 from allennlp.common import Params
 from allennlp.common.testing.test_case import AllenNlpTestCase
 from allennlp.modules.attention.attention import Attention
-from allennlp.modules.attention.scaled_dot_product_attention import ScaledDotProductAttention
+from allennlp.modules.attention.scaled_dot_product_attention import (
+    ScaledDotProductAttention,
+)
 
 
 class TestScaledDotProductAttention(AllenNlpTestCase):

@@ -1,17 +1,17 @@
 import logging
-
-from typing import Optional
 import math
+from typing import Optional
+
 import numpy as np
-
-from overrides import overrides
 import torch
-
-# import torch.distributed as dist
+from overrides import overrides
 
 from allennlp.common.util import is_distributed
 from allennlp.training.metrics.covariance import Covariance
 from allennlp.training.metrics.metric import Metric
+
+# import torch.distributed as dist
+
 
 logger = logging.getLogger(__name__)
 

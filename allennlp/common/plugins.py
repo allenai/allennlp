@@ -13,12 +13,11 @@ be loaded, one per line.
 import importlib
 import logging
 import os
-from pathlib import Path
 import sys
+from pathlib import Path
 from typing import Iterable, Set
 
-from allennlp.common.util import push_python_path, import_module_and_submodules
-
+from allennlp.common.util import import_module_and_submodules, push_python_path
 
 logger = logging.getLogger(__name__)
 

@@ -1,9 +1,10 @@
 import copy
+
 import torch
 
 from allennlp.common import Params
-from allennlp.modules.transformer import ActivationLayer
 from allennlp.common.testing import AllenNlpTestCase
+from allennlp.modules.transformer import ActivationLayer
 
 
 class TestActivationLayer(AllenNlpTestCase):

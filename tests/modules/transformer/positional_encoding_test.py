@@ -1,9 +1,11 @@
 import copy
-import torch
+
 import numpy as np
+import torch
+
 from allennlp.common import Params
-from allennlp.modules.transformer import SinusoidalPositionalEncoding
 from allennlp.common.testing import AllenNlpTestCase
+from allennlp.modules.transformer import SinusoidalPositionalEncoding
 
 
 class TestSinusoidalPositionalEncoding(AllenNlpTestCase):

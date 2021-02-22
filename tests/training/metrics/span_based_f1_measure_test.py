@@ -1,12 +1,12 @@
+import pytest
 import torch
 from torch.testing import assert_allclose
-import pytest
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
 from allennlp.common.testing import AllenNlpTestCase, multi_device
 from allennlp.data import Vocabulary
-from allennlp.training.metrics import SpanBasedF1Measure, Metric
+from allennlp.training.metrics import Metric, SpanBasedF1Measure
 
 
 class SpanBasedF1Test(AllenNlpTestCase):

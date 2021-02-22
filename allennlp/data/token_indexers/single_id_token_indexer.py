@@ -1,12 +1,11 @@
-from typing import Dict, List, Optional
 import itertools
+from typing import Dict, List, Optional
 
 from overrides import overrides
 
-from allennlp.data.vocabulary import Vocabulary
+from allennlp.data.token_indexers.token_indexer import IndexedTokenList, TokenIndexer
 from allennlp.data.tokenizers import Token
-from allennlp.data.token_indexers.token_indexer import TokenIndexer, IndexedTokenList
-
+from allennlp.data.vocabulary import Vocabulary
 
 _DEFAULT_VALUE = "THIS IS A REALLY UNLIKELY VALUE THAT HAS TO BE A STRING"
 

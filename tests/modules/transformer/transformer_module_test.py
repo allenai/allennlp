@@ -1,8 +1,7 @@
 import torch
 
-from allennlp.common.testing import assert_equal_parameters
+from allennlp.common.testing import AllenNlpTestCase, assert_equal_parameters
 from allennlp.modules.transformer import TransformerModule
-from allennlp.common.testing import AllenNlpTestCase
 
 
 class TestTransformerModule(AllenNlpTestCase):

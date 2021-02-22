@@ -12,7 +12,6 @@ from ruamel.yaml import YAML
 
 from allennlp.version import VERSION
 
-
 API_TOC_KEY = "API"
 
 

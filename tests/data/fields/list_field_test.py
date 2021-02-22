@@ -4,10 +4,16 @@ import numpy
 import torch
 
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.data import Token, Vocabulary, Instance
-from allennlp.data.fields import TextField, LabelField, ListField, IndexField, SequenceLabelField
-from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenCharactersIndexer
+from allennlp.data import Instance, Token, Vocabulary
 from allennlp.data.data_loaders import SimpleDataLoader
+from allennlp.data.fields import (
+    IndexField,
+    LabelField,
+    ListField,
+    SequenceLabelField,
+    TextField,
+)
+from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenCharactersIndexer
 from allennlp.data.tokenizers import SpacyTokenizer
 from allennlp.models import Model
 from allennlp.modules import Embedding
@@ -318,13 +324,10 @@ class TestListField(AllenNlpTestCase):
         model.forward(**batch)
 
     def test_list_of_text_padding(self):
+        from allennlp.data import Vocabulary
+        from allennlp.data.fields import ListField, TextField
         from allennlp.data.token_indexers import PretrainedTransformerIndexer
         from allennlp.data.tokenizers import Token
-        from allennlp.data.fields import (
-            TextField,
-            ListField,
-        )
-        from allennlp.data import Vocabulary
 
         word_indexer = {"tokens": PretrainedTransformerIndexer("albert-base-v2")}
         text_field = TextField(

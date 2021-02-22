@@ -1,12 +1,12 @@
 """
 Conditional random field
 """
-from typing import List, Tuple, Dict, Union
+from typing import Dict, List, Tuple, Union
 
 import torch
 
-from allennlp.common.checks import ConfigurationError
 import allennlp.nn.util as util
+from allennlp.common.checks import ConfigurationError
 
 VITERBI_DECODING = Tuple[List[int], float]  # a list of tags, and a viterbi score
 

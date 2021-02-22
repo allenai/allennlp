@@ -5,7 +5,7 @@ import re
 import tarfile
 import warnings
 import zipfile
-from typing import Any, cast, Iterator, NamedTuple, Optional, Sequence, Tuple, BinaryIO
+from typing import Any, BinaryIO, Iterator, NamedTuple, Optional, Sequence, Tuple, cast
 
 import numpy
 import torch
@@ -14,7 +14,11 @@ from torch.nn.functional import embedding
 
 from allennlp.common import Tqdm
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.file_utils import cached_path, get_file_extension, is_url_or_existing_file
+from allennlp.common.file_utils import (
+    cached_path,
+    get_file_extension,
+    is_url_or_existing_file,
+)
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.modules.time_distributed import TimeDistributed
 from allennlp.modules.token_embedders.token_embedder import TokenEmbedder

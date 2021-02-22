@@ -1,18 +1,17 @@
-from typing import List
 import logging
 import os
-import tempfile
-import subprocess
 import shutil
-
-from overrides import overrides
-from nltk import Tree
+import subprocess
+import tempfile
+from typing import List
 
 import torch
 import torch.distributed as dist
+from nltk import Tree
+from overrides import overrides
 
-from allennlp.common.util import is_distributed
 from allennlp.common.checks import ConfigurationError
+from allennlp.common.util import is_distributed
 from allennlp.training.metrics.metric import Metric
 
 logger = logging.getLogger(__name__)

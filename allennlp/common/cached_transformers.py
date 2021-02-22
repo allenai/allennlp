@@ -1,8 +1,8 @@
 import logging
-from typing import NamedTuple, Optional, Dict, Tuple
+from typing import Dict, NamedTuple, Optional, Tuple
+
 import transformers
 from transformers import AutoModel
-
 
 logger = logging.getLogger(__name__)
 
@@ -46,8 +46,9 @@ def get(
     transformer = _model_cache.get(spec, None)
     if transformer is None:
         if override_weights_file is not None:
-            from allennlp.common.file_utils import cached_path
             import torch
+
+            from allennlp.common.file_utils import cached_path
 
             override_weights_file = cached_path(override_weights_file)
             override_weights = torch.load(override_weights_file)

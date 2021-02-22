@@ -1,14 +1,15 @@
-from typing import List, Iterable, Dict
+from typing import Dict, Iterable, List
 
-import torch
 import pytest
+import torch
+
 from allennlp.common.testing import requires_gpu
-from allennlp.data.instance import Instance
-from allennlp.data.dataset_readers import DatasetReader
 from allennlp.data.data_loaders import MultiProcessDataLoader, WorkerError
-from allennlp.data.fields import Field, TextField, MetadataField, TensorField
-from allennlp.data.tokenizers import PretrainedTransformerTokenizer
+from allennlp.data.dataset_readers import DatasetReader
+from allennlp.data.fields import Field, MetadataField, TensorField, TextField
+from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import PretrainedTransformerIndexer
+from allennlp.data.tokenizers import PretrainedTransformerTokenizer
 from allennlp.data.vocabulary import Vocabulary
 
 

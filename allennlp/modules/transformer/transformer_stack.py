@@ -1,13 +1,12 @@
-from typing import Union, Optional, Dict
 import logging
+from typing import Dict, Optional, Union
 
 import torch
 
 from allennlp.common import FromParams
-
-from allennlp.modules.util import replicate_layers
 from allennlp.modules.transformer.transformer_layer import TransformerLayer
 from allennlp.modules.transformer.transformer_module import TransformerModule
+from allennlp.modules.util import replicate_layers
 
 logger = logging.getLogger(__name__)
 

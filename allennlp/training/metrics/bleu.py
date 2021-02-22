@@ -1,10 +1,10 @@
-from collections import Counter
 import math
-from typing import Iterable, Tuple, Dict, Set
+from collections import Counter
+from typing import Dict, Iterable, Set, Tuple
 
-from overrides import overrides
 import torch
 import torch.distributed as dist
+from overrides import overrides
 
 from allennlp.common.util import is_distributed
 from allennlp.training.metrics.metric import Metric

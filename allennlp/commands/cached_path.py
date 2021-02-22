@@ -9,12 +9,11 @@ from overrides import overrides
 
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common.file_utils import (
-    cached_path,
     CACHE_DIRECTORY,
+    cached_path,
     inspect_cache,
     remove_cache_entries,
 )
-
 
 logger = logging.getLogger(__name__)
 

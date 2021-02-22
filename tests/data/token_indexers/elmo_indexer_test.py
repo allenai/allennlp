@@ -2,10 +2,10 @@ import numpy as np
 import pytest
 
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.data import Token, Vocabulary, Instance
+from allennlp.data import Instance, Token, Vocabulary
 from allennlp.data.batch import Batch
-from allennlp.data.token_indexers import ELMoTokenCharactersIndexer
 from allennlp.data.fields import ListField, TextField
+from allennlp.data.token_indexers import ELMoTokenCharactersIndexer
 
 
 class TestELMoTokenCharactersIndexer(AllenNlpTestCase):

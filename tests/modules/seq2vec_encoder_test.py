@@ -2,8 +2,8 @@ import pytest
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
-from allennlp.modules import Seq2VecEncoder
 from allennlp.common.testing import AllenNlpTestCase
+from allennlp.modules import Seq2VecEncoder
 
 
 class TestSeq2VecEncoder(AllenNlpTestCase):
