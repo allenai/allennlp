@@ -21,33 +21,42 @@ class LogWriter(FromParams):
 
     summary_interval : `int`, optional (default = `100`)
         Most statistics will be written out only every this many batches.
+
     distribution_interval : `int`, optional (default = `None`)
         If provided, activation distributions will be written out every this many batches.
         If None, activation distributions will not be written out.
         When this parameter is specified, the following additional logging is enabled:
+
             * Distributions of model parameters
             * The ratio of parameter update norm to parameter norm
             * Distribution of layer activations
+
         The layer activations are logged for any modules in the `Model` that have
         the attribute `should_log_activations` set to `True`.  Logging
         distributions requires a number of GPU-CPU copies during training and is typically
         slow, so we recommend logging distributions relatively infrequently.
         Note: only Modules that return tensors, tuples of tensors or dicts
         with tensors as values currently support activation logging.
+
     batch_size_interval : `int`, optional, (default = `None`)
         If defined, how often to log the average batch size.
+
     should_log_parameter_statistics : `bool`, optional (default = `True`)
         Whether to log parameter statistics (mean and standard deviation of parameters and
         gradients).
+
     should_log_learning_rate : `bool`, optional (default = `False`)
         Whether to log (parameter-specific) learning rate.
+
     should_log_inputs : `bool`, optional (default = `False`)
         Whether to log model inputs.
+
     get_batch_num_total : `Callable[[], int]`, optional (default = `None`)
         A thunk that returns the number of batches so far. Most likely this will
         be a closure around an instance variable in your `Trainer` class.  Because of circular
         dependencies in constructing this object and the `Trainer`, this is typically `None` when
         you construct the object, but it gets set inside the constructor of our `Trainer`.
+
     """
 
     def __init__(
@@ -60,7 +69,6 @@ class LogWriter(FromParams):
         should_log_learning_rate: bool = False,
         should_log_inputs: bool = False,
         get_batch_num_total: Callable[[], int] = None,
-        **kwargs,
     ):
         self._serialization_dir = serialization_dir
         self._summary_interval = summary_interval

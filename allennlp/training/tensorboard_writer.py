@@ -1,3 +1,4 @@
+import warnings
 from typing import Dict, Optional, Callable
 from numbers import Number
 import logging
@@ -24,15 +25,19 @@ class TensorBoardWriter(LogWriter):
 
         In a typical AllenNLP configuration file, this parameter does not get an entry under the
         "tensorboard_writer", it gets passed in separately.
+
     summary_interval : `int`, optional (default = `100`)
         Most statistics will be written out only every this many batches.
+
     distribution_interval : `int`, optional (default = `None`)
         If provided, activation histograms will be written out every this many batches.
         If None, activation histograms will not be written out.
         When this parameter is specified, the following additional logging is enabled:
+
             * Histograms of model parameters
             * The ratio of parameter update norm to parameter norm
             * Histogram of layer activations
+
         We log histograms of the parameters returned by
         `model.get_parameters_for_histogram_tensorboard_logging`.
         The layer activations are logged for any modules in the `Model` that have
@@ -41,23 +46,27 @@ class TensorBoardWriter(LogWriter):
         slow, so we recommend logging histograms relatively infrequently.
         Note: only Modules that return tensors, tuples of tensors or dicts
         with tensors as values currently support activation logging.
-    histogram_interval : `int`, optional (default = `None`)
-        This is the same as `distribution_interval` and is kept for backwards compatibility.
+
     batch_size_interval : `int`, optional, (default = `None`)
         If defined, how often to log the average batch size.
+
     should_log_parameter_statistics : `bool`, optional (default = `True`)
         Whether to log parameter statistics (mean and standard deviation of parameters and
         gradients).
+
     should_log_learning_rate : `bool`, optional (default = `False`)
         Whether to log (parameter-specific) learning rate.
+
     should_log_inputs : `bool`, optional (default = `False`)
         Whether to log model inputs. Setting it to `True` will log inputs
         on the tensorboard only.
+
     get_batch_num_total : `Callable[[], int]`, optional (default = `None`)
         A thunk that returns the number of batches so far. Most likely this will
         be a closure around an instance variable in your `Trainer` class.  Because of circular
         dependencies in constructing this object and the `Trainer`, this is typically `None` when
         you construct the object, but it gets set inside the constructor of our `Trainer`.
+
     """
 
     def __init__(
@@ -65,22 +74,20 @@ class TensorBoardWriter(LogWriter):
         serialization_dir: Optional[str] = None,
         summary_interval: int = 100,
         distribution_interval: Optional[int] = None,
-        histogram_interval: Optional[int] = None,
         batch_size_interval: Optional[int] = None,
         should_log_parameter_statistics: bool = True,
         should_log_learning_rate: bool = False,
         should_log_inputs: bool = False,
         get_batch_num_total: Callable[[], int] = None,
+        **kwargs,
     ) -> None:
 
-        if distribution_interval is not None and histogram_interval is not None:
-            logger.warning(
-                f"`histogram_interval`=`{histogram_interval}` will be ignored "
-                f"in favor of `distribution_interval`=`{distribution_interval}`"
+        if "histogram_interval" in kwargs:
+            warnings.warn(
+                "`histogram_interval` is deprecated." "Use `distribution_interval` instead.",
+                DeprecationWarning,
             )
-
-        if distribution_interval is None:
-            distribution_interval = histogram_interval
+            distribution_interval = kwargs.pop("histogram_interval")
 
         super().__init__(
             serialization_dir,
