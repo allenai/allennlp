@@ -18,7 +18,7 @@ class MultiTaskPredictor(Predictor):
     _WRONG_READER_ERROR = (
         "MultitaskPredictor is designed to work with MultiTaskDatasetReader. "
         + "If you have a different DatasetReader, you have to write your own "
-        + "Predictor, but you can use MultitaskPredictor as a starting point."
+        + "Predictor, but you can use MultiTaskPredictor as a starting point."
     )
 
     _WRONG_FIELD_ERROR = (
