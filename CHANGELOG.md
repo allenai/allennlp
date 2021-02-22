@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-### Fixed
+### Changed
 
 - `@Registrable.register(...)` decorator no longer masks the decorated class's annotations
 
@@ -33,6 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed handling of HTTP errors when fetching remote resources with `cached_path()`. Previously the content would be cached even when
   certain errors - like 404s - occurred. Now an `HTTPError` will be raised whenever the HTTP response is not OK.
 
+
 ## [v2.0.1](https://github.com/allenai/allennlp/releases/tag/v2.0.1) - 2021-01-29
 
 ### Added
@@ -47,6 +48,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - `common.util.sanitize` now handles sets.
+
 
 ## [v2.0.0](https://github.com/allenai/allennlp/releases/tag/v2.0.0) - 2021-01-27
 
@@ -80,6 +82,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - We set a value to `epoch` so in case of firing `TrainerCallback.on_end()` the variable is bound.
   This could have lead to an error in case of trying to recover a run after it was finished training.
 
+
 ## [v2.0.0rc1](https://github.com/allenai/allennlp/releases/tag/v2.0.0rc1) - 2021-01-21
 
 ### Added
@@ -90,7 +93,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added abstraction and demo implementation for an image augmentation module.
 - Added abstraction and concrete implementation for region detectors.
 - A new high-performance default `DataLoader`: `MultiProcessDataLoading`.
-- A `MultiTaskModel` and abstractions to use with it, including `Backbone` and `Head`. The
+- A `MultiTaskModel` and abstractions to use with it, including `Backbone` and `Head`.  The
   `MultiTaskModel` first runs its inputs through the `Backbone`, then passes the result (and
   whatever other relevant inputs it got) to each `Head` that's in use.
 - A `MultiTaskDataLoader`, with a corresponding `MultiTaskDatasetReader`, and a couple of new
@@ -148,6 +151,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   can't be acquired because the file system is read-only.
 - `TrackEpochCallback` is now a `EpochCallback`.
 
+
 ## [v1.3.0](https://github.com/allenai/allennlp/releases/tag/v1.3.0) - 2020-12-15
 
 ### Added
@@ -178,6 +182,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added safety checks for extracting tar files
 - Turned superfluous warning to info when extending the vocab in the embedding matrix, if no pretrained file was provided
 
+
 ## [v1.2.2](https://github.com/allenai/allennlp/releases/tag/v1.2.2) - 2020-11-17
 
 ### Added
@@ -188,6 +193,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - `GumbelSampler` now sorts the beams by their true log prob.
+
 
 ## [v1.2.1](https://github.com/allenai/allennlp/releases/tag/v1.2.1) - 2020-11-10
 
@@ -211,7 +217,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   was an exception.
 - Fixed the computation of saliency maps in the Interpret code when using mismatched indexing.
   Previously, we would compute gradients from the top of the transformer, after aggregation from
-  wordpieces to tokens, which gives results that are not very informative. Now, we compute gradients
+  wordpieces to tokens, which gives results that are not very informative.  Now, we compute gradients
   with respect to the embedding layer, and aggregate wordpieces to tokens separately.
 - Fixed the heuristics for finding embedding layers in the case of RoBERTa. An update in the
   `transformers` library broke our old heuristic.
@@ -219,6 +225,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed default masks that were erroneously created on the CPU even when a GPU is available.
 - Fixed pretrained embeddings for transformers that don't use end tokens.
 - Fixed the transformer tokenizer cache when the tokenizers are initialized with custom kwargs.
+
 
 ## [v1.2.0](https://github.com/allenai/allennlp/releases/tag/v1.2.0) - 2020-10-29
 
@@ -241,6 +248,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   used rare vocabulary items.
 - Fixed a bug where `BeamSearch` would fail if `max_steps` was equal to 1.
 - Fixed `BasicTextFieldEmbedder` to not raise ConfigurationError if it has embedders that are empty and not in input
+
 
 ## [v1.2.0rc1](https://github.com/allenai/allennlp/releases/tag/v1.2.0rc1) - 2020-10-22
 
@@ -325,6 +333,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed a bug in the cnn_encoder where activations involving masked tokens could be picked up by the max
 - Fix intra word tokenization for `PretrainedTransformerTokenizer` when disabling fast tokenizer.
 
+
 ## [v1.1.0](https://github.com/allenai/allennlp/releases/tag/v1.1.0) - 2020-09-08
 
 ### Fixed
@@ -340,6 +349,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - `Predictor.capture_model_internals()` now accepts a regex specifying which modules to capture.
+
 
 ## [v1.1.0rc4](https://github.com/allenai/allennlp/releases/tag/v1.1.0rc4) - 2020-08-20
 
@@ -366,6 +376,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed problem with automatically detecting whether tokenization is necessary.
   This affected primarily the Roberta SST model.
 - Improved help text for using the --overrides command line flag.
+
 
 ## [v1.1.0rc2](https://github.com/allenai/allennlp/releases/tag/v1.1.0rc2) - 2020-07-31
 
@@ -446,7 +457,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Not specifying a `cuda_device` now automatically determines whether to use a GPU or not.
 - Discovered plugins are logged so you can see what was loaded.
 - `allennlp.data.DataLoader` is now an abstract registrable class. The default implementation
-  remains the same, but was renamed to `allennlp.data.PyTorchDataLoader`.
+remains the same, but was renamed to `allennlp.data.PyTorchDataLoader`.
 - `BertPooler` can now unwrap and re-wrap extra dimensions if necessary.
 - New `transformers` dependency. Only version >=3.0 now supported.
 
@@ -532,10 +543,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - The `allennlp test-install` command now just ensures the core submodules can
-  be imported successfully, and prints out some other useful information such as the version, PyTorch version,
-  and the number of GPU devices available.
+be imported successfully, and prints out some other useful information such as the version, PyTorch version,
+and the number of GPU devices available.
 - All of the tests moved from `allennlp/tests` to `tests` at the root level, and
-  `allennlp/tests/fixtures` moved to `test_fixtures` at the root level. The PyPI source and wheel distributions will no longer include tests and fixtures.
+`allennlp/tests/fixtures` moved to `test_fixtures` at the root level. The PyPI source and wheel distributions will no longer include tests and fixtures.
 
 ## [v1.0.0rc4](https://github.com/allenai/allennlp/releases/tag/v1.0.0rc4) - 2020-05-14
 
