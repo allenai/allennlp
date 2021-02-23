@@ -31,10 +31,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed handling of HTTP errors when fetching remote resources with `cached_path()`. Previously the content would be cached even when
   certain errors - like 404s - occurred. Now an `HTTPError` will be raised whenever the HTTP response is not OK.
 
-### Removed
-
-- Dropped support for Python 3.6.
-
 
 ## [v2.0.1](https://github.com/allenai/allennlp/releases/tag/v2.0.1) - 2021-01-29
 
