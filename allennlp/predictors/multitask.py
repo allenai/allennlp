@@ -2,8 +2,9 @@ from overrides import overrides
 from typing import Type, List, Dict
 
 from allennlp.common import JsonDict
-from allennlp.data import DatasetReader, Instance
-from allennlp.models import Model
+from allennlp.data import Instance
+from allennlp.data.dataset_readers.multitask import MultiTaskDatasetReader
+from allennlp.models.multitask import MultiTaskModel
 from allennlp.predictors.predictor import Predictor
 
 
@@ -26,10 +27,8 @@ class MultiTaskPredictor(Predictor):
         + "with the name 'task', containing the name of the task the instance is for."
     )
 
-    def __init__(self, model: Model, dataset_reader: DatasetReader) -> None:
+    def __init__(self, model: MultiTaskModel, dataset_reader: MultiTaskDatasetReader) -> None:
         from allennlp.common.checks import ConfigurationError
-        from allennlp.models.multitask import MultiTaskModel
-        from allennlp.data.dataset_readers.multitask import MultiTaskDatasetReader
 
         if not isinstance(dataset_reader, MultiTaskDatasetReader):
             raise ConfigurationError(self._WRONG_READER_ERROR)
