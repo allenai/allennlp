@@ -654,7 +654,7 @@ class TestTrainer(TrainerTestBase):
             serialization_dir=self.TEST_DIR,
             callbacks=[
                 TensorBoardCallback.from_params(
-                    Params({"tensorboard_writer": {"histogram_interval": 2}}),
+                    Params({"tensorboard_writer": {"distribution_interval": 2}}),
                     serialization_dir=self.TEST_DIR,
                 )
             ],
@@ -1149,7 +1149,7 @@ class TestTrainer(TrainerTestBase):
                     Params(
                         {
                             "tensorboard_writer": {
-                                "histogram_interval": 2,
+                                "distribution_interval": 2,
                                 "should_log_inputs": True,
                             }
                         }
@@ -1173,7 +1173,7 @@ class TestTrainer(TrainerTestBase):
             serialization_dir=self.TEST_DIR,
             callbacks=[
                 ConsoleLogCallback.from_params(
-                    Params({"console_writer": {"distribution_interval": 2}}),
+                    Params({"should_log_inputs": True}),
                     serialization_dir=self.TEST_DIR,
                 )
             ],

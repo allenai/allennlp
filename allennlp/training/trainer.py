@@ -30,10 +30,26 @@ from allennlp.training.momentum_schedulers import MomentumScheduler
 from allennlp.training.moving_average import MovingAverage
 from allennlp.training.optimizers import Optimizer
 from allennlp.training.tensorboard_writer import TensorBoardWriter
-from allennlp.training.console_writer import ConsoleWriter
 from allennlp.training.log_writer import LogWriter
 
 logger = logging.getLogger(__name__)
+
+
+def get_train_and_validation_metrics(metrics: Dict):
+    """
+    Utility function to separate out train_metrics and val_metrics.
+    """
+    train_metrics: Dict[str, Any] = {}
+    val_metrics: Dict[str, Any] = {}
+    for key, value in metrics.items():
+        if key.startswith("training_"):
+            key = key.replace("training_", "", 1)
+            if key not in {"duration", "start_epoch", "epochs"}:
+                train_metrics[key] = value
+        elif key.startswith("validation_"):
+            key = key.replace("validation_", "", 1)
+            val_metrics[key] = value
+    return train_metrics, val_metrics
 
 
 class Trainer(Registrable):
@@ -264,16 +280,7 @@ class LogCallback(TrainerCallback):
             return None
         assert self._log_writer is not None
 
-        train_metrics: Dict[str, Any] = {}
-        val_metrics: Dict[str, Any] = {}
-        for key, value in metrics.items():
-            if key.startswith("training_"):
-                key = key.replace("training_", "", 1)
-                if key not in {"duration", "start_epoch", "epochs"}:
-                    train_metrics[key] = value
-            elif key.startswith("validation_"):
-                key = key.replace("validation_", "", 1)
-                val_metrics[key] = value
+        train_metrics, val_metrics = get_train_and_validation_metrics(metrics)
 
         self._log_writer.log_metrics(
             train_metrics,
@@ -294,6 +301,114 @@ class LogCallback(TrainerCallback):
             self._log_writer.close()
 
 
+@TrainerCallback.register("console")
+class ConsoleLogCallback(LogCallback):
+    def __init__(
+        self,
+        serialization_dir: Optional[str] = None,
+        should_log_inputs: bool = False,
+    ) -> None:
+        super().__init__(serialization_dir=serialization_dir)
+        self._should_log_inputs = should_log_inputs
+
+    def on_batch(
+        self,
+        trainer: "GradientDescentTrainer",
+        batch_inputs: List[List[TensorDict]],
+        batch_outputs: List[Dict[str, Any]],
+        batch_metrics: Dict[str, Any],
+        epoch: int,
+        batch_number: int,
+        is_training: bool,
+        is_primary: bool = True,
+        batch_grad_norm: Optional[float] = None,
+        **kwargs,
+    ) -> None:
+        # In the distributed case we need to call this from every worker, since every
+        # worker reports its own memory usage.
+        cpu_memory_usage = common_util.peak_cpu_memory()
+        gpu_memory_usage = common_util.peak_gpu_memory()
+
+        if not is_primary:
+            return None
+
+        # We only want to do this for the first batch (TODO: only first epoch too?)
+        if batch_number == 1:
+
+            # Log memory usage
+            cpu_memory_usage_total = 0.0
+            for worker, mem_bytes in cpu_memory_usage.items():
+                memory = mem_bytes / (1024 * 1024)
+                logger.info(f"memory_usage/worker_{worker}_cpu - {memory}")
+                cpu_memory_usage_total += memory
+            logger.info(f"memory_usage/cpu - {cpu_memory_usage_total}")
+            for gpu, mem_bytes in gpu_memory_usage.items():
+                memory = mem_bytes / (1024 * 1024)
+                logger.info(f"memory_usage/gpu_{gpu} - {memory}")
+
+            # Log batch inputs
+            if self._should_log_inputs:
+                logger.info("Batch inputs")
+                for b, batch in enumerate(batch_inputs):
+                    self._log_fields(batch, log_prefix="batch_input")  # type: ignore
+
+    def _log_fields(self, fields: Dict, log_prefix: str = ""):
+        for key, val in fields.items():
+            key = log_prefix + "/" + key
+            if isinstance(val, dict):
+                self._log_fields(val, key)
+            elif isinstance(val, torch.Tensor):
+                logger.info(f"\"{key}\" (Shape : {' x '.join([str(x) for x in val.shape])})")
+                torch.set_printoptions(threshold=2)
+                logger.info(f"{val}")
+                torch.set_printoptions(threshold=1000)
+            elif isinstance(val, List):
+                logger.info(f'Field : "{key}" : (Length : {len(val)} of type "{type(val[0])}")')
+            elif isinstance(val, str):
+                logger.info(f'Field : "{key}"')
+                logger.info("{:20.20} ...".format(val))
+            else:
+                logger.info(f'"{key}" : "{val}"')
+
+    def on_epoch(
+        self,
+        trainer: "GradientDescentTrainer",
+        metrics: Dict[str, Any],
+        epoch: int,
+        is_primary: bool = True,
+        **kwargs,
+    ) -> None:
+        if not is_primary:
+            return None
+
+        train_metrics, val_metrics = get_train_and_validation_metrics(metrics)
+
+        metric_names = set(train_metrics.keys())
+        if val_metrics is not None:
+            metric_names.update(val_metrics.keys())
+        val_metrics = val_metrics or {}
+
+        dual_message_template = "%s |  %8.3f  |  %8.3f"
+        no_val_message_template = "%s |  %8.3f  |  %8s"
+        no_train_message_template = "%s |  %8s  |  %8.3f"
+        header_template = "%s |  %-10s"
+        name_length = max(len(x) for x in metric_names)
+        logger.info(header_template, "Training".rjust(name_length + 13), "Validation")
+
+        for name in sorted(metric_names):
+            train_metric = train_metrics.get(name)
+            val_metric = val_metrics.get(name)
+
+            if val_metric is not None and train_metric is not None:
+                logger.info(
+                    dual_message_template, name.ljust(name_length), train_metric, val_metric
+                )
+            elif val_metric is not None:
+                logger.info(no_train_message_template, name.ljust(name_length), "N/A", val_metric)
+            elif train_metric is not None:
+                logger.info(no_val_message_template, name.ljust(name_length), train_metric, "N/A")
+
+
 @TrainerCallback.register("tensorboard")
 class TensorBoardCallback(LogCallback):
     """
@@ -306,20 +421,6 @@ class TensorBoardCallback(LogCallback):
         tensorboard_writer: Lazy[TensorBoardWriter] = Lazy(TensorBoardWriter),
     ) -> None:
         super().__init__(serialization_dir=serialization_dir, log_writer=tensorboard_writer)  # type: ignore
-
-
-@TrainerCallback.register("console")
-class ConsoleLogCallback(LogCallback):
-    """
-    Log training statistics and metrics to console using the `ConsoleWriter`.
-    """
-
-    def __init__(
-        self,
-        serialization_dir: str,
-        console_writer: Lazy[ConsoleWriter] = Lazy(ConsoleWriter),
-    ) -> None:
-        super().__init__(serialization_dir=serialization_dir, log_writer=console_writer)  # type: ignore
 
 
 @TrainerCallback.register("track_epoch_callback")

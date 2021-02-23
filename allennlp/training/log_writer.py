@@ -19,6 +19,12 @@ class LogWriter(FromParams):
 
     # Parameters
 
+    serialization_dir : `str`, optional (default = `None`)
+        If provided, this is where the logs will be written.
+
+        In a typical AllenNLP configuration file, this parameter does not get an entry under the
+        "tensorboard_writer", it gets passed in separately.
+
     summary_interval : `int`, optional (default = `100`)
         Most statistics will be written out only every this many batches.
 
@@ -149,9 +155,8 @@ class LogWriter(FromParams):
         return NotImplementedError
 
     def log_inputs(self, batch_group: List[List[TensorDict]]):
-        if self._should_log_inputs:
-            for b, batch in enumerate(batch_group):
-                self._log_fields(batch, log_prefix="batch_input")  # type: ignore
+        for b, batch in enumerate(batch_group):
+            self._log_fields(batch, log_prefix="batch_input")  # type: ignore
 
     def log_memory_usage(self, cpu_memory_usage: Dict[int, int], gpu_memory_usage: Dict[int, int]):
         cpu_memory_usage_total = 0.0
@@ -184,7 +189,9 @@ class LogWriter(FromParams):
             assert param_updates is not None
             self.log_distributions(model)
             self.log_gradient_updates(model, param_updates)
-            self.log_inputs(batch_group)
+
+            if self._should_log_inputs:
+                self.log_inputs(batch_group)
 
         if self._batch_size_interval:
             # We're assuming here that `log_batch` will get called every batch, and only every
