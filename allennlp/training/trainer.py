@@ -30,6 +30,7 @@ from allennlp.training.momentum_schedulers import MomentumScheduler
 from allennlp.training.moving_average import MovingAverage
 from allennlp.training.optimizers import Optimizer
 from allennlp.training.tensorboard_writer import TensorBoardWriter
+from allennlp.sanity_checks.batch_norm_verification import BatchNormVerification
 
 logger = logging.getLogger(__name__)
 
@@ -175,6 +176,50 @@ class TrainerCallback(Registrable):
 
 
 TrainerCallback.register("null")(TrainerCallback)
+
+
+@TrainerCallback.register("sanity-checks")
+class SanityCheckCallback(TrainerCallback):
+    """
+    Performs model sanity checks.
+    """
+
+    def on_start(
+        self, trainer: "GradientDescentTrainer", is_primary: bool = True, **kwargs
+    ) -> None:
+        self.trainer = trainer
+        if is_primary:
+            self._verification = BatchNormVerification(self.trainer._pytorch_model)
+            # Register the hooks that perform the verification before training starts.
+            self._verification.register_hooks()
+
+    def on_batch(
+        self,
+        trainer: "GradientDescentTrainer",
+        batch_inputs: List[List[TensorDict]],
+        batch_outputs: List[Dict[str, Any]],
+        batch_metrics: Dict[str, Any],
+        epoch: int,
+        batch_number: int,
+        is_training: bool,
+        is_primary: bool = True,
+        batch_grad_norm: Optional[float] = None,
+        **kwargs,
+    ) -> None:
+        if not is_primary:
+            return None
+
+        # We destroy the hooks after the first batch, since we only want to
+        # perform this check once.
+        if epoch == 0 and batch_number == 1 and is_training:
+            self._verification.destroy_hooks()
+            detected_pairs = self._verification.collect_detections()
+            # TODO: Should we actual fail with an error instead?
+            if detected_pairs:
+                logger.warning(
+                    "The model failed the BatchNormVerification check. "
+                    f"It contains {len(detected_pairs)} invalid layer combination(s)."
+                )
 
 
 @TrainerCallback.register("tensorboard")

@@ -15,7 +15,8 @@ from torch.nn.utils import clip_grad_norm_
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
 from allennlp.common.testing import AllenNlpTestCase, requires_gpu, requires_multi_gpu
-from allennlp.data import Vocabulary
+from allennlp.data import Vocabulary, Instance
+from allennlp.data.fields import TensorField
 from allennlp.data.data_loaders import MultiProcessDataLoader, SimpleDataLoader, TensorDict
 from allennlp.data.dataset_readers import SequenceTaggingDatasetReader
 from allennlp.models.model import Model
@@ -26,6 +27,7 @@ from allennlp.training import (
     TrainerCallback,
     TrackEpochCallback,
     TensorBoardCallback,
+    SanityCheckCallback,
 )
 from allennlp.training.learning_rate_schedulers import CosineWithRestarts
 from allennlp.training.learning_rate_schedulers import ExponentialLearningRateScheduler
@@ -753,6 +755,31 @@ class TestTrainer(TrainerTestBase):
             ],
         )
 
+        trainer.train()
+
+    def test_sanity_check_callback(self):
+        class BiasBatchNormModel(Model):
+            def __init__(self, use_bias=True):
+                super().__init__(vocab=Vocabulary())
+                self.conv = torch.nn.Conv2d(3, 5, kernel_size=1, bias=use_bias)
+                self.bn = torch.nn.BatchNorm2d(5)
+
+            def forward(self, x):
+                # x: (B, 3, H, W)
+                out = self.bn(self.conv(x))
+                return {"loss": out.sum()}
+
+        model_with_bias = BiasBatchNormModel(use_bias=True)
+        inst = Instance({"x": TensorField(torch.rand(3, 1, 4))})
+        data_loader = SimpleDataLoader([inst, inst], 2)
+        trainer = GradientDescentTrainer(
+            model_with_bias,
+            self.optimizer,
+            data_loader,
+            num_epochs=1,
+            serialization_dir=self.TEST_DIR,
+            callbacks=[SanityCheckCallback(serialization_dir=self.TEST_DIR)],
+        )
         trainer.train()
 
     def test_trainer_saves_models_at_specified_interval(self):

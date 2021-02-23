@@ -7,4 +7,5 @@ from allennlp.training.trainer import (
     TrainerCallback,
     TrackEpochCallback,
     TensorBoardCallback,
+    SanityCheckCallback,
 )
