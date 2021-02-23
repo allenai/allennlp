@@ -20,10 +20,7 @@ codecov
 matplotlib>=2.2.3
 
 # For mocking HTTP requests/responses.
-responses>=0.7
-# This needs to be pinned below 1.26.0 for responses to work until
-# https://github.com/getsentry/responses/issues/354 is resolved.
-urllib3<1.26.0
+responses>=0.12
 
 # For running tests that aren't 100% reliable.
 flaky
