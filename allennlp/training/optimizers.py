@@ -155,10 +155,6 @@ def make_parameter_groups(
                     "When constructing parameter groups, %s does not match any parameter name",
                     regex,
                 )
-
-        # If the default group is empty, remove it.
-        if len(parameter_groups[-1]["params"]) <= 0:
-            del parameter_groups[-1]
     else:
         parameter_groups = [param for name, param in model_parameters]
 

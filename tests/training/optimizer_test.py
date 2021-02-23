@@ -163,18 +163,19 @@ class TestRegexOptimizer(AllenNlpTestCase):
                     name == "embedder"
                 ), "Optimizers were not initialized in the same order as parameter groups."
                 param_groups = inner_optimizer.param_groups
-                assert len(param_groups) == 1
-                for param_group in param_groups:
-                    assert param_group["betas"] == (0.9, 0.98)
-                    assert param_group["lr"] == 2
-                    assert param_group["weight_decay"] == 0.01
+                assert len(param_groups) == 1 + 1       # one extra for the empty default group
+                assert len(param_groups[-1]["params"]) == 0  # default group for an inner optimizer should be empty
+                assert param_groups[0]["betas"] == (0.9, 0.98)
+                assert param_groups[0]["lr"] == 2
+                assert param_groups[0]["weight_decay"] == 0.01
             elif i == 1:
                 assert (
                     name == "encoder"
                 ), "Optimizers were not initialized in the same order as parameter groups."
                 param_groups = inner_optimizer.param_groups
                 # The optimizer can have sub-groups with different options.
-                assert len(param_groups) == 2
+                assert len(param_groups) == 2 + 1       # one extra for the empty default group
+                assert len(param_groups[-1]["params"]) == 0  # default group for an inner optimizer should be empty
                 for i, param_group in enumerate(param_groups):
                     if i == 0:
                         assert param_group["lr"] == 0.001
