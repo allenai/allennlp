@@ -1,6 +1,6 @@
 from allennlp.common.params import Params
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.common.model_card import ModelCard, IntendedUse, Paper
+from allennlp.common.model_card import ModelCard, ModelUsage, IntendedUse, Paper
 from allennlp.models import Model
 
 
@@ -10,13 +10,12 @@ class TestPretrainedModelConfiguration(AllenNlpTestCase):
             id="fake_name",
             display_name="Fake Name",
             model_details="Model's description",
-            archive_file="fake.tar.gz",
-            overrides={},
+            model_usage=ModelUsage(**{"archive_file": "fake.tar.gz", "overrides": {}}),
         )
 
         assert model_card.id == "fake_name"
         assert model_card.display_name == "Fake Name"
-        assert model_card.archive_file == ModelCard._storage_location + "fake.tar.gz"
+        assert model_card.model_usage.archive_file == ModelUsage._storage_location + "fake.tar.gz"
         assert model_card.model_details.description == "Model's description"
 
     def test_init_registered_model(self):

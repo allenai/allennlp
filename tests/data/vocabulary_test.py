@@ -873,3 +873,19 @@ class TestVocabularyFromFilesWithArchive(AllenNlpTestCase):
         vocab = Vocabulary.from_files(str(self.model_archive))
         vocab.get_namespaces() == {"tokens", "labels"}
         assert vocab.get_token_from_index(3, namespace="tokens") == "u.n."
+
+
+class TestVocabularyFromPretrainedTransformer(AllenNlpTestCase):
+    @pytest.mark.parametrize("model_name", ["bert-base-cased", "roberta-base"])
+    def test_from_pretrained_transformer(self, model_name):
+        namespace = "tokens"
+        from allennlp.common import cached_transformers
+
+        tokenizer = cached_transformers.get_tokenizer(model_name)
+
+        vocab = Vocabulary.from_pretrained_transformer(model_name, namespace=namespace)
+        assert vocab._token_to_index[namespace] == tokenizer.get_vocab()
+        vocab.save_to_files(self.TEST_DIR / "vocab")
+
+        vocab1 = Vocabulary.from_files(self.TEST_DIR / "vocab")
+        assert vocab1._token_to_index[namespace] == tokenizer.get_vocab()

@@ -949,7 +949,6 @@ class GradientDescentTrainer(Trainer):
         logger.info("Beginning training.")
 
         val_metrics: Dict[str, float] = {}
-        this_epoch_val_metric: float = 0.0
         metrics: Dict[str, Any] = {}
         epochs_trained = 0
         training_start_time = time.time()
@@ -976,6 +975,7 @@ class GradientDescentTrainer(Trainer):
                 elif key.startswith("worker_") and key.endswith("_memory_MB"):
                     metrics["peak_" + key] = max(metrics.get("peak_" + key, 0), value)
 
+            this_epoch_val_metric: float = 0.0
             if self._validation_data_loader is not None:
                 with torch.no_grad():
                     # We have a validation set, so compute all the metrics on it.
@@ -999,8 +999,8 @@ class GradientDescentTrainer(Trainer):
                     )
 
                     # Check validation metric for early stopping
+                    this_epoch_val_metric = self._metric_tracker.combined_score(val_metrics)
                     self._metric_tracker.add_metrics(val_metrics)
-
                     if self._metric_tracker.should_stop_early():
                         logger.info("Ran out of patience.  Stopping training.")
                         break
