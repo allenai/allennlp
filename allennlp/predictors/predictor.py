@@ -1,4 +1,4 @@
-from typing import List, Iterator, Dict, Tuple, Any, Type, Union
+from typing import List, Iterator, Dict, Tuple, Any, Type, Union, Optional
 import logging
 import json
 import re
@@ -67,6 +67,7 @@ class Predictor(Registrable):
         """
 
         instance = self._json_to_instance(inputs)
+        self._dataset_reader.apply_token_indexers(instance)
         outputs = self._model.forward_on_instance(instance)
         new_instances = self.predictions_to_labeled_instances(instance, outputs)
         return new_instances
@@ -104,6 +105,9 @@ class Predictor(Registrable):
         embedding_gradients: List[Tensor] = []
         hooks: List[RemovableHandle] = self._register_embedding_gradient_hooks(embedding_gradients)
 
+        for instance in instances:
+            self._dataset_reader.apply_token_indexers(instance)
+
         dataset = Batch(instances)
         dataset.index_instances(self._model.vocab)
         dataset_tensor_dict = util.move_to_device(dataset.as_tensor_dict(), self.cuda_device)
@@ -134,6 +138,37 @@ class Predictor(Registrable):
             param.requires_grad = original_param_name_to_requires_grad_dict[param_name]
 
         return grad_dict, outputs
+
+    def get_interpretable_layer(self) -> torch.nn.Module:
+        """
+        Returns the input/embedding layer of the model.
+        If the predictor wraps around a non-AllenNLP model,
+        this function should be overridden to specify the correct input/embedding layer.
+        For the cases where the input layer _is_ an embedding layer, this should be the
+        layer 0 of the embedder.
+        """
+        try:
+            return util.find_embedding_layer(self._model)
+        except RuntimeError:
+            raise RuntimeError(
+                "If the model does not use `TextFieldEmbedder`, please override "
+                "`get_interpretable_layer` in your predictor to specify the embedding layer."
+            )
+
+    def get_interpretable_text_field_embedder(self) -> torch.nn.Module:
+        """
+        Returns the first `TextFieldEmbedder` of the model.
+        If the predictor wraps around a non-AllenNLP model,
+        this function should be overridden to specify the correct embedder.
+        """
+        try:
+            return util.find_text_field_embedder(self._model)
+        except RuntimeError:
+            raise RuntimeError(
+                "If the model does not use `TextFieldEmbedder`, please override "
+                "`get_interpretable_text_field_embedder` in your predictor to specify "
+                "the embedding layer."
+            )
 
     def _register_embedding_gradient_hooks(self, embedding_gradients):
         """
@@ -181,9 +216,9 @@ class Predictor(Registrable):
                 self._token_offsets.append(offsets)
 
         hooks = []
-        text_field_embedder = util.find_text_field_embedder(self._model)
+        text_field_embedder = self.get_interpretable_text_field_embedder()
         hooks.append(text_field_embedder.register_forward_hook(get_token_offsets))
-        embedding_layer = util.find_embedding_layer(self._model)
+        embedding_layer = self.get_interpretable_layer()
         hooks.append(embedding_layer.register_backward_hook(hook_layers))
         return hooks
 
@@ -224,6 +259,7 @@ class Predictor(Registrable):
             hook.remove()
 
     def predict_instance(self, instance: Instance) -> JsonDict:
+        self._dataset_reader.apply_token_indexers(instance)
         outputs = self._model.forward_on_instance(instance)
         return sanitize(outputs)
 
@@ -255,6 +291,8 @@ class Predictor(Registrable):
         return self.predict_batch_instance(instances)
 
     def predict_batch_instance(self, instances: List[Instance]) -> List[JsonDict]:
+        for instance in instances:
+            self._dataset_reader.apply_token_indexers(instance)
         outputs = self._model.forward_on_instances(instances)
         return sanitize(outputs)
 
@@ -333,6 +371,7 @@ class Predictor(Registrable):
         predictor_name: str = None,
         dataset_reader_to_load: str = "validation",
         frozen: bool = True,
+        extra_args: Optional[Dict[str, Any]] = None,
     ) -> "Predictor":
         """
         Instantiate a `Predictor` from an [`Archive`](../models/archival.md);
@@ -363,4 +402,7 @@ class Predictor(Registrable):
         if frozen:
             model.eval()
 
-        return predictor_class(model, dataset_reader)
+        if extra_args is None:
+            extra_args = {}
+
+        return predictor_class(model, dataset_reader, **extra_args)

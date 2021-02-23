@@ -111,10 +111,10 @@ class Covariance(Metric):
 
         #     # Note: this gives an approximate aggregation of the covariance.
         #     device = gold_labels.device
-        #     delta_mean_prediction = torch.tensor(delta_mean_prediction).to(device)
-        #     delta_mean_label = torch.tensor(delta_mean_label).to(device)
-        #     delta_co_moment = torch.tensor(delta_co_moment).to(device)
-        #     _total_count = torch.tensor(updated_count).to(device)
+        #     delta_mean_prediction = torch.tensor(delta_mean_prediction, device=device)
+        #     delta_mean_label = torch.tensor(delta_mean_label, device=device)
+        #     delta_co_moment = torch.tensor(delta_co_moment, device=device)
+        #     _total_count = torch.tensor(updated_count, device=device)
         #     dist.all_reduce(delta_mean_prediction, op=dist.ReduceOp.SUM)
         #     dist.all_reduce(delta_mean_label, op=dist.ReduceOp.SUM)
         #     dist.all_reduce(delta_co_moment, op=dist.ReduceOp.SUM)

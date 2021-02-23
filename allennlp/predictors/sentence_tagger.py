@@ -16,7 +16,7 @@ class SentenceTaggerPredictor(Predictor):
     """
     Predictor for any model that takes in a sentence and returns
     a single set of tags for it.  In particular, it can be used with
-    the [`CrfTagger`](https://docs.allennlp.org/models/master/models/tagging/models/crf_tagger/)
+    the [`CrfTagger`](https://docs.allennlp.org/models/main/models/tagging/models/crf_tagger/)
     model and also the [`SimpleTagger`](../models/simple_tagger.md) model.
 
     Registered as a `Predictor` with name "sentence_tagger".

@@ -195,16 +195,18 @@ def create_kwargs(
         # and an __args__ field indicating `(str, int)`. We capture both.
         annotation = remove_optional(param.annotation)
 
+        explicitly_set = param_name in params
         constructed_arg = pop_and_construct_arg(
             cls.__name__, param_name, annotation, param.default, params, **extras
         )
 
-        # If we just ended up constructing the default value for the parameter, we can just omit it.
+        # If the param wasn't explicitly set in `params` and we just ended up constructing
+        # the default value for the parameter, we can just omit it.
         # Leaving it in can cause issues with **kwargs in some corner cases, where you might end up
         # with multiple values for a single parameter (e.g., the default value gives you lazy=False
         # for a dataset reader inside **kwargs, but a particular dataset reader actually hard-codes
         # lazy=True - the superclass sees both lazy=True and lazy=False in its constructor).
-        if constructed_arg is not param.default:
+        if explicitly_set or constructed_arg is not param.default:
             kwargs[param_name] = constructed_arg
 
     if accepts_kwargs:

@@ -5,12 +5,15 @@ import json
 import time
 import shutil
 
+from filelock import Timeout
 import pytest
 import responses
-from requests.exceptions import ConnectionError
+import torch
+from requests.exceptions import ConnectionError, HTTPError
 
 from allennlp.common import file_utils
 from allennlp.common.file_utils import (
+    FileLock,
     _resource_to_filename,
     filename_to_url,
     get_from_cache,
@@ -22,6 +25,8 @@ from allennlp.common.file_utils import (
     _find_entries,
     inspect_cache,
     remove_cache_entries,
+    LocalCacheResource,
+    TensorCache,
 )
 from allennlp.common.testing import AllenNlpTestCase
 
@@ -57,6 +62,42 @@ def set_up_glove(url: str, byt: bytes, change_etag_every: int = 1000):
         return (200, headers, "")
 
     responses.add_callback(responses.HEAD, url, callback=head_callback)
+
+
+class TestFileLock(AllenNlpTestCase):
+    def setup_method(self):
+        super().setup_method()
+
+        # Set up a regular lock and a read-only lock.
+        open(self.TEST_DIR / "lock", "a").close()
+        open(self.TEST_DIR / "read_only_lock", "a").close()
+        os.chmod(self.TEST_DIR / "read_only_lock", 0o555)
+
+        # Also set up a read-only directory.
+        os.mkdir(self.TEST_DIR / "read_only_dir", 0o555)
+
+    def test_locking(self):
+        with FileLock(self.TEST_DIR / "lock"):
+            # Trying to acquire the lock again should fail.
+            with pytest.raises(Timeout):
+                with FileLock(self.TEST_DIR / "lock", timeout=0.1):
+                    pass
+
+        # Trying to acquire a lock when lacking write permissions on the file should fail.
+        with pytest.raises(PermissionError):
+            with FileLock(self.TEST_DIR / "read_only_lock"):
+                pass
+
+        # But this should only issue a warning if we set the `read_only_ok` flag to `True`.
+        with pytest.warns(UserWarning, match="Lacking permissions"):
+            with FileLock(self.TEST_DIR / "read_only_lock", read_only_ok=True):
+                pass
+
+        # However this should always fail when we lack write permissions and the file lock
+        # doesn't exist yet.
+        with pytest.raises(PermissionError):
+            with FileLock(self.TEST_DIR / "read_only_dir" / "lock", read_only_ok=True):
+                pass
 
 
 class TestFileUtils(AllenNlpTestCase):
@@ -265,6 +306,27 @@ class TestFileUtils(AllenNlpTestCase):
         with open(filename, "r") as f:
             assert f.read().startswith("I mean, ")
 
+    @responses.activate
+    def test_cached_path_http_err_handling(self):
+        url_404 = "http://fake.datastore.com/does-not-exist"
+        byt = b"Does not exist"
+        for method in (responses.GET, responses.HEAD):
+            responses.add(
+                method,
+                url_404,
+                body=byt,
+                status=404,
+                headers={"Content-Length": str(len(byt))},
+            )
+
+        with pytest.raises(HTTPError):
+            cached_path(url_404, cache_dir=self.TEST_DIR)
+
+    def test_extract_with_external_symlink(self):
+        dangerous_file = self.FIXTURES_ROOT / "common" / "external_symlink.tar.gz"
+        with pytest.raises(ValueError):
+            cached_path(dangerous_file, extract_archive=True)
+
     def test_open_compressed(self):
         uncompressed_file = self.FIXTURES_ROOT / "embeddings/fake_embeddings.5d.txt"
         with open_compressed(uncompressed_file) as f:
@@ -449,3 +511,55 @@ class TestCacheFile(AllenNlpTestCase):
                 raise IOError("I made this up")
         assert not os.path.exists(handle.name)
         assert not os.path.exists(cache_filename)
+
+
+class TestLocalCacheResource(AllenNlpTestCase):
+    def test_local_cache_resource(self):
+        with LocalCacheResource("some-computation", "version-1", cache_dir=self.TEST_DIR) as cache:
+            assert not cache.cached()
+
+            with cache.writer() as w:
+                json.dump({"a": 1}, w)
+
+        with LocalCacheResource("some-computation", "version-1", cache_dir=self.TEST_DIR) as cache:
+            assert cache.cached()
+
+            with cache.reader() as r:
+                data = json.load(r)
+
+            assert data["a"] == 1
+
+
+class TestTensorCace(AllenNlpTestCase):
+    def test_tensor_cache(self):
+        cache = TensorCache(self.TEST_DIR / "cache")
+        assert not cache.read_only
+
+        # Insert some stuff into the cache.
+        cache["a"] = torch.tensor([1, 2, 3])
+
+        # Close cache.
+        del cache
+
+        # Now let's open another one in read-only mode.
+        cache = TensorCache(self.TEST_DIR / "cache", read_only=True)
+        assert cache.read_only
+
+        # If we try to write we should get a ValueError
+        with pytest.raises(ValueError, match="cannot write"):
+            cache["b"] = torch.tensor([1, 2, 3])
+
+        # But we should be able to retrieve from the cache.
+        assert cache["a"].shape == (3,)
+
+        # Close this one.
+        del cache
+
+        # Now we're going to tell the OS to make the cache file read-only.
+        os.chmod(self.TEST_DIR / "cache", 0o444)
+        os.chmod(self.TEST_DIR / "cache-lock", 0o444)
+
+        # This time when we open the cache, it should automatically be set to read-only.
+        with pytest.warns(UserWarning, match="cache will be read-only"):
+            cache = TensorCache(self.TEST_DIR / "cache")
+            assert cache.read_only

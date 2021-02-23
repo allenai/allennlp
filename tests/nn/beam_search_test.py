@@ -434,10 +434,14 @@ class BeamSearchTest(AllenNlpTestCase):
         num_classes = len(log_probabilities[0])
         sampler_state = sampler.init_state(log_probabilities, batch_size=2, num_classes=num_classes)
 
-        probabilities, classes, state = sampler.sample_beams(log_probabilities, 3, sampler_state)
+        log_probs, indices, state = sampler.sample_beams(log_probabilities, 3, sampler_state)
 
-        assert probabilities.size() == classes.size()
-        assert classes.size() == (2, 3)
+        assert log_probs.size() == indices.size()
+        assert indices.size() == (2, 3)
 
-        assert all([x >= 0 and x < 4 for x in classes[0]])
-        assert all([x > 1 and x <= 5 for x in classes[1]])
+        # Make sure the probabilities are sorted.
+        _, sorted_indices = log_probs.sort(dim=-1, descending=True)
+        assert (sorted_indices == torch.arange(3).unsqueeze(0)).all()
+
+        assert all([x >= 0 and x < 4 for x in indices[0]])
+        assert all([x > 1 and x <= 5 for x in indices[1]])

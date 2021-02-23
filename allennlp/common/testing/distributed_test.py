@@ -14,8 +14,8 @@ def init_process(
     func: Callable,
     func_args: Tuple = None,
     func_kwargs: Dict[str, Any] = None,
-    master_addr: str = "127.0.0.1",
-    master_port: int = 29500,
+    primary_addr: str = "127.0.0.1",
+    primary_port: int = 29500,
 ):
     assert world_size > 1
 
@@ -27,14 +27,14 @@ def init_process(
         torch.cuda.set_device(int(gpu_id))
         dist.init_process_group(
             backend="nccl",
-            init_method=f"tcp://{master_addr}:{master_port}",
+            init_method=f"tcp://{primary_addr}:{primary_port}",
             world_size=world_size,
             rank=global_rank,
         )
     else:
         dist.init_process_group(
             backend="gloo",
-            init_method=f"tcp://{master_addr}:{master_port}",
+            init_method=f"tcp://{primary_addr}:{primary_port}",
             world_size=world_size,
             rank=global_rank,
             timeout=datetime.timedelta(seconds=120),

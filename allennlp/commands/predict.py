@@ -90,6 +90,15 @@ class Predict(Subcommand):
         )
 
         subparser.add_argument(
+            "--predictor-args",
+            type=str,
+            default="",
+            help=(
+                "an optional JSON structure used to provide additional parameters to the predictor"
+            ),
+        )
+
+        subparser.add_argument(
             "--file-friendly-logging",
             action="store_true",
             default=False,
@@ -110,8 +119,19 @@ def _get_predictor(args: argparse.Namespace) -> Predictor:
         overrides=args.overrides,
     )
 
+    predictor_args = args.predictor_args.strip()
+    if len(predictor_args) <= 0:
+        predictor_args = {}
+    else:
+        import json
+
+        predictor_args = json.loads(predictor_args)
+
     return Predictor.from_archive(
-        archive, args.predictor, dataset_reader_to_load=args.dataset_reader_choice
+        archive,
+        args.predictor,
+        dataset_reader_to_load=args.dataset_reader_choice,
+        extra_args=predictor_args,
     )
 
 

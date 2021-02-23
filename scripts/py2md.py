@@ -29,6 +29,10 @@ from pydoc_markdown.reflection import Argument, Module, Function, Class, Data
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("py2md")
+BASE_MODULE = os.environ.get("BASE_MODULE", "allennlp")
+BASE_SOURCE_LINK = os.environ.get(
+    "BASE_SOURCE_LINK", "https://github.com/allenai/allennlp/blob/main/allennlp/"
+)
 
 
 class DocstringError(Exception):
@@ -209,18 +213,20 @@ class AllenNlpDocstringProcessor(Struct):
                         state.current_section = None
                 else:
                     state.consecutive_blank_line_count = 0
-                line = self._preprocess_line(line, state)
+                line = self._preprocess_line(node, line, state)
 
             lines.append(line)
 
         # Now set the docstring to our preprocessed version of it.
         node.docstring = "\n".join(lines)
 
-    def _preprocess_line(self, line, state: ProcessorState) -> str:
+    def _preprocess_line(self, node, line, state: ProcessorState) -> str:
         match = re.match(r"#+ (.*)$", line)
         if match:
             state.current_section = Section.from_str(match.group(1).strip())
-            line = re.sub(r"#+ (.*)$", r"<strong>\1</strong>\n", line)
+            name = match.group(1).strip()
+            slug = (node.name + "." + match.group(1).strip()).lower().replace(" ", "_")
+            line = f'<h4 id="{slug}">{name}<a class="headerlink" href="#{slug}" title="Permanent link">&para;</a></h4>\n'  # noqa: E501
         else:
             if line and not line.startswith(" ") and not line.startswith("!!! "):
                 if state.current_section in (
@@ -247,7 +253,7 @@ class AllenNlpDocstringProcessor(Struct):
         Replace sphinx style crossreferences with markdown links.
         """
         for match, ty, name in self.CROSS_REF_RE.findall(line):
-            if name.startswith("allennlp."):
+            if name.startswith(f"{BASE_MODULE}."):
                 path = name.split(".")
                 if ty == "mod":
                     href = "/api/" + "/".join(path[1:])
@@ -268,7 +274,7 @@ class AllenNlpFilterProcessor(Struct):
     Used to filter out nodes that we don't want to document.
     """
 
-    PRIVATE_METHODS_TO_KEEP = {"DatasetReader._read", "__call__"}
+    PRIVATE_METHODS_TO_KEEP = {"DatasetReader._read", "__call__", "__iter__"}
 
     def process(self, graph, _resolver):
         graph.visit(self._process_node)
@@ -396,20 +402,24 @@ class AllenNlpRenderer(MarkdownRenderer):
 
     def _render_module_breadcrumbs(self, fp, mod: Module):
         submods = mod.name.split(".")
-        if submods[0] != "allennlp":
-            return
         breadcrumbs = []
         for i, submod_name in enumerate(submods):
             if i == 0:
-                title = f"*{submod_name}*"
+                title = f"<i>{submod_name}</i>"
             elif i == len(submods) - 1:
-                title = f"**.{submod_name}**"
+                title = f"<strong>.{submod_name}</strong>"
             else:
-                title = f"*.{submod_name}*"
-            #  href = "/api/" + "/".join(submods[1 : i + 1])
-            #  breadcrumbs.append(f"[{title}]({href})")
+                title = f"<i>.{submod_name}</i>"
             breadcrumbs.append(title)
-        fp.write("[ " + "".join(breadcrumbs) + " ]\n\n---\n\n")
+        "/".join(submods[1:])
+        source_link = BASE_SOURCE_LINK + "/".join(submods[1:]) + ".py"
+        fp.write(
+            "<div>\n"
+            ' <p class="alignleft">' + "".join(breadcrumbs) + "</p>\n"
+            f' <p class="alignright"><a class="sourcelink" href="{source_link}">[SOURCE]</a></p>\n'
+            "</div>\n"
+            '<div style="clear: both;"></div>\n\n---\n\n'
+        )
 
     def _render_object(self, fp, level, obj):
         if not isinstance(obj, Module) or self.render_module_header:

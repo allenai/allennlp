@@ -4,51 +4,49 @@ import json
 import os
 import re
 import time
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import math
 import pytest
 
 import torch
-from torch.utils.data import DataLoader
 from torch.nn.utils import clip_grad_norm_
-from allennlp.data.dataloader import PyTorchDataLoader
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
 from allennlp.common.testing import AllenNlpTestCase, requires_gpu, requires_multi_gpu
 from allennlp.data import Vocabulary
-from allennlp.data.dataloader import TensorDict
+from allennlp.data.data_loaders import MultiProcessDataLoader, SimpleDataLoader, TensorDict
 from allennlp.data.dataset_readers import SequenceTaggingDatasetReader
 from allennlp.models.model import Model
 from allennlp.models.simple_tagger import SimpleTagger
 from allennlp.training import (
     GradientDescentTrainer,
     Checkpointer,
-    TensorboardWriter,
-    BatchCallback,
-    EpochCallback,
     TrainerCallback,
     TrackEpochCallback,
+    TensorBoardCallback,
 )
 from allennlp.training.learning_rate_schedulers import CosineWithRestarts
 from allennlp.training.learning_rate_schedulers import ExponentialLearningRateScheduler
 from allennlp.training.momentum_schedulers import MomentumScheduler
 from allennlp.training.moving_average import ExponentialMovingAverage
-from allennlp.data import allennlp_collate
+from allennlp.training.optimizers import Optimizer
 
 
 class TrainerTestBase(AllenNlpTestCase):
     def setup_method(self):
         super().setup_method()
-        self.instances = SequenceTaggingDatasetReader().read(
-            self.FIXTURES_ROOT / "data" / "sequence_tagging.tsv"
+        self.data_path = str(self.FIXTURES_ROOT / "data" / "sequence_tagging.tsv")
+        self.reader = SequenceTaggingDatasetReader()
+        self.data_loader = MultiProcessDataLoader(self.reader, self.data_path, batch_size=2)
+        self.data_loader_lazy = MultiProcessDataLoader(
+            self.reader, self.data_path, batch_size=2, max_instances_in_memory=10
         )
-        self.instances_lazy = SequenceTaggingDatasetReader(lazy=True).read(
-            self.FIXTURES_ROOT / "data" / "sequence_tagging.tsv"
-        )
-        vocab = Vocabulary.from_instances(self.instances)
-        self.vocab = vocab
+        self.instances = list(self.data_loader.iter_instances())
+        self.vocab = Vocabulary.from_instances(self.instances)
+        self.data_loader.index_with(self.vocab)
+        self.data_loader_lazy.index_with(self.vocab)
         self.model_params = Params(
             {
                 "text_field_embedder": {
@@ -59,15 +57,10 @@ class TrainerTestBase(AllenNlpTestCase):
         )
         self.model = SimpleTagger.from_params(vocab=self.vocab, params=self.model_params)
         self.optimizer = torch.optim.SGD(self.model.parameters(), 0.01, momentum=0.9)
-        self.data_loader = DataLoader(self.instances, batch_size=2, collate_fn=allennlp_collate)
-        self.data_loader_lazy = DataLoader(
-            self.instances_lazy, batch_size=2, collate_fn=allennlp_collate
+        self.validation_data_loader = MultiProcessDataLoader(
+            self.reader, self.data_path, batch_size=2
         )
-        self.validation_data_loader = DataLoader(
-            self.instances, batch_size=2, collate_fn=allennlp_collate
-        )
-        self.instances.index_with(vocab)
-        self.instances_lazy.index_with(vocab)
+        self.validation_data_loader.index_with(self.vocab)
 
 
 class TestTrainer(TrainerTestBase):
@@ -166,18 +159,12 @@ class TestTrainer(TrainerTestBase):
         assert trainer._batch_num_total == num_epochs * 2
 
     def test_data_loader_lazy_epoch_size_correct_custom_epoch_size(self):
-        batches_per_epoch = 3
+        self.data_loader_lazy.batches_per_epoch = 3
         num_epochs = 3
-        data_loader_custom_epoch_lazy = PyTorchDataLoader(
-            self.instances_lazy,
-            batch_size=2,
-            collate_fn=allennlp_collate,
-            batches_per_epoch=batches_per_epoch,
-        )
         trainer = GradientDescentTrainer(
             self.model,
             self.optimizer,
-            data_loader_custom_epoch_lazy,
+            self.data_loader_lazy,
             validation_data_loader=self.validation_data_loader,
             num_epochs=num_epochs,
             serialization_dir=self.TEST_DIR,
@@ -186,15 +173,14 @@ class TestTrainer(TrainerTestBase):
         metrics = trainer.train()
         epoch = metrics["epoch"]
         assert epoch == num_epochs - 1
-        assert trainer._batch_num_total == num_epochs * batches_per_epoch
+        assert trainer._batch_num_total == num_epochs * 3
 
     def test_trainer_respects_epoch_size_equals_total(self):
         batches_per_epoch = 4
         num_epochs = 3
-        data_loader_equal_epoch = PyTorchDataLoader(
+        data_loader_equal_epoch = SimpleDataLoader(
             self.instances,
-            batch_size=2,
-            collate_fn=allennlp_collate,
+            2,
             batches_per_epoch=batches_per_epoch,
         )
         trainer = GradientDescentTrainer(
@@ -214,10 +200,9 @@ class TestTrainer(TrainerTestBase):
     def test_trainer_respects_epoch_size_larger_tnan_total(self):
         batches_per_epoch = 7
         num_epochs = 3
-        data_loader_larger_epoch = PyTorchDataLoader(
+        data_loader_larger_epoch = SimpleDataLoader(
             self.instances,
-            batch_size=2,
-            collate_fn=allennlp_collate,
+            2,
             batches_per_epoch=batches_per_epoch,
         )
         trainer = GradientDescentTrainer(
@@ -237,10 +222,9 @@ class TestTrainer(TrainerTestBase):
     def test_trainer_respects_epoch_size_smaller_tnan_total(self):
         batches_per_epoch = 1
         num_epochs = 2
-        data_loader_smaller_epoch = PyTorchDataLoader(
+        data_loader_smaller_epoch = SimpleDataLoader(
             self.instances,
-            batch_size=2,
-            collate_fn=allennlp_collate,
+            2,
             batches_per_epoch=batches_per_epoch,
         )
         trainer = GradientDescentTrainer(
@@ -330,28 +314,31 @@ class TestTrainer(TrainerTestBase):
             num_epochs=3,
             serialization_dir=self.TEST_DIR,
             patience=5,
-            validation_metric="+test",
+            validation_metric="+acc",
         )
         tracker = new_trainer._metric_tracker
 
         # when it is the only metric it should be considered the best
         new_tracker = copy.deepcopy(tracker)
-        new_tracker.add_metric(1)
+        new_tracker.add_metrics({"acc": 1})
         assert new_tracker.is_best_so_far()
 
         # when it is the same as one before it it is not considered the best
         new_tracker = copy.deepcopy(tracker)
-        new_tracker.add_metrics([0.3, 0.3, 0.3, 0.2, 0.5, 0.1, 0.3])
+        for acc in [0.3, 0.3, 0.3, 0.2, 0.5, 0.1, 0.3]:
+            new_tracker.add_metrics({"acc": acc})
         assert not new_tracker.is_best_so_far()
 
         # when it is the best it is considered the best
         new_tracker = copy.deepcopy(tracker)
-        new_tracker.add_metrics([0.3, 0.3, 0.3, 0.2, 0.5, 0.1, 13])
+        for acc in [0.3, 0.3, 0.3, 0.2, 0.5, 0.1, 13]:
+            new_tracker.add_metrics({"acc": acc})
         assert new_tracker.is_best_so_far()
 
         # when it is not the the best it is not considered the best
         new_tracker = copy.deepcopy(tracker)
-        new_tracker.add_metrics([0.3, 0.3, 0.3, 0.2, 0.5, 0.1, 0.0013])
+        for acc in [0.3, 0.3, 0.3, 0.2, 0.5, 0.1, 0.0013]:
+            new_tracker.add_metrics({"acc": acc})
         assert not new_tracker.is_best_so_far()
 
     def test_metric_only_considered_best_so_far_when_strictly_better_than_those_before_it_decreasing_metric(
@@ -365,28 +352,31 @@ class TestTrainer(TrainerTestBase):
             num_epochs=3,
             serialization_dir=self.TEST_DIR,
             patience=5,
-            validation_metric="-test",
+            validation_metric="-acc",
         )
         tracker = new_trainer._metric_tracker
 
         # when it is the only metric it should be considered the best
         new_tracker = copy.deepcopy(tracker)
-        new_tracker.add_metric(1)
+        new_tracker.add_metrics({"acc": 1})
         assert new_tracker.is_best_so_far()
 
         # when it is the same as one before it it is not considered the best
         new_tracker = copy.deepcopy(tracker)
-        new_tracker.add_metrics([0.3, 0.3, 0.3, 0.2, 0.5, 0.1, 0.3])
+        for acc in [0.3, 0.3, 0.3, 0.2, 0.5, 0.1, 0.3]:
+            new_tracker.add_metrics({"acc": acc})
         assert not new_tracker.is_best_so_far()
 
         # when it is the best it is considered the best
         new_tracker = copy.deepcopy(tracker)
-        new_tracker.add_metrics([0.3, 0.3, 0.3, 0.2, 0.5, 0.1, 0.0013])
+        for acc in [0.3, 0.3, 0.3, 0.2, 0.5, 0.1, 0.0013]:
+            new_tracker.add_metrics({"acc": acc})
         assert new_tracker.is_best_so_far()
 
         # when it is not the the best it is not considered the best
         new_tracker = copy.deepcopy(tracker)
-        new_tracker.add_metrics([0.3, 0.3, 0.3, 0.2, 0.5, 0.1, 13])
+        for acc in [0.3, 0.3, 0.3, 0.2, 0.5, 0.1, 13]:
+            new_tracker.add_metrics({"acc": acc})
 
     def test_should_stop_early_with_increasing_metric(self):
         new_trainer = GradientDescentTrainer(
@@ -397,21 +387,23 @@ class TestTrainer(TrainerTestBase):
             num_epochs=3,
             serialization_dir=self.TEST_DIR,
             patience=5,
-            validation_metric="+test",
+            validation_metric="+acc",
         )
 
         tracker = new_trainer._metric_tracker
 
         new_tracker = copy.deepcopy(tracker)
-        new_tracker.add_metrics([0.5, 0.3, 0.2, 0.1, 0.4, 0.4])
+        for acc in [0.5, 0.3, 0.2, 0.1, 0.4, 0.4]:
+            new_tracker.add_metrics({"acc": acc})
         assert new_tracker.should_stop_early()
 
         new_tracker = copy.deepcopy(tracker)
-        new_tracker.add_metrics([0.3, 0.3, 0.3, 0.2, 0.5, 0.1])
+        for acc in [0.3, 0.3, 0.3, 0.2, 0.5, 0.1]:
+            new_tracker.add_metrics({"acc": acc})
         assert not new_tracker.should_stop_early()
 
     def test_should_stop_early_with_flat_lining_metric(self):
-        flatline = [0.2] * 6
+        flatline = [{"acc": 0.2}] * 6
         tracker = GradientDescentTrainer(
             self.model,
             self.optimizer,
@@ -420,9 +412,10 @@ class TestTrainer(TrainerTestBase):
             num_epochs=3,
             serialization_dir=self.TEST_DIR,
             patience=5,
-            validation_metric="+test",
+            validation_metric="+acc",
         )._metric_tracker
-        tracker.add_metrics(flatline)
+        for m in flatline:
+            tracker.add_metrics(m)
         assert tracker.should_stop_early
 
         tracker = GradientDescentTrainer(
@@ -433,9 +426,10 @@ class TestTrainer(TrainerTestBase):
             num_epochs=3,
             serialization_dir=self.TEST_DIR,
             patience=5,
-            validation_metric="-test",
+            validation_metric="-acc",
         )._metric_tracker
-        tracker.add_metrics(flatline)
+        for m in flatline:
+            tracker.add_metrics(m)
         assert tracker.should_stop_early
 
     def test_should_stop_early_with_decreasing_metric(self):
@@ -447,20 +441,23 @@ class TestTrainer(TrainerTestBase):
             num_epochs=3,
             serialization_dir=self.TEST_DIR,
             patience=5,
-            validation_metric="-test",
+            validation_metric="-acc",
         )
         tracker = new_trainer._metric_tracker
 
         new_tracker = copy.deepcopy(tracker)
-        new_tracker.add_metrics([0.02, 0.3, 0.2, 0.1, 0.4, 0.4])
+        for acc in [0.02, 0.3, 0.2, 0.1, 0.4, 0.4]:
+            new_tracker.add_metrics({"acc": acc})
         assert new_tracker.should_stop_early()
 
         new_tracker = copy.deepcopy(tracker)
-        new_tracker.add_metrics([0.3, 0.3, 0.2, 0.1, 0.4, 0.5])
+        for acc in [0.3, 0.3, 0.2, 0.1, 0.4, 0.5]:
+            new_tracker.add_metrics({"acc": acc})
         assert not new_tracker.should_stop_early()
 
         new_tracker = copy.deepcopy(tracker)
-        new_tracker.add_metrics([0.1, 0.3, 0.2, 0.1, 0.4, 0.5])
+        for acc in [0.1, 0.3, 0.2, 0.1, 0.4, 0.5]:
+            new_tracker.add_metrics({"acc": acc})
         assert new_tracker.should_stop_early()
 
     def test_should_stop_early_with_early_stopping_disabled(self):
@@ -472,10 +469,11 @@ class TestTrainer(TrainerTestBase):
             validation_data_loader=self.validation_data_loader,
             num_epochs=100,
             patience=None,
-            validation_metric="+test",
+            validation_metric="+acc",
         )
         tracker = trainer._metric_tracker
-        tracker.add_metrics([float(i) for i in reversed(range(20))])
+        for m in [{"acc": float(i)} for i in reversed(range(20))]:
+            tracker.add_metrics(m)
         assert not tracker.should_stop_early()
 
         # Decreasing metric
@@ -486,10 +484,11 @@ class TestTrainer(TrainerTestBase):
             validation_data_loader=self.validation_data_loader,
             num_epochs=100,
             patience=None,
-            validation_metric="-test",
+            validation_metric="-acc",
         )
         tracker = trainer._metric_tracker
-        tracker.add_metrics([float(i) for i in range(20)])
+        for m in [{"acc": float(i)} for i in range(20)]:
+            tracker.add_metrics(m)
         assert not tracker.should_stop_early()
 
     def test_should_stop_early_with_invalid_patience(self):
@@ -507,7 +506,7 @@ class TestTrainer(TrainerTestBase):
                     validation_data_loader=self.validation_data_loader,
                     num_epochs=100,
                     patience=patience,
-                    validation_metric="+test",
+                    validation_metric="+acc",
                 )
 
     def test_trainer_can_run_and_resume_with_momentum_scheduler(self):
@@ -558,6 +557,32 @@ class TestTrainer(TrainerTestBase):
             num_epochs=2,
         )
         trainer.train()
+
+    def test_trainer_sends_metric_to_lr_scheduler(self):
+        from allennlp.training.learning_rate_schedulers import ReduceOnPlateauLearningRateScheduler
+
+        class RecordMetricLearningRateScheduler(ReduceOnPlateauLearningRateScheduler):
+            def __init__(self, optimizer: Optimizer):
+                super(RecordMetricLearningRateScheduler, self).__init__(optimizer)
+                self.recordings: List[float] = []
+
+            def step(self, metric: float = None) -> None:
+                self.recordings.append(metric)
+                super().step(metric)
+
+        lr_scheduler = RecordMetricLearningRateScheduler(self.optimizer)
+        trainer = GradientDescentTrainer(
+            model=self.model,
+            optimizer=self.optimizer,
+            data_loader=self.data_loader,
+            learning_rate_scheduler=lr_scheduler,
+            validation_metric="-loss",
+            validation_data_loader=self.validation_data_loader,
+            num_epochs=2,
+        )
+        trainer.train()
+
+        assert all([value != 0 for value in lr_scheduler.recordings])
 
     def test_trainer_can_resume_with_lr_scheduler(self):
         lr_scheduler = CosineWithRestarts(self.optimizer, t_initial=5)
@@ -613,9 +638,12 @@ class TestTrainer(TrainerTestBase):
             self.data_loader,
             num_epochs=3,
             serialization_dir=self.TEST_DIR,
-            tensorboard_writer=TensorboardWriter(
-                serialization_dir=self.TEST_DIR, histogram_interval=2
-            ),
+            callbacks=[
+                TensorBoardCallback.from_params(
+                    Params({"tensorboard_writer": {"histogram_interval": 2}}),
+                    serialization_dir=self.TEST_DIR,
+                )
+            ],
         )
         trainer.train()
 
@@ -669,7 +697,7 @@ class TestTrainer(TrainerTestBase):
         #       2, 4, plus the last two at 5 and 6.
 
         class SlowDataLoader:
-            data_loader = DataLoader(self.instances, batch_size=2, collate_fn=allennlp_collate)
+            data_loader = SimpleDataLoader(self.instances, batch_size=2)
 
             def __iter__(self):
                 time.sleep(2.5)
@@ -677,6 +705,9 @@ class TestTrainer(TrainerTestBase):
 
             def __len__(self):
                 return len(self.data_loader)
+
+            def set_target_device(self, _):
+                pass
 
         trainer = GradientDescentTrainer(
             self.model,
@@ -700,24 +731,32 @@ class TestTrainer(TrainerTestBase):
             assert sorted(epochs) == [1, 3, 4, 5]
 
     def test_trainer_can_log_learning_rates_tensorboard(self):
-        data_loader = DataLoader(self.instances, batch_size=4, collate_fn=allennlp_collate)
+        data_loader = SimpleDataLoader(self.instances, 4)
         trainer = GradientDescentTrainer(
             self.model,
             self.optimizer,
             data_loader,
             num_epochs=2,
             serialization_dir=self.TEST_DIR,
-            tensorboard_writer=TensorboardWriter(
-                serialization_dir=self.TEST_DIR,
-                should_log_learning_rate=True,
-                summary_interval=2,
-            ),
+            callbacks=[
+                TensorBoardCallback.from_params(
+                    Params(
+                        {
+                            "tensorboard_writer": {
+                                "summary_interval": 2,
+                                "should_log_learning_rate": True,
+                            }
+                        }
+                    ),
+                    serialization_dir=self.TEST_DIR,
+                )
+            ],
         )
 
         trainer.train()
 
     def test_trainer_saves_models_at_specified_interval(self):
-        data_loader = DataLoader(self.instances, batch_size=4, collate_fn=allennlp_collate)
+        data_loader = SimpleDataLoader(self.instances, 4)
 
         trainer = GradientDescentTrainer(
             self.model,
@@ -882,37 +921,6 @@ class TestTrainer(TrainerTestBase):
         assert training_metrics["best_epoch"] == 0
         assert training_metrics["validation_loss"] > restored_metrics["validation_loss"]
 
-    def test_restoring_works_with_older_checkpointing(self):
-        trainer = GradientDescentTrainer(
-            self.model,
-            self.optimizer,
-            self.data_loader,
-            validation_data_loader=self.validation_data_loader,
-            num_epochs=3,
-            serialization_dir=self.TEST_DIR,
-            checkpointer=Checkpointer(
-                serialization_dir=self.TEST_DIR, num_serialized_models_to_keep=4
-            ),
-        )
-        trainer.train()
-
-        for index in range(3):
-            path = str(self.TEST_DIR / "training_state_epoch_{}.th".format(index))
-            state = torch.load(path)
-            state.pop("metric_tracker")
-            state.pop("batch_num_total")
-            state["val_metric_per_epoch"] = [0.4, 0.1, 0.8]
-            torch.save(state, path)
-
-        next_epoch = trainer._restore_checkpoint()
-        best_epoch = trainer._metric_tracker.best_epoch
-
-        # Loss decreases in 3 epochs, but because we hard fed the val metrics as above:
-        assert next_epoch == 3
-        assert best_epoch == 1
-        assert trainer._metric_tracker._best_so_far == 0.1
-        assert trainer._metric_tracker._epochs_with_no_improvement == 1
-
     def test_trainer_can_run_gradient_accumulation(self):
         instances = list(self.instances)
         steps_to_accumulate = 2
@@ -936,65 +944,6 @@ class TestTrainer(TrainerTestBase):
 
         assert num_batches_trained_per_epoch == num_batches_expected
 
-    def test_batch_callback_is_called_at_every_batch(self):
-        class FakeBatchCallback(BatchCallback):
-            def __call__(
-                self,
-                trainer: "GradientDescentTrainer",
-                batch_inputs: List[List[TensorDict]],
-                batch_outputs: List[Dict[str, Any]],
-                batch_metrics: Dict[str, Any],
-                epoch: int,
-                batch_number: int,
-                is_training: bool,
-                is_master: bool,
-            ) -> None:
-                if not hasattr(trainer, "batch_callback_calls"):
-                    trainer.batch_callback_calls = []  # type: ignore
-                trainer.batch_callback_calls.append((epoch, batch_number, is_training))  # type: ignore
-
-        trainer = GradientDescentTrainer(
-            self.model,
-            self.optimizer,
-            self.data_loader,
-            num_epochs=2,
-            validation_data_loader=self.validation_data_loader,
-            batch_callbacks=[FakeBatchCallback()],
-        )
-        trainer.train()
-        expected_calls = [
-            (epoch, batch_number + 1, is_train)
-            for epoch in range(2)
-            for is_train in (True, False)
-            for batch_number in range(len(self.instances) // 2)
-        ]
-        assert trainer.batch_callback_calls == expected_calls
-
-    def test_epoch_callback_is_called_at_every_epoch(self):
-        class FakeEpochCallback(EpochCallback):
-            def __call__(
-                self,
-                trainer: "GradientDescentTrainer",
-                metrics: Dict[str, Any],
-                epoch: int,
-                is_master: bool,
-            ) -> None:
-                if not hasattr(trainer, "epoch_callback_calls"):
-                    trainer.epoch_callback_calls = []  # type: ignore
-                trainer.epoch_callback_calls.append(epoch)  # type: ignore
-
-        trainer = GradientDescentTrainer(
-            self.model,
-            self.optimizer,
-            self.data_loader,
-            num_epochs=4,
-            validation_data_loader=self.validation_data_loader,
-            epoch_callbacks=[FakeEpochCallback()],
-        )
-        trainer.train()
-        expected_calls = [epoch for epoch in range(-1, 4)]
-        assert trainer.epoch_callback_calls == expected_calls
-
     def test_track_epoch_callback(self):
         num_epochs = 4
         trainer = GradientDescentTrainer(
@@ -1003,38 +952,19 @@ class TestTrainer(TrainerTestBase):
             self.data_loader,
             num_epochs=num_epochs,
             validation_data_loader=self.validation_data_loader,
-            epoch_callbacks=[TrackEpochCallback()],
+            callbacks=[TrackEpochCallback(serialization_dir=self.TEST_DIR)],
         )
         trainer.train()
         assert trainer.model.epoch == num_epochs
 
-    def test_end_callback_is_called_at_end(self):
-        class FakeEndCallback(EpochCallback):
-            def __call__(
-                self,
-                trainer: "GradientDescentTrainer",
-                metrics: Dict[str, Any],
-                epoch: int,
-                is_master: bool,
-            ) -> None:
-                if not hasattr(trainer, "end_callback_calls"):
-                    trainer.end_callback_calls = []  # type: ignore
-                trainer.end_callback_calls.append(epoch)  # type: ignore
-
-        trainer = GradientDescentTrainer(
-            self.model,
-            self.optimizer,
-            self.data_loader,
-            num_epochs=4,
-            validation_data_loader=self.validation_data_loader,
-            end_callbacks=[FakeEndCallback()],
-        )
-        trainer.train()
-        expected_calls = [3]
-        assert trainer.end_callback_calls == expected_calls
-
     def test_trainer_callback_is_called_everywhere(self):
         class FakeTrainerCallback(TrainerCallback):
+            def on_start(
+                self, trainer: "GradientDescentTrainer", is_primary: bool = True, **kwargs
+            ) -> None:
+                if not hasattr(trainer, "start_callback_is_fired_first"):
+                    trainer.start_callback_is_fired_first = True  # type: ignore
+
             def on_batch(
                 self,
                 trainer: "GradientDescentTrainer",
@@ -1044,8 +974,13 @@ class TestTrainer(TrainerTestBase):
                 epoch: int,
                 batch_number: int,
                 is_training: bool,
-                is_master: bool,
+                is_primary: bool = True,
+                batch_grad_norm: Optional[float] = None,
+                **kwargs,
             ) -> None:
+                if not hasattr(trainer, "start_callback_is_fired_first"):
+                    trainer.start_callback_is_fired_first = False  # type: ignore
+
                 if not hasattr(trainer, "batch_callback_calls"):
                     trainer.batch_callback_calls = []  # type: ignore
                 trainer.batch_callback_calls.append((epoch, batch_number, is_training))  # type: ignore
@@ -1055,8 +990,12 @@ class TestTrainer(TrainerTestBase):
                 trainer: "GradientDescentTrainer",
                 metrics: Dict[str, Any],
                 epoch: int,
-                is_master: bool,
+                is_primary: bool = True,
+                **kwargs,
             ) -> None:
+                if not hasattr(trainer, "start_callback_is_fired_first"):
+                    trainer.start_callback_is_fired_first = False  # type: ignore
+
                 if not hasattr(trainer, "epoch_callback_calls"):
                     trainer.epoch_callback_calls = []  # type: ignore
                 trainer.epoch_callback_calls.append(epoch)  # type: ignore
@@ -1064,10 +1003,14 @@ class TestTrainer(TrainerTestBase):
             def on_end(
                 self,
                 trainer: "GradientDescentTrainer",
-                metrics: Dict[str, Any],
-                epoch: int,
-                is_master: bool,
+                metrics: Dict[str, Any] = None,
+                epoch: int = None,
+                is_primary: bool = True,
+                **kwargs,
             ) -> None:
+                if not hasattr(trainer, "start_callback_is_fired_first"):
+                    trainer.start_callback_is_fired_first = False  # type: ignore
+
                 if not hasattr(trainer, "end_callback_calls"):
                     trainer.end_callback_calls = []  # type: ignore
                 trainer.end_callback_calls.append(epoch)  # type: ignore
@@ -1078,7 +1021,7 @@ class TestTrainer(TrainerTestBase):
             self.data_loader,
             num_epochs=2,
             validation_data_loader=self.validation_data_loader,
-            trainer_callbacks=[FakeTrainerCallback()],
+            callbacks=[FakeTrainerCallback(serialization_dir=self.TEST_DIR)],
         )
         trainer.train()
         expected_batch_calls = [
@@ -1087,26 +1030,21 @@ class TestTrainer(TrainerTestBase):
             for is_train in (True, False)
             for batch_number in range(len(self.instances) // 2)
         ]
-        expected_epoch_calls = [epoch for epoch in range(-1, 2)]
+        expected_epoch_calls = [epoch for epoch in range(0, 2)]
         expected_end_calls = [1]
 
+        assert trainer.start_callback_is_fired_first
         assert trainer.batch_callback_calls == expected_batch_calls
         assert trainer.epoch_callback_calls == expected_epoch_calls
         assert trainer.end_callback_calls == expected_end_calls
 
     def test_total_loss_is_average_of_batch_loss(self):
-
         batches_per_epoch = 3
 
-        data_loader_custom_epoch_lazy = PyTorchDataLoader(
-            self.instances_lazy,
-            batch_size=2,
-            collate_fn=allennlp_collate,
-            batches_per_epoch=batches_per_epoch,
-        )
+        self.data_loader_lazy.batches_per_epoch = 3
 
-        class FakeBatchCallback(BatchCallback):
-            def __call__(
+        class FakeOnBatchCallback(TrainerCallback):
+            def on_batch(
                 self,
                 trainer: "GradientDescentTrainer",
                 batch_inputs: List[List[TensorDict]],
@@ -1115,7 +1053,9 @@ class TestTrainer(TrainerTestBase):
                 epoch: int,
                 batch_number: int,
                 is_training: bool,
-                is_master: bool,
+                is_primary: bool = True,
+                batch_grad_norm: Optional[float] = None,
+                **kwargs,
             ) -> None:
                 if not hasattr(trainer, "batch_losses"):
                     trainer.batch_losses = []  # type: ignore
@@ -1124,9 +1064,9 @@ class TestTrainer(TrainerTestBase):
         trainer = GradientDescentTrainer(
             self.model,
             self.optimizer,
-            data_loader_custom_epoch_lazy,
+            self.data_loader_lazy,
             num_epochs=1,
-            batch_callbacks=[FakeBatchCallback()],
+            callbacks=[FakeOnBatchCallback(serialization_dir=self.TEST_DIR)],
         )
         metrics = trainer.train()
 

@@ -93,8 +93,7 @@ def prepare_global_logging(
 
     # Remove the already set handlers in root logger.
     # Not doing this will result in duplicate log messages
-    for handler in root_logger.handlers:
-        root_logger.removeHandler(handler)
+    root_logger.handlers.clear()
 
     if os.environ.get("ALLENNLP_DEBUG"):
         LEVEL = logging.DEBUG

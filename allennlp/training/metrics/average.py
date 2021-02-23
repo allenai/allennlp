@@ -1,10 +1,7 @@
 from overrides import overrides
 
-import torch
-import torch.distributed as dist
-
-from allennlp.common.util import is_distributed
 from allennlp.training.metrics.metric import Metric
+from allennlp.nn.util import dist_reduce, ReduceOp
 
 
 @Metric.register("average")
@@ -28,18 +25,8 @@ class Average(Metric):
         value : `float`
             The value to average.
         """
-        _total_value = list(self.detach_tensors(value))[0]
-        _count = 1
-        if is_distributed():
-            device = torch.device("cuda" if dist.get_backend() == "nccl" else "cpu")
-            count = torch.tensor(_count).to(device)
-            total_value = torch.tensor(_total_value).to(device)
-            dist.all_reduce(count, op=dist.ReduceOp.SUM)
-            dist.all_reduce(total_value, op=dist.ReduceOp.SUM)
-            _count = count.item()
-            _total_value = total_value.item()
-        self._count += _count
-        self._total_value += _total_value
+        self._count += dist_reduce(1, ReduceOp.SUM)
+        self._total_value += dist_reduce(float(list(self.detach_tensors(value))[0]), ReduceOp.SUM)
 
     @overrides
     def get_metric(self, reset: bool = False):

@@ -6,9 +6,9 @@ from allennlp.common.util import pad_sequence_to_length
 from overrides import overrides
 
 from allennlp.data.vocabulary import Vocabulary
-from allennlp.data.tokenizers import PretrainedTransformerTokenizer
-from allennlp.data.tokenizers.token import Token
+from allennlp.data.tokenizers import Token, PretrainedTransformerTokenizer
 from allennlp.data.token_indexers.token_indexer import TokenIndexer, IndexedTokenList
+
 
 logger = logging.getLogger(__name__)
 
@@ -81,16 +81,7 @@ class PretrainedTransformerIndexer(TokenIndexer):
         if self._added_to_vocabulary:
             return
 
-        try:
-            vocab_items = self._tokenizer.get_vocab().items()
-        except NotImplementedError:
-            vocab_items = (
-                (self._tokenizer.convert_ids_to_tokens(idx), idx)
-                for idx in range(self._tokenizer.vocab_size)
-            )
-        for word, idx in vocab_items:
-            vocab._token_to_index[self._namespace][word] = idx
-            vocab._index_to_token[self._namespace][idx] = word
+        vocab.add_transformer_vocab(self._tokenizer, self._namespace)
 
         self._added_to_vocabulary = True
 

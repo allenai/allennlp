@@ -5,8 +5,196 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-
 ## Unreleased
+
+### Changed
+
+- `coding_scheme` parameter is now deprecated in `Conll2003DatasetReader`, please use `convert_to_coding_scheme` instead.
+- Support spaCy v3
+
+### Added
+
+- Added `ModelUsage` to `ModelCard` class.
+- Added a way to specify extra parameters to the predictor in an `allennlp predict` call.
+- Added a way to initialize a `Vocabulary` from transformers models.
+- Added an example for fields of type `ListField[TextField]` to `apply_token_indexers` API docs.
+- Added `text_key` and `label_key` parameters to `TextClassificationJsonReader` class.
+
+### Fixed
+
+- Ensured that `MeanAbsoluteError` always returns a `float` metric value instead of a `Tensor`.
+- Learning rate schedulers that rely on metrics from the validation set were broken in v2.0.0. This
+  brings that functionality back.
+- Fixed a bug where the `MultiProcessDataLoading` would crash when `num_workers > 0`, `start_method = "spawn"`, `max_instances_in_memory not None`, and `batches_per_epoch not None`.
+- Fixed documentation and validation checks for `FBetaMultiLabelMetric`.
+- Fixed handling of HTTP errors when fetching remote resources with `cached_path()`. Previously the content would be cached even when
+  certain errors - like 404s - occurred. Now an `HTTPError` will be raised whenever the HTTP response is not OK.
+
+### Removed
+
+- Dropped support for Python 3.6.
+
+
+## [v2.0.1](https://github.com/allenai/allennlp/releases/tag/v2.0.1) - 2021-01-29
+
+### Added
+
+- Added `tokenizer_kwargs` and `transformer_kwargs` arguments to `PretrainedTransformerBackbone`
+- Resize transformers word embeddings layer for `additional_special_tokens`
+
+### Changed
+
+- GradientDescentTrainer makes `serialization_dir` when it's instantiated, if it doesn't exist.
+
+### Fixed
+
+- `common.util.sanitize` now handles sets.
+
+
+## [v2.0.0](https://github.com/allenai/allennlp/releases/tag/v2.0.0) - 2021-01-27
+
+### Added
+
+- The `TrainerCallback` constructor accepts `serialization_dir` provided by `Trainer`. This can be useful for `Logger` callbacks those need to store files in the run directory.
+- The `TrainerCallback.on_start()` is fired at the start of the training.
+- The `TrainerCallback` event methods now accept `**kwargs`. This may be useful to maintain backwards-compability of callbacks easier in the future. E.g. we may decide to pass the exception/traceback object in case of failure to `on_end()` and this older callbacks may simply ignore the argument instead of raising a `TypeError`.
+- Added a `TensorBoardCallback` which wraps the `TensorBoardWriter`.
+
+### Changed
+
+- The `TrainerCallack.on_epoch()` does not fire with `epoch=-1` at the start of the training.
+  Instead, `TrainerCallback.on_start()` should be used for these cases.
+- `TensorBoardBatchMemoryUsage` is converted from `BatchCallback` into `TrainerCallback`.
+- `TrackEpochCallback` is converted from `EpochCallback` into `TrainerCallback`.
+- `Trainer` can accept callbacks simply with name `callbacks` instead of `trainer_callbacks`.
+- `TensorboardWriter` renamed to `TensorBoardWriter`, and removed as an argument to the `GradientDescentTrainer`.
+  In order to enable TensorBoard logging during training, you should utilize the `TensorBoardCallback` instead.
+
+### Removed
+
+- Removed `EpochCallback`, `BatchCallback` in favour of `TrainerCallback`.
+  The metaclass-wrapping implementation is removed as well.
+- Removed the `tensorboard_writer` parameter to `GradientDescentTrainer`. You should use the `TensorBoardCallback` now instead.
+
+### Fixed
+
+- Now Trainer always fires `TrainerCallback.on_end()` so all the resources can be cleaned up properly.
+- Fixed the misspelling, changed `TensoboardBatchMemoryUsage` to `TensorBoardBatchMemoryUsage`.
+- We set a value to `epoch` so in case of firing `TrainerCallback.on_end()` the variable is bound.
+  This could have lead to an error in case of trying to recover a run after it was finished training.
+
+
+## [v2.0.0rc1](https://github.com/allenai/allennlp/releases/tag/v2.0.0rc1) - 2021-01-21
+
+### Added
+
+- Added `TensorCache` class for caching tensors on disk
+- Added abstraction and concrete implementation for image loading
+- Added abstraction and concrete implementation for `GridEmbedder`
+- Added abstraction and demo implementation for an image augmentation module.
+- Added abstraction and concrete implementation for region detectors.
+- A new high-performance default `DataLoader`: `MultiProcessDataLoading`.
+- A `MultiTaskModel` and abstractions to use with it, including `Backbone` and `Head`.  The
+  `MultiTaskModel` first runs its inputs through the `Backbone`, then passes the result (and
+  whatever other relevant inputs it got) to each `Head` that's in use.
+- A `MultiTaskDataLoader`, with a corresponding `MultiTaskDatasetReader`, and a couple of new
+  configuration objects: `MultiTaskEpochSampler` (for deciding what proportion to sample from each
+  dataset at every epoch) and a `MultiTaskScheduler` (for ordering the instances within an epoch).
+- Transformer toolkit to plug and play with modular components of transformer architectures.
+- Added a command to count the number of instances we're going to be training with
+- Added a `FileLock` class to `common.file_utils`. This is just like the `FileLock` from the `filelock` library, except that
+  it adds an optional flag `read_only_ok: bool`, which when set to `True` changes the behavior so that a warning will be emitted
+  instead of an exception when lacking write permissions on an existing file lock.
+  This makes it possible to use the `FileLock` class on a read-only file system.
+- Added a new learning rate scheduler: `CombinedLearningRateScheduler`. This can be used to combine different LR schedulers, using one after the other.
+- Added an official CUDA 10.1 Docker image.
+- Moving `ModelCard` and `TaskCard` abstractions into the main repository.
+- Added a util function `allennlp.nn.util.dist_reduce(...)` for handling distributed reductions.
+  This is especially useful when implementing a distributed `Metric`.
+- Added a `FileLock` class to `common.file_utils`. This is just like the `FileLock` from the `filelock` library, except that
+  it adds an optional flag `read_only_ok: bool`, which when set to `True` changes the behavior so that a warning will be emitted
+  instead of an exception when lacking write permissions on an existing file lock.
+  This makes it possible to use the `FileLock` class on a read-only file system.
+- Added a new learning rate scheduler: `CombinedLearningRateScheduler`. This can be used to combine different LR schedulers, using one after the other.
+- Moving `ModelCard` and `TaskCard` abstractions into the main repository.
+
+### Changed
+
+- `DatasetReader`s are now always lazy. This means there is no `lazy` parameter in the base
+  class, and the `_read()` method should always be a generator.
+- The `DataLoader` now decides whether to load instances lazily or not.
+  With the `PyTorchDataLoader` this is controlled with the `lazy` parameter, but with
+  the `MultiProcessDataLoading` this is controlled by the `max_instances_in_memory` setting.
+- `ArrayField` is now called `TensorField`, and implemented in terms of torch tensors, not numpy.
+- Improved `nn.util.move_to_device` function by avoiding an unnecessary recursive check for tensors and
+  adding a `non_blocking` optional argument, which is the same argument as in `torch.Tensor.to()`.
+- If you are trying to create a heterogeneous batch, you now get a better error message.
+- Readers using the new vision features now explicitly log how they are featurizing images.
+- `master_addr` and `master_port` renamed to `primary_addr` and `primary_port`, respectively.
+- `is_master` parameter for training callbacks renamed to `is_primary`.
+- `master` branch renamed to `main`
+- Torch version bumped to 1.7.1 in Docker images.
+- 'master' branch renamed to 'main'
+- Torch version bumped to 1.7.1 in Docker images.
+
+### Removed
+
+- Removed `nn.util.has_tensor`.
+
+### Fixed
+
+- The `build-vocab` command no longer crashes when the resulting vocab file is
+  in the current working directory.
+- VQA models now use the `vqa_score` metric for early stopping. This results in
+  much better scores.
+- Fixed typo with `LabelField` string representation: removed trailing apostrophe.
+- `Vocabulary.from_files` and `cached_path` will issue a warning, instead of failing, when a lock on an existing resource
+  can't be acquired because the file system is read-only.
+- `TrackEpochCallback` is now a `EpochCallback`.
+
+
+## [v1.3.0](https://github.com/allenai/allennlp/releases/tag/v1.3.0) - 2020-12-15
+
+### Added
+
+- Added links to source code in docs.
+- Added `get_embedding_layer` and `get_text_field_embedder` to the `Predictor` class; to specify embedding layers for non-AllenNLP models.
+- Added [Gaussian Error Linear Unit (GELU)](https://pytorch.org/docs/stable/generated/torch.nn.GELU.html) as an Activation.
+
+### Changed
+
+- Renamed module `allennlp.data.tokenizers.token` to `allennlp.data.tokenizers.token_class` to avoid
+  [this bug](https://github.com/allenai/allennlp/issues/4819).
+- `transformers` dependency updated to version 4.0.1.
+
+### Fixed
+
+- Fixed a lot of instances where tensors were first created and then sent to a device
+  with `.to(device)`. Instead, these tensors are now created directly on the target device.
+- Fixed issue with `GradientDescentTrainer` when constructed with `validation_data_loader=None` and `learning_rate_scheduler!=None`.
+- Fixed a bug when removing all handlers in root logger.
+- `ShardedDatasetReader` now inherits parameters from `base_reader` when required.
+- Fixed an issue in `FromParams` where parameters in the `params` object used to a construct a class
+  were not passed to the constructor if the value of the parameter was equal to the default value.
+  This caused bugs in some edge cases where a subclass that takes `**kwargs` needs to inspect
+  `kwargs` before passing them to its superclass.
+- Improved the band-aid solution for segmentation faults and the "ImportError: dlopen: cannot load any more object with static TLS"
+  by adding a `transformers` import.
+- Added safety checks for extracting tar files
+- Turned superfluous warning to info when extending the vocab in the embedding matrix, if no pretrained file was provided
+
+
+## [v1.2.2](https://github.com/allenai/allennlp/releases/tag/v1.2.2) - 2020-11-17
+
+### Added
+
+- Added Docker builds for other torch-supported versions of CUDA.
+- Adds [`allennlp-semparse`](https://github.com/allenai/allennlp-semparse) as an official, default plugin.
+
+### Fixed
+
+- `GumbelSampler` now sorts the beams by their true log prob.
+
 
 ## [v1.2.1](https://github.com/allenai/allennlp/releases/tag/v1.2.1) - 2020-11-10
 
@@ -18,7 +206,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added more documentation about plugins.
 - Added sampler class and parameter in beam search for non-deterministic search, with several
   implementations, including `MultinomialSampler`, `TopKSampler`, `TopPSampler`, and
-  `GumbelMaxSampler`. Utilizing `GumbelMaxSampler` will give [Stochastic Beam Search](https://api.semanticscholar.org/CorpusID:76662039).
+  `GumbelSampler`. Utilizing `GumbelSampler` will give [Stochastic Beam Search](https://api.semanticscholar.org/CorpusID:76662039).
 
 ### Changed
 
@@ -37,6 +225,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed typo with registered name of ROUGE metric. Previously was `rogue`, fixed to `rouge`.
 - Fixed default masks that were erroneously created on the CPU even when a GPU is available.
 - Fixed pretrained embeddings for transformers that don't use end tokens.
+- Fixed the transformer tokenizer cache when the tokenizers are initialized with custom kwargs.
+
 
 ## [v1.2.0](https://github.com/allenai/allennlp/releases/tag/v1.2.0) - 2020-10-29
 
@@ -82,7 +272,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added ability to pass additional key word arguments to `cached_transformers.get()`, which will be passed on to `AutoModel.from_pretrained()`.
 - Added an `overrides` argument to `Predictor.from_path()`.
 - Added a `cached-path` command.
-- Added a function `inspect_cache` to `common.file_utils` that prints useful information about the cache. This can also 
+- Added a function `inspect_cache` to `common.file_utils` that prints useful information about the cache. This can also
   be used from the `cached-path` command with `allennlp cached-path --inspect`.
 - Added a function `remove_cache_entries` to `common.file_utils` that removes any cache entries matching the given
   glob patterns. This can used from the `cached-path` command with `allennlp cached-path --remove some-files-*`.
@@ -144,6 +334,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed a bug in the cnn_encoder where activations involving masked tokens could be picked up by the max
 - Fix intra word tokenization for `PretrainedTransformerTokenizer` when disabling fast tokenizer.
 
+
 ## [v1.1.0](https://github.com/allenai/allennlp/releases/tag/v1.1.0) - 2020-09-08
 
 ### Fixed
@@ -158,8 +349,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- `Predictor.capture_model_internals()` now accepts a regex specifying
-  which modules to capture
+- `Predictor.capture_model_internals()` now accepts a regex specifying which modules to capture.
 
 
 ## [v1.1.0rc4](https://github.com/allenai/allennlp/releases/tag/v1.1.0rc4) - 2020-08-20
@@ -226,7 +416,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   in the log output even when `train_parameters` was set to `False`.
 - Fixed a bug with the sharded dataset reader where it would only read a fraction of the instances
   in distributed training.
-- Fixed checking equality of `ArrayField`s.
+- Fixed checking equality of `TensorField`s.
 - Fixed a bug where `NamespaceSwappingField` did not work correctly with `.empty_field()`.
 - Put more sensible defaults on the `huggingface_adamw` optimizer.
 - Simplified logging so that all logging output always goes to one file.
