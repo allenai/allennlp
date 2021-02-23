@@ -201,10 +201,10 @@ class Optimizer(torch.optim.Optimizer, Registrable):
         return Optimizer.from_params(model_parameters=model_parameters, params=Params({}))
 
 
-@Optimizer.register("regex")
-class RegexOptimizer(Optimizer):
+@Optimizer.register("multi")
+class MultiOptimizer(Optimizer):
     """
-    A `RegexOptimizer` creates a dictionary of `Optimizer`s keyed on some 'name'.
+    A `MultiOptimizer` creates a dictionary of `Optimizer`s keyed on some 'name'.
     Each Optimizer contains its own set of parameters which are obtained using
     regex matches for certain model parameters.
 
@@ -288,7 +288,7 @@ class RegexOptimizer(Optimizer):
         }
 
         # Copy the defaults from the optimizers into the parameter groups, so they are visible in
-        # optimizer.params when optimizer is a RegexOptimizer.
+        # optimizer.params when optimizer is a MultiOptimizer.
         parameter_groups = copy.deepcopy(parameter_groups)
         for parameter_group in parameter_groups:
             regexes, pg_overrides = parameter_group

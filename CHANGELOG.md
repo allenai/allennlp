@@ -19,7 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added a way to initialize a `Vocabulary` from transformers models.
 - Added an example for fields of type `ListField[TextField]` to `apply_token_indexers` API docs.
 - Added `text_key` and `label_key` parameters to `TextClassificationJsonReader` class.
-- Added `RegexOptimizer`, which allows you to use different optimizers for different parts of your model.
+- Added `MultiOptimizer`, which allows you to use different optimizers for different parts of your model.
 
 ### Fixed
 

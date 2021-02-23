@@ -80,7 +80,7 @@ class TestOptimizer(AllenNlpTestCase):
         assert len(param_groups[2]["params"]) == 2
 
 
-class TestRegexOptimizer(AllenNlpTestCase):
+class TestMultiOptimizer(AllenNlpTestCase):
     def setup_method(self):
         super().setup_method()
         self.instances = SequenceTaggingDatasetReader().read(
@@ -101,7 +101,7 @@ class TestRegexOptimizer(AllenNlpTestCase):
     def test_multiple_optimizers(self):
         optimizer_params = Params(
             {
-                "type": "regex",
+                "type": "multi",
                 "optimizers": {
                     "embedder": {"type": "adam", "lr": 2},
                     "encoder": {"type": "adam", "lr": 3},
@@ -163,8 +163,10 @@ class TestRegexOptimizer(AllenNlpTestCase):
                     name == "embedder"
                 ), "Optimizers were not initialized in the same order as parameter groups."
                 param_groups = inner_optimizer.param_groups
-                assert len(param_groups) == 1 + 1       # one extra for the empty default group
-                assert len(param_groups[-1]["params"]) == 0  # default group for an inner optimizer should be empty
+                assert len(param_groups) == 1 + 1  # one extra for the empty default group
+                assert (
+                    len(param_groups[-1]["params"]) == 0
+                )  # default group for an inner optimizer should be empty
                 assert param_groups[0]["betas"] == (0.9, 0.98)
                 assert param_groups[0]["lr"] == 2
                 assert param_groups[0]["weight_decay"] == 0.01
@@ -174,8 +176,10 @@ class TestRegexOptimizer(AllenNlpTestCase):
                 ), "Optimizers were not initialized in the same order as parameter groups."
                 param_groups = inner_optimizer.param_groups
                 # The optimizer can have sub-groups with different options.
-                assert len(param_groups) == 2 + 1       # one extra for the empty default group
-                assert len(param_groups[-1]["params"]) == 0  # default group for an inner optimizer should be empty
+                assert len(param_groups) == 2 + 1  # one extra for the empty default group
+                assert (
+                    len(param_groups[-1]["params"]) == 0
+                )  # default group for an inner optimizer should be empty
                 for i, param_group in enumerate(param_groups):
                     if i == 0:
                         assert param_group["lr"] == 0.001
@@ -193,7 +197,7 @@ class TestRegexOptimizer(AllenNlpTestCase):
     def test_optimizer_params(self):
         optimizer_params = Params(
             {
-                "type": "regex",
+                "type": "multi",
                 "optimizers": {
                     "default": {"type": "adam", "lr": 1},
                     "embedder": {"type": "adam", "lr": 2},
@@ -219,8 +223,8 @@ class TestRegexOptimizer(AllenNlpTestCase):
         parameters = [[n, p] for n, p in self.model.named_parameters() if p.requires_grad]
         optimizer = Optimizer.from_params(model_parameters=parameters, params=optimizer_params)
 
-        # When the RegexOptimizer is initialized, `optimizer.param_groups` stores the parameter groups.
-        # These parameter groups are assigned to their own optimizer by the RegexOptimizer.
+        # When the MultiOptimizer is initialized, `optimizer.param_groups` stores the parameter groups.
+        # These parameter groups are assigned to their own optimizer by the MultiOptimizer.
         # Check that changes to the parameters in optimizer.param_groups affect the parameters in
         # optimizer._grouped_optimizers.
         regex_optimizer_params = set()
