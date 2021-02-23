@@ -41,7 +41,7 @@ def make_parameter_groups(
 ) -> Union[List[Dict[str, Any]], List[torch.nn.Parameter]]:
     """
     Takes a list of model parameters with associated names (typically coming from something like
-    `model.parameters`), along with a grouping (as specified below), and prepares them to be passed
+    `model.named_parameters()`), along with a grouping (as specified below), and prepares them to be passed
     to the `__init__` function of a `torch.Optimizer`.  This means separating the parameters into
     groups with the given regexes, and prepping whatever keyword arguments are given for those
     regexes in `groups`.
