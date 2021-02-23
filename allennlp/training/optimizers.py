@@ -16,24 +16,28 @@ The available optimizers are
 * [adamax](https://pytorch.org/docs/master/optim.html#torch.optim.Adamax)
 * [averaged_sgd](https://pytorch.org/docs/master/optim.html#torch.optim.ASGD)
 """
-
+import copy
 import logging
 import re
 import math
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, Dict, List, Tuple, Union, Optional
 from overrides import overrides
 
 import torch
 import transformers
 
-from allennlp.common import Params, Registrable
+from allennlp.common import Params, Registrable, Lazy
+from allennlp.common.checks import ConfigurationError
 
 logger = logging.getLogger(__name__)
 
 
+ParameterGroupsType = List[Tuple[List[str], Dict[str, Any]]]
+
+
 def make_parameter_groups(
     model_parameters: List[Tuple[str, torch.nn.Parameter]],
-    groups: Union[List[Tuple[List[str], Dict[str, Any]]], Any] = None,
+    groups: Optional[ParameterGroupsType] = None,
 ) -> Union[List[Dict[str, Any]], List[torch.nn.Parameter]]:
     """
     Takes a list of model parameters with associated names (typically coming from something like
@@ -64,13 +68,9 @@ def make_parameter_groups(
     When a parameter group has `{"requires_grad": False}`, the gradient on all matching parameters
     will be disabled and that group will be dropped so that it's not actually passed to the optimizer.
 
-    When using the `RegexOptimizer`, the value of `groups` is a boolean set to False. This is because
-    the parameter groups are already created by the `RegexOptimizer` and when deferring to individual
-    sub-optimizers, we make this function a no-op during optimizer initialization.
-    
     Ultimately, the return value of this function is in the right format to be passed directly
     as the `params` argument to a pytorch `Optimizer`.
-    If there are multiple groups specified, this is list of dictionaries, where each
+    If there are multiple groups specified, this is a list of dictionaries, where each
     dict contains a "parameter group" and groups specific options, e.g., {'params': [list of
     parameters], 'lr': 1e-3, ...}.  Any config option not specified in the additional options (e.g.
     for the default group) is inherited from the top level arguments given in the constructor.  See:
@@ -80,10 +80,6 @@ def make_parameter_groups(
     The dictionary's return type is labeled as `Any`, because it can be a `List[torch.nn.Parameter]`
     (for the "params" key), or anything else (typically a float) for the other keys.
     """
-    # The RegexOptimizer passes in the `groups` argument as False so this function is a no-op.
-    if groups is False:
-        return model_parameters
-
     if groups:
         # In addition to any parameters that match group specific regex,
         # we also need a group for the remaining "default" group.
@@ -160,6 +156,9 @@ def make_parameter_groups(
                     regex,
                 )
 
+        # If the default group is empty, remove it.
+        if len(parameter_groups[-1]["params"]) <= 0:
+            del parameter_groups[-1]
     else:
         parameter_groups = [param for name, param in model_parameters]
 
@@ -171,6 +170,7 @@ def make_parameter_groups(
         else:
             num_parameters += parameter_group.numel()  # type: ignore
     logger.info("Number of trainable parameters: %s", num_parameters)
+
     return parameter_groups
 
 
@@ -211,134 +211,124 @@ class RegexOptimizer(Optimizer):
     A `RegexOptimizer` creates a dictionary of `Optimizer`s keyed on some 'name'.
     Each Optimizer contains its own set of parameters which are obtained using
     regex matches for certain model parameters.
-    
+
     This optimizer works by taking in a parameter `optimizers` which contains a list of `Optimizers`
     with their keyword arguments, and a parameter `parameter_groups`, which contains regexes and their
-    corresponding optimizer and optional non-default optimizer options for this group. 
+    corresponding optimizer and optional non-default optimizer options for this group.
     The regexes in the parameter groups are assigned to their optimizer based on the 'name' argument
     where the 'name' value should be the same for the optimizer and parameter group.
-    You should specify a default optimizer with 'name': 'default' which will be used for all 
-    parameters which didn't obtain a regex match or when your parameter group doesn't contain a 'name' 
+    You should specify a default optimizer with 'name': 'default' which will be used for all
+    parameters which didn't obtain a regex match or when your parameter group doesn't contain a 'name'
     parameter.
 
     # Parameters
 
     optimizers: `List[Dict[str, Any]]`
-        A list of optimizers to use. Each entry in the list is a dictionary of keyword arguments. A 'name' 
-        keyword argument should be given which will serve as the key to match the optimizer with a 
-        specific parameter group. You should also supply an entry for the default parameter group, 
+        A list of optimizers to use. Each entry in the list is a dictionary of keyword arguments. A 'name'
+        keyword argument should be given which will serve as the key to match the optimizer with a
+        specific parameter group. You should also supply an entry for the default parameter group,
         e.g. 'name': 'default'.
 
     parameter_groups:  `List[Tuple[List[str], Dict[str, Any]]`, optional (default = `None`)
         See the docstring of `make_parameter_groups` for what this parameter should look like. It
-        should follow the same format as there, except an additional 'name' argument should be provided
-        to match this group to its own optimizer. Optimizer options can also be set for this group which
-        will override the default options.
+        should follow the same format as there, except an additional 'optimizer_name' argument should be
+        provided to match this group to its own optimizer. Optimizer options can also be set for this
+        group which will override the default options.
     """
 
     def __init__(
         self,
         model_parameters: List[Tuple[str, torch.nn.Parameter]],
-        optimizers: List[Dict[str, Any]],
-        parameter_groups: List[Tuple[List[str], Dict[str, Any]]],
+        optimizers: Dict[str, Lazy[Optimizer]],
+        parameter_groups: ParameterGroupsType,
     ):
-        self.model_parameters = model_parameters
-        self.optimizers = optimizers
-        self.parameter_groups = parameter_groups
+        if "default" not in optimizers:
+            raise ConfigurationError(
+                "No optimizer was provided for the 'default' group."
+                " Please provide an Optimizer under the name 'default'"
+            )
 
-        self._grouped_optimizers: Dict[str, Optimizer] = {}
+        # calculate parameter groups for each optimizer
+        optimizer_name_to_parameter_groups: Dict[str, ParameterGroupsType] = {
+            optimizer_name: [] for optimizer_name in optimizers.keys()
+        }
+        for parameter_group in parameter_groups:
+            regexes, pg_overrides = parameter_group
+            optimizer_name = pg_overrides.get("optimizer_name", "default")
+            optimizer_name_to_parameter_groups[optimizer_name].append(parameter_group)
 
-        optimizer_names = [optimizer["name"] for optimizer in self.optimizers]
-        assert "default" in optimizer_names, (
-           "No optimizer was provided for the 'default' group."
-           " Please provide a 'name': 'default' parameter for one of the `optimizers`."
-           )
-
-        parameter_groups = make_parameter_groups(self.model_parameters, self.parameter_groups)
-        # Manually set optimizer kwargs for the default group, so certain schedulers are able
-        # to know the options for this group.
-        if len(list(parameter_groups[-1].keys())) == 1:
-            for optimizer in self.optimizers:
-                if optimizer["name"] == "default":
-                    parameter_groups[-1].update(optimizer)
-
-        optimizer_groups = self._populate_optimizer_groups(parameter_groups)
-        self._set_optimizer_kwargs(optimizer_groups, self.optimizers)
+        # calculate model parameters for each optimizer
+        optimizer_name_to_model_parameters: Dict[str, List[Tuple[str, torch.nn.Parameter]]] = {
+            optimizer_name: [] for optimizer_name in optimizers.keys()
+        }
+        for model_parameter_tuple in model_parameters:
+            parameter_name, parameter_tensor = model_parameter_tuple
+            for regexes, pg_overrides in parameter_groups:
+                if any(re.search(regex, parameter_name) for regex in regexes):
+                    optimizer_name = pg_overrides.get("optimizer_name", "default")
+                    optimizer_name_to_model_parameters[optimizer_name].append(model_parameter_tuple)
+                    break
+            else:
+                optimizer_name_to_model_parameters["default"].append(model_parameter_tuple)
 
         # Check to see if an optimizer didn't receive any parameters.
-        for optimizer_key, optimizer_parameters in optimizer_groups.items():
+        for optimizer_name, optimizer_parameters in optimizer_name_to_model_parameters.items():
             if len(optimizer_parameters[0]) == 0:
-               raise ValueError(
-                    f"Optimizer '{optimizer_key}' did not receive any parameters."
+                raise ConfigurationError(
+                    f"Optimizer '{optimizer_name}' did not receive any parameters."
                     " If you are using `parameter_groups`, please make sure that the regexes you have provided"
                     " match the desired model parameters, or that the `name` value of this optimizer "
                     " matches that of the parameter group you are trying to assign to it."
                     " Alternatively, you can remove this optimizer from the provided `optimizers`"
                     " if it is not relevant to a particular parameter group."
-                    )
+                )
 
-        # We have already created our parameter groups so we set `parameter_groups` to False, which is a no-op in `make_parameter_groups`.
-        # This is so that we don't have to change any of the code when initializing individual optimizers.
-        for optimizer_name, (params, optimizer_kwargs) in optimizer_groups.items():
-            self._grouped_optimizers[optimizer_name] = Optimizer.from_params(model_parameters=params, parameter_groups=False, params=Params(optimizer_kwargs))
-        
-        super().__init__(parameter_groups, optimizer_groups["default"][1])
+        self.optimizers = {
+            optimizer_name: lazy_optimizer.construct(
+                model_parameters=optimizer_name_to_model_parameters[optimizer_name],
+                parameter_groups=optimizer_name_to_parameter_groups[optimizer_name],
+            )
+            for optimizer_name, lazy_optimizer in optimizers.items()
+        }
 
-    def _populate_optimizer_groups(self, parameter_groups):
-        """
-        Assigns each parameter group in `parameter_groups` to the
-        appropriate optimizer or to the 'default' optimizer.
-        """
-        optimizer_groups = {}
-
+        # Copy the defaults from the optimizers into the parameter groups, so they are visible int
+        # optimizer.params when optimizer is a RegexOptimizer.
+        parameter_groups = copy.deepcopy(parameter_groups)
         for parameter_group in parameter_groups:
-            # Check to see what optimizer this group should be assigned to.
-            if "name" in list(parameter_group.keys()):
-                optimizer_key = parameter_group["name"]
-                if not optimizer_key in optimizer_groups:
-                    optimizer_groups[optimizer_key] = ([], {})
-                
-                group = {key: value for key, value in parameter_group.items() if key != "name"}
-                optimizer_groups[optimizer_key][0].append(group)
-            # If no optimizer name is given, assign this group to the default group.
-            else:
-                if not "default" in optimizer_groups:
-                    optimizer_groups["default"] = ([], {})
-                group = {key: value for key, value in parameter_group.items()}            
-                optimizer_groups["default"][0].append(group)
-        
-        return optimizer_groups
-
-    def _set_optimizer_kwargs(self, optimizer_groups, optimizers):
-        """
-        Sets the optimizer keyword arguments for each optimizer.
-        """
-        for optimizer in optimizers:
-            optimizer_key = optimizer["name"]
-            for key, value in optimizer.items():
-                if key != "name":
-                    # Set optimizer kwargs.
-                    optimizer_groups[optimizer_key][1][key] = value
+            regexes, pg_overrides = parameter_group
+            optimizer_name = pg_overrides.get("optimizer_name", "default")
+            optimizer = self.optimizers[optimizer_name]
+            for key, value in optimizer.defaults.items():
+                if key not in pg_overrides:
+                    pg_overrides[key] = value
+        super().__init__(make_parameter_groups(model_parameters, parameter_groups), {})
 
     @overrides
     def step(self):
         """
         Takes an optimization step for each optimizer.
         """
-        for optimizer in self._grouped_optimizers.values():
+        for optimizer in self.optimizers.values():
             optimizer.step()
 
     @overrides
     def state_dict(self):
         """
-        Creates an object `optimizer_state_dict`, which is a dictionary mapping an optimizer key to its `state_dict`.
-        This dictionary is used as the value for 'optimizer' in the 'training_states' dictionary in the `gradient_descent`
-        `Trainer`, e.g. "optimizer" : {"optimizer1": `optimizer1_state_dict`, "optimizer2" : `optimizer2_state_dict`}.
+        Creates an object `optimizer_state_dict`, which is a dictionary mapping an optimizer key to its
+        `state_dict`. This dictionary is used as the value for 'optimizer' in the 'training_states' dictionary in
+        the `gradient_descent` `Trainer`, e.g.
+        ```
+        "optimizer" : {
+            "optimizer1": `optimizer1_state_dict`,
+            "optimizer2": `optimizer2_state_dict`
+        }.
+        ```
         """
         optimizer_state_dict = {
-            f"{optimizer_key}_optimizer": optimizer.state_dict() for optimizer_key, optimizer in self._grouped_optimizers.items()
+            f"{optimizer_key}_optimizer": optimizer.state_dict()
+            for optimizer_key, optimizer in self.optimizers.items()
         }
-        
+
         return optimizer_state_dict
 
     @overrides
@@ -346,7 +336,7 @@ class RegexOptimizer(Optimizer):
         """
         Loads each optimizer's `state_dict`.
         """
-        for optimizer_key, optimizer in self._grouped_optimizers.items():
+        for optimizer_key, optimizer in self.optimizers.items():
             optimizer.load_state_dict(training_state[f"{optimizer_key}_optimizer"])
 
     @overrides
@@ -354,7 +344,7 @@ class RegexOptimizer(Optimizer):
         """
         Sets parameter gradients to zero or None.
         """
-        for optimizer in self._grouped_optimizers.values():
+        for optimizer in self.optimizers.values():
             optimizer.zero_grad(set_to_none)
 
 

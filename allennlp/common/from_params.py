@@ -14,7 +14,6 @@ from typing import (
     Type,
     TypeVar,
     Union,
-    MutableMapping,
 )
 import inspect
 import logging
