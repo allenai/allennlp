@@ -291,7 +291,7 @@ class RegexOptimizer(Optimizer):
             for optimizer_name, lazy_optimizer in optimizers.items()
         }
 
-        # Copy the defaults from the optimizers into the parameter groups, so they are visible int
+        # Copy the defaults from the optimizers into the parameter groups, so they are visible in
         # optimizer.params when optimizer is a RegexOptimizer.
         parameter_groups = copy.deepcopy(parameter_groups)
         for parameter_group in parameter_groups:
