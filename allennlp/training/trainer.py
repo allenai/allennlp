@@ -35,7 +35,7 @@ from allennlp.training.log_writer import LogWriter
 logger = logging.getLogger(__name__)
 
 
-def get_train_and_validation_metrics(metrics: Dict):
+def _get_train_and_validation_metrics(metrics: Dict):
     """
     Utility function to separate out train_metrics and val_metrics.
     """
@@ -280,7 +280,7 @@ class LogCallback(TrainerCallback):
             return None
         assert self._log_writer is not None
 
-        train_metrics, val_metrics = get_train_and_validation_metrics(metrics)
+        train_metrics, val_metrics = _get_train_and_validation_metrics(metrics)
 
         self._log_writer.log_metrics(
             train_metrics,
@@ -301,8 +301,8 @@ class LogCallback(TrainerCallback):
             self._log_writer.close()
 
 
-@TrainerCallback.register("console")
-class ConsoleLogCallback(LogCallback):
+@TrainerCallback.register("console-logger")
+class ConsoleLoggerCallback(TrainerCallback):
     def __init__(
         self,
         serialization_dir: Optional[str] = None,
@@ -381,7 +381,7 @@ class ConsoleLogCallback(LogCallback):
         if not is_primary:
             return None
 
-        train_metrics, val_metrics = get_train_and_validation_metrics(metrics)
+        train_metrics, val_metrics = _get_train_and_validation_metrics(metrics)
 
         metric_names = set(train_metrics.keys())
         if val_metrics is not None:

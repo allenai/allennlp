@@ -8,5 +8,5 @@ from allennlp.training.trainer import (
     TrainerCallback,
     TrackEpochCallback,
     TensorBoardCallback,
-    ConsoleLogCallback,
+    ConsoleLoggerCallback,
 )

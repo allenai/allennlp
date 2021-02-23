@@ -11,14 +11,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `coding_scheme` parameter is now deprecated in `Conll2003DatasetReader`, please use `convert_to_coding_scheme` instead.
 - Support spaCy v3
+- `histogram_interval` parameter is now deprecated in `TensorboardWriter`, please use `distribution_interval` instead.
 
 ### Added
 
 - Added `ModelUsage` to `ModelCard` class.
 - Added a way to specify extra parameters to the predictor in an `allennlp predict` call.
 - Added a way to initialize a `Vocabulary` from transformers models.
-- Added `LogWriter` classe. `TensorBoardWriter` now inherits from `LogWriter`.
-- Added `LogCallback` and `ConsoleLogCallback` classes. `TensorBoardCallback` inherits from `LogCallback`.
+- Added `LogWriter` class. `TensorBoardWriter` now inherits from `LogWriter`.
+- Added `LogCallback` and `ConsoleLoggerCallback` classes. `TensorBoardCallback` inherits from `LogCallback`.  
 - Added an example for fields of type `ListField[TextField]` to `apply_token_indexers` API docs.
 - Added `text_key` and `label_key` parameters to `TextClassificationJsonReader` class.
 
