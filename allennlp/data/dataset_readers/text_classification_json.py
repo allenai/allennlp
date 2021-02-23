@@ -43,10 +43,10 @@ class TextClassificationJsonReader(DatasetReader):
     skip_label_indexing : `bool`, optional (default = `False`)
         Whether or not to skip label indexing. You might want to skip label indexing if your
         labels are numbers, so the dataset reader doesn't re-number them starting from 0.
-    text_key: `str`, optional (default=`text`)
-        key name for TextField instance in JSON.
-    label_key: `str`, optional (default=`label`)
-        key name for LabelField instance in JSON.
+    text_key: `str`, optional (default=`"text"`)
+        The key name of the source field in the JSON data file.
+    label_key: `str`, optional (default=`"label"`)
+        The key name of the target field in the JSON data file.
     """
 
     def __init__(
