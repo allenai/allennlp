@@ -462,6 +462,17 @@ jobs:
         git commit -m "automated update of the docs"
         git push
 
+    - name: Re-write docs commit history
+      if: github.event_name == 'release' && github.ref == 'refs/heads/main'
+      run: |
+        cd ~/allennlp-docs/
+        git checkout --orphan latest_branch
+        git add -A
+        git commit -m "Re-write commit history"
+        git branch -D master  # remove old master branch
+        git branch -m master  # rename clean new branch to master branch
+        git push -f origin master
+
     - name: Clean up
       if: always()
       run: |
