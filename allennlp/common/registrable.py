@@ -3,9 +3,9 @@
 any base class with a named registry for its subclasses and a decorator
 for registering them.
 """
-import collections
 import importlib
 import logging
+from collections import defaultdict
 from typing import Callable, ClassVar, DefaultDict, Dict, List, Optional, Tuple, Type, TypeVar, cast
 
 from allennlp.common.checks import ConfigurationError
@@ -15,6 +15,8 @@ logger = logging.getLogger(__name__)
 
 _T = TypeVar("_T")
 _RegistrableT = TypeVar("_RegistrableT", bound="Registrable")
+
+_SubclassRegistry = Dict[type, Tuple[type, Optional[str]]]
 
 
 class Registrable(FromParams):
@@ -39,9 +41,7 @@ class Registrable(FromParams):
     a subclass to load all other subclasses and the abstract class).
     """
 
-    _registry: ClassVar[
-        DefaultDict[type, Dict[str, Tuple[type, Optional[str]]]]
-    ] = collections.defaultdict(dict)
+    _registry: ClassVar[DefaultDict[type, _SubclassRegistry]] = defaultdict(dict)
 
     default_implementation: Optional[str] = None
 
