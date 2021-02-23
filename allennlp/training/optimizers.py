@@ -301,7 +301,14 @@ class RegexOptimizer(Optimizer):
             for key, value in optimizer.defaults.items():
                 if key not in pg_overrides:
                     pg_overrides[key] = value
-        super().__init__(make_parameter_groups(model_parameters, parameter_groups), {})
+
+        # Any parameter that doesn't match a regex goes into the last output from make_parameter_groups(). We need
+        # to copy the params from the default optimizer into that groups as well.
+        made_parameter_groups = make_parameter_groups(model_parameters, parameter_groups)
+        for key, value in self.optimizers["default"].defaults.items():
+            made_parameter_groups[-1][key] = value
+
+        super().__init__(made_parameter_groups, {})
 
     @overrides
     def step(self):
