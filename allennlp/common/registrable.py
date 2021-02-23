@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 _T = TypeVar("_T")
 _RegistrableT = TypeVar("_RegistrableT", bound="Registrable")
 
-_SubclassRegistry = Dict[type, Tuple[type, Optional[str]]]
+_SubclassRegistry = Dict[str, Tuple[type, Optional[str]]]
 
 
 class Registrable(FromParams):
