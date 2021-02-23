@@ -14,6 +14,9 @@ class MultiTaskPredictor(Predictor):
     Predictor for multitask models.
 
     Registered as a `Predictor` with name "multitask".
+
+    This predictor is tightly coupled to `MultiTaskDatasetReader` and `MultiTaskModel`, and will not work if
+    used with other readers or models.
     """
 
     _WRONG_READER_ERROR = (
