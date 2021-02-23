@@ -69,6 +69,7 @@ class SpacyTokenizer(Tokenizer):
         # We reverse the tokens here because we're going to insert them with `insert(0)` later;
         # this makes sure they show up in the right order.
         self._start_tokens.reverse()
+        self._is_version_3 = spacy.__version__ >= "3.0"
         self._end_tokens = end_tokens or []
 
     def _sanitize(self, tokens: List[spacy.tokens.Token]) -> List[Token]:
@@ -98,10 +99,16 @@ class SpacyTokenizer(Tokenizer):
 
     @overrides
     def batch_tokenize(self, texts: List[str]) -> List[List[Token]]:
-        return [
-            self._sanitize(_remove_spaces(tokens))
-            for tokens in self.spacy.pipe(texts, n_threads=-1)
-        ]
+        if self._is_version_3:
+            return [
+                self._sanitize(_remove_spaces(tokens))
+                for tokens in self.spacy.pipe(texts, n_process=-1)
+            ]
+        else:
+            return [
+                self._sanitize(_remove_spaces(tokens))
+                for tokens in self.spacy.pipe(texts, n_threads=-1)
+            ]
 
     @overrides
     def tokenize(self, text: str) -> List[Token]:

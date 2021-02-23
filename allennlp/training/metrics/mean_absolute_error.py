@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Dict, Optional
 
 from overrides import overrides
 import torch
@@ -23,7 +23,7 @@ class MeanAbsoluteError(Metric):
         predictions: torch.Tensor,
         gold_labels: torch.Tensor,
         mask: Optional[torch.BoolTensor] = None,
-    ):
+    ) -> None:
         """
         # Parameters
 
@@ -54,10 +54,10 @@ class MeanAbsoluteError(Metric):
             _absolute_error = absolute_error.item()
             _total_count = total_count.item()
 
-        self._absolute_error += _absolute_error
-        self._total_count += _total_count
+        self._absolute_error += float(_absolute_error)
+        self._total_count += int(_total_count)
 
-    def get_metric(self, reset: bool = False):
+    def get_metric(self, reset: bool = False) -> Dict[str, float]:
         """
         # Returns
 
@@ -69,6 +69,6 @@ class MeanAbsoluteError(Metric):
         return {"mae": mean_absolute_error}
 
     @overrides
-    def reset(self):
+    def reset(self) -> None:
         self._absolute_error = 0.0
         self._total_count = 0.0
