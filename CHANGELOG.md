@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `LogWriter` classe. `TensorBoardWriter` now inherits from `LogWriter`.
 - Added `LogCallback` and `ConsoleLogCallback` classes. `TensorBoardCallback` inherits from `LogCallback`.
 - Added an example for fields of type `ListField[TextField]` to `apply_token_indexers` API docs.
+- Added `text_key` and `label_key` parameters to `TextClassificationJsonReader` class.
 
 ### Fixed
 
