@@ -6,7 +6,11 @@ import torch
 from overrides import overrides
 
 from allennlp.common import util
-from allennlp.data.dataset_readers.dataset_reader import DatasetReader, DatasetReaderInput,WorkerInfo
+from allennlp.data.dataset_readers.dataset_reader import (
+    DatasetReader,
+    DatasetReaderInput,
+    WorkerInfo,
+)
 from allennlp.data.batch import Batch
 from allennlp.data.data_loaders.data_loader import DataLoader, TensorDict
 from allennlp.data.data_loaders.multiprocess_data_loader import MultiProcessDataLoader
