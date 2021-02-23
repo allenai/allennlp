@@ -2021,7 +2021,7 @@ def tiny_value_of_dtype(dtype: torch.dtype):
 _V = TypeVar("_V", int, float)
 
 
-def dist_reduce(value: _V, reduce_op: dist.ReduceOp = dist.ReduceOp.SUM, **kwargs) -> _V:
+def dist_reduce(value: _V, reduce_op: dist.ReduceOp, **kwargs) -> _V:
     """
     Reduces the given `value` across all distributed worker nodes according the given
     reduction operation.
@@ -2032,7 +2032,7 @@ def dist_reduce(value: _V, reduce_op: dist.ReduceOp = dist.ReduceOp.SUM, **kwarg
 
     value : `_V`
         The value to reduce across distributed nodes.
-    reduce_op : `torch.distributed.ReduceOp`, optional (default = `ReduceOp.SUM`)
+    reduce_op : `torch.distributed.ReduceOp`
         The [reduction operation](https://pytorch.org/docs/stable/distributed.html#torch.distributed.ReduceOp)
         to use.
     **kwargs : `Any`

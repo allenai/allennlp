@@ -1,4 +1,5 @@
 from overrides import overrides
+import torch.distributed as dist
 
 from allennlp.training.metrics.metric import Metric
 from allennlp.nn.util import dist_reduce
@@ -25,8 +26,10 @@ class Average(Metric):
         value : `float`
             The value to average.
         """
-        self._count += dist_reduce(1)
-        self._total_value += dist_reduce(float(list(self.detach_tensors(value))[0]))
+        self._count += dist_reduce(1, dist.ReduceOp.SUM)
+        self._total_value += dist_reduce(
+            float(list(self.detach_tensors(value))[0]), dist.ReduceOp.SUM
+        )
 
     @overrides
     def get_metric(self, reset: bool = False):
