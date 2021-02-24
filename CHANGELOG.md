@@ -17,7 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `ModelUsage` to `ModelCard` class.
 - Added a way to specify extra parameters to the predictor in an `allennlp predict` call.
 - Added a way to initialize a `Vocabulary` from transformers models.
-- Added the ability to use `Predictors` with multitask models.
+- Added the ability to use `Predictors` with multitask models through the new `MultiTaskPredictor`.
 - Added an example for fields of type `ListField[TextField]` to `apply_token_indexers` API docs.
 - Added `text_key` and `label_key` parameters to `TextClassificationJsonReader` class.
 - Added `MultiOptimizer`, which allows you to use different optimizers for different parts of your model.
