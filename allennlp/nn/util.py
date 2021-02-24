@@ -12,7 +12,6 @@ import math
 import numpy
 import torch
 import torch.distributed as dist
-from torch.distributed import ReduceOp
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import int_to_device, is_distributed
@@ -2020,7 +2019,7 @@ def tiny_value_of_dtype(dtype: torch.dtype):
 _V = TypeVar("_V", int, float)
 
 
-def dist_reduce(value: _V, reduce_op: ReduceOp, **kwargs) -> _V:
+def dist_reduce(value: _V, reduce_op, **kwargs) -> _V:
     """
     Reduces the given `value` across all distributed worker nodes according the given
     reduction operation.
@@ -2031,8 +2030,9 @@ def dist_reduce(value: _V, reduce_op: ReduceOp, **kwargs) -> _V:
 
     value : `_V`
         The value to reduce across distributed nodes.
-    reduce_op : `ReduceOp`
-        The reduction operation to use.
+    reduce_op : `torch.distributed.ReduceOp`
+        The [reduction operation](https://pytorch.org/docs/stable/distributed.html#torch.distributed.ReduceOp)
+        to use.
     **kwargs : `Any`
         Additional arguments used to construct the tensor that will wrap `value`.
 
@@ -2047,3 +2047,19 @@ def dist_reduce(value: _V, reduce_op: ReduceOp, **kwargs) -> _V:
     value_tensor = torch.tensor(value, device=device, **kwargs)
     dist.all_reduce(value_tensor, op=reduce_op)
     return value_tensor.item()  # type: ignore[return-value]
+
+
+def dist_reduce_sum(value: _V, **kwargs) -> _V:
+    """
+    Sums the given `value` across distributed worker nodes.
+    This is equivalent to calling `dist_reduce(v, dist.ReduceOp.SUM)`.
+    """
+    # NOTE: Why have this check here even though the same check is in `dist_reduce()`?
+    # Because we want to be able to call this function even when torch's distributed framework
+    # is not available...
+    # If torch's distributed framework is not available on the system, then `torch.distributed`
+    # (imported here as `dist`) will just be an empty module. So calling `dist.ReduceOp.SUM` would
+    # result in an `AttributeError`.
+    if not is_distributed():
+        return value
+    return dist_reduce(value, dist.ReduceOp.SUM)

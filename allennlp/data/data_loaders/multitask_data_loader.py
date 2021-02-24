@@ -6,7 +6,11 @@ import torch
 from overrides import overrides
 
 from allennlp.common import util
-from allennlp.data.dataset_readers.dataset_reader import DatasetReader, DatasetReaderInput
+from allennlp.data.dataset_readers.dataset_reader import (
+    DatasetReader,
+    DatasetReaderInput,
+    WorkerInfo,
+)
 from allennlp.data.batch import Batch
 from allennlp.data.data_loaders.data_loader import DataLoader, TensorDict
 from allennlp.data.data_loaders.multiprocess_data_loader import MultiProcessDataLoader
@@ -272,6 +276,13 @@ class _MultitaskDatasetReaderShim(DatasetReader):
         super().__init__(**kwargs)
         self.inner = inner
         self.head = head
+
+    def _set_worker_info(self, info: Optional[WorkerInfo]) -> None:
+        """
+        Should only be used internally.
+        """
+        super()._set_worker_info(info)
+        self.inner._set_worker_info(info)
 
     def read(self, file_path: DatasetReaderInput) -> Iterator[Instance]:
         from allennlp.data.fields import MetadataField

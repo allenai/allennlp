@@ -39,11 +39,28 @@
 - [Continuous Build](https://github.com/allenai/allennlp/actions)
 - [Nightly Releases](https://pypi.org/project/allennlp/#history)
 
+## In this README
+
+- [Getting Started Using the Library](#getting-started-using-the-library)
+- [Plugins](#plugins)
+- [Package Overview](#package-overview)
+- [Installation](#installation)
+    - [Installing via pip](#installing-via-pip)
+    - [Installing using Docker](#installing-using-docker)
+    - [Installing from source](#installing-from-source)
+- [Running AllenNLP](#running-allennlp)
+- [Issues](#issues)
+- [Contributions](#contributions)
+- [Citing](#citing)
+- [Team](#team)
+
 ## Getting Started Using the Library
 
 If you're interested in using AllenNLP for model development, we recommend you check out the
-[AllenNLP Guide](https://guide.allennlp.org).  When you're ready to start your project, we've
-created a couple of template repositories that you can use as a starting place:
+[AllenNLP Guide](https://guide.allennlp.org) for a thorough introduction to the library, followed by our more advanced guides
+on [GitHub Discussions](https://github.com/allenai/allennlp/discussions/categories/guides).
+
+When you're ready to start your project, we've created a couple of template repositories that you can use as a starting place:
 
 * If you want to use `allennlp train` and config files to specify experiments, use [this
   template](https://github.com/allenai/allennlp-template-config-files). We recommend this approach.
@@ -57,6 +74,8 @@ In addition, there are external tutorials:
 
 * [Hyperparameter optimization for AllenNLP using Optuna](https://medium.com/optuna/hyperparameter-optimization-for-allennlp-using-optuna-54b4bfecd78b)
 * [Training with multiple GPUs in AllenNLP](https://medium.com/ai2-blog/tutorial-how-to-train-with-multiple-gpus-in-allennlp-c4d7c17eb6d6)
+* [Training on larger batches with less memory in AllenNLP](https://medium.com/ai2-blog/tutorial-training-on-larger-batches-with-less-memory-in-allennlp-1cd2047d92ad)
+* [How to upload transformer weights and tokenizers from AllenNLP to HuggingFace](https://medium.com/ai2-blog/tutorial-how-to-upload-transformer-weights-and-tokenizers-from-allennlp-to-huggingface-ecf6c0249bf)
 
 And others on the [AI2 AllenNLP blog](https://medium.com/ai2-blog/allennlp/home).
 
@@ -285,9 +304,13 @@ Everyone is welcome to file issues with either feature requests, bug reports, or
 
 ## Contributions
 
-The AllenNLP team at AI2 (@allenai) welcomes contributions from the greater AllenNLP community, and, if you would like to get a change into the library, this is likely the fastest approach.  If you would like to contribute a larger feature, we recommend first creating an issue with a proposed design for discussion.  This will prevent you from spending significant time on an implementation which has a technical limitation someone could have pointed out early on.  Small contributions can be made directly in a pull request.
+The AllenNLP team at AI2 ([@allenai](https://github.com/allenai)) welcomes contributions from the community. 
+If you're a first time contributor, we recommend you start by reading our [CONTRIBUTING.md](https://github.com/allenai/allennlp/blob/main/CONTRIBUTING.md) guide.
+Then have a look at our issues with the tag [**`Good First Issue`**](https://github.com/allenai/allennlp/issues?q=is%3Aissue+is%3Aopen+label%3A%22Good+First+Issue%22).
 
-Pull requests (PRs) must have one approving review and no requested changes before they are merged.  As AllenNLP is primarily driven by AI2 (@allenai) we reserve the right to reject or revert contributions that we don't think are good additions.
+If you would like to contribute a larger feature, we recommend first creating an issue with a proposed design for discussion. This will prevent you from spending significant time on an implementation which has a technical limitation someone could have pointed out early on. Small contributions can be made directly in a pull request.
+
+Pull requests (PRs) must have one approving review and no requested changes before they are merged.  As AllenNLP is primarily driven by AI2 we reserve the right to reject or revert contributions that we don't think are good additions.
 
 ## Citing
 
