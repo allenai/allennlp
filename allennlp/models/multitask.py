@@ -69,6 +69,8 @@ class MultiTaskModel(Model):
         If provided, will be used to initialize the model parameters.
     """
 
+    default_predictor = "multitask"
+
     def __init__(
         self,
         vocab: Vocabulary,
