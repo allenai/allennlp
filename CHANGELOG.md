@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `@Registrable.register(...)` decorator no longer masks the decorated class's annotations
 - Ensured that `MeanAbsoluteError` always returns a `float` metric value instead of a `Tensor`.
 - Learning rate schedulers that rely on metrics from the validation set were broken in v2.0.0. This
   brings that functionality back.
