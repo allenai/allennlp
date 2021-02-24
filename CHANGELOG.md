@@ -32,6 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed documentation and validation checks for `FBetaMultiLabelMetric`.
 - Fixed handling of HTTP errors when fetching remote resources with `cached_path()`. Previously the content would be cached even when
   certain errors - like 404s - occurred. Now an `HTTPError` will be raised whenever the HTTP response is not OK.
+- Fixed a bug where the `MultiTaskDataLoader` would crash when `num_workers > 0`
 - Fixed an import error that happens when PyTorch's distributed framework is unavailable on the system.
 
 
