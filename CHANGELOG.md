@@ -18,6 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added a way to specify extra parameters to the predictor in an `allennlp predict` call.
 - Added a way to initialize a `Vocabulary` from transformers models.
 - Added an example for fields of type `ListField[TextField]` to `apply_token_indexers` API docs.
+- Added `text_key` and `label_key` parameters to `TextClassificationJsonReader` class.
+- Added `MultiOptimizer`, which allows you to use different optimizers for different parts of your model.
 
 ### Fixed
 
@@ -29,6 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed documentation and validation checks for `FBetaMultiLabelMetric`.
 - Fixed handling of HTTP errors when fetching remote resources with `cached_path()`. Previously the content would be cached even when
   certain errors - like 404s - occurred. Now an `HTTPError` will be raised whenever the HTTP response is not OK.
+- Fixed an import error that happens when PyTorch's distributed framework is unavailable on the system.
 
 
 ## [v2.0.1](https://github.com/allenai/allennlp/releases/tag/v2.0.1) - 2021-01-29
