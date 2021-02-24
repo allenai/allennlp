@@ -1,11 +1,16 @@
-from overrides import overrides
+import collections
 from typing import Type, List, Dict
+
+from overrides import overrides
 
 from allennlp.common import JsonDict
 from allennlp.data import Instance
-from allennlp.data.dataset_readers.multitask import MultiTaskDatasetReader
 from allennlp.models.multitask import MultiTaskModel
 from allennlp.predictors.predictor import Predictor
+from allennlp.common.util import sanitize
+from allennlp.data.fields import MetadataField
+from allennlp.common.checks import ConfigurationError
+from allennlp.data.dataset_readers import MultiTaskDatasetReader
 
 
 @Predictor.register("multitask")
@@ -31,8 +36,6 @@ class MultiTaskPredictor(Predictor):
     )
 
     def __init__(self, model: MultiTaskModel, dataset_reader: MultiTaskDatasetReader) -> None:
-        from allennlp.common.checks import ConfigurationError
-
         if not isinstance(dataset_reader, MultiTaskDatasetReader):
             raise ConfigurationError(self._WRONG_READER_ERROR)
 
@@ -53,11 +56,6 @@ class MultiTaskPredictor(Predictor):
 
     @overrides
     def predict_instance(self, instance: Instance) -> JsonDict:
-        from allennlp.data.fields import MetadataField
-        from allennlp.common.util import sanitize
-        from allennlp.data.dataset_readers import MultiTaskDatasetReader
-        from allennlp.common.checks import ConfigurationError
-
         task_field = instance["task"]
         if not isinstance(task_field, MetadataField):
             raise ValueError(self._WRONG_FIELD_ERROR)
@@ -70,8 +68,6 @@ class MultiTaskPredictor(Predictor):
 
     @overrides
     def _json_to_instance(self, json_dict: JsonDict) -> Instance:
-        from allennlp.data.fields import MetadataField
-
         task = json_dict["task"]
         del json_dict["task"]
         predictor = self.predictors[task]
@@ -81,11 +77,6 @@ class MultiTaskPredictor(Predictor):
 
     @overrides
     def predict_batch_instance(self, instances: List[Instance]) -> List[JsonDict]:
-        import collections
-        from allennlp.data.fields import MetadataField
-        from allennlp.common.checks import ConfigurationError
-        from allennlp.data.dataset_readers import MultiTaskDatasetReader
-
         task_to_instances: Dict[str, List[Instance]] = collections.defaultdict(lambda: [])
         for instance in instances:
             task_field = instance["task"]
