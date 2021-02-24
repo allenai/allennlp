@@ -281,8 +281,8 @@ class _MultitaskDatasetReaderShim(DatasetReader):
         """
         Should only be used internally.
         """
-        self._worker_info = info
-        self.inner._worker_info = info
+        super()._set_worker_info(info)
+        self.inner._set_worker_info(info)
 
     def read(self, file_path: DatasetReaderInput) -> Iterator[Instance]:
         from allennlp.data.fields import MetadataField
