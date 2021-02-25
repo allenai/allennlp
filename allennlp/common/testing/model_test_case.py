@@ -16,7 +16,7 @@ from allennlp.data import DataLoader
 from allennlp.data.batch import Batch
 from allennlp.models import load_archive, Model
 from allennlp.training import GradientDescentTrainer
-from allennlp.sanity_checks.batch_norm_verification import BatchNormVerification
+from allennlp.sanity_checks.normalization_bias_verification import NormalizationBiasVerification
 
 
 class ModelTestCase(AllenNlpTestCase):
@@ -65,7 +65,7 @@ class ModelTestCase(AllenNlpTestCase):
 
     def test_model_batch_norm_verification(self):
         if hasattr(self, "model"):  # TODO: can this be done using pytest.skipif?
-            verification = BatchNormVerification(self.model)
+            verification = NormalizationBiasVerification(self.model)
             assert verification.check(inputs=self.dataset.as_tensor_dict())
 
     def ensure_model_can_train_save_and_load(

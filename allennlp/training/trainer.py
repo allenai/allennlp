@@ -30,7 +30,7 @@ from allennlp.training.momentum_schedulers import MomentumScheduler
 from allennlp.training.moving_average import MovingAverage
 from allennlp.training.optimizers import Optimizer
 from allennlp.training.tensorboard_writer import TensorBoardWriter
-from allennlp.sanity_checks.batch_norm_verification import BatchNormVerification
+from allennlp.sanity_checks.normalization_bias_verification import NormalizationBiasVerification
 
 logger = logging.getLogger(__name__)
 
@@ -189,7 +189,7 @@ class SanityCheckCallback(TrainerCallback):
     ) -> None:
         self.trainer = trainer
         if is_primary:
-            self._verification = BatchNormVerification(self.trainer._pytorch_model)
+            self._verification = NormalizationBiasVerification(self.trainer._pytorch_model)
             # Register the hooks that perform the verification before training starts.
             self._verification.register_hooks()
 
@@ -216,10 +216,17 @@ class SanityCheckCallback(TrainerCallback):
             detected_pairs = self._verification.collect_detections()
             # TODO: Should we actual fail with an error instead?
             if detected_pairs:
-                logger.warning(
-                    "The model failed the BatchNormVerification check. "
-                    f"It contains {len(detected_pairs)} invalid layer combination(s)."
+                message = "\nThe model failed the NormalizationBiasVerification check. "
+                for pair in detected_pairs:
+                    message += (
+                        f"\nDetected a layer '{pair[0]}' with bias followed by"
+                        f" a normalization layer '{pair[1]}'."
+                    )
+                message += (
+                    "\nThis makes the normalization ineffective and can lead to unstable training."
+                    " Either remove the normalization or turn off the bias."
                 )
+                logger.warning(message)
 
 
 @TrainerCallback.register("tensorboard")

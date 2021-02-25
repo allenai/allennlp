@@ -12,9 +12,14 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class BatchNormVerification(VerificationBase):
+class NormalizationBiasVerification(VerificationBase):
+    """
+    Network layers with biases should not be combined with normalization layers,
+    as the bias makes normalization ineffective and can lead to unstable training.
+    This verification detects such combinations.
+    """
 
-    normalization_layer = (
+    normalization_layers = (
         nn.BatchNorm1d,
         nn.BatchNorm2d,
         nn.BatchNorm3d,
@@ -52,8 +57,8 @@ class BatchNormVerification(VerificationBase):
         ):
             bias = getattr(mod0, "bias", None)
             detected = (
-                isinstance(mod1, self.normalization_layer)
-                and mod1.training  # TODO: do we want/need this check?
+                isinstance(mod1, self.normalization_layers)
+                and mod1.training
                 and isinstance(bias, torch.Tensor)
                 and bias.requires_grad
             )
@@ -62,7 +67,9 @@ class BatchNormVerification(VerificationBase):
         self._detected_pairs = detected_pairs
         if detected_pairs:
             logger.warning(
-                f"The following invalid BatchNorm-bias layer pairings were detected: {detected_pairs}"
+                "The following invalid BatchNorm-bias layer pairings were detected: {}".format(
+                    detected_pairs
+                )
             )
         return detected_pairs
 

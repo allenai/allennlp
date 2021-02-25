@@ -1,29 +1,21 @@
 import torch
 
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.sanity_checks.batch_norm_verification import BatchNormVerification
+from allennlp.common.testing.sanity_check_test import (
+    FakeModelForTestingNormalizationBiasVerification,
+)
+from allennlp.sanity_checks.normalization_bias_verification import NormalizationBiasVerification
 
 
-class BiasBatchNormModel(torch.nn.Module):
-    def __init__(self, use_bias=True):
-        super().__init__()
-        self.conv = torch.nn.Conv2d(3, 5, kernel_size=1, bias=use_bias)
-        self.bn = torch.nn.BatchNorm2d(5)
-
-    def forward(self, x):
-        # x: (B, 3, H, W)
-        return self.bn(self.conv(x))
-
-
-class TestBatchNormVerification(AllenNlpTestCase):
+class TestNormalizationBiasVerification(AllenNlpTestCase):
     def setup_method(self):
         super().setup_method()
 
-        self.model_with_bias = BiasBatchNormModel(use_bias=True)
-        self.model_without_bias = BiasBatchNormModel(use_bias=False)
+        self.model_with_bias = FakeModelForTestingNormalizationBiasVerification(use_bias=True)
+        self.model_without_bias = FakeModelForTestingNormalizationBiasVerification(use_bias=False)
 
-        self.verification_with_bias = BatchNormVerification(self.model_with_bias)
-        self.verification_without_bias = BatchNormVerification(self.model_without_bias)
+        self.verification_with_bias = NormalizationBiasVerification(self.model_with_bias)
+        self.verification_without_bias = NormalizationBiasVerification(self.model_without_bias)
 
         inputs = torch.rand(2, 3, 1, 4)
 

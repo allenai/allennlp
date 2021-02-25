@@ -34,6 +34,9 @@ from allennlp.training.learning_rate_schedulers import ExponentialLearningRateSc
 from allennlp.training.momentum_schedulers import MomentumScheduler
 from allennlp.training.moving_average import ExponentialMovingAverage
 from allennlp.training.optimizers import Optimizer
+from allennlp.common.testing.sanity_check_test import (
+    FakeModelForTestingNormalizationBiasVerification,
+)
 
 
 class TrainerTestBase(AllenNlpTestCase):
@@ -758,18 +761,8 @@ class TestTrainer(TrainerTestBase):
         trainer.train()
 
     def test_sanity_check_callback(self):
-        class BiasBatchNormModel(Model):
-            def __init__(self, use_bias=True):
-                super().__init__(vocab=Vocabulary())
-                self.conv = torch.nn.Conv2d(3, 5, kernel_size=1, bias=use_bias)
-                self.bn = torch.nn.BatchNorm2d(5)
 
-            def forward(self, x):
-                # x: (B, 3, H, W)
-                out = self.bn(self.conv(x))
-                return {"loss": out.sum()}
-
-        model_with_bias = BiasBatchNormModel(use_bias=True)
+        model_with_bias = FakeModelForTestingNormalizationBiasVerification(use_bias=True)
         inst = Instance({"x": TensorField(torch.rand(3, 1, 4))})
         data_loader = SimpleDataLoader([inst, inst], 2)
         trainer = GradientDescentTrainer(
@@ -781,6 +774,7 @@ class TestTrainer(TrainerTestBase):
             callbacks=[SanityCheckCallback(serialization_dir=self.TEST_DIR)],
         )
         trainer.train()
+        assert False
 
     def test_trainer_saves_models_at_specified_interval(self):
         data_loader = SimpleDataLoader(self.instances, 4)
