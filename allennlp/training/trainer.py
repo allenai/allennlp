@@ -236,10 +236,6 @@ class LogCallback(TrainerCallback):
         batch_grad_norm: Optional[float] = None,
         **kwargs,
     ) -> None:
-        # In the distributed case we need to call this from every worker, since every
-        # worker reports its own memory usage.
-        cpu_memory_usage = common_util.peak_cpu_memory()
-        gpu_memory_usage = common_util.peak_gpu_memory()
 
         if not is_primary:
             return None
@@ -252,7 +248,6 @@ class LogCallback(TrainerCallback):
         else:
             self._param_updates = None
 
-        self._log_writer.log_memory_usage(cpu_memory_usage, gpu_memory_usage)
         self._log_writer.log_batch(
             trainer.model,
             trainer.optimizer,  # type: ignore[arg-type]
@@ -324,16 +319,17 @@ class ConsoleLoggerCallback(TrainerCallback):
         batch_grad_norm: Optional[float] = None,
         **kwargs,
     ) -> None:
-        # In the distributed case we need to call this from every worker, since every
-        # worker reports its own memory usage.
-        cpu_memory_usage = common_util.peak_cpu_memory()
-        gpu_memory_usage = common_util.peak_gpu_memory()
 
         if not is_primary:
             return None
 
-        # We only want to do this for the first batch (TODO: only first epoch too?)
-        if batch_number == 1:
+        # We only want to do this for the first batch in the first epoch.
+        if batch_number == 1 and epoch == 0:
+
+            # In the distributed case we need to call this from every worker, since every
+            # worker reports its own memory usage.
+            cpu_memory_usage = common_util.peak_cpu_memory()
+            gpu_memory_usage = common_util.peak_gpu_memory()
 
             # Log memory usage
             cpu_memory_usage_total = 0.0
@@ -358,17 +354,15 @@ class ConsoleLoggerCallback(TrainerCallback):
             if isinstance(val, dict):
                 self._log_fields(val, key)
             elif isinstance(val, torch.Tensor):
-                logger.info(f"\"{key}\" (Shape : {' x '.join([str(x) for x in val.shape])})")
                 torch.set_printoptions(threshold=2)
-                logger.info(f"{val}")
+                logger.info("%s (Shape: %s)\n%s", key, " x ".join([str(x) for x in val.shape]), val)
                 torch.set_printoptions(threshold=1000)
             elif isinstance(val, List):
-                logger.info(f'Field : "{key}" : (Length : {len(val)} of type "{type(val[0])}")')
+                logger.info('Field : "%s" : (Length %d of type "%s")', key, len(val), type(val[0]))
             elif isinstance(val, str):
-                logger.info(f'Field : "{key}"')
-                logger.info("{:20.20} ...".format(val))
+                logger.info('Field : "{}" : "{:20.20} ..."'.format(key, val))
             else:
-                logger.info(f'"{key}" : "{val}"')
+                logger.info('Field : "%s" : %s', key, val)
 
     def on_epoch(
         self,

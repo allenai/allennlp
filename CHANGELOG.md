@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `coding_scheme` parameter is now deprecated in `Conll2003DatasetReader`, please use `convert_to_coding_scheme` instead.
 - Support spaCy v3
 - `histogram_interval` parameter is now deprecated in `TensorboardWriter`, please use `distribution_interval` instead.
+- Memory usage is not logged in tensorboard during training now. `ConsoleLoggerCallback` should be used instead.
 
 ### Added
 
