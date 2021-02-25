@@ -145,7 +145,6 @@ class _PredictManager:
         print_to_console: bool,
         has_dataset_reader: bool,
     ) -> None:
-
         self._predictor = predictor
         self._input_file = input_file
         self._output_file = None if output_file is None else open(output_file, "w")
