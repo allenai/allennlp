@@ -324,29 +324,10 @@ class ConsoleLoggerCallback(TrainerCallback):
             return None
 
         # We only want to do this for the first batch in the first epoch.
-        if batch_number == 1 and epoch == 0:
-
-            # In the distributed case we need to call this from every worker, since every
-            # worker reports its own memory usage.
-            cpu_memory_usage = common_util.peak_cpu_memory()
-            gpu_memory_usage = common_util.peak_gpu_memory()
-
-            # Log memory usage
-            cpu_memory_usage_total = 0.0
-            for worker, mem_bytes in cpu_memory_usage.items():
-                memory = mem_bytes / (1024 * 1024)
-                logger.info(f"memory_usage/worker_{worker}_cpu - {memory}")
-                cpu_memory_usage_total += memory
-            logger.info(f"memory_usage/cpu - {cpu_memory_usage_total}")
-            for gpu, mem_bytes in gpu_memory_usage.items():
-                memory = mem_bytes / (1024 * 1024)
-                logger.info(f"memory_usage/gpu_{gpu} - {memory}")
-
-            # Log batch inputs
-            if self._should_log_inputs:
-                logger.info("Batch inputs")
-                for b, batch in enumerate(batch_inputs):
-                    self._log_fields(batch, log_prefix="batch_input")  # type: ignore
+        if batch_number == 1 and epoch == 0 and self._should_log_inputs:
+            logger.info("Batch inputs")
+            for b, batch in enumerate(batch_inputs):
+                self._log_fields(batch, log_prefix="batch_input")  # type: ignore
 
     def _log_fields(self, fields: Dict, log_prefix: str = ""):
         for key, val in fields.items():
