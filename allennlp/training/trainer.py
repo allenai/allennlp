@@ -31,8 +31,26 @@ from allennlp.training.moving_average import MovingAverage
 from allennlp.training.optimizers import Optimizer
 from allennlp.training.tensorboard_writer import TensorBoardWriter
 from allennlp.sanity_checks.normalization_bias_verification import NormalizationBiasVerification
+from allennlp.training.log_writer import LogWriter
 
 logger = logging.getLogger(__name__)
+
+
+def _get_train_and_validation_metrics(metrics: Dict):
+    """
+    Utility function to separate out train_metrics and val_metrics.
+    """
+    train_metrics: Dict[str, Any] = {}
+    val_metrics: Dict[str, Any] = {}
+    for key, value in metrics.items():
+        if key.startswith("training_"):
+            key = key.replace("training_", "", 1)
+            if key not in {"duration", "start_epoch", "epochs"}:
+                train_metrics[key] = value
+        elif key.startswith("validation_"):
+            key = key.replace("validation_", "", 1)
+            val_metrics[key] = value
+    return train_metrics, val_metrics
 
 
 class Trainer(Registrable):
@@ -118,7 +136,7 @@ class TrainerCallback(Registrable):
     and saving its own files next to the config/checkpoints/logs/etc.
     """
 
-    def __init__(self, serialization_dir: str) -> None:
+    def __init__(self, serialization_dir: Optional[str] = None) -> None:
         self.serialization_dir = serialization_dir
         self.trainer: Optional["GradientDescentTrainer"] = None
 
@@ -229,20 +247,19 @@ class SanityCheckCallback(TrainerCallback):
                 logger.warning(message)
 
 
-@TrainerCallback.register("tensorboard")
-class TensorBoardCallback(TrainerCallback):
+class LogCallback(TrainerCallback):
     """
-    Log training statistics and metrics to TensorBoard using the `TensorBoardWriter`.
+    Log training statistics and metrics using a `LogWriter`.
     """
 
     def __init__(
         self,
-        serialization_dir: str,
-        tensorboard_writer: Lazy[TensorBoardWriter] = Lazy(TensorBoardWriter),
+        serialization_dir: Optional[str] = None,
+        log_writer: Lazy[LogWriter] = Lazy(LogWriter),
     ) -> None:
         super().__init__(serialization_dir=serialization_dir)
-        self._tensorboard_constructor = tensorboard_writer
-        self._tensorboard: Optional[TensorBoardWriter] = None
+        self._log_writer_constructor = log_writer
+        self._log_writer: Optional[LogWriter] = None
         self._param_updates: Optional[Dict[str, torch.Tensor]] = None
 
     def on_start(
@@ -250,13 +267,13 @@ class TensorBoardCallback(TrainerCallback):
     ) -> None:
         self.trainer = trainer
         if is_primary:
-            self._tensorboard = self._tensorboard_constructor.construct(
+            self._log_writer = self._log_writer_constructor.construct(
                 serialization_dir=self.serialization_dir
             )
-            self._tensorboard.get_batch_num_total = (
+            self._log_writer.get_batch_num_total = (
                 lambda: self.trainer._batch_num_total  # type: ignore[union-attr]
             )
-            self._tensorboard.enable_activation_logging(self.trainer.model)
+            self._log_writer.enable_activation_logging(self.trainer.model)
 
     def on_batch(
         self,
@@ -271,24 +288,19 @@ class TensorBoardCallback(TrainerCallback):
         batch_grad_norm: Optional[float] = None,
         **kwargs,
     ) -> None:
-        # In the distributed case we need to call this from every worker, since every
-        # worker reports its own memory usage.
-        cpu_memory_usage = common_util.peak_cpu_memory()
-        gpu_memory_usage = common_util.peak_gpu_memory()
 
         if not is_primary:
             return None
-        assert self._tensorboard is not None
+        assert self._log_writer is not None
 
-        if self._tensorboard.should_log_histograms_this_batch():
+        if self._log_writer.should_log_distributions_this_batch():
             assert self._param_updates is not None
             for name, param in trainer.model.named_parameters():
                 self._param_updates[name].sub_(param.detach().cpu())
         else:
             self._param_updates = None
 
-        self._tensorboard.log_memory_usage(cpu_memory_usage, gpu_memory_usage)
-        self._tensorboard.log_batch(
+        self._log_writer.log_batch(
             trainer.model,
             trainer.optimizer,  # type: ignore[arg-type]
             batch_grad_norm,
@@ -297,7 +309,7 @@ class TensorBoardCallback(TrainerCallback):
             self._param_updates,
         )
 
-        if self._tensorboard.should_log_histograms_next_batch():
+        if self._log_writer.should_log_distributions_next_batch():
             self._param_updates = {
                 name: param.detach().cpu().clone()
                 for name, param in trainer.model.named_parameters()
@@ -313,23 +325,13 @@ class TensorBoardCallback(TrainerCallback):
     ) -> None:
         if not is_primary:
             return None
-        assert self._tensorboard is not None
+        assert self._log_writer is not None
 
-        train_metrics: Dict[str, Any] = {}
-        val_metrics: Dict[str, Any] = {}
-        for key, value in metrics.items():
-            if key.startswith("training_"):
-                key = key.replace("training_", "", 1)
-                if key not in {"duration", "start_epoch", "epochs"}:
-                    train_metrics[key] = value
-            elif key.startswith("validation_"):
-                key = key.replace("validation_", "", 1)
-                val_metrics[key] = value
+        train_metrics, val_metrics = _get_train_and_validation_metrics(metrics)
 
-        self._tensorboard.log_metrics(
+        self._log_writer.log_metrics(
             train_metrics,
             val_metrics=val_metrics,
-            log_to_console=True,
             epoch=epoch + 1,  # +1 because tensorboard doesn't like 0
         )
 
@@ -342,8 +344,110 @@ class TensorBoardCallback(TrainerCallback):
         **kwargs,
     ) -> None:
         if is_primary:
-            assert self._tensorboard is not None
-            self._tensorboard.close()
+            assert self._log_writer is not None
+            self._log_writer.close()
+
+
+@TrainerCallback.register("console-logger")
+class ConsoleLoggerCallback(TrainerCallback):
+    def __init__(
+        self,
+        serialization_dir: Optional[str] = None,
+        should_log_inputs: bool = False,
+    ) -> None:
+        super().__init__(serialization_dir=serialization_dir)
+        self._should_log_inputs = should_log_inputs
+
+    def on_batch(
+        self,
+        trainer: "GradientDescentTrainer",
+        batch_inputs: List[List[TensorDict]],
+        batch_outputs: List[Dict[str, Any]],
+        batch_metrics: Dict[str, Any],
+        epoch: int,
+        batch_number: int,
+        is_training: bool,
+        is_primary: bool = True,
+        batch_grad_norm: Optional[float] = None,
+        **kwargs,
+    ) -> None:
+
+        if not is_primary:
+            return None
+
+        # We only want to do this for the first batch in the first epoch.
+        if batch_number == 1 and epoch == 0 and self._should_log_inputs:
+            logger.info("Batch inputs")
+            for b, batch in enumerate(batch_inputs):
+                self._log_fields(batch, log_prefix="batch_input")  # type: ignore
+
+    def _log_fields(self, fields: Dict, log_prefix: str = ""):
+        for key, val in fields.items():
+            key = log_prefix + "/" + key
+            if isinstance(val, dict):
+                self._log_fields(val, key)
+            elif isinstance(val, torch.Tensor):
+                torch.set_printoptions(threshold=2)
+                logger.info("%s (Shape: %s)\n%s", key, " x ".join([str(x) for x in val.shape]), val)
+                torch.set_printoptions(threshold=1000)
+            elif isinstance(val, List):
+                logger.info('Field : "%s" : (Length %d of type "%s")', key, len(val), type(val[0]))
+            elif isinstance(val, str):
+                logger.info('Field : "{}" : "{:20.20} ..."'.format(key, val))
+            else:
+                logger.info('Field : "%s" : %s', key, val)
+
+    def on_epoch(
+        self,
+        trainer: "GradientDescentTrainer",
+        metrics: Dict[str, Any],
+        epoch: int,
+        is_primary: bool = True,
+        **kwargs,
+    ) -> None:
+        if not is_primary:
+            return None
+
+        train_metrics, val_metrics = _get_train_and_validation_metrics(metrics)
+
+        metric_names = set(train_metrics.keys())
+        if val_metrics is not None:
+            metric_names.update(val_metrics.keys())
+        val_metrics = val_metrics or {}
+
+        dual_message_template = "%s |  %8.3f  |  %8.3f"
+        no_val_message_template = "%s |  %8.3f  |  %8s"
+        no_train_message_template = "%s |  %8s  |  %8.3f"
+        header_template = "%s |  %-10s"
+        name_length = max(len(x) for x in metric_names)
+        logger.info(header_template, "Training".rjust(name_length + 13), "Validation")
+
+        for name in sorted(metric_names):
+            train_metric = train_metrics.get(name)
+            val_metric = val_metrics.get(name)
+
+            if val_metric is not None and train_metric is not None:
+                logger.info(
+                    dual_message_template, name.ljust(name_length), train_metric, val_metric
+                )
+            elif val_metric is not None:
+                logger.info(no_train_message_template, name.ljust(name_length), "N/A", val_metric)
+            elif train_metric is not None:
+                logger.info(no_val_message_template, name.ljust(name_length), train_metric, "N/A")
+
+
+@TrainerCallback.register("tensorboard")
+class TensorBoardCallback(LogCallback):
+    """
+    Log training statistics and metrics to TensorBoard using the `TensorBoardWriter`.
+    """
+
+    def __init__(
+        self,
+        serialization_dir: str,
+        tensorboard_writer: Lazy[TensorBoardWriter] = Lazy(TensorBoardWriter),
+    ) -> None:
+        super().__init__(serialization_dir=serialization_dir, log_writer=tensorboard_writer)  # type: ignore
 
 
 @TrainerCallback.register("track_epoch_callback")
