@@ -25,6 +25,9 @@ class T5LayerNorm(TransformerModule, FromParams):
         self.weight = nn.Parameter(torch.ones(hidden_size))
         self.variance_epsilon = eps
 
+    def output_hidden_size(self) -> int:
+        return len(self.weight)
+
     def forward(self, hidden_states) -> FloatT:
         # layer norm should always be calculated in float32
         variance = hidden_states.to(torch.float32).pow(2).mean(-1, keepdim=True)
@@ -132,7 +135,7 @@ class T5Attention(TransformerModule, FromParams):
         self.q = nn.Linear(self.hidden_size, self.inner_dim, bias=False)
         self.k = nn.Linear(self.hidden_size, self.inner_dim, bias=False)
         self.v = nn.Linear(self.hidden_size, self.inner_dim, bias=False)
-        self.o = nn.Linear(self.inner_dim, self.d_model, bias=False)
+        self.o = nn.Linear(self.inner_dim, self.hidden_size, bias=False)
         if self.has_relative_attention_bias:
             self.relative_attention_bias = nn.Embedding(
                 self.relative_attention_num_buckets, self.num_heads
@@ -615,9 +618,12 @@ class T5Stack(TransformerModule, FromParams):
             raise ConfigurationError("Found mismatched blocks in stack.")
         self.block = nn.ModuleList(layers)
 
-        self.token_embeddings = token_embeddings
+        self.token_embeddings = token_embeddings or nn.Embedding(32128, 1024)
         self.final_layer_norm = final_layer_norm or T5LayerNorm()
         self.dropout = nn.Dropout(dropout)
+
+    def output_hidden_size(self) -> int:
+        return self.final_layer_norm.output_hidden_size()
 
     @staticmethod
     def get_head_mask(head_mask: Optional[torch.BoolTensor], num_hidden_layers: int) -> BoolT:
@@ -778,7 +784,7 @@ class T5EncoderStack(T5Stack, FromParams):
                     attention=T5LayerSelfAttention(
                         T5Attention(False, has_relative_attention_bias=(i == 0))
                     ),
-                    cross_attention=T5LayerCrossAttention() if self.is_decoder else None,
+                    cross_attention=None
                 )
                 for i in range(24)
             ]
@@ -807,7 +813,7 @@ class T5DecoderStack(T5Stack, FromParams):
                     attention=T5LayerSelfAttention(
                         T5Attention(True, has_relative_attention_bias=(i == 0))
                     ),
-                    cross_attention=T5LayerCrossAttention() if self.is_decoder else None,
+                    cross_attention=T5LayerCrossAttention(),
                 )
                 for i in range(24)
             ]
@@ -851,10 +857,10 @@ class T5ForConditionalGeneration(TransformerModule, FromParams):
         if token_embeddings is None:
             self.token_embeddings.weight.data.normal_(mean=0.0, std=1.0)
 
-        self.encoder = encoder or T5EncoderStack()
-        self.decoder = decoder or T5DecoderStack()
+        self.encoder = encoder or T5EncoderStack(token_embeddings=self.token_embeddings)
+        self.decoder = decoder or T5DecoderStack(token_embeddings=self.token_embeddings)
 
-        self.lm_head = nn.Linear(decoder.hidden_size, token_embeddings.num_embeddings, bias=False)
+        self.lm_head = nn.Linear(self.decoder.output_hidden_size(), self.token_embeddings.num_embeddings, bias=False)
 
         self.decoder_start_token_id = decoder_start_token_id
         self.pad_token_id = pad_token_id
