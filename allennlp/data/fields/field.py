@@ -56,18 +56,14 @@ class Field(Generic[DataArray]):
 
     def human_readable_dict(self) -> JsonDict:
         """
-        This function facilitate saving formated instances to json files for human readability,
-        use case includes example-based explanation, where it's better to have a output file
-        rather than printing or logging. The output will be a dictionary, which contains a
-        default key/name of the field, then a structured representation of the field.
-
-        For example, - if the field is LabelField, then we just output,
-                        {"label": field.label (string)}
-                     - if the field is TextField, then we just output,
-                        {"tokens": field.tokens (preferrably un-numericalized tokens)}
-
-        Since this is hard to deal with in higher level usage -- e.g. judging instance contains which fields
-        and how to convert -- it's better to do it in the lower level.
+        This method should be implemented by subclasses to return a structured, yet human-readable
+        representation of the field.
+        
+        The return type is `JsonDict`, which means it's just a Python dictionary that is JSON-serializable.
+        
+        !!! Note
+            `human_readable_dict()` is not meant to be used as a method to serialize a `Field` since the return
+            value does not necessarily contain all of the attributes of the `Field` instance.
         """
         raise NotImplementedError
 
