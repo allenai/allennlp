@@ -54,7 +54,7 @@ class Field(Generic[DataArray]):
         """
         pass
 
-    def human_readable_repr(self) -> object:
+    def human_readable_repr(self) -> Any:
         """
         This method should be implemented by subclasses to return a structured, yet human-readable
         representation of the field.
