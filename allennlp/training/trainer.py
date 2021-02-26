@@ -232,19 +232,9 @@ class SanityCheckCallback(TrainerCallback):
         if epoch == 0 and batch_number == 1 and is_training:
             self._verification.destroy_hooks()
             detected_pairs = self._verification.collect_detections()
-            # TODO: Should we actual fail with an error instead?
+            # TODO: Should we actually fail with an error instead?
             if detected_pairs:
-                message = "\nThe model failed the NormalizationBiasVerification check. "
-                for pair in detected_pairs:
-                    message += (
-                        f"\nDetected a layer '{pair[0]}' with bias followed by"
-                        f" a normalization layer '{pair[1]}'."
-                    )
-                message += (
-                    "\nThis makes the normalization ineffective and can lead to unstable training."
-                    " Either remove the normalization or turn off the bias."
-                )
-                logger.warning(message)
+                logger.warning("The NormalizationBiasVerification check failed.")
 
 
 class LogCallback(TrainerCallback):

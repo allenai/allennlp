@@ -15,12 +15,10 @@ from torch.nn.utils import clip_grad_norm_
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
 from allennlp.common.testing import AllenNlpTestCase, requires_gpu, requires_multi_gpu
-from allennlp.data import Vocabulary, Instance
-from allennlp.data.fields import TensorField
+from allennlp.data import Vocabulary, Instance, Token
 from allennlp.data.data_loaders import MultiProcessDataLoader, SimpleDataLoader, TensorDict
 from allennlp.data.dataset_readers import SequenceTaggingDatasetReader, DatasetReader
 from allennlp.data.token_indexers import SingleIdTokenIndexer
-from allennlp.data import Token, Instance
 from allennlp.models.model import Model
 from allennlp.models.simple_tagger import SimpleTagger
 from allennlp.training import (

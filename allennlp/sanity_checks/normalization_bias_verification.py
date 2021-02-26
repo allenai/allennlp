@@ -66,12 +66,24 @@ class NormalizationBiasVerification(VerificationBase):
                 detected_pairs.append((name0, name1))
         self._detected_pairs = detected_pairs
         if detected_pairs:
-            logger.warning(
-                "The following invalid BatchNorm-bias layer pairings were detected: {}".format(
-                    detected_pairs
-                )
-            )
+            logger.warning(self._verification_message())
         return detected_pairs
+
+    def _verification_message(self):
+        if self._detected_pairs:
+            message = "\n\nThe model failed the NormalizationBiasVerification check:"
+            for pair in self._detected_pairs:
+                message += (
+                    f"\n  * Detected a layer '{pair[0]}' with bias followed by"
+                    f" a normalization layer '{pair[1]}'."
+                )
+            message += (
+                "\n\nThis makes the normalization ineffective and can lead to unstable training. "
+                "Either remove the normalization or turn off the bias.\n\n"
+            )
+        else:
+            message = "\nThe model passed the NormalizationBiasVerification check."
+        return message
 
     def register_hooks(self):
         hook_handles = []
