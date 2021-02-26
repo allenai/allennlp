@@ -1,5 +1,5 @@
 from copy import deepcopy
-from typing import Dict, Generic, List, TypeVar
+from typing import Dict, Generic, List, TypeVar, Any
 
 import torch
 
