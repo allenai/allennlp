@@ -7,7 +7,6 @@ import torch
 from allennlp.data.fields.field import Field
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.util import JsonDict
 
 logger = logging.getLogger(__name__)
 
@@ -107,8 +106,8 @@ class LabelField(Field[torch.Tensor]):
         return LabelField(-1, self._label_namespace, skip_indexing=True)
 
     @overrides
-    def human_readable_dict(self) -> JsonDict:
-        return {"label": self.label}
+    def human_readable_repr(self) -> str:
+        return self.label
 
     def __str__(self) -> str:
         return f"LabelField with label: {self.label} in namespace: '{self._label_namespace}'."

@@ -362,4 +362,4 @@ class TestTextField(AllenNlpTestCase):
     def test_to_json(self):
         field = TextField([Token(t) for t in ["This", "is", "a", "sentence", "."]], {})
 
-        assert field.human_readable_dict() == {"tokens": ["This", "is", "a", "sentence", "."]}
+        assert field.human_readable_repr() == ["This", "is", "a", "sentence", "."]
