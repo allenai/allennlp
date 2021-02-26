@@ -861,6 +861,7 @@ class T5ForConditionalGeneration(TransformerModule, FromParams):
         self.decoder = decoder or T5DecoderStack(token_embeddings=self.token_embeddings)
 
         self.lm_head = nn.Linear(self.decoder.output_hidden_size(), self.token_embeddings.num_embeddings, bias=False)
+        self.lm_head.weight = self.token_embeddings.weight
 
         self.decoder_start_token_id = decoder_start_token_id
         self.pad_token_id = pad_token_id
