@@ -79,8 +79,7 @@ class TensorField(Field[torch.Tensor]):
 
     @overrides
     def human_readable_dict(self):
-        size = list(self.tensor.shape)
+        shape = list(self.tensor.shape)
         std = torch.std(self.tensor.float()).item()
         ave = torch.mean(self.tensor.float()).item()
-
-        return {"tensor": {"size": size, "element_std": std, "element_ave": ave}}
+        return {"tensor": {"shape": shape, "element_std": std, "element_ave": ave}}
