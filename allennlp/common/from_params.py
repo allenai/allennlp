@@ -375,8 +375,11 @@ def construct_arg(
         and can_construct_from_params(args[-1])
     ):
         value_cls = annotation.__args__[-1]
-
         value_dict = {}
+        if not isinstance(popped_params, Mapping):
+            raise TypeError(
+                f"Expected {argument_name} to be a Mapping (probably a dict or a Params object)."
+            )
 
         for key, value_params in popped_params.items():
             value_dict[key] = construct_arg(

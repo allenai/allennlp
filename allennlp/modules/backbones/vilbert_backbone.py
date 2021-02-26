@@ -215,20 +215,3 @@ class VilbertBackbone(Backbone):
             "encoded_text_pooled": pooled_output_t,
             "pooled_boxes_and_text": pooled_output,
         }
-
-    @overrides
-    def make_output_human_readable(
-        self, output_dict: Dict[str, torch.Tensor]
-    ) -> Dict[str, torch.Tensor]:
-        tokens = []
-        for instance_tokens in output_dict[
-            "token_ids"
-        ]:  # TODO: do we even have "token_ids" in the output?
-            tokens.append(
-                [
-                    self._vocab.get_token_from_index(token_id.item(), namespace=self._namespace)
-                    for token_id in instance_tokens
-                ]
-            )
-        output_dict["tokens"] = tokens
-        return output_dict
