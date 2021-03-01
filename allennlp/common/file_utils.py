@@ -603,6 +603,7 @@ class TensorCache(MutableMapping[str, Tensor], ABC):
         if self.read_only:
             raise ValueError("cannot write to a read-only cache")
 
+        tensor = tensor.cpu()
         encoded_key = key.encode()
         buffer = io.BytesIO()
         if tensor.storage().size() != np.prod(tensor.size()):
