@@ -42,7 +42,7 @@ class TestInstance(AllenNlpTestCase):
         assert "labels" not in other.fields
         assert other != instance  # sanity check on the '__eq__' method.
 
-    def test_human_readable_dict(self):
+    def test_human_readable_repr(self):
         words_field = TextField([Token("hello")], {})
         label_field = LabelField(1, skip_indexing=True)
         instance1 = Instance({"words": words_field, "labels": label_field})
