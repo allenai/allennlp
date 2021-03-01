@@ -114,7 +114,12 @@ class TestTensorField(AllenNlpTestCase):
         assert array1 != array3
         assert array1 == array4
 
-    def test_human_readable_dict(self):
+    def test_human_readable_repr(self):
         array = TensorField(numpy.asarray([1.0, 1, 1]))
-        ans = {"shape": [3], "element_ave": 1.0, "element_std": 0.0}
+        ans = {
+            "shape": [3],
+            "element_ave": 1.0,
+            "element_std": 0.0,
+            "type": "<class 'torch.Tensor'>",
+        }
         assert array.human_readable_repr() == ans

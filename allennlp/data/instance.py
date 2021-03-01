@@ -118,10 +118,5 @@ class Instance(Mapping[str, Field]):
         This function help to output instances to json files or print for human readability.
         Use case includes example-based explanation, where it's better to have a output file or
         rather than printing or logging.
-
-        For example, - if the field is LabelField, then we just output,`field.label` (string)
-                     - if the field is TextField, then we just output,
-                     field.tokens` (preferrably un-numericalized tokens)
-                     - the instances output then is {"label": `field.label`, "tokens": `field.tokens`}
         """
         return {key: field.human_readable_repr() for key, field in self.fields.items()}
