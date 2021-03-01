@@ -1,4 +1,4 @@
-from typing import Dict, List, Set, Tuple, Optional, Any
+from typing import Dict, List, Set, Tuple, Optional
 import logging
 import textwrap
 
@@ -157,7 +157,7 @@ class AdjacencyField(Field[torch.Tensor]):
         return len(self.sequence_field)
 
     @overrides
-    def human_readable_repr(self) -> Dict[str, Any]:
+    def human_readable_repr(self):
         ret = {"indices": self.indices}
         if self.labels is not None:
             ret["labels"] = self.labels
