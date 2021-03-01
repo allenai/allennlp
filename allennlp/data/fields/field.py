@@ -59,8 +59,6 @@ class Field(Generic[DataArray]):
         This method should be implemented by subclasses to return a structured, yet human-readable
         representation of the field.
 
-        The return type is `JsonDict`, which means it's just a Python dictionary that is JSON-serializable.
-
         !!! Note
             `human_readable_repr()` is not meant to be used as a method to serialize a `Field` since the return
             value does not necessarily contain all of the attributes of the `Field` instance.
