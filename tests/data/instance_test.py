@@ -52,7 +52,12 @@ class TestInstance(AllenNlpTestCase):
 
         instance1_human_readable_dict = instance1.human_readable_dict()
         array = TensorField(numpy.asarray([1, 1, 1]))
-        array_human_readable_dict = {"shape": [3], "element_ave": 1.0, "element_std": 0}
+        array_human_readable_dict = {
+            "shape": [3],
+            "element_ave": 1.0,
+            "element_std": 0,
+            "type": "<class 'torch.Tensor'>",
+        }
         instance2 = Instance({"words": words_field, "labels": label_field, "tensor": array})
         instance1_human_readable_dict["tensor"] = array_human_readable_dict
         assert instance1_human_readable_dict == instance2.human_readable_dict()
