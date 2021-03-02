@@ -87,5 +87,5 @@ class TensorField(Field[torch.Tensor]):
             "shape": shape,
             "element_std": std,
             "element_ave": ave,
-            "type": str(type(self.tensor)),
+            "type": str(self.tensor.dtype),
         }
