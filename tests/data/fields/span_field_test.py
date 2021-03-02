@@ -54,3 +54,7 @@ class TestSpanField(AllenNlpTestCase):
         assert span_field1 == span_field2
         assert span_field1 != span_field3
         assert span_field2 != span_field3
+
+    def test_human_readable_repr(self):
+        span_field = SpanField(2, 3, self.text)
+        assert span_field.human_readable_repr() == (2, 3)

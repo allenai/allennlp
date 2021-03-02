@@ -59,3 +59,7 @@ class TestAdjacencyField(AllenNlpTestCase):
     def test_printing_doesnt_crash(self):
         adjacency_field = AdjacencyField([(0, 1)], self.text, ["label1"])
         print(adjacency_field)
+
+    def test_human_readable_repr(self):
+        adjacency_field = AdjacencyField([(0, 1)], self.text, ["label1"])
+        assert adjacency_field.human_readable_repr() == {"indices": [(0, 1)], "labels": ["label1"]}

@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, Any
 
 from overrides import overrides
 import torch
@@ -57,3 +57,10 @@ class NamespaceSwappingField(Field[torch.Tensor]):
 
     def __len__(self):
         return len(self._source_tokens)
+
+    @overrides
+    def human_readable_repr(self) -> Dict[str, Any]:
+        return {
+            "source_tokens": [str(t) for t in self._source_tokens],
+            "target_namespace": self._target_namespace,
+        }

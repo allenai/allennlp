@@ -1,4 +1,4 @@
-from typing import Dict, List, Iterator, Sequence
+from typing import Dict, List, Iterator, Sequence, Any
 
 from overrides import overrides
 
@@ -118,3 +118,7 @@ class ListField(SequenceField[DataArray]):
         field_class = self.field_list[0].__class__.__name__
         base_string = f"ListField of {len(self.field_list)} {field_class}s : \n"
         return " ".join([base_string] + [f"\t {field} \n" for field in self.field_list])
+
+    @overrides
+    def human_readable_repr(self) -> List[Any]:
+        return [f.human_readable_repr() for f in self.field_list]
