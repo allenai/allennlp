@@ -232,9 +232,9 @@ class SanityCheckCallback(TrainerCallback):
         if epoch == 0 and batch_number == 1 and is_training:
             self._verification.destroy_hooks()
             detected_pairs = self._verification.collect_detections()
-            # TODO: Should we actually fail with an error instead?
-            if detected_pairs:
-                logger.warning("The NormalizationBiasVerification check failed.")
+            assert (
+                len(detected_pairs) == 0
+            ), "The NormalizationBiasVerification check failed. See logs for more details."
 
 
 class LogCallback(TrainerCallback):
@@ -1332,6 +1332,7 @@ class GradientDescentTrainer(Trainer):
         checkpointer: Lazy[Checkpointer] = Lazy(Checkpointer),
         callbacks: List[Lazy[TrainerCallback]] = None,
         trainer_callbacks: List[Lazy[TrainerCallback]] = None,
+        run_sanity_check: bool = True,
     ) -> "Trainer":
         """
         This method exists so that we can have a documented method to construct this class using
@@ -1403,6 +1404,12 @@ class GradientDescentTrainer(Trainer):
         for callback in callbacks:
             callback_ = callback.construct(serialization_dir=serialization_dir)
             callbacks_.append(callback_)
+
+        # Even if it is already specified in the callbacks, the hooks will be
+        # destroyed after the first run, therefore, the second instance of the
+        # callback will do nothing.
+        if run_sanity_check:
+            callbacks_.append(SanityCheckCallback(serialization_dir=serialization_dir))
 
         return cls(
             model,

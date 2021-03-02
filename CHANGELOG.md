@@ -16,6 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added `LogWriter` class. `TensorBoardWriter` now inherits from `LogWriter`.
 - Added `LogCallback` and `ConsoleLoggerCallback` classes. `TensorBoardCallback` inherits from `LogCallback`. 
+- Added `NormalizationBiasVerification` and `SanityCheckCallback` for model sanity checks.
+- `SanityCheckCallback` runs by default. It can be turned off by setting `run_sanity_check`=`False` in trainer parameters.
 
 ### Fixed
 
@@ -34,7 +36,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `ModelUsage` to `ModelCard` class.
 - Added a way to specify extra parameters to the predictor in an `allennlp predict` call.
 - Added a way to initialize a `Vocabulary` from transformers models.
-- Added `NormalizationBiasVerification` and `SanityCheckCallback` for model sanity checks.
 - Added a way to initialize a `Vocabulary` from transformers models. 
 - Added the ability to use `Predictors` with multitask models through the new `MultiTaskPredictor`.
 - Added an example for fields of type `ListField[TextField]` to `apply_token_indexers` API docs.

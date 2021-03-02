@@ -830,6 +830,31 @@ class TestTrainer(TrainerTestBase):
             serialization_dir=self.TEST_DIR,
             callbacks=[SanityCheckCallback(serialization_dir=self.TEST_DIR)],
         )
+        with pytest.raises(AssertionError):
+            trainer.train()
+
+    def test_sanity_check_default(self):
+        model_with_bias = FakeModelForTestingNormalizationBiasVerification(use_bias=True)
+        inst = Instance({"x": TensorField(torch.rand(3, 1, 4))})
+        data_loader = SimpleDataLoader([inst, inst], 2)
+        trainer = GradientDescentTrainer.from_partial_objects(
+            model_with_bias,
+            serialization_dir=self.TEST_DIR,
+            data_loader=data_loader,
+            num_epochs=1,
+        )
+        with pytest.raises(AssertionError):
+            trainer.train()
+
+        trainer = GradientDescentTrainer.from_partial_objects(
+            model_with_bias,
+            serialization_dir=self.TEST_DIR,
+            data_loader=data_loader,
+            num_epochs=1,
+            run_sanity_check=False,
+        )
+
+        # Check is not run, so no failure.
         trainer.train()
 
     def test_trainer_saves_models_at_specified_interval(self):
