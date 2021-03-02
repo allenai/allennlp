@@ -120,6 +120,6 @@ class TestTensorField(AllenNlpTestCase):
             "shape": [3],
             "element_mean": 1.0,
             "element_std": 0.0,
-            "type": "torch.float64",
+            "type": "float64",
         }
         assert array.human_readable_repr() == ans

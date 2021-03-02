@@ -56,7 +56,7 @@ class TestInstance(AllenNlpTestCase):
             "shape": [3],
             "element_mean": 1.0,
             "element_std": 0,
-            "type": "torch.float64",
+            "type": "float64",
         }
         instance2 = Instance({"words": words_field, "labels": label_field, "tensor": array})
         instance1_human_readable_dict["tensor"] = array_human_readable_dict
