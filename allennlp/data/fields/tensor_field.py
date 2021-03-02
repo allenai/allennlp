@@ -82,10 +82,10 @@ class TensorField(Field[torch.Tensor]):
     def human_readable_repr(self) -> JsonDict:
         shape = list(self.tensor.shape)
         std = torch.std(self.tensor.float()).item()
-        ave = torch.mean(self.tensor.float()).item()
+        mean = torch.mean(self.tensor.float()).item()
         return {
             "shape": shape,
             "element_std": std,
-            "element_ave": ave,
+            "element_mean": mean,
             "type": str(self.tensor.dtype),
         }
