@@ -51,12 +51,12 @@ class TestInstance(AllenNlpTestCase):
         assert instance1.human_readable_dict() == {"words": ["hello"], "labels": 1}
 
         instance1_human_readable_dict = instance1.human_readable_dict()
-        array = TensorField(numpy.asarray([1, 1, 1]))
+        array = TensorField(numpy.asarray([1., 1, 1]))
         array_human_readable_dict = {
             "shape": [3],
-            "element_ave": 1.0,
+            "element_mean": 1.0,
             "element_std": 0,
-            "type": "<class 'torch.Tensor'>",
+            "type": "torch.float64",
         }
         instance2 = Instance({"words": words_field, "labels": label_field, "tensor": array})
         instance1_human_readable_dict["tensor"] = array_human_readable_dict
