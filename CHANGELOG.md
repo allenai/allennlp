@@ -19,6 +19,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `LogWriter` class. `TensorBoardWriter` now inherits from `LogWriter`.
 - Added `LogCallback` and `ConsoleLoggerCallback` classes. `TensorBoardCallback` inherits from `LogCallback`. 
 
+### Fixed
+
+- Makes sure tensors that are stored in `TensorCache` always live on CPUs
+
+
 ## [v2.1.0](https://github.com/allenai/allennlp/releases/tag/v2.1.0) - 2021-02-24
 
 ### Changed
