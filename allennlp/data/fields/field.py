@@ -61,7 +61,8 @@ class Field(Generic[DataArray]):
 
         !!! Note
             `human_readable_repr()` is not meant to be used as a method to serialize a `Field` since the return
-            value does not necessarily contain all of the attributes of the `Field` instance.
+            value does not necessarily contain all of the attributes of the `Field` instance. But the object
+            returned should be JSON-serializable.
         """
         raise NotImplementedError
 
