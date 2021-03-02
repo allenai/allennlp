@@ -118,7 +118,7 @@ class TestTensorField(AllenNlpTestCase):
         array = TensorField(numpy.asarray([1.0, 1, 1]))
         ans = {
             "shape": [3],
-            "element_ave": 1.0,
+            "element_mean": 1.0,
             "element_std": 0.0,
             "type": "<class 'torch.Tensor'>",
         }
