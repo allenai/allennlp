@@ -207,10 +207,10 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
             # https://huggingface.co/transformers/model_doc/bert.html#transformers.BertModel.forward
             # These hidden states will also include the embedding layer, which we don't
             # include in the scalar mix. Hence the `[1:]` slicing.
-            hidden_states = transformer_output[-1][1:]
+            hidden_states = transformer_output.hidden_states[1:]
             embeddings = self._scalar_mix(hidden_states)
         else:
-            embeddings = transformer_output[0]
+            embeddings = transformer_output.last_hidden_state
 
         if fold_long_sequences:
             embeddings = self._unfold_long_sequences(
