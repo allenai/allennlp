@@ -5,6 +5,7 @@ import numpy as np
 from overrides import overrides
 
 from allennlp.data.fields.field import Field
+from allennlp.common.util import JsonDict
 
 
 class TensorField(Field[torch.Tensor]):
@@ -78,7 +79,13 @@ class TensorField(Field[torch.Tensor]):
         return self.tensor.numpy()
 
     @overrides
-    def to_json(self, human_readable: bool = True):
-        if not human_readable:
-            return self.tensor.numpy()
-        return None
+    def human_readable_repr(self) -> JsonDict:
+        shape = list(self.tensor.shape)
+        std = torch.std(self.tensor.float()).item()
+        mean = torch.mean(self.tensor.float()).item()
+        return {
+            "shape": shape,
+            "element_std": std,
+            "element_mean": mean,
+            "type": str(self.tensor.dtype).replace("torch.", ""),
+        }

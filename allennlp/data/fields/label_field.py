@@ -106,7 +106,7 @@ class LabelField(Field[torch.Tensor]):
         return LabelField(-1, self._label_namespace, skip_indexing=True)
 
     @overrides
-    def to_json(self, human_readable: bool = True):
+    def human_readable_repr(self) -> Union[str, int]:
         return self.label
 
     def __str__(self) -> str:

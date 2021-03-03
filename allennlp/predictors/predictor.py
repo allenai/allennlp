@@ -282,7 +282,7 @@ class Predictor(Registrable):
         """
         Converts a JSON object into an [`Instance`](../data/instance.md)
         and a `JsonDict` of information which the `Predictor` should pass through,
-        such as tokenised inputs.
+        such as tokenized inputs.
         """
         raise NotImplementedError
 

@@ -113,23 +113,10 @@ class Instance(Mapping[str, Field]):
         new.indexed = self.indexed
         return new
 
-    def to_json(self, human_readable: bool = True) -> JsonDict:
+    def human_readable_dict(self) -> JsonDict:
         """
-        This function facilitate saving formated instances to json files for human readability,
-        use case includes example-based explanation, where it's better to have a output file
+        This function help to output instances to json files or print for human readability.
+        Use case includes example-based explanation, where it's better to have a output file or
         rather than printing or logging.
-
-        For example, - if the field is LabelField, then we just output, field.label
-                     - if the field is TextField, then we just output, field.tokens
-                       (preferrably un-numericalized tokens)
-                     - the instances output then is {`label`: `field.label`, `tokens`: `field.tokens`}
-
         """
-        ret = {}
-        for key, field in self.fields.items():
-            to_json = field.to_json(human_readable)
-            if to_json is None:
-                continue
-            ret[key] = to_json
-
-        return ret
+        return {key: field.human_readable_repr() for key, field in self.fields.items()}

@@ -155,3 +155,10 @@ class AdjacencyField(Field[torch.Tensor]):
 
     def __len__(self):
         return len(self.sequence_field)
+
+    @overrides
+    def human_readable_repr(self):
+        ret = {"indices": self.indices}
+        if self.labels is not None:
+            ret["labels"] = self.labels
+        return ret

@@ -201,5 +201,5 @@ class TextField(SequenceField[TextFieldTensors]):
         return new
 
     @overrides
-    def to_json(self, human_readable: bool = True):
+    def human_readable_repr(self) -> List[str]:
         return [str(t) for t in self.tokens]

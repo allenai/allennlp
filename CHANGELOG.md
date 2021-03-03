@@ -7,36 +7,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Changed
+
+- `histogram_interval` parameter is now deprecated in `TensorboardWriter`, please use `distribution_interval` instead.
+- Memory usage is not logged in tensorboard during training now. `ConsoleLoggerCallback` should be used instead.
 
 ### Added
--  Adding new function for example-based interpretation methods --- `SimpleInfluence`
 
-### Added
--  New functionality `to_json()` to support outputing instances to files
-=======
+- Add new function for example-based interpretation methods --- `SimpleInfluence`
+- Add new method on `Field` class: `.human_readable_repr() -> Any`
+- Add new method on `Instance` class: `.human_readable_dict() -> JsonDict`.
+- Added `LogWriter` class. `TensorBoardWriter` now inherits from `LogWriter`.
+- Added `LogCallback` and `ConsoleLoggerCallback` classes. `TensorBoardCallback` inherits from `LogCallback`. 
+
 ### Fixed
 
-- Ensured that `MeanAbsoluteError` always returns a `float` metric value instead of a `Tensor`.
+- Makes sure tensors that are stored in `TensorCache` always live on CPUs
+
+
+## [v2.1.0](https://github.com/allenai/allennlp/releases/tag/v2.1.0) - 2021-02-24
 
 
 ### Changed
 
 - `coding_scheme` parameter is now deprecated in `Conll2003DatasetReader`, please use `convert_to_coding_scheme` instead.
+- Support spaCy v3
 
 ### Added
 
 - Added `ModelUsage` to `ModelCard` class.
 - Added a way to specify extra parameters to the predictor in an `allennlp predict` call.
 - Added a way to initialize a `Vocabulary` from transformers models.
+- Added the ability to use `Predictors` with multitask models through the new `MultiTaskPredictor`.
+- Added an example for fields of type `ListField[TextField]` to `apply_token_indexers` API docs.
+- Added `text_key` and `label_key` parameters to `TextClassificationJsonReader` class.
+- Added `MultiOptimizer`, which allows you to use different optimizers for different parts of your model.
 
 ### Fixed
 
+- `@Registrable.register(...)` decorator no longer masks the decorated class's annotations
+- Ensured that `MeanAbsoluteError` always returns a `float` metric value instead of a `Tensor`.
 - Learning rate schedulers that rely on metrics from the validation set were broken in v2.0.0. This
   brings that functionality back.
 - Fixed a bug where the `MultiProcessDataLoading` would crash when `num_workers > 0`, `start_method = "spawn"`, `max_instances_in_memory not None`, and `batches_per_epoch not None`.
 - Fixed documentation and validation checks for `FBetaMultiLabelMetric`.
 - Fixed handling of HTTP errors when fetching remote resources with `cached_path()`. Previously the content would be cached even when
   certain errors - like 404s - occurred. Now an `HTTPError` will be raised whenever the HTTP response is not OK.
+- Fixed a bug where the `MultiTaskDataLoader` would crash when `num_workers > 0`
+- Fixed an import error that happens when PyTorch's distributed framework is unavailable on the system.
+
 
 ## [v2.0.1](https://github.com/allenai/allennlp/releases/tag/v2.0.1) - 2021-01-29
 

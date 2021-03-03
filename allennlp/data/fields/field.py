@@ -1,9 +1,10 @@
 from copy import deepcopy
-from typing import Dict, Generic, List, TypeVar
+from typing import Dict, Generic, List, TypeVar, Any
 
 import torch
 
 from allennlp.data.vocabulary import Vocabulary
+
 
 DataArray = TypeVar(
     "DataArray", torch.Tensor, Dict[str, torch.Tensor], Dict[str, Dict[str, torch.Tensor]]
@@ -53,25 +54,15 @@ class Field(Generic[DataArray]):
         """
         pass
 
-    def to_json(self, human_readable: bool = True):
+    def human_readable_repr(self) -> Any:
         """
-        This function facilitate saving formated instances to json files for human readability,
-        use case includes example-based explanation, where it's better to have a output file
-        rather than printing or logging.
+        This method should be implemented by subclasses to return a structured, yet human-readable
+        representation of the field.
 
-        For example, - if the field is LabelField, then we just output, field.label
-                     - if the field is TextField, then we just output, field.tokens
-                       (preferrably un-numericalized tokens)
-        Since this is hard to deal with in higher level usage -- e.g. judging instance contains which fields
-        and how to convert -- it's better to do it in the lower level.
-
-        # Parameters
-        human_readable : `bool`
-                        a flag to control the json output of the field.
-                        For example, If the field is TensorField, then it makes less sense to
-                        output it for human readabilty. But still, if the user
-                        really want to output it, we still allows it. In contrast, if it's label field,
-                        then, simply outputing it seems fine.
+        !!! Note
+            `human_readable_repr()` is not meant to be used as a method to serialize a `Field` since the return
+            value does not necessarily contain all of the attributes of the `Field` instance. But the object
+            returned should be JSON-serializable.
         """
         raise NotImplementedError
 

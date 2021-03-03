@@ -233,6 +233,21 @@ class DatasetReader(Registrable):
         """
         If `Instance`s created by this reader contain `TextField`s without `token_indexers`,
         this method can be overriden to set the `token_indexers` of those fields.
+
+        E.g. if you have you have `"source"` `TextField`, you could implement this method like this:
+
+        ```python
+        def apply_token_indexers(self, instance: Instance) -> None:
+            instance["source"].token_indexers = self._token_indexers
+        ```
+
+        If your `TextField`s are wrapped in a `ListField`, you can access them via `field_list`.
+        E.g. if you had a `"source"` field of `ListField[TextField]` objects, you could:
+
+        ```python
+        for text_field in instance["source"].field_list:
+            text_field.token_indexers = self._token_indexers
+        ```
         """
         pass
 
