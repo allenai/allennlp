@@ -31,3 +31,7 @@ class TestMetadataField(AllenNlpTestCase):
 
         with pytest.raises(TypeError):
             _ = [x for x in field]
+
+    def test_human_readable_repr(self):
+        field = MetadataField({"a": 1, "b": [0]})
+        assert field.human_readable_repr() == {"a": 1, "b": [0]}

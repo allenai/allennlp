@@ -113,3 +113,13 @@ class TestTensorField(AllenNlpTestCase):
         assert array1 != array2
         assert array1 != array3
         assert array1 == array4
+
+    def test_human_readable_repr(self):
+        array = TensorField(numpy.asarray([1.0, 1, 1]))
+        ans = {
+            "shape": [3],
+            "element_mean": 1.0,
+            "element_std": 0.0,
+            "type": "float64",
+        }
+        assert array.human_readable_repr() == ans

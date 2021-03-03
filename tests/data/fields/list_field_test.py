@@ -275,6 +275,13 @@ class TestListField(AllenNlpTestCase):
         list_field = ListField([self.field1, self.field2])
         print(list_field)
 
+    def test_human_readable_repr(self):
+        list_field = ListField([self.field1, self.field2])
+        assert list_field.human_readable_repr() == [
+            self.field1.human_readable_repr(),
+            self.field2.human_readable_repr(),
+        ]
+
     def test_sequence_methods(self):
         list_field = ListField([self.field1, self.field2, self.field3])
 

@@ -199,3 +199,7 @@ class TextField(SequenceField[TextFieldTensors]):
             new = TextField(deepcopy(self.tokens))
         new._indexed_tokens = deepcopy(self._indexed_tokens)
         return new
+
+    @overrides
+    def human_readable_repr(self) -> List[str]:
+        return [str(t) for t in self.tokens]
