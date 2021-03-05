@@ -288,7 +288,7 @@ jobs:
         elif [[ $CUDA == '10.2' ]]; then
             echo "DOCKER_TORCH_VERSION='torch==1.8.0'" >> $GITHUB_ENV;
         elif [[ $CUDA == '11.1' ]]; then
-            echo "DOCKER_TORCH_VERSION='torch==1.8.0+cu111 torchvision==0.8.0+cu111 -f https://download.pytorch.org/whl/torch_stable.html'" >> $GITHUB_ENV;
+            echo "DOCKER_TORCH_VERSION='torch==1.8.0+cu111 torchvision==0.9.0+cu111 -f https://download.pytorch.org/whl/torch_stable.html'" >> $GITHUB_ENV;
         else
             echo "Unhandled CUDA version $CUDA";
             exit 1;
