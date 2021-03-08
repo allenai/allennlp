@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `histogram_interval` parameter is now deprecated in `TensorboardWriter`, please use `distribution_interval` instead.
 - Memory usage is not logged in tensorboard during training now. `ConsoleLoggerCallback` should be used instead.
 - Use attributes of `ModelOutputs` object in `PretrainedTransformerEmbedder` instead of indexing.
+- Added support for PyTorch version 1.8 and `torchvision` version 0.9 .
 
 ### Added
 
