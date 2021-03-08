@@ -200,6 +200,14 @@ TrainerCallback.register("null")(TrainerCallback)
 class SanityCheckCallback(TrainerCallback):
     """
     Performs model sanity checks.
+
+    Checks performed:
+
+    * `NormalizationBiasVerification` for detecting invalid combinations of
+       bias and normalization layers.
+       See `allennlp.sanity_checks.normalization_bias_verification` for more details.
+
+    Note: Any new sanity checks should also be added to this callback.
     """
 
     def on_start(
