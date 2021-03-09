@@ -30,6 +30,7 @@ from allennlp.training.momentum_schedulers import MomentumScheduler
 from allennlp.training.moving_average import MovingAverage
 from allennlp.training.optimizers import Optimizer
 from allennlp.training.tensorboard_writer import TensorBoardWriter
+from allennlp.sanity_checks.normalization_bias_verification import NormalizationBiasVerification
 from allennlp.training.log_writer import LogWriter
 
 logger = logging.getLogger(__name__)
@@ -193,6 +194,55 @@ class TrainerCallback(Registrable):
 
 
 TrainerCallback.register("null")(TrainerCallback)
+
+
+@TrainerCallback.register("sanity-checks")
+class SanityCheckCallback(TrainerCallback):
+    """
+    Performs model sanity checks.
+
+    Checks performed:
+
+    * `NormalizationBiasVerification` for detecting invalid combinations of
+       bias and normalization layers.
+       See `allennlp.sanity_checks.normalization_bias_verification` for more details.
+
+    Note: Any new sanity checks should also be added to this callback.
+    """
+
+    def on_start(
+        self, trainer: "GradientDescentTrainer", is_primary: bool = True, **kwargs
+    ) -> None:
+        self.trainer = trainer
+        if is_primary:
+            self._verification = NormalizationBiasVerification(self.trainer._pytorch_model)
+            # Register the hooks that perform the verification before training starts.
+            self._verification.register_hooks()
+
+    def on_batch(
+        self,
+        trainer: "GradientDescentTrainer",
+        batch_inputs: List[List[TensorDict]],
+        batch_outputs: List[Dict[str, Any]],
+        batch_metrics: Dict[str, Any],
+        epoch: int,
+        batch_number: int,
+        is_training: bool,
+        is_primary: bool = True,
+        batch_grad_norm: Optional[float] = None,
+        **kwargs,
+    ) -> None:
+        if not is_primary:
+            return None
+
+        # We destroy the hooks after the first batch, since we only want to
+        # perform this check once.
+        if epoch == 0 and batch_number == 1 and is_training:
+            self._verification.destroy_hooks()
+            detected_pairs = self._verification.collect_detections()
+            assert (
+                len(detected_pairs) == 0
+            ), "The NormalizationBiasVerification check failed. See logs for more details."
 
 
 class LogCallback(TrainerCallback):
@@ -1290,6 +1340,7 @@ class GradientDescentTrainer(Trainer):
         checkpointer: Lazy[Checkpointer] = Lazy(Checkpointer),
         callbacks: List[Lazy[TrainerCallback]] = None,
         trainer_callbacks: List[Lazy[TrainerCallback]] = None,
+        run_sanity_check: bool = True,
     ) -> "Trainer":
         """
         This method exists so that we can have a documented method to construct this class using
@@ -1361,6 +1412,12 @@ class GradientDescentTrainer(Trainer):
         for callback in callbacks:
             callback_ = callback.construct(serialization_dir=serialization_dir)
             callbacks_.append(callback_)
+
+        # Even if it is already specified in the callbacks, the hooks will be
+        # destroyed after the first run, therefore, the second instance of the
+        # callback will do nothing.
+        if run_sanity_check:
+            callbacks_.append(SanityCheckCallback(serialization_dir=serialization_dir))
 
         return cls(
             model,

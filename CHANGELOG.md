@@ -20,6 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add new method on `Instance` class: `.human_readable_dict() -> JsonDict`.
 - Added `LogWriter` class. `TensorBoardWriter` now inherits from `LogWriter`.
 - Added `LogCallback` and `ConsoleLoggerCallback` classes. `TensorBoardCallback` inherits from `LogCallback`. 
+- Added `NormalizationBiasVerification` and `SanityCheckCallback` for model sanity checks.
+- `SanityCheckCallback` runs by default. It can be turned off by setting `run_sanity_check`=`False` in trainer parameters.
 
 ### Fixed
 

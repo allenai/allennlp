@@ -15,11 +15,10 @@ from torch.nn.utils import clip_grad_norm_
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
 from allennlp.common.testing import AllenNlpTestCase, requires_gpu, requires_multi_gpu
-from allennlp.data import Vocabulary
+from allennlp.data import Vocabulary, Instance, Token
 from allennlp.data.data_loaders import MultiProcessDataLoader, SimpleDataLoader, TensorDict
 from allennlp.data.dataset_readers import SequenceTaggingDatasetReader, DatasetReader
 from allennlp.data.token_indexers import SingleIdTokenIndexer
-from allennlp.data import Token, Instance
 from allennlp.models.model import Model
 from allennlp.models.simple_tagger import SimpleTagger
 from allennlp.training import (
@@ -28,6 +27,7 @@ from allennlp.training import (
     TrainerCallback,
     TrackEpochCallback,
     TensorBoardCallback,
+    SanityCheckCallback,
     ConsoleLoggerCallback,
 )
 from allennlp.training.learning_rate_schedulers import CosineWithRestarts
@@ -46,6 +46,9 @@ from allennlp.data.fields import (
     TensorField,
 )
 from allennlp.training.optimizers import Optimizer
+from allennlp.common.testing.sanity_check_test import (
+    FakeModelForTestingNormalizationBiasVerification,
+)
 
 
 class FakeDatasetReader(DatasetReader):
@@ -812,6 +815,46 @@ class TestTrainer(TrainerTestBase):
             ],
         )
 
+        trainer.train()
+
+    def test_sanity_check_callback(self):
+
+        model_with_bias = FakeModelForTestingNormalizationBiasVerification(use_bias=True)
+        inst = Instance({"x": TensorField(torch.rand(3, 1, 4))})
+        data_loader = SimpleDataLoader([inst, inst], 2)
+        trainer = GradientDescentTrainer(
+            model_with_bias,
+            self.optimizer,
+            data_loader,
+            num_epochs=1,
+            serialization_dir=self.TEST_DIR,
+            callbacks=[SanityCheckCallback(serialization_dir=self.TEST_DIR)],
+        )
+        with pytest.raises(AssertionError):
+            trainer.train()
+
+    def test_sanity_check_default(self):
+        model_with_bias = FakeModelForTestingNormalizationBiasVerification(use_bias=True)
+        inst = Instance({"x": TensorField(torch.rand(3, 1, 4))})
+        data_loader = SimpleDataLoader([inst, inst], 2)
+        trainer = GradientDescentTrainer.from_partial_objects(
+            model_with_bias,
+            serialization_dir=self.TEST_DIR,
+            data_loader=data_loader,
+            num_epochs=1,
+        )
+        with pytest.raises(AssertionError):
+            trainer.train()
+
+        trainer = GradientDescentTrainer.from_partial_objects(
+            model_with_bias,
+            serialization_dir=self.TEST_DIR,
+            data_loader=data_loader,
+            num_epochs=1,
+            run_sanity_check=False,
+        )
+
+        # Check is not run, so no failure.
         trainer.train()
 
     def test_trainer_saves_models_at_specified_interval(self):
