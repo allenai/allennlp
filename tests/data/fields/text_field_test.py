@@ -358,3 +358,8 @@ class TestTextField(AllenNlpTestCase):
         assert len(field) == 5
         assert field[1].text == "is"
         assert [token.text for token in field] == ["This", "is", "a", "sentence", "."]
+
+    def test_human_readable_repr(self):
+        field = TextField([Token(t) for t in ["This", "is", "a", "sentence", "."]], {})
+
+        assert field.human_readable_repr() == ["This", "is", "a", "sentence", "."]

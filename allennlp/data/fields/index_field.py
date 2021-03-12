@@ -65,3 +65,7 @@ class IndexField(Field[torch.Tensor]):
 
     def __len__(self):
         return 1
+
+    @overrides
+    def human_readable_repr(self):
+        return self.sequence_index

@@ -88,3 +88,7 @@ class TestMultiLabelField(AllenNlpTestCase):
     def test_printing_doesnt_crash(self):
         field = MultiLabelField(["label"], label_namespace="namespace")
         print(field)
+
+    def test_human_readable_repr(self):
+        field = MultiLabelField(["label"], label_namespace="namespace")
+        assert field.human_readable_repr() == ["label"]

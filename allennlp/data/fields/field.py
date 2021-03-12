@@ -1,9 +1,10 @@
 from copy import deepcopy
-from typing import Dict, Generic, List, TypeVar
+from typing import Dict, Generic, List, TypeVar, Any
 
 import torch
 
 from allennlp.data.vocabulary import Vocabulary
+
 
 DataArray = TypeVar(
     "DataArray", torch.Tensor, Dict[str, torch.Tensor], Dict[str, Dict[str, torch.Tensor]]
@@ -52,6 +53,18 @@ class Field(Generic[DataArray]):
         "token_characters", "tags", or "labels", and the second key is the actual vocabulary item.
         """
         pass
+
+    def human_readable_repr(self) -> Any:
+        """
+        This method should be implemented by subclasses to return a structured, yet human-readable
+        representation of the field.
+
+        !!! Note
+            `human_readable_repr()` is not meant to be used as a method to serialize a `Field` since the return
+            value does not necessarily contain all of the attributes of the `Field` instance. But the object
+            returned should be JSON-serializable.
+        """
+        raise NotImplementedError
 
     def index(self, vocab: Vocabulary):
         """

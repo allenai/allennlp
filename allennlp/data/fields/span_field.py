@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, Tuple
 
 from overrides import overrides
 import torch
@@ -73,3 +73,7 @@ class SpanField(Field[torch.Tensor]):
 
     def __len__(self):
         return 2
+
+    @overrides
+    def human_readable_repr(self) -> Tuple[int, int]:
+        return self.span_start, self.span_end

@@ -5,6 +5,7 @@ import numpy as np
 from overrides import overrides
 
 from allennlp.data.fields.field import Field
+from allennlp.common.util import JsonDict
 
 
 class TensorField(Field[torch.Tensor]):
@@ -76,3 +77,15 @@ class TensorField(Field[torch.Tensor]):
     def array(self):
         """This is a compatibility method that returns the underlying tensor as a numpy array."""
         return self.tensor.numpy()
+
+    @overrides
+    def human_readable_repr(self) -> JsonDict:
+        shape = list(self.tensor.shape)
+        std = torch.std(self.tensor.float()).item()
+        mean = torch.mean(self.tensor.float()).item()
+        return {
+            "shape": shape,
+            "element_std": std,
+            "element_mean": mean,
+            "type": str(self.tensor.dtype).replace("torch.", ""),
+        }

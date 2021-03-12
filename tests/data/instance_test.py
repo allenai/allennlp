@@ -1,6 +1,7 @@
+import numpy
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Instance
-from allennlp.data.fields import TextField, LabelField
+from allennlp.data.fields import TextField, LabelField, TensorField
 from allennlp.data.token_indexers import PretrainedTransformerIndexer
 from allennlp.data.tokenizers import Token
 
@@ -40,3 +41,23 @@ class TestInstance(AllenNlpTestCase):
         instance.add_field("labels", LabelField("some_label"))
         assert "labels" not in other.fields
         assert other != instance  # sanity check on the '__eq__' method.
+
+    def test_human_readable_repr(self):
+        words_field = TextField([Token("hello")], {})
+        label_field = LabelField(1, skip_indexing=True)
+        instance1 = Instance({"words": words_field, "labels": label_field})
+
+        assert type(instance1.human_readable_dict()) is dict
+        assert instance1.human_readable_dict() == {"words": ["hello"], "labels": 1}
+
+        instance1_human_readable_dict = instance1.human_readable_dict()
+        array = TensorField(numpy.asarray([1.0, 1, 1]))
+        array_human_readable_dict = {
+            "shape": [3],
+            "element_mean": 1.0,
+            "element_std": 0,
+            "type": "float64",
+        }
+        instance2 = Instance({"words": words_field, "labels": label_field, "tensor": array})
+        instance1_human_readable_dict["tensor"] = array_human_readable_dict
+        assert instance1_human_readable_dict == instance2.human_readable_dict()

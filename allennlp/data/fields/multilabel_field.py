@@ -141,3 +141,7 @@ class MultiLabelField(Field[torch.Tensor]):
 
     def __len__(self):
         return 1
+
+    @overrides
+    def human_readable_repr(self) -> Sequence[Union[str, int]]:
+        return self.labels

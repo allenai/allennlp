@@ -278,7 +278,7 @@ class TestImageFeatureEmbeddings(AllenNlpTestCase):
                 super().__init__()
 
                 self.image_embeddings = torch.nn.Linear(feature_size, embedding_size)
-                self.image_location_embeddings = torch.nn.Linear(4, embedding_size)
+                self.image_location_embeddings = torch.nn.Linear(4, embedding_size, bias=False)
                 self.layer_norm = torch.nn.LayerNorm(embedding_size, eps=1e-12)
                 self.dropout = torch.nn.Dropout(dropout)
 
