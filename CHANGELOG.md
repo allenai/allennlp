@@ -27,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Makes sure tensors that are stored in `TensorCache` always live on CPUs
 - Fixed a bug where `FromParams` objects wrapped in `Lazy()` couldn't be pickled.
+- Fixed a bug where the `ROUGE` metric couldn't be picked.
 
 
 ## [v2.1.0](https://github.com/allenai/allennlp/releases/tag/v2.1.0) - 2021-02-24
