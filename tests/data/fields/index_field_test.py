@@ -51,3 +51,7 @@ class TestIndexField(AllenNlpTestCase):
         assert index_field1 != index_field3
         assert index_field2 != index_field3
         assert index_field3 == index_field3
+
+    def test_human_readable_repr(self):
+        index_field1 = IndexField(4, self.text)
+        assert index_field1.human_readable_repr() == 4

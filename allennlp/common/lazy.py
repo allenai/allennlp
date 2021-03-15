@@ -1,5 +1,6 @@
+import copy
 import inspect
-from typing import Callable, Generic, TypeVar, Type, Union
+from typing import Callable, Generic, TypeVar, Type, Union, Optional, Dict, Any
 
 from allennlp.common.params import Params
 
@@ -45,18 +46,35 @@ class Lazy(Generic[T]):
 
     """
 
-    def __init__(self, constructor: Union[Type[T], Callable[..., T]]):
-        constructor_to_use: Callable[..., T]
+    def __init__(
+        self,
+        constructor: Union[Type[T], Callable[..., T]],
+        params: Optional[Params] = None,
+        contructor_extras: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        self._constructor = constructor
+        self._params = params or Params({})
+        self._constructor_extras = contructor_extras or {}
 
-        if inspect.isclass(constructor):
+    @property
+    def constructor(self) -> Callable[..., T]:
+        if inspect.isclass(self._constructor):
 
             def constructor_to_use(**kwargs):
-                return constructor.from_params(Params({}), **kwargs)  # type: ignore[union-attr]
+                return self._constructor.from_params(  # type: ignore[union-attr]
+                    copy.deepcopy(self._params),
+                    **kwargs,
+                )
 
+            return constructor_to_use
         else:
-            constructor_to_use = constructor
-
-        self._constructor = constructor_to_use
+            return self._constructor
 
     def construct(self, **kwargs) -> T:
-        return self._constructor(**kwargs)
+        """
+        Call the constructor to create an instance of `T`.
+        """
+        # If there are duplicate keys between self._constructor_extras and kwargs,
+        # this will overwrite the ones in self._constructor_extras with what's in kwargs.
+        contructor_kwargs = {**self._constructor_extras, **kwargs}
+        return self.constructor(**contructor_kwargs)

@@ -36,9 +36,9 @@ class ROUGE(Metric):
         self._ngram_size = ngram_size
         self._exclude_indices = exclude_indices or set()
 
-        self._total_rouge_n_recalls: Dict[int, float] = defaultdict(lambda: 0.0)
-        self._total_rouge_n_precisions: Dict[int, float] = defaultdict(lambda: 0.0)
-        self._total_rouge_n_f1s: Dict[int, float] = defaultdict(lambda: 0.0)
+        self._total_rouge_n_recalls: Dict[int, float] = defaultdict(float)
+        self._total_rouge_n_precisions: Dict[int, float] = defaultdict(float)
+        self._total_rouge_n_f1s: Dict[int, float] = defaultdict(float)
 
         self._total_rouge_l_f1 = 0.0
 
@@ -46,9 +46,9 @@ class ROUGE(Metric):
 
     @overrides
     def reset(self) -> None:
-        self._total_rouge_n_recalls = defaultdict(lambda: 0.0)
-        self._total_rouge_n_precisions = defaultdict(lambda: 0.0)
-        self._total_rouge_n_f1s = defaultdict(lambda: 0.0)
+        self._total_rouge_n_recalls = defaultdict(float)
+        self._total_rouge_n_precisions = defaultdict(float)
+        self._total_rouge_n_f1s = defaultdict(float)
 
         self._total_rouge_l_f1 = 0.0
 

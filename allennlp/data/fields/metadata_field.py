@@ -66,3 +66,9 @@ class MetadataField(Field[DataArray], Mapping[str, Any]):
 
     def __str__(self) -> str:
         return "MetadataField (print field.metadata to see specific information)."
+
+    @overrides
+    def human_readable_repr(self):
+        if hasattr(self.metadata, "human_readable_repr"):
+            return self.metadata.human_readable_repr()
+        return self.metadata

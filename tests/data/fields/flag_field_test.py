@@ -17,6 +17,10 @@ class TestFlagField(AllenNlpTestCase):
         flag = FlagField(True)
         print(flag)
 
+    def test_human_readable_repr(self):
+        flag = FlagField(True)
+        assert flag.human_readable_repr() is True
+
     def test_batch_tensors_returns_single_value(self):
         value = True
         fields = [FlagField(value) for _ in range(5)]

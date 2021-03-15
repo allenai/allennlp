@@ -67,4 +67,4 @@ class TestCnnEncoder(AllenNlpTestCase):
         )
         regular_output = encoder.forward(tokens=tokens, mask=None)
         masked_output = encoder.forward(tokens=padded_tokens, mask=mask)
-        assert_almost_equal(regular_output.data.numpy(), masked_output.data.numpy(), decimal=6)
+        assert_almost_equal(regular_output.data.numpy(), masked_output.data.numpy(), decimal=5)
