@@ -31,8 +31,14 @@ def hf_model(model_name):
     return hf_t5.T5ForConditionalGeneration.from_pretrained(model_name).eval()
 
 
-@pytest.fixture
-def input_ids(tokenizer):
+def test_t5_forward_loss(
+    model: T5ForConditionalGeneration,
+    hf_model: hf_t5.T5ForConditionalGeneration,
+    tokenizer: hf_t5.T5Tokenizer,
+):
+    """
+    Make sure loss and generation match the implementation from HF.
+    """
     input_ids = tokenizer(
         ["The <extra_id_0> walks in <extra_id_1> park", "The <extra_id_0> barked"],
         return_tensors="pt",
@@ -42,11 +48,9 @@ def input_ids(tokenizer):
         [37, 32099, 10681, 16, 32098, 2447, 1],
         [37, 32099, 1207, 5100, 1, 0, 0],
     ]
-    return input_ids
 
+    attention_mask = ~(input_ids == 0)
 
-@pytest.fixture
-def labels(tokenizer):
     labels = tokenizer(
         ["<extra_id_0> cute dog <extra_id_1> the <extra_id_2>", "<extra_id_0> dog"],
         return_tensors="pt",
@@ -56,38 +60,41 @@ def labels(tokenizer):
         [32099, 5295, 1782, 32098, 8, 32097, 1],
         [32099, 1782, 1, 0, 0, 0, 0],
     ]
-    return labels
 
+    outputs = model(input_ids, attention_mask=attention_mask, labels=labels)
+    hf_outputs = hf_model(input_ids=input_ids, attention_mask=attention_mask, labels=labels)
 
-@pytest.mark.skip(
-    reason="This is covered by 'test_forward_loss', but can helpful for more fine-grained debugging"
-)
-def test_t5_encoder(
-    model: T5ForConditionalGeneration, hf_model: hf_t5.T5ForConditionalGeneration, input_ids
-):
-    """
-    Make sure loss and generation match the implementation from HF.
-    """
-    encoder_outputs = model.encoder(
-        input_ids, output_attentions=True, output_all_hidden_states=True
-    )
-    hf_encoder_outputs = hf_model.encoder(
-        input_ids, output_attentions=True, output_hidden_states=True
-    )
-    assert len(encoder_outputs.all_hidden_states) == len(hf_encoder_outputs.hidden_states)
-    for layer, (hidden_state, hf_hidden_state) in enumerate(
-        zip(encoder_outputs.all_hidden_states, hf_encoder_outputs.hidden_states)
-    ):
-        assert (hidden_state == hf_hidden_state).all(), f"Layer {layer} hidden states differ"
-
-
-def test_t5_forward_loss(
-    model: T5ForConditionalGeneration, hf_model: hf_t5.T5ForConditionalGeneration, input_ids, labels
-):
-    """
-    Make sure loss and generation match the implementation from HF.
-    """
-    outputs = model(input_ids, labels=labels)
-    hf_outputs = hf_model(input_ids=input_ids, labels=labels)
     assert outputs.loss == hf_outputs.loss
     assert (outputs.logits == hf_outputs.logits).all()
+
+
+def test_t5_forward_beam_search(model: T5ForConditionalGeneration, tokenizer: hf_t5.T5Tokenizer):
+    """
+    Make sure beam search generates reasonable results, and that we get the same results
+    for a given input, regardless of whether we run it on its own or part of a batch.
+    """
+
+    def run_beam_search(sents):
+        input_ids = tokenizer(sents, return_tensors="pt", padding=True).input_ids
+        outputs = model(input_ids)
+        preds = [tokenizer.decode(preds[0]) for preds in outputs.predictions]
+        probs = [round(float(p[0]), 4) for p in outputs.predicted_log_probs.exp()]
+        return preds, probs
+
+    s1 = "translate English to German: That is good"
+    s2 = (
+        "mnli premise: The Old One always comforted Ca'daan, except today. "
+        "hypothesis: Ca'daan knew the Old One very well."
+    )
+
+    s1_pred, s1_prob = run_beam_search([s1])
+    assert s1_pred == ["Das ist gut.</s>"]
+    assert s1_prob == [0.5645]
+
+    s2_pred, s2_prob = run_beam_search([s2])
+    assert s2_pred == ["neutral</s> </s> </s> </s>"]
+    assert s2_prob == [0.3992]
+
+    combined_preds, combined_probs = run_beam_search([s1, s2])
+    assert combined_preds == s1_pred + s2_pred
+    assert combined_probs == s1_prob + s2_prob

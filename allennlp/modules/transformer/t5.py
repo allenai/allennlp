@@ -978,6 +978,18 @@ class T5ForConditionalGeneration(TransformerModule, FromParams):
 
         return shifted_input_ids
 
+    def _get_lm_logits(self, decoder_last_hidden_state: FloatT) -> FloatT:
+        # Shape: (batch_size, target_length, d_model)
+        sequence_output = decoder_last_hidden_state
+        # Rescale output before projecting on vocab
+        # TODO: HF only does this when does this when embeddings are tied.
+        # Currently tied embeddings is the only option we have, but if make
+        # that configurable then we should put this in an 'if' block.
+        sequence_output = sequence_output * (self.d_model ** -0.5)
+        # Shape: (batch_size, target_length, vocab_size)
+        logits = self.lm_head(sequence_output)
+        return logits
+
     def forward(
         self,
         input_ids: FloatT,
@@ -987,6 +999,9 @@ class T5ForConditionalGeneration(TransformerModule, FromParams):
         """
         Run forward pass of the model.
         """
+        if attention_mask is None:
+            attention_mask = ~(input_ids == self.pad_token_id)
+
         # Encode inputs.
         encoder_outputs: T5StackOutput = self.encoder(
             input_ids=input_ids,
@@ -1021,16 +1036,8 @@ class T5ForConditionalGeneration(TransformerModule, FromParams):
                 output_all_hidden_states=self.output_all_hidden_states,
             )
 
-            # Shape: (batch_size, target_length, d_model)
-            sequence_output = decoder_outputs.last_hidden_state  # type: ignore[union-attr]
-            # Rescale output before projecting on vocab
-            # TODO: HF only does this when does this when embeddings are tied.
-            # Currently tied embeddings is the only option we have, but if make
-            # that configurable then we should put this in an 'if' block.
-            sequence_output = sequence_output * (self.d_model ** -0.5)
-
             # Shape: (batch_size, target_length, vocab_size)
-            logits = self.lm_head(sequence_output)
+            logits = self._get_lm_logits(decoder_outputs.last_hidden_state)  # type: ignore[union-attr]
 
             # Shape: (1,)
             loss = self.loss_fct(logits.view(-1, logits.size(-1)), labels.view(-1))
@@ -1106,7 +1113,7 @@ class T5ForConditionalGeneration(TransformerModule, FromParams):
         )
 
         # Shape: (group_size, 2, vocab_size)
-        lm_logits = self.lm_head(decoder_outputs.last_hidden_state)
+        lm_logits = self._get_lm_logits(decoder_outputs.last_hidden_state)
 
         # Shape: (group_size, vocab_size)
         logits = lm_logits[:, -1, :]
