@@ -852,9 +852,9 @@ class T5DecoderStack(T5Stack, FromParams):
 
 
 @dataclass
-class T5ForConditionalGenerationOutput:
+class T5Output:
     """
-    Defines the output from the `T5ForConditionalGeneration` model.
+    Defines the output from the `T5` model.
     """
 
     encoder_last_hidden_state: FloatT
@@ -928,7 +928,7 @@ class T5ForConditionalGenerationOutput:
     """
 
 
-class T5ForConditionalGeneration(TransformerModule, FromParams):
+class T5(TransformerModule, FromParams):
     _huggingface_mapping = {"shared": "token_embeddings"}
 
     def __init__(
@@ -995,7 +995,7 @@ class T5ForConditionalGeneration(TransformerModule, FromParams):
         input_ids: FloatT,
         attention_mask: Optional[BoolT] = None,
         labels: Optional[IntT] = None,
-    ) -> T5ForConditionalGenerationOutput:
+    ) -> T5Output:
         """
         Run forward pass of the model.
         """
@@ -1065,7 +1065,7 @@ class T5ForConditionalGeneration(TransformerModule, FromParams):
                 initial_decoder_ids, initial_state, self.take_search_step
             )
 
-        return T5ForConditionalGenerationOutput(
+        return T5Output(
             encoder_last_hidden_state=encoder_outputs.last_hidden_state,
             encoder_all_hidden_states=encoder_outputs.all_hidden_states,
             decoder_last_hidden_state=(

@@ -1,12 +1,12 @@
 import pytest
 from transformers.models import t5 as hf_t5
 
-from allennlp.modules.transformer.t5 import T5ForConditionalGeneration
+from allennlp.modules.transformer.t5 import T5
 
 
 @pytest.mark.skip(reason="Not implemented yet")
 def test_create_t5_large_from_pretrained():
-    T5ForConditionalGeneration.from_pretrained_module("t5-large")
+    T5.from_pretrained_module("t5-large")
 
 
 @pytest.fixture(scope="module")
@@ -16,7 +16,7 @@ def model_name():
 
 @pytest.fixture(scope="module")
 def model(model_name):
-    model = T5ForConditionalGeneration.from_pretrained_module(model_name).eval()
+    model = T5.from_pretrained_module(model_name).eval()
     model.beam_search.max_steps = 5
     return model
 
@@ -32,7 +32,7 @@ def hf_model(model_name):
 
 
 def test_t5_forward_loss(
-    model: T5ForConditionalGeneration,
+    model: T5,
     hf_model: hf_t5.T5ForConditionalGeneration,
     tokenizer: hf_t5.T5Tokenizer,
 ):
@@ -68,7 +68,7 @@ def test_t5_forward_loss(
     assert (outputs.logits == hf_outputs.logits).all()
 
 
-def test_t5_forward_beam_search(model: T5ForConditionalGeneration, tokenizer: hf_t5.T5Tokenizer):
+def test_t5_forward_beam_search(model: T5, tokenizer: hf_t5.T5Tokenizer):
     """
     Make sure beam search generates reasonable results, and that we get the same results
     for a given input, regardless of whether we run it on its own or part of a batch.
