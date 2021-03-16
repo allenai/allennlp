@@ -603,7 +603,7 @@ class T5Block(TransformerModule, FromParams):
 
 @dataclass
 class T5StackOutput:
-    last_hidden_state: FloatT = None
+    last_hidden_state: FloatT
     past_key_values: Optional[List[KeyValueStates]] = None
     all_hidden_states: Optional[List[FloatT]] = None
     attentions: Optional[List[FloatT]] = None
@@ -707,8 +707,8 @@ class T5Stack(TransformerModule, FromParams):
             ), ":obj:`use_cache` can only be set to `True` if {} is used as a decoder".format(self)
 
         if attention_mask is None:
-            attention_mask = torch.ones(batch_size, mask_seq_length, dtype=torch.bool).to(
-                inputs_embeds.device
+            attention_mask = torch.ones(
+                batch_size, mask_seq_length, dtype=torch.bool, device=inputs_embeds.device
             )
         if self.is_decoder and encoder_attention_mask is None and encoder_hidden_states is not None:
             encoder_seq_length = encoder_hidden_states.shape[1]
@@ -947,6 +947,7 @@ class T5ForConditionalGeneration(TransformerModule, FromParams):
         d_model: int = 512,
     ):
         super().__init__()
+        self.d_model = d_model
         self.token_embeddings = token_embeddings or nn.Embedding(vocab_size, d_model)
         if token_embeddings is None:
             self.token_embeddings.weight.data.normal_(mean=0.0, std=1.0)
@@ -1020,8 +1021,16 @@ class T5ForConditionalGeneration(TransformerModule, FromParams):
                 output_all_hidden_states=self.output_all_hidden_states,
             )
 
+            # Shape: (batch_size, target_length, d_model)
+            sequence_output = decoder_outputs.last_hidden_state  # type: ignore[union-attr]
+            # Rescale output before projecting on vocab
+            # TODO: HF only does this when does this when embeddings are tied.
+            # Currently tied embeddings is the only option we have, but if make
+            # that configurable then we should put this in an 'if' block.
+            sequence_output = sequence_output * (self.d_model ** -0.5)
+
             # Shape: (batch_size, target_length, vocab_size)
-            logits = self.lm_head(decoder_outputs.last_hidden_state)  # type: ignore[union-attr]
+            logits = self.lm_head(sequence_output)
 
             # Shape: (1,)
             loss = self.loss_fct(logits.view(-1, logits.size(-1)), labels.view(-1))
