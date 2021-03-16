@@ -15,7 +15,6 @@ from torch.nn import CrossEntropyLoss
 from allennlp.common import FromParams
 from allennlp.modules.transformer import TransformerModule
 from allennlp.modules.transformer.util import (
-    apply_mask,
     invert_attention_mask,
     get_extended_attention_mask,
 )
@@ -336,9 +335,8 @@ class T5Attention(TransformerModule, FromParams):
                 position_bias = position_bias[:, :, -seq_length:, :]
 
             if mask is not None:
-                position_bias = apply_mask(
-                    position_bias, mask
-                )  # (batch_size, num_heads, seq_length, key_length)
+                # Shape: (batch_size, num_heads, seq_length, key_length)
+                position_bias = position_bias + mask
 
         scores += position_bias
         attn_weights = F.softmax(scores.float(), dim=-1).type_as(
@@ -435,7 +433,9 @@ class T5LayerCrossAttention(TransformerModule, FromParams):
         dropout: float = 0.1,
     ):
         super().__init__()
-        self.enc_dec_attention = enc_dec_attention or T5Attention(has_relative_attention_bias=False)
+        self.enc_dec_attention = enc_dec_attention or T5Attention(
+            is_decoder=True, has_relative_attention_bias=False
+        )
         self.layer_norm = layer_norm or T5LayerNorm()
         self.dropout = nn.Dropout(dropout)
 
@@ -1084,6 +1084,9 @@ class T5ForConditionalGeneration(TransformerModule, FromParams):
         }
         if decoder_cache_dict:
             decoder_cache = self._dict_to_decoder_cache(decoder_cache_dict)
+
+        if len(last_predictions.shape) == 1:
+            last_predictions = last_predictions.unsqueeze(-1)
 
         decoder_outputs: T5StackOutput = self.decoder(
             input_ids=last_predictions,
