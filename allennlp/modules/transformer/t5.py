@@ -967,8 +967,10 @@ class T5Output:
     """
 
 
-class T5(TransformerModule, FromParams):
+class T5(TransformerModule, Registrable):
     _huggingface_mapping = {"shared": "token_embeddings"}
+
+    default_implementation = "default"
 
     def __init__(
         self,
@@ -1097,9 +1099,10 @@ class T5(TransformerModule, FromParams):
 
     def forward(
         self,
-        input_ids: FloatT,
+        input_ids: IntT,
         attention_mask: Optional[BoolT] = None,
         labels: Optional[IntT] = None,
+        decoder_attention_mask: Optional[BoolT] = None,
     ) -> T5Output:
         """
         Run forward pass of the model.
@@ -1124,6 +1127,9 @@ class T5(TransformerModule, FromParams):
         if labels is not None:
             # Calculate loss against targets.
 
+            if decoder_attention_mask is None:
+                decoder_attention_mask = ~(labels == self.pad_token_id)
+
             # Get decoder inputs from shifting lm labels to the right and pre-pending
             # the decoder start token ID.
             # Shape (both): (batch_size, target_length)
@@ -1135,6 +1141,7 @@ class T5(TransformerModule, FromParams):
             # Decode.
             decoder_outputs = self.decoder(
                 input_ids=decoder_input_ids,
+                attention_mask=decoder_attention_mask,
                 encoder_hidden_states=encoder_outputs.last_hidden_state,
                 encoder_attention_mask=attention_mask,
                 output_attentions=self.output_attentions,
@@ -1146,6 +1153,8 @@ class T5(TransformerModule, FromParams):
 
             # Shape: (1,)
             loss = self.loss_fct(logits.view(-1, logits.size(-1)), labels.view(-1))
+        elif self.training:
+            raise ValueError("'labels' required during training")
 
         if not self.training:
             # Use beam search to generate a sequence of predicted tokens.
@@ -1258,3 +1267,7 @@ class T5(TransformerModule, FromParams):
             )
             decoder_cache.append(layer_cache)
         return decoder_cache
+
+
+T5.register("default")(T5)
+T5.register("from_pretrained", constructor="from_pretrained_module")(T5)

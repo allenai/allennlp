@@ -67,8 +67,20 @@ def test_t5_forward_loss(
         [32099, 1782, 1, 0, 0, 0, 0],
     ]
 
-    outputs = model(input_ids, attention_mask=attention_mask, labels=labels)
-    hf_outputs = hf_model(input_ids=input_ids, attention_mask=attention_mask, labels=labels)
+    decoder_attention_mask = ~(labels == 0)
+
+    outputs = model(
+        input_ids,
+        attention_mask=attention_mask,
+        labels=labels,
+        decoder_attention_mask=decoder_attention_mask,
+    )
+    hf_outputs = hf_model(
+        input_ids=input_ids,
+        attention_mask=attention_mask,
+        labels=labels,
+        decoder_attention_mask=decoder_attention_mask,
+    )
 
     assert outputs.loss == hf_outputs.loss
     assert (outputs.logits == hf_outputs.logits).all()

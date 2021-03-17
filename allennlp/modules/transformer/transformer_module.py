@@ -32,7 +32,7 @@ class TransformerModule(torch.nn.Module):
     def _get_mapping(
         cls,
         pretrained_module: Optional[torch.nn.Module] = None,
-        source="huggingface",
+        source: str = "huggingface",
         mapping: Optional[Dict[str, str]] = None,
     ):
         """
@@ -40,7 +40,7 @@ class TransformerModule(torch.nn.Module):
         If `pretrained_module` is not given, the default module-level mapping is returned.
         """
         combined_mapping = {}
-        if "huggingface" in source:
+        if "huggingface" == source:
             combined_mapping.update(cls._huggingface_mapping)
         if mapping is not None:
             combined_mapping.update(mapping)
@@ -48,7 +48,10 @@ class TransformerModule(torch.nn.Module):
 
     @classmethod
     def _get_mapped_submodules(
-        cls, pretrained_module, source="huggingface", mapping: Optional[Dict[str, str]] = None
+        cls,
+        pretrained_module: torch.nn.Module,
+        source: str = "huggingface",
+        mapping: Optional[Dict[str, str]] = None,
     ):
         """
         Subclasses overload this method, and provide appropriate name mapping based on the source.
@@ -64,7 +67,7 @@ class TransformerModule(torch.nn.Module):
 
     def _construct_default_mapping(
         self,
-        pretrained_module,
+        pretrained_module: torch.nn.Module,
         source: str = "huggingface",
         mapping: Optional[Dict[str, str]] = None,
     ):
@@ -142,7 +145,7 @@ class TransformerModule(torch.nn.Module):
         cls,
         pretrained_module: Union[str, torch.nn.Module],
         relevant_module: Optional[Union[str, List[str]]] = None,
-        source="huggingface",
+        source: str = "huggingface",
         mapping: Optional[Dict[str, str]] = None,
     ):
         """
@@ -187,7 +190,7 @@ class TransformerModule(torch.nn.Module):
     def from_pretrained_module(
         cls,
         pretrained_module: Union[str, torch.nn.Module],
-        source="huggingface",
+        source: str = "huggingface",
         mapping: Optional[Dict[str, str]] = None,
         **kwargs,
     ):
