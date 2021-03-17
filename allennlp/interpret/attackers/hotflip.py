@@ -188,10 +188,13 @@ class Hotflip(Attacker):
             If given, this will be a `targeted` hotflip attack, where instead of just trying to
             change a model's prediction from what it current is predicting, we try to change it to
             a `specific` target value.  This is a `JsonDict` because it needs to specify the
-            field name and target value.  For example, for a masked LM, this would be something
+            field name and target value. For example, for a masked LM, this would be something
             like `{"words": ["she"]}`, because `"words"` is the field name, there is one mask
             token (hence the list of length one), and we want to change the prediction from
             whatever it was to `"she"`.
+            By default, `output_dict` from forward pass would be given for
+            func:`Predictor.predictions_to_labeled_instances` where target has to be extracted
+            manually according to logit.
         """
         instance = self.predictor._json_to_instance(inputs)
         self.predictor._dataset_reader.apply_token_indexers(instance)

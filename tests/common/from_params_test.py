@@ -12,12 +12,6 @@ from allennlp.models.archival import load_archive
 from allennlp.common.checks import ConfigurationError
 
 
-class MyClass(FromParams):
-    def __init__(self, my_int: int, my_bool: bool = False) -> None:
-        self.my_int = my_int
-        self.my_bool = my_bool
-
-
 class TestFromParams(AllenNlpTestCase):
     def test_takes_arg(self):
         def bare_function(some_input: int) -> int:
@@ -739,6 +733,13 @@ class TestFromParams(AllenNlpTestCase):
 
         Testing.from_params(Params({"lazy_object": {"string": test_string}}))
 
+    def test_lazy_and_from_params_can_be_pickled(self):
+
+        import pickle
+
+        baz = Baz.from_params(Params({"bar": {"foo": {"a": 2}}}))
+        pickle.dumps(baz)
+
     def test_optional_vs_required_lazy_objects(self):
         class ConstructedObject(FromParams):
             def __init__(self, a: int):
@@ -1042,3 +1043,28 @@ class TestFromParams(AllenNlpTestCase):
 
         foo = Foo.from_params(Params({"a": 2}))
         assert foo.a == 2
+
+
+class MyClass(FromParams):
+    def __init__(self, my_int: int, my_bool: bool = False) -> None:
+        self.my_int = my_int
+        self.my_bool = my_bool
+
+
+class Foo(FromParams):
+    def __init__(self, a: int = 1) -> None:
+        self.a = a
+
+
+class Bar(FromParams):
+    def __init__(self, foo: Foo) -> None:
+        self.foo = foo
+
+
+class Baz(FromParams):
+    def __init__(self, bar: Lazy[Bar]) -> None:
+        self._bar = bar
+
+    @property
+    def bar(self):
+        return self._bar.construct()

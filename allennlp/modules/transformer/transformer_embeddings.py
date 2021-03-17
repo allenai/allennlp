@@ -69,7 +69,7 @@ class ImageFeatureEmbeddings(Embeddings):
 
     def __init__(self, feature_size: int, embedding_size: int, dropout: float = 0.0):
         image_embeddings = torch.nn.Linear(feature_size, embedding_size)
-        location_embeddings = torch.nn.Linear(4, embedding_size)
+        location_embeddings = torch.nn.Linear(4, embedding_size, bias=False)
         embeddings = torch.nn.ModuleDict(
             {"image_embeddings": image_embeddings, "location_embeddings": location_embeddings}
         )
