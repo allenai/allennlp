@@ -1,4 +1,4 @@
-from typing import Optional, Dict, Union, List
+from typing import Optional, Dict, Union, List, Any
 import logging
 import inspect
 
@@ -127,10 +127,10 @@ class TransformerModule(torch.nn.Module):
     def _get_input_arguments(
         cls,
         pretrained_module: torch.nn.Module,
-        source="huggingface",
+        source: str = "huggingface",
         mapping: Optional[Dict[str, str]] = None,
         **kwargs,
-    ):
+    ) -> Dict[str, Any]:
         """
         Constructs the arguments required for instantiating an object of this class, using
         the values from `pretrained_module`.

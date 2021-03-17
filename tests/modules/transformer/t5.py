@@ -4,9 +4,15 @@ from transformers.models import t5 as hf_t5
 from allennlp.modules.transformer.t5 import T5
 
 
-@pytest.mark.skip(reason="Not implemented yet")
-def test_create_t5_large_from_pretrained():
-    T5.from_pretrained_module("t5-large")
+@pytest.mark.parametrize(
+    "pretrained_model_name",
+    [
+        "t5-base",
+        #  "t5-large",  # Takes too long in CI
+    ],
+)
+def test_create_t5_from_pretrained(pretrained_model_name: str):
+    T5.from_pretrained_module(pretrained_model_name)
 
 
 @pytest.fixture(scope="module")

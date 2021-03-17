@@ -5,14 +5,15 @@ Adapted from [HuggingFace]
 
 import math
 from dataclasses import dataclass
-from typing import Optional, Tuple, List, Union, Dict
+from typing import Optional, Tuple, List, Union, Dict, Any
 
 import torch
 from torch import nn
 import torch.nn.functional as F
 from torch.nn import CrossEntropyLoss
 
-from allennlp.common import FromParams
+from allennlp.common import FromParams, Params, Lazy, Registrable
+from allennlp.common.checks import ConfigurationError
 from allennlp.modules.transformer import TransformerModule
 from allennlp.modules.transformer.util import (
     invert_attention_mask,
@@ -34,9 +35,6 @@ class T5LayerNorm(TransformerModule, FromParams):
         self.weight = nn.Parameter(torch.ones(hidden_size))
         self.variance_epsilon = eps
 
-    def output_hidden_size(self) -> int:
-        return len(self.weight)
-
     def forward(self, hidden_states) -> FloatT:
         # layer norm should always be calculated in float32
         variance = hidden_states.to(torch.float32).pow(2).mean(-1, keepdim=True)
@@ -48,12 +46,19 @@ class T5LayerNorm(TransformerModule, FromParams):
         return self.weight * hidden_states
 
 
+class T5FeedForwardProjection(TransformerModule, Registrable):
+    def forward(self, hidden_states) -> FloatT:
+        raise NotImplementedError
+
+
+@T5FeedForwardProjection.register("relu")
 class T5DenseReluDense(TransformerModule, FromParams):
     def __init__(self, hidden_size: int = 512, ff_size: int = 2048, dropout: float = 0.1):
         super().__init__()
-        self.wi = nn.Linear(hidden_size, ff_size, bias=False)
-        self.wi.weight.data.normal_(mean=0.0, std=hidden_size ** -0.5)
-        self.wo = nn.Linear(ff_size, hidden_size, bias=False)
+        self.hidden_size = hidden_size
+        self.wi = nn.Linear(self.hidden_size, ff_size, bias=False)
+        self.wi.weight.data.normal_(mean=0.0, std=self.hidden_size ** -0.5)
+        self.wo = nn.Linear(ff_size, self.hidden_size, bias=False)
         self.wo.weight.data.normal_(mean=0.0, std=ff_size ** -0.5)
         self.dropout = nn.Dropout(dropout)
 
@@ -65,14 +70,16 @@ class T5DenseReluDense(TransformerModule, FromParams):
         return hidden_states
 
 
+@T5FeedForwardProjection.register("gated-gelu")
 class T5DenseGatedGeluDense(TransformerModule, FromParams):
     def __init__(self, hidden_size: int = 512, ff_size: int = 2048, dropout: float = 0.1):
         super().__init__()
-        self.wi_0 = nn.Linear(hidden_size, ff_size, bias=False)
-        self.wi_0.weight.data.normal_(mean=0.0, std=hidden_size ** -0.5)
-        self.wi_1 = nn.Linear(hidden_size, ff_size, bias=False)
-        self.wi_1.weight.data.normal_(mean=0.0, std=hidden_size ** -0.5)
-        self.wo = nn.Linear(ff_size, hidden_size, bias=False)
+        self.hidden_size = hidden_size
+        self.wi_0 = nn.Linear(self.hidden_size, ff_size, bias=False)
+        self.wi_0.weight.data.normal_(mean=0.0, std=self.hidden_size ** -0.5)
+        self.wi_1 = nn.Linear(self.hidden_size, ff_size, bias=False)
+        self.wi_1.weight.data.normal_(mean=0.0, std=self.hidden_size ** -0.5)
+        self.wo = nn.Linear(ff_size, self.hidden_size, bias=False)
         self.wo.weight.data.normal_(mean=0.0, std=ff_size ** -0.5)
         self.dropout = nn.Dropout(dropout)
         from allennlp.nn import Activation
@@ -89,22 +96,22 @@ class T5DenseGatedGeluDense(TransformerModule, FromParams):
 
 
 class T5LayerFF(TransformerModule, FromParams):
-    _huggingface_mapping = {"DenseReluDense": "feed_forward_proj"}
+    _huggingface_mapping = {"DenseReluDense": "ff_proj"}
 
     def __init__(
         self,
-        feed_forward_proj: Optional[nn.Module] = None,
+        ff_proj: Optional[T5FeedForwardProjection] = None,
         layer_norm: Optional[T5LayerNorm] = None,
         dropout: float = 0.1,
     ):
         super().__init__()
-        self.feed_forward_proj = feed_forward_proj or T5DenseReluDense()
+        self.ff_proj = ff_proj or T5DenseReluDense()
         self.layer_norm = layer_norm or T5LayerNorm()
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, hidden_states) -> FloatT:
         forwarded_states = self.layer_norm(hidden_states)
-        forwarded_states = self.feed_forward_proj(forwarded_states)
+        forwarded_states = self.ff_proj(forwarded_states)
         hidden_states = hidden_states + self.dropout(forwarded_states)
         return hidden_states
 
@@ -118,8 +125,6 @@ class T5AttentionOutput:
 
 
 class T5Attention(TransformerModule, FromParams):
-    _huggingface_mapping = {"d_model": "hidden_size", "n_heads": "num_heads"}
-
     def __init__(
         self,
         is_decoder: bool = False,
@@ -383,7 +388,7 @@ class T5LayerSelfAttention(TransformerModule, FromParams):
     ):
         super().__init__()
         self.self_attention = self_attention or T5Attention()
-        self.layer_norm = layer_norm or T5LayerNorm()
+        self.layer_norm = layer_norm or T5LayerNorm(hidden_size=self.self_attention.hidden_size)
         self.dropout = nn.Dropout(dropout)
 
     def forward(
@@ -436,7 +441,7 @@ class T5LayerCrossAttention(TransformerModule, FromParams):
         self.enc_dec_attention = enc_dec_attention or T5Attention(
             is_decoder=True, has_relative_attention_bias=False
         )
-        self.layer_norm = layer_norm or T5LayerNorm()
+        self.layer_norm = layer_norm or T5LayerNorm(hidden_size=self.enc_dec_attention.hidden_size)
         self.dropout = nn.Dropout(dropout)
 
     def forward(
@@ -504,6 +509,10 @@ class T5Block(TransformerModule, FromParams):
             self.layer.append(cross_attention)
             self.is_decoder = True
         self.layer.append(ff or T5LayerFF())
+
+    @property
+    def hidden_size(self) -> int:
+        return self.layer[0].self_attention.hidden_size
 
     def forward(
         self,
@@ -615,31 +624,27 @@ class T5Stack(TransformerModule, FromParams):
 
     def __init__(
         self,
-        layers: List[T5Block],
-        token_embeddings: Optional[nn.Embedding] = None,
+        token_embeddings: nn.Embedding,
+        blocks: List[T5Block],
         final_layer_norm: Optional[T5LayerNorm] = None,
         dropout: float = 0.1,
-        vocab_size: int = 32128,
-        d_model: int = 512,
     ):
-        from allennlp.common.checks import ConfigurationError
-
         super().__init__()
-        self.is_decoder = layers[0].is_decoder
-        if not all(b.is_decoder == self.is_decoder for b in layers):
+        self.is_decoder = blocks[0].is_decoder
+        if not all(b.is_decoder == self.is_decoder for b in blocks):
             raise ConfigurationError("Found mismatched blocks in stack.")
-        self.blocks = nn.ModuleList(layers)
-
-        self.token_embeddings = token_embeddings or nn.Embedding(vocab_size, d_model)
-        self.final_layer_norm = final_layer_norm or T5LayerNorm()
+        self.blocks = nn.ModuleList(blocks)
+        self.token_embeddings = token_embeddings
+        self.final_layer_norm = final_layer_norm or T5LayerNorm(hidden_size=self.hidden_size)
         self.dropout = nn.Dropout(dropout)
 
     @property
-    def num_layers(self) -> int:
+    def num_blocks(self) -> int:
         return len(self.blocks)
 
-    def output_hidden_size(self) -> int:
-        return self.final_layer_norm.output_hidden_size()
+    @property
+    def hidden_size(self) -> int:
+        return self.blocks[0].hidden_size
 
     @staticmethod
     def get_head_mask(head_mask: Optional[torch.BoolTensor], num_hidden_layers: int) -> BoolT:
@@ -728,8 +733,8 @@ class T5Stack(TransformerModule, FromParams):
             encoder_extended_attention_mask = None
 
         # Prepare head mask if needed
-        head_mask = self.get_head_mask(head_mask, self.num_layers)
-        encoder_head_mask = self.get_head_mask(encoder_head_mask, self.num_layers)
+        head_mask = self.get_head_mask(head_mask, self.num_blocks)
+        encoder_head_mask = self.get_head_mask(encoder_head_mask, self.num_blocks)
         present_key_value_states: Optional[List[KeyValueStates]] = [] if use_cache else None
         all_hidden_states: Optional[List[FloatT]] = [] if output_all_hidden_states else None
         all_attentions: Optional[List[FloatT]] = [] if output_attentions else None
@@ -742,7 +747,7 @@ class T5Stack(TransformerModule, FromParams):
         hidden_states = self.dropout(inputs_embeds)
 
         for i, (layer_module, past_key_value) in enumerate(
-            zip(self.blocks, past_key_values or [None] * self.num_layers)
+            zip(self.blocks, past_key_values or [None] * self.num_blocks)
         ):
             layer_head_mask = head_mask[i]
             encoder_layer_head_mask = encoder_head_mask[i]
@@ -796,59 +801,93 @@ class T5Stack(TransformerModule, FromParams):
 class T5EncoderStack(T5Stack, FromParams):
     def __init__(
         self,
-        layers: Optional[List[T5Block]] = None,
-        token_embeddings: Optional[nn.Embedding] = None,
+        token_embeddings: nn.Embedding,
+        blocks: List[T5Block],
         final_layer_norm: Optional[T5LayerNorm] = None,
         dropout: float = 0.1,
     ):
-        if layers is None:
-            layers = [
-                T5Block(
-                    attention=T5LayerSelfAttention(
-                        T5Attention(False, has_relative_attention_bias=(i == 0))
-                    ),
-                    cross_attention=None,
-                )
-                for i in range(6)  # TODO: make configurable
-            ]
-        else:
-            if any(b.is_decoder for b in layers):
-                from allennlp.common.checks import ConfigurationError
+        if any(b.is_decoder for b in blocks):
+            raise ConfigurationError("Found a decoder block in an encoder stack. This won't work.")
 
-                raise ConfigurationError(
-                    "Found a decoder block in an encoder stack. This won't work."
-                )
+        super().__init__(
+            token_embeddings,
+            blocks,
+            final_layer_norm=final_layer_norm,
+            dropout=dropout,
+        )
 
-        super().__init__(layers, token_embeddings, final_layer_norm, dropout)
+    @classmethod
+    def basic_encoder(
+        cls,
+        token_embeddings: nn.Embedding,
+        num_blocks: int = 6,
+        block_self_attention: Lazy[T5Attention] = Lazy(T5Attention),
+        final_layer_norm: Optional[T5LayerNorm] = None,
+        block_ff: Lazy[T5LayerFF] = Lazy(T5LayerFF),
+        dropout: float = 0.1,
+    ) -> "T5EncoderStack":
+        blocks = [
+            T5Block(
+                attention=T5LayerSelfAttention(
+                    self_attention=block_self_attention.construct(
+                        is_decoder=False, has_relative_attention_bias=(i == 0)
+                    )
+                ),
+                cross_attention=None,
+                ff=block_ff.construct(),
+            )
+            for i in range(num_blocks)
+        ]
+        return cls(token_embeddings, blocks, final_layer_norm=final_layer_norm, dropout=dropout)
 
 
 class T5DecoderStack(T5Stack, FromParams):
     def __init__(
         self,
-        layers: Optional[List[T5Block]] = None,
-        token_embeddings: Optional[nn.Embedding] = None,
+        token_embeddings: nn.Embedding,
+        blocks: List[T5Block],
         final_layer_norm: Optional[T5LayerNorm] = None,
         dropout: float = 0.1,
     ):
-        if layers is None:
-            layers = [
-                T5Block(
-                    attention=T5LayerSelfAttention(
-                        T5Attention(True, has_relative_attention_bias=(i == 0))
-                    ),
-                    cross_attention=T5LayerCrossAttention(),
-                )
-                for i in range(6)  # TODO: make configurable
-            ]
-        else:
-            if not all(b.is_decoder for b in layers):
-                from allennlp.common.checks import ConfigurationError
+        if not all(b.is_decoder for b in blocks):
+            raise ConfigurationError("Found an encoder block in a decoder stack. This won't work.")
 
-                raise ConfigurationError(
-                    "Found an encoder block in a decoder stack. This won't work."
-                )
+        super().__init__(
+            token_embeddings,
+            blocks,
+            final_layer_norm=final_layer_norm,
+            dropout=dropout,
+        )
 
-        super().__init__(layers, token_embeddings, final_layer_norm, dropout)
+    @classmethod
+    def basic_decoder(
+        cls,
+        token_embeddings: nn.Embedding,
+        num_blocks: int = 6,
+        block_self_attention: Lazy[T5Attention] = Lazy(T5Attention),
+        block_cross_attention: Lazy[T5Attention] = Lazy(T5Attention),
+        final_layer_norm: Optional[T5LayerNorm] = None,
+        block_ff: Lazy[T5LayerFF] = Lazy(T5LayerFF),
+        dropout: float = 0.1,
+    ) -> "T5DecoderStack":
+        blocks = [
+            T5Block(
+                attention=T5LayerSelfAttention(
+                    self_attention=block_self_attention.construct(
+                        is_decoder=True, has_relative_attention_bias=(i == 0)
+                    )
+                ),
+                cross_attention=T5LayerCrossAttention(
+                    enc_dec_attention=block_cross_attention.construct(
+                        is_decoder=True,
+                        has_relative_attention_bias=False,
+                    )
+                ),
+                ff=block_ff.construct(),
+            )
+            for i in range(num_blocks)
+        ]
+        return cls(token_embeddings, blocks, final_layer_norm=final_layer_norm, dropout=dropout)
 
 
 @dataclass
@@ -934,28 +973,28 @@ class T5(TransformerModule, FromParams):
     def __init__(
         self,
         token_embeddings: Optional[nn.Embedding] = None,
-        encoder: Optional[T5EncoderStack] = None,
-        decoder: Optional[T5DecoderStack] = None,
+        encoder: Lazy[T5EncoderStack] = Lazy(T5EncoderStack),
+        decoder: Lazy[T5DecoderStack] = Lazy(T5DecoderStack),
         decoder_start_token_id: int = 0,
-        pad_token_id: int = 0,  # These are both 0 in t5-large. Go figure.
+        pad_token_id: int = 0,  # These are both 0 in t5-(small|base|large). Go figure.
         eos_token_id: int = 1,
+        vocab_size: int = 32128,
+        model_dim: int = 512,
         output_attentions: bool = False,
         output_all_hidden_states: bool = False,
         beam_size: int = 3,
         max_decoding_steps: int = 100,
-        vocab_size: int = 32128,
-        d_model: int = 512,
     ):
         super().__init__()
-        self.d_model = d_model
-        self.token_embeddings = token_embeddings or nn.Embedding(vocab_size, d_model)
+        self.model_dim = model_dim
+        self.token_embeddings = token_embeddings or nn.Embedding(vocab_size, model_dim)
         if token_embeddings is None:
             self.token_embeddings.weight.data.normal_(mean=0.0, std=1.0)
 
-        self.encoder = encoder or T5EncoderStack(token_embeddings=self.token_embeddings)
-        self.decoder = decoder or T5DecoderStack(token_embeddings=self.token_embeddings)
+        self.encoder: T5EncoderStack = encoder.construct(token_embeddings=self.token_embeddings)
+        self.decoder: T5DecoderStack = decoder.construct(token_embeddings=self.token_embeddings)
         self.lm_head = nn.Linear(
-            self.decoder.output_hidden_size(), self.token_embeddings.num_embeddings, bias=False
+            self.decoder.hidden_size, self.token_embeddings.num_embeddings, bias=False
         )
         self.lm_head.weight = self.token_embeddings.weight
         self.loss_fct = CrossEntropyLoss(ignore_index=-100)
@@ -970,6 +1009,72 @@ class T5(TransformerModule, FromParams):
             self.eos_token_id, max_steps=max_decoding_steps, beam_size=beam_size or 1
         )
 
+    @classmethod
+    def _get_input_arguments(
+        cls,
+        pretrained_module: torch.nn.Module,
+        source: str = "huggingface",
+        mapping: Optional[Dict[str, str]] = None,
+        **kwargs,
+    ) -> Dict[str, Any]:
+        from transformers.models.t5 import T5Config
+
+        config: T5Config = pretrained_module.config
+        attention_kwargs = {
+            "hidden_size": config.d_model,
+            "key_value_proj_dim": config.d_kv,
+            "num_heads": config.num_heads,
+            "relative_attention_num_buckets": config.relative_attention_num_buckets,
+            "dropout": config.dropout_rate,
+        }
+        layer_norm_kwargs = {
+            "hidden_size": config.d_model,
+            "eps": config.layer_norm_epsilon,
+        }
+        block_ff = Lazy(
+            T5LayerFF,
+            params=Params(
+                {
+                    "ff_proj": {
+                        "type": config.feed_forward_proj,
+                        "hidden_size": config.d_model,
+                        "ff_size": config.d_ff,
+                        "dropout": config.dropout_rate,
+                    },
+                    "layer_norm": layer_norm_kwargs,
+                    "dropout": config.dropout_rate,
+                }
+            ),
+        )
+        return {
+            "encoder": Lazy(
+                T5EncoderStack.basic_encoder,
+                contructor_extras={
+                    "num_blocks": config.num_layers,
+                    "block_self_attention": Lazy(T5Attention, contructor_extras=attention_kwargs),
+                    "final_layer_norm": T5LayerNorm(**layer_norm_kwargs),
+                    "block_ff": block_ff,
+                    "dropout": config.dropout_rate,
+                },
+            ),
+            "decoder": Lazy(
+                T5DecoderStack.basic_decoder,
+                contructor_extras={
+                    "num_blocks": config.num_decoder_layers,
+                    "block_self_attention": Lazy(T5Attention, contructor_extras=attention_kwargs),
+                    "block_cross_attention": Lazy(T5Attention, contructor_extras=attention_kwargs),
+                    "final_layer_norm": T5LayerNorm(**layer_norm_kwargs),
+                    "block_ff": block_ff,
+                    "dropout": config.dropout_rate,
+                },
+            ),
+            "decoder_start_token_id": config.decoder_start_token_id,
+            "pad_token_id": config.pad_token_id,
+            "eos_token_id": config.eos_token_id,
+            "vocab_size": config.vocab_size,
+            "model_dim": config.d_model,
+        }
+
     def _shift_right(self, input_ids, start_value: int):
         # shift inputs to the right
         shifted_input_ids = input_ids.new_zeros(input_ids.shape)
@@ -979,13 +1084,13 @@ class T5(TransformerModule, FromParams):
         return shifted_input_ids
 
     def _get_lm_logits(self, decoder_last_hidden_state: FloatT) -> FloatT:
-        # Shape: (batch_size, target_length, d_model)
+        # Shape: (batch_size, target_length, model_dim)
         sequence_output = decoder_last_hidden_state
         # Rescale output before projecting on vocab
         # TODO: HF only does this when does this when embeddings are tied.
         # Currently tied embeddings is the only option we have, but if make
         # that configurable then we should put this in an 'if' block.
-        sequence_output = sequence_output * (self.d_model ** -0.5)
+        sequence_output = sequence_output * (self.model_dim ** -0.5)
         # Shape: (batch_size, target_length, vocab_size)
         logits = self.lm_head(sequence_output)
         return logits
@@ -1143,8 +1248,8 @@ class T5(TransformerModule, FromParams):
 
     def _dict_to_decoder_cache(self, cache_dict: Dict[str, torch.Tensor]) -> List[KeyValueStates]:
         decoder_cache: List[KeyValueStates] = []
-        for layer_index in range(self.decoder.num_layers):
-            base_key = f"decoder_cache_{layer_index}_"
+        for block_index in range(self.decoder.num_blocks):
+            base_key = f"decoder_cache_{block_index}_"
             layer_cache = (
                 cache_dict[base_key + "0"].contiguous(),
                 cache_dict[base_key + "1"].contiguous(),
