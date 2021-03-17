@@ -1,2 +1,3 @@
 from allennlp.interpret.influence_interpreters.influence_interpreter import InfluenceInterpreter
 from allennlp.interpret.influence_interpreters.simple_influence import SimpleInfluence
+from allennlp.interpret.influence_interpreters.fast_influence import FastInfluence

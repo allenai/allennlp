@@ -14,16 +14,22 @@ from allennlp.interpret.influence_interpreters.influence_interpreter import (
 from allennlp.predictors import Predictor
 from allennlp.models.model import Model
 from allennlp.data import DatasetReader, Batch, Instance
+from allennlp.data.token_indexers import TokenIndexer
+from allennlp.data.vocabulary import Vocabulary
+from allennlp.data.tokenizers import Tokenizer
 from allennlp.data.data_loaders import DataLoader, MultiProcessDataLoader
+from allennlp.modules.token_embedders import TokenEmbedder
 from allennlp.modules.seq2vec_encoders import Seq2VecEncoder, BertPooler
+
 from allennlp.nn import util
 from allennlp.interpret.influence_interpreters.influence_utils import faiss_utils
+from allennlp.interpret.influence_interpreters.influence_utils import FAISSWrapper
 
 
 @InfluenceInterpreter.register("fast-influence")
 class FastInfluence(InfluenceInterpreter):
     """
-    Registered as a `SimpleInfluence` with name "simple-influence". This is a simple influence function
+    Registered as a `FastInfluence` with name "fast-influence". This is a simple influence function
     calculator. We simply go through every examples in train set to calculate the influence score, and uses
     recommended LiSSA algorithm (essentially a first-order Talyor approxmation) to approximate the inverse
     of Hessian used for influence score calculation. At best, we uses a single GPU for running the calculation.
@@ -69,8 +75,13 @@ class FastInfluence(InfluenceInterpreter):
         train_filepath: str,
         test_filepath: str,
         train_dataset_reader: DatasetReader,
-        seq2vec_encoder: Optional[Seq2VecEncoder] = BertPooler("bert-base-uncased"),
-        faiss_description: Optional[str] = "Flat",
+        # seq2vec_encoder: Optional[Seq2VecEncoder] = BertPooler("bert-base-uncased"),
+        faiss_dataset_reader: Optional[DatasetReader] = None,
+        faiss_dataset_wrapper: Optional[FAISSWrapper] = None,
+        # faiss_token_indexer: Optional[TokenIndexer] = None,
+        # faiss_tokenizer: Optional[Tokenizer] = None,
+        # faiss_vocab: Optional[Vocabulary] = None,
+        # faiss_text_field_embedder: Optional[TokenEmbedder] = None,
         test_dataset_reader: Optional[DatasetReader] = None,
         params_to_freeze: Optional[List[str]] = None,
         k: int = 20,
@@ -91,14 +102,19 @@ class FastInfluence(InfluenceInterpreter):
             k=k,
             device=device,
         )
-        self.seq2vec_encoder = seq2vec_encoder
+        # self.seq2vec_encoder = seq2vec_encoder
         # vectorize the training set, so t
         # TODO (@Leo): might give user the option to choose whether to use FAISS
-        self.faiss_index = faiss_utils.FAISSIndex(seq2vec_encoder.get_output_dim(), faiss_description)
-        self._train_loader = MultiProcessDataLoader(
-            self.train_dataset_reader, train_filepath, batch_size=128, shuffle=False
+        self.faiss_wrapper = faiss_dataset_wrapper
+        # self.faiss_index = faiss_utils.FAISSIndex(seq2vec_encoder.get_output_dim(), faiss_description)
+        # self.faiss_token_indexer = faiss_token_indexer
+        # self.faiss_vocab = faiss_vocab
+        # self.faiss_tokenizer = faiss_tokenizer
+        # self.faiss_text_field_embedder = faiss_text_field_embedder
+        self._faiss_train_loader = MultiProcessDataLoader(
+            faiss_dataset_reader, train_filepath, batch_size=128, shuffle=False
         )
-        self._train_loader.index_with(self.vocab)
+        self._faiss_train_loader.index_with(self.faiss_wrapper.vocab)
         self._create_faiss_index()
         self.damping = damping
         self.num_samples = num_samples
@@ -110,12 +126,11 @@ class FastInfluence(InfluenceInterpreter):
 
     def _create_faiss_index(self):
         # TODO: re-write this in AllenNLP fashion
-        for inputs in tqdm(self._train_loader):
+        for inputs in tqdm(self._faiss_train_loader):
 
-            output = self.seq2vec_encoder(**inputs)
-            features = misc_utils.compute_BERT_CLS_feature(model, **inputs)
+            features = self.faiss_wrapper(inputs)
             features = features.cpu().detach().numpy()
-            self.faiss_index.add(features)
+            self.faiss_wrapper.add(features)
 
 
 
