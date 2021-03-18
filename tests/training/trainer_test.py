@@ -26,7 +26,7 @@ from allennlp.training import (
     Checkpointer,
     TrainerCallback,
     TrackEpochCallback,
-    TensorBoardCallback,
+    LogWriterCallback,
     SanityCheckCallback,
     ConsoleLoggerCallback,
 )
@@ -701,8 +701,8 @@ class TestTrainer(TrainerTestBase):
             num_epochs=3,
             serialization_dir=self.TEST_DIR,
             callbacks=[
-                TensorBoardCallback.from_params(
-                    Params({"tensorboard_writer": {"distribution_interval": 2}}),
+                LogWriterCallback.from_params(
+                    Params({"log_writer": {"type": "tensorboard", "distribution_interval": 2}}),
                     serialization_dir=self.TEST_DIR,
                 )
             ],
@@ -801,10 +801,11 @@ class TestTrainer(TrainerTestBase):
             num_epochs=2,
             serialization_dir=self.TEST_DIR,
             callbacks=[
-                TensorBoardCallback.from_params(
+                LogWriterCallback.from_params(
                     Params(
                         {
-                            "tensorboard_writer": {
+                            "log_writer": {
+                                "type": "tensorboard",
                                 "summary_interval": 2,
                                 "should_log_learning_rate": True,
                             }
@@ -1070,7 +1071,7 @@ class TestTrainer(TrainerTestBase):
             def on_batch(
                 self,
                 trainer: "GradientDescentTrainer",
-                batch_inputs: List[List[TensorDict]],
+                batch_inputs: List[TensorDict],
                 batch_outputs: List[Dict[str, Any]],
                 batch_metrics: Dict[str, Any],
                 epoch: int,
@@ -1149,7 +1150,7 @@ class TestTrainer(TrainerTestBase):
             def on_batch(
                 self,
                 trainer: "GradientDescentTrainer",
-                batch_inputs: List[List[TensorDict]],
+                batch_inputs: List[TensorDict],
                 batch_outputs: List[Dict[str, Any]],
                 batch_metrics: Dict[str, Any],
                 epoch: int,
@@ -1195,10 +1196,11 @@ class TestTrainer(TrainerTestBase):
             num_epochs=2,
             serialization_dir=self.TEST_DIR,
             callbacks=[
-                TensorBoardCallback.from_params(
+                LogWriterCallback.from_params(
                     Params(
                         {
-                            "tensorboard_writer": {
+                            "log_writer": {
+                                "type": "tensorboard",
                                 "distribution_interval": 2,
                                 "should_log_inputs": True,
                             }

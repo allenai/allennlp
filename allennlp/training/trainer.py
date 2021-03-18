@@ -30,13 +30,14 @@ from allennlp.training.momentum_schedulers import MomentumScheduler
 from allennlp.training.moving_average import MovingAverage
 from allennlp.training.optimizers import Optimizer
 from allennlp.training.tensorboard_writer import TensorBoardWriter
+from allennlp.training.wandb_writer import WandBWriter
 from allennlp.sanity_checks.normalization_bias_verification import NormalizationBiasVerification
 from allennlp.training.log_writer import LogWriter
 
 logger = logging.getLogger(__name__)
 
 
-def _get_train_and_validation_metrics(metrics: Dict):
+def _get_train_and_validation_metrics(metrics: Dict) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     """
     Utility function to separate out train_metrics and val_metrics.
     """
@@ -79,7 +80,15 @@ class Trainer(Registrable):
                 cuda_device = -1
 
         check_for_gpu(cuda_device)
-        self._serialization_dir = serialization_dir
+
+        if serialization_dir is None:
+            import tempfile
+
+            self._serialization_dir = tempfile.mkdtemp()
+        else:
+            self._serialization_dir = serialization_dir
+        # Ensure serialization directory exists.
+        os.makedirs(self._serialization_dir, exist_ok=True)
 
         if isinstance(cuda_device, list):
             raise ConfigurationError(
@@ -100,9 +109,6 @@ class Trainer(Registrable):
         self._rank = local_rank
         self._primary = self._rank == 0
         self._world_size = world_size
-        # Ensure serialization directory exists.
-        if serialization_dir is not None:
-            os.makedirs(serialization_dir, exist_ok=True)
 
     def train(self) -> Dict[str, Any]:
         """
@@ -136,7 +142,7 @@ class TrainerCallback(Registrable):
     and saving its own files next to the config/checkpoints/logs/etc.
     """
 
-    def __init__(self, serialization_dir: Optional[str] = None) -> None:
+    def __init__(self, serialization_dir: str) -> None:
         self.serialization_dir = serialization_dir
         self.trainer: Optional["GradientDescentTrainer"] = None
 
@@ -151,7 +157,7 @@ class TrainerCallback(Registrable):
     def on_batch(
         self,
         trainer: "GradientDescentTrainer",
-        batch_inputs: List[List[TensorDict]],
+        batch_inputs: List[TensorDict],
         batch_outputs: List[Dict[str, Any]],
         batch_metrics: Dict[str, Any],
         epoch: int,
@@ -222,7 +228,7 @@ class SanityCheckCallback(TrainerCallback):
     def on_batch(
         self,
         trainer: "GradientDescentTrainer",
-        batch_inputs: List[List[TensorDict]],
+        batch_inputs: List[TensorDict],
         batch_outputs: List[Dict[str, Any]],
         batch_metrics: Dict[str, Any],
         epoch: int,
@@ -245,17 +251,18 @@ class SanityCheckCallback(TrainerCallback):
             ), "The NormalizationBiasVerification check failed. See logs for more details."
 
 
-class LogCallback(TrainerCallback):
+@TrainerCallback.register("log-writer")
+class LogWriterCallback(TrainerCallback):
     """
     Log training statistics and metrics using a `LogWriter`.
     """
 
     def __init__(
         self,
-        serialization_dir: Optional[str] = None,
-        log_writer: Lazy[LogWriter] = Lazy(LogWriter),
+        serialization_dir: str,
+        log_writer: Lazy[LogWriter],
     ) -> None:
-        super().__init__(serialization_dir=serialization_dir)
+        super().__init__(serialization_dir)
         self._log_writer_constructor = log_writer
         self._log_writer: Optional[LogWriter] = None
         self._param_updates: Optional[Dict[str, torch.Tensor]] = None
@@ -266,17 +273,15 @@ class LogCallback(TrainerCallback):
         self.trainer = trainer
         if is_primary:
             self._log_writer = self._log_writer_constructor.construct(
-                serialization_dir=self.serialization_dir
+                serialization_dir=self.serialization_dir,
+                model=self.trainer.model,
+                optimizer=self.trainer.optimizer,
             )
-            self._log_writer.get_batch_num_total = (
-                lambda: self.trainer._batch_num_total  # type: ignore[union-attr]
-            )
-            self._log_writer.enable_activation_logging(self.trainer.model)
 
     def on_batch(
         self,
         trainer: "GradientDescentTrainer",
-        batch_inputs: List[List[TensorDict]],
+        batch_inputs: List[TensorDict],
         batch_outputs: List[Dict[str, Any]],
         batch_metrics: Dict[str, Any],
         epoch: int,
@@ -286,8 +291,7 @@ class LogCallback(TrainerCallback):
         batch_grad_norm: Optional[float] = None,
         **kwargs,
     ) -> None:
-
-        if not is_primary:
+        if not is_training and not is_primary:
             return None
         assert self._log_writer is not None
 
@@ -297,17 +301,19 @@ class LogCallback(TrainerCallback):
                 self._param_updates[name].sub_(param.detach().cpu())
         else:
             self._param_updates = None
+        # Need to call this before .log_batch(), since .log_batch() updates its
+        # internal batch num counter.
+        should_log_distributions_next_batch = self._log_writer.should_log_distributions_next_batch()
 
         self._log_writer.log_batch(
-            trainer.model,
-            trainer.optimizer,  # type: ignore[arg-type]
             batch_grad_norm,
             batch_metrics,
             batch_inputs,
             self._param_updates,
+            batch_number,
         )
 
-        if self._log_writer.should_log_distributions_next_batch():
+        if should_log_distributions_next_batch:
             self._param_updates = {
                 name: param.detach().cpu().clone()
                 for name, param in trainer.model.named_parameters()
@@ -326,11 +332,10 @@ class LogCallback(TrainerCallback):
         assert self._log_writer is not None
 
         train_metrics, val_metrics = _get_train_and_validation_metrics(metrics)
-
-        self._log_writer.log_metrics(
+        self._log_writer.log_epoch(
             train_metrics,
-            val_metrics=val_metrics,
-            epoch=epoch + 1,  # +1 because tensorboard doesn't like 0
+            val_metrics,
+            epoch,
         )
 
     def on_end(
@@ -345,21 +350,37 @@ class LogCallback(TrainerCallback):
             assert self._log_writer is not None
             self._log_writer.close()
 
+    @classmethod
+    def tensorboard(
+        cls, serialization_dir: str, log_writer: Lazy[TensorBoardWriter] = Lazy(TensorBoardWriter)
+    ) -> "LogWriterCallback":
+        return cls(serialization_dir, log_writer)  # type: ignore[arg-type]
+
+    @classmethod
+    def wandb(
+        cls, serialization_dir: str, log_writer: Lazy[WandBWriter] = Lazy(WandBWriter)
+    ) -> "LogWriterCallback":
+        return cls(serialization_dir, log_writer)  # type: ignore[arg-type]
+
+
+TrainerCallback.register("tensorboard", constructor="tensorboard")(LogWriterCallback)
+TrainerCallback.register("wandb", constructor="wandb")(LogWriterCallback)
+
 
 @TrainerCallback.register("console-logger")
 class ConsoleLoggerCallback(TrainerCallback):
     def __init__(
         self,
-        serialization_dir: Optional[str] = None,
+        serialization_dir: str,
         should_log_inputs: bool = False,
     ) -> None:
-        super().__init__(serialization_dir=serialization_dir)
+        super().__init__(serialization_dir)
         self._should_log_inputs = should_log_inputs
 
     def on_batch(
         self,
         trainer: "GradientDescentTrainer",
-        batch_inputs: List[List[TensorDict]],
+        batch_inputs: List[TensorDict],
         batch_outputs: List[Dict[str, Any]],
         batch_metrics: Dict[str, Any],
         epoch: int,
@@ -432,20 +453,6 @@ class ConsoleLoggerCallback(TrainerCallback):
                 logger.info(no_train_message_template, name.ljust(name_length), "N/A", val_metric)
             elif train_metric is not None:
                 logger.info(no_val_message_template, name.ljust(name_length), train_metric, "N/A")
-
-
-@TrainerCallback.register("tensorboard")
-class TensorBoardCallback(LogCallback):
-    """
-    Log training statistics and metrics to TensorBoard using the `TensorBoardWriter`.
-    """
-
-    def __init__(
-        self,
-        serialization_dir: str,
-        tensorboard_writer: Lazy[TensorBoardWriter] = Lazy(TensorBoardWriter),
-    ) -> None:
-        super().__init__(serialization_dir=serialization_dir, log_writer=tensorboard_writer)  # type: ignore
 
 
 @TrainerCallback.register("track_epoch_callback")
@@ -682,13 +689,8 @@ class GradientDescentTrainer(Trainer):
 
         self._callbacks = callbacks or []
 
-        # We keep the total batch number as an instance variable because it
-        # is used inside a closure for the hook which logs activations in
-        # `_enable_activation_logging`.
         self._batch_num_total = 0
-
         self._last_log = 0.0  # time of last logging
-
         self._num_gradient_accumulation_steps = num_gradient_accumulation_steps
 
         # Enable automatic mixed precision training.

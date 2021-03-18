@@ -1,284 +1,325 @@
-from typing import Any, Callable, Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional, Set, Union
 import logging
 
 import torch
 
-from allennlp.common.from_params import FromParams
+from allennlp.common import Registrable
 from allennlp.data import TensorDict
 from allennlp.nn import util as nn_util
 from allennlp.training.optimizers import Optimizer
 from allennlp.training import util as training_util
 from allennlp.models.model import Model
 
+
 logger = logging.getLogger(__name__)
 
 
-class LogWriter(FromParams):
+class LogWriter(Registrable):
     """
     Class that handles trainer logging.
 
     # Parameters
 
-    serialization_dir : `str`, optional (default = `None`)
-        If provided, this is where the logs will be written.
+    serialization_dir : `str`
+        The training serialization directory.
 
-        In a typical AllenNLP configuration file, this parameter does not get an entry under the
-        "tensorboard_writer", it gets passed in separately.
+        In a typical AllenNLP configuration file, this parameter does not get an entry in the
+        file, it gets passed in separately.
+
+    model : `Model`
+        The model being trained.
+
+        In a typical AllenNLP configuration file, this parameter does not get an entry in the
+        file, it gets passed in separately.
+
+    optimizer : `Optimizer`
+        The optimizer used to train the model.
+
+        In a typical AllenNLP configuration file, this parameter does not get an entry in the
+        file, it gets passed in separately.
 
     summary_interval : `int`, optional (default = `100`)
         Most statistics will be written out only every this many batches.
 
     distribution_interval : `int`, optional (default = `None`)
-        If provided, activation distributions will be written out every this many batches.
-        If None, activation distributions will not be written out.
-        When this parameter is specified, the following additional logging is enabled:
+        When this parameter is specified, the following additional logging is enabled
+        every this many batches:
 
             * Distributions of model parameters
             * The ratio of parameter update norm to parameter norm
             * Distribution of layer activations
 
         The layer activations are logged for any modules in the `Model` that have
-        the attribute `should_log_activations` set to `True`.  Logging
-        distributions requires a number of GPU-CPU copies during training and is typically
+        the attribute `should_log_activations` set to `True`.
+
+        Logging distributions requires a number of GPU-CPU copies during training and is typically
         slow, so we recommend logging distributions relatively infrequently.
-        Note: only Modules that return tensors, tuples of tensors or dicts
-        with tensors as values currently support activation logging.
+
+        !!! Note
+            Only Modules that return tensors, tuples of tensors or dicts
+            with tensors as values currently support activation logging.
 
     batch_size_interval : `int`, optional, (default = `None`)
         If defined, how often to log the average batch size.
 
     should_log_parameter_statistics : `bool`, optional (default = `True`)
         Whether to log parameter statistics (mean and standard deviation of parameters and
-        gradients).
+        gradients). If `True`, parameter stats are logged every `summary_interval` batches.
 
     should_log_learning_rate : `bool`, optional (default = `False`)
         Whether to log (parameter-specific) learning rate.
-
-    should_log_inputs : `bool`, optional (default = `False`)
-        Whether to log model inputs.
-
-    get_batch_num_total : `Callable[[], int]`, optional (default = `None`)
-        A thunk that returns the number of batches so far. Most likely this will
-        be a closure around an instance variable in your `Trainer` class.  Because of circular
-        dependencies in constructing this object and the `Trainer`, this is typically `None` when
-        you construct the object, but it gets set inside the constructor of our `Trainer`.
+        If `True`, learning rates are logged every `summary_interval` batches.
 
     """
 
     def __init__(
         self,
-        serialization_dir: Optional[str] = None,
+        serialization_dir: str,
+        model: Model,
+        optimizer: Optimizer,
         summary_interval: int = 100,
         distribution_interval: Optional[int] = None,
         batch_size_interval: Optional[int] = None,
         should_log_parameter_statistics: bool = True,
         should_log_learning_rate: bool = False,
-        should_log_inputs: bool = False,
-        get_batch_num_total: Callable[[], int] = None,
     ):
         self._serialization_dir = serialization_dir
+        self._model = model
+        self._optimizer = optimizer
         self._summary_interval = summary_interval
         self._distribution_interval = distribution_interval
         self._batch_size_interval = batch_size_interval
         self._should_log_parameter_statistics = should_log_parameter_statistics
         self._should_log_learning_rate = should_log_learning_rate
-        self._should_log_inputs = should_log_inputs
-        self.get_batch_num_total = get_batch_num_total
-
         self._cumulative_batch_group_size = 0
-        self._batches_this_epoch = 0
         self._distribution_parameters: Optional[Set[str]] = None
+        self._module_hook_handles: List[torch.utils.hooks.RemovableHandle] = []
+        self._batch_num_total: int = 0
 
-    @staticmethod
-    def _item(value: Any):
-        if hasattr(value, "item"):
-            val = value.item()
-        else:
-            val = value
-        return val
+        self._enable_activation_logging()
 
-    def reset_epoch(self) -> None:
-        self._cumulative_batch_group_size = 0
-        self._batches_this_epoch = 0
-
-    def should_log_this_batch(self) -> bool:
-        assert self.get_batch_num_total is not None
-        return self.get_batch_num_total() % self._summary_interval == 0
-
-    def should_log_distributions_next_batch(self) -> bool:
-        assert self.get_batch_num_total is not None
-        return (
-            self._distribution_interval is not None
-            and (self.get_batch_num_total() + 1) % self._distribution_interval == 0
-        )
-
-    def should_log_distributions_this_batch(self) -> bool:
-        assert self.get_batch_num_total is not None
-        return (
-            self._distribution_interval is not None
-            and self.get_batch_num_total() % self._distribution_interval == 0
-        )
-
-    def add_train_scalar(self, name: str, value: float, timestep: int = None):
-        """
-        This function is for how scalar values should be logged.
-        """
-        return NotImplementedError
-
-    def add_validation_scalar(self, name: str, value: float, timestep: int = None):
-        return NotImplementedError
-
-    def add_train_tensor(self, name: str, values: torch.Tensor):
-        """
-        This function is for how tensor values should be logged.
-        """
-        return NotImplementedError
-
-    def log_metrics(
+    def log_scalars(
         self,
-        train_metrics: dict,
-        val_metrics: dict = None,
-        epoch: int = None,
-    ):
+        scalars: Dict[str, Union[int, float]],
+        log_prefix: str = "",
+        epoch: Optional[int] = None,
+    ) -> None:
         """
-        Sends all of the train metrics (and validation metrics, if provided) to tensorboard/console.
+        Required to be implemented by subclasses.
+
+        Defines how batch or epoch scalar metrics are logged.
         """
-        return NotImplementedError
+        raise NotImplementedError
 
-    def enable_activation_logging(self, model: Model):
-        return NotImplementedError
+    def log_tensors(
+        self, tensors: Dict[str, torch.Tensor], log_prefix: str = "", epoch: Optional[int] = None
+    ) -> None:
+        """
+        Required to be implemented by subclasses.
 
-    def log_activation_distribution(self, outputs, log_prefix: str):
-        return NotImplementedError
+        Defines how batch or epoch tensor metrics are logged.
+        """
+        raise NotImplementedError
 
-    def _log_fields(self, fields: Dict, log_prefix: str = ""):
-        return NotImplementedError
+    def log_inputs(self, inputs: List[TensorDict], log_prefix: str = "") -> None:
+        """
+        Can be optionally implemented by subclasses.
 
-    def log_inputs(self, batch_group: List[List[TensorDict]]):
-        for b, batch in enumerate(batch_group):
-            self._log_fields(batch, log_prefix="batch_input")  # type: ignore
-
-    def log_memory_usage(self, cpu_memory_usage: Dict[int, int], gpu_memory_usage: Dict[int, int]):
-        cpu_memory_usage_total = 0.0
-        for worker, mem_bytes in cpu_memory_usage.items():
-            memory = mem_bytes / (1024 * 1024)
-            self.add_train_scalar(f"memory_usage/worker_{worker}_cpu", memory)
-            cpu_memory_usage_total += memory
-        self.add_train_scalar("memory_usage/cpu", cpu_memory_usage_total)
-        for gpu, mem_bytes in gpu_memory_usage.items():
-            memory = mem_bytes / (1024 * 1024)
-            self.add_train_scalar(f"memory_usage/gpu_{gpu}", memory)
+        Defines how batch inputs are logged. This is called once at the start of each epoch.
+        """
+        pass
 
     def log_batch(
         self,
-        model: Model,
-        optimizer: Optimizer,
         batch_grad_norm: Optional[float],
         metrics: Dict[str, float],
-        batch_group: List[List[TensorDict]],
+        batch_group: List[TensorDict],
         param_updates: Optional[Dict[str, torch.Tensor]],
+        batch_number: int,
     ) -> None:
-        if self.should_log_this_batch():
-            self.log_parameter_and_gradient_statistics(model, batch_grad_norm)
-            self.log_learning_rates(model, optimizer)
+        """
+        Called every batch to perform all of the logging that is due.
+        """
+        if batch_number == 0:
+            self._cumulative_batch_group_size = 0
+            self.log_inputs(batch_group)
 
-            self.add_train_scalar("loss/loss_train", metrics["loss"])
-            self.log_metrics({"epoch_metrics/" + k: v for k, v in metrics.items()})
+        if self._should_log_this_batch():
+            if self._should_log_parameter_statistics:
+                self._log_parameter_and_gradient_statistics(batch_grad_norm)
+            if self._should_log_learning_rate:
+                self._log_learning_rates()
+            self.log_scalars(
+                {k: v for k, v in metrics.items() if isinstance(v, (int, float))},
+                log_prefix="batch",
+            )
 
         if self.should_log_distributions_this_batch():
             assert param_updates is not None
-            self.log_distributions(model)
-            self.log_gradient_updates(model, param_updates)
-
-            if self._should_log_inputs:
-                self.log_inputs(batch_group)
+            self._log_distributions()
+            self._log_gradient_updates(param_updates)
 
         if self._batch_size_interval:
             # We're assuming here that `log_batch` will get called every batch, and only every
             # batch.  This is true with our current usage of this code (version 1.0); if that
             # assumption becomes wrong, this code will break.
             batch_group_size = sum(training_util.get_batch_size(batch) for batch in batch_group)  # type: ignore
-            self._batches_this_epoch += 1
             self._cumulative_batch_group_size += batch_group_size
+            if (batch_number + 1) % self._batch_size_interval == 0:
+                average = self._cumulative_batch_group_size / (batch_number + 1)
+                self.log_scalars(
+                    {"batch_size": batch_group_size, "mean_batch_size": average}, log_prefix="batch"
+                )
 
-            if (self._batches_this_epoch - 1) % self._batch_size_interval == 0:
-                average = self._cumulative_batch_group_size / self._batches_this_epoch
-                logger.info(f"current batch size: {batch_group_size} mean batch size: {average}")
-                self.add_train_scalar("current_batch_size", batch_group_size)
-                self.add_train_scalar("mean_batch_size", average)
+        self._batch_num_total += 1
 
-    def log_distributions(self, model: Model) -> None:
+    def log_epoch(
+        self,
+        train_metrics: Dict[str, Any],
+        val_metrics: Dict[str, Any],
+        epoch: int,
+    ) -> None:
         """
-        Send distributions of parameters to tensorboard.
+        Called at the end of every epoch to log training and validation metrics.
+        """
+        self.log_scalars(
+            {k: v for k, v in train_metrics.items() if isinstance(v, (int, float))},
+            log_prefix="train",
+            epoch=epoch,
+        )
+        self.log_scalars(
+            {k: v for k, v in val_metrics.items() if isinstance(v, (int, float))},
+            log_prefix="validation",
+            epoch=epoch,
+        )
+
+    def should_log_distributions_next_batch(self) -> bool:
+        return (
+            self._distribution_interval is not None
+            and (self._batch_num_total + 2) % self._distribution_interval == 0
+        )
+
+    def should_log_distributions_this_batch(self) -> bool:
+        return (
+            self._distribution_interval is not None
+            and (self._batch_num_total + 1) % self._distribution_interval == 0
+        )
+
+    def _enable_activation_logging(self) -> None:
+        if self._distribution_interval is not None:
+            # To log activation histograms to the forward pass, we register
+            # a hook on forward to capture the output tensors.
+            # This uses a closure to determine whether to log the activations,
+            # since we don't want them on every call.
+            for _, module in self._model.named_modules():
+                if not getattr(module, "should_log_activations", False):
+                    # skip it
+                    continue
+
+                def hook(module_, inputs, outputs):
+                    if self.should_log_distributions_this_batch():
+                        self._log_activation_distribution(outputs, str(module_.__class__))
+
+                self._module_hook_handles.append(module.register_forward_hook(hook))
+
+    def _should_log_this_batch(self) -> bool:
+        return self._batch_num_total % self._summary_interval == 0
+
+    def _log_activation_distribution(self, outputs: Any, module_name: str) -> None:
+        activations_to_log: Dict[str, torch.Tensor] = {}
+        if isinstance(outputs, torch.Tensor):
+            log_name = module_name
+            activations_to_log[log_name] = outputs
+        elif isinstance(outputs, (list, tuple)):
+            for i, output in enumerate(outputs):
+                if isinstance(output, torch.Tensor):
+                    log_name = "{0}_{1}".format(module_name, i)
+                    activations_to_log[log_name] = output
+        elif isinstance(outputs, dict):
+            for k, output in outputs.items():
+                log_name = "{0}_{1}".format(module_name, k)
+                if isinstance(output, torch.Tensor):
+                    activations_to_log[log_name] = output
+
+        if activations_to_log:
+            self.log_tensors(activations_to_log, log_prefix="activation_histogram")
+
+    def _log_parameter_and_gradient_statistics(self, batch_grad_norm: float = None) -> None:
+        parameter_mean_scalars: Dict[str, float] = {}
+        parameter_std_scalars: Dict[str, float] = {}
+        gradient_mean_scalars: Dict[str, float] = {}
+        gradient_std_scalars: Dict[str, float] = {}
+        # Log parameter values to TensorBoard
+        for name, param in self._model.named_parameters():
+            if param.data.numel() > 0:
+                parameter_mean_scalars[name] = param.data.mean().item()
+            if param.data.numel() > 1:
+                parameter_std_scalars[name] = param.data.std().item()
+            if param.grad is not None:
+                if param.grad.is_sparse:
+                    grad_data = param.grad.data._values()
+                else:
+                    grad_data = param.grad.data
+
+                # skip empty gradients
+                if torch.prod(torch.tensor(grad_data.shape)).item() > 0:
+                    gradient_mean_scalars[name] = grad_data.mean().item()
+                    if grad_data.numel() > 1:
+                        gradient_std_scalars[name] = grad_data.std().item()
+                else:
+                    # no gradient for a parameter with sparse gradients
+                    logger.info("No gradient for %s, skipping logging.", name)
+        self.log_scalars(parameter_mean_scalars, log_prefix="parameter_mean")
+        self.log_scalars(parameter_std_scalars, log_prefix="parameter_std")
+        self.log_scalars(gradient_mean_scalars, log_prefix="gradient_mean")
+        self.log_scalars(gradient_std_scalars, log_prefix="gradient_std")
+        # norm of gradients
+        if batch_grad_norm is not None:
+            self.log_scalars({"gradient_norm": batch_grad_norm})
+
+    def _log_learning_rates(self):
+        # optimizer stores lr info keyed by parameter tensor
+        # we want to log with parameter name
+        lr_scalars: Dict[str, float] = {}
+        names = {param: name for name, param in self._model.named_parameters()}
+        for group in self._optimizer.param_groups:
+            if "lr" not in group:
+                continue
+            rate = group["lr"]
+            for param in group["params"]:
+                # check whether params has requires grad or not
+                effective_rate = rate * float(param.requires_grad)
+                lr_scalars[names[param]] = effective_rate
+        self.log_scalars(lr_scalars, log_prefix="learning_rate")
+
+    def _log_distributions(self) -> None:
+        """
+        Log distributions of parameters.
         """
         if not self._distribution_parameters:
             # Avoiding calling this every batch.  If we ever use two separate models with a single
             # writer, this is wrong, but I doubt that will ever happen.
-            self._distribution_parameters = set(
-                model.get_parameters_for_histogram_tensorboard_logging()
-            )
-        for name, param in model.named_parameters():
+            self._distribution_parameters = set(self._model.get_parameters_for_histogram_logging())
+        parameters_to_log: Dict[str, torch.Tensor] = {}
+        for name, param in self._model.named_parameters():
             if name in self._distribution_parameters:
-                self.add_train_tensor("parameter_histogram/" + name, param)
+                parameters_to_log[name] = param
+        self.log_tensors(parameters_to_log, log_prefix="parameter_histogram")
 
-    def log_parameter_and_gradient_statistics(
-        self, model: Model, batch_grad_norm: float = None
-    ) -> None:
-        """
-        Send the mean and std of all parameters and gradients to tensorboard, as well
-        as logging the average gradient norm.
-        """
-        if self._should_log_parameter_statistics:
-            # Log parameter values to TensorBoard
-            for name, param in model.named_parameters():
-                if param.data.numel() > 0:
-                    self.add_train_scalar("parameter_mean/" + name, param.data.mean().item())
-                if param.data.numel() > 1:
-                    self.add_train_scalar("parameter_std/" + name, param.data.std().item())
-                if param.grad is not None:
-                    if param.grad.is_sparse:
-
-                        grad_data = param.grad.data._values()
-                    else:
-                        grad_data = param.grad.data
-
-                    # skip empty gradients
-                    if torch.prod(torch.tensor(grad_data.shape)).item() > 0:
-                        self.add_train_scalar("gradient_mean/" + name, grad_data.mean())
-                        if grad_data.numel() > 1:
-                            self.add_train_scalar("gradient_std/" + name, grad_data.std())
-                    else:
-                        # no gradient for a parameter with sparse gradients
-                        logger.info("No gradient for %s, skipping logging.", name)
-            # norm of gradients
-            if batch_grad_norm is not None:
-                self.add_train_scalar("gradient_norm", batch_grad_norm)
-
-    def log_learning_rates(self, model: Model, optimizer: Optimizer):
-        """
-        Send current parameter specific learning rates to tensorboard
-        """
-        if self._should_log_learning_rate:
-            # optimizer stores lr info keyed by parameter tensor
-            # we want to log with parameter name
-            names = {param: name for name, param in model.named_parameters()}
-            for group in optimizer.param_groups:
-                if "lr" not in group:
-                    continue
-                rate = group["lr"]
-                for param in group["params"]:
-                    # check whether params has requires grad or not
-                    effective_rate = rate * float(param.requires_grad)
-                    self.add_train_scalar("learning_rate/" + names[param], effective_rate)
-
-    def log_gradient_updates(self, model: Model, param_updates: Dict[str, torch.Tensor]) -> None:
-        for name, param in model.named_parameters():
+    def _log_gradient_updates(self, param_updates: Dict[str, torch.Tensor]) -> None:
+        gradient_update_scalars: Dict[str, torch.Tensor] = {}
+        for name, param in self._model.named_parameters():
             update_norm = torch.norm(param_updates[name].view(-1))
             param_norm = torch.norm(param.view(-1)).cpu()
-            self.add_train_scalar(
-                "gradient_update/" + name,
-                update_norm / (param_norm + nn_util.tiny_value_of_dtype(param_norm.dtype)),
-            )
+            gradient_update_scalars[name] = (
+                update_norm / (param_norm + nn_util.tiny_value_of_dtype(param_norm.dtype))
+            ).item()
+        self.log_scalars(gradient_update_scalars, log_prefix="gradient_update")
 
     def close(self) -> None:
-        pass
+        """
+        Called at the end of training to remove any module hooks and close out any
+        other logging resources.
+        """
+        for handle in self._module_hook_handles:
+            handle.remove()
