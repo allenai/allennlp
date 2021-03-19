@@ -1,4 +1,5 @@
-from typing import Any, Dict, List, Optional, Set, Union
+from collections import deque, defaultdict
+from typing import Any, Dict, List, Optional, Set, Union, Deque
 import logging
 
 import torch
@@ -70,6 +71,9 @@ class LogWriter(Registrable):
         Whether to log (parameter-specific) learning rate.
         If `True`, learning rates are logged every `summary_interval` batches.
 
+    batch_loss_moving_average_count : `int`, optional (default = `100`)
+        The length of the moving average for batch loss.
+
     """
 
     def __init__(
@@ -82,6 +86,7 @@ class LogWriter(Registrable):
         batch_size_interval: Optional[int] = None,
         should_log_parameter_statistics: bool = True,
         should_log_learning_rate: bool = False,
+        batch_loss_moving_average_count: int = 100,
     ):
         self._serialization_dir = serialization_dir
         self._model = model
@@ -95,6 +100,9 @@ class LogWriter(Registrable):
         self._distribution_parameters: Optional[Set[str]] = None
         self._module_hook_handles: List[torch.utils.hooks.RemovableHandle] = []
         self._batch_num_total: int = 0
+        self._batch_loss_moving_average_count = batch_loss_moving_average_count
+        self._batch_loss_moving_sum: Dict[str, float] = defaultdict(float)
+        self._batch_loss_moving_items: Dict[str, Deque[float]] = defaultdict(deque)
 
         self._enable_activation_logging()
 
@@ -147,11 +155,29 @@ class LogWriter(Registrable):
         if self._should_log_this_batch():
             if self._should_log_parameter_statistics:
                 self._log_parameter_and_gradient_statistics(batch_grad_norm)
+
             if self._should_log_learning_rate:
                 self._log_learning_rates()
+
+            # Now collect per-batch metrics to log.
+            metrics_to_log: Dict[str, float] = {}
+            for key in ("batch_loss", "batch_reg_loss"):
+                if key not in metrics:
+                    continue
+                value = metrics[key]
+                metrics_to_log[key] = value
+                # Update and add moving average.
+                self._batch_loss_moving_sum[key] += value
+                self._batch_loss_moving_items[key].append(value)
+                if len(self._batch_loss_moving_items[key]) > self._batch_loss_moving_average_count:
+                    self._batch_loss_moving_sum[key] -= self._batch_loss_moving_items[key].popleft()
+                metrics_to_log[f"{key}_mov_avg"] = self._batch_loss_moving_sum[key] / len(
+                    self._batch_loss_moving_items[key]
+                )
+
             self.log_scalars(
-                {k: v for k, v in metrics.items() if isinstance(v, (int, float))},
-                log_prefix="batch",
+                metrics_to_log,
+                log_prefix="train",
             )
 
         if self.should_log_distributions_this_batch():
@@ -168,7 +194,7 @@ class LogWriter(Registrable):
             if (batch_number + 1) % self._batch_size_interval == 0:
                 average = self._cumulative_batch_group_size / (batch_number + 1)
                 self.log_scalars(
-                    {"batch_size": batch_group_size, "mean_batch_size": average}, log_prefix="batch"
+                    {"batch_size": batch_group_size, "mean_batch_size": average}, log_prefix="train"
                 )
 
         self._batch_num_total += 1
@@ -307,7 +333,7 @@ class LogWriter(Registrable):
         self.log_tensors(parameters_to_log, log_prefix="parameter_histogram")
 
     def _log_gradient_updates(self, param_updates: Dict[str, torch.Tensor]) -> None:
-        gradient_update_scalars: Dict[str, torch.Tensor] = {}
+        gradient_update_scalars: Dict[str, float] = {}
         for name, param in self._model.named_parameters():
             update_norm = torch.norm(param_updates[name].view(-1))
             param_norm = torch.norm(param.view(-1)).cpu()
