@@ -352,15 +352,17 @@ class LogWriterCallback(TrainerCallback):
 
     @classmethod
     def tensorboard(
-        cls, serialization_dir: str, log_writer: Lazy[TensorBoardWriter] = Lazy(TensorBoardWriter)
+        cls,
+        serialization_dir: str,
+        tensorboard_writer: Lazy[TensorBoardWriter] = Lazy(TensorBoardWriter),
     ) -> "LogWriterCallback":
-        return cls(serialization_dir, log_writer)  # type: ignore[arg-type]
+        return cls(serialization_dir, tensorboard_writer)  # type: ignore[arg-type]
 
     @classmethod
     def wandb(
-        cls, serialization_dir: str, log_writer: Lazy[WandBWriter] = Lazy(WandBWriter)
+        cls, serialization_dir: str, wandb_writer: Lazy[WandBWriter] = Lazy(WandBWriter)
     ) -> "LogWriterCallback":
-        return cls(serialization_dir, log_writer)  # type: ignore[arg-type]
+        return cls(serialization_dir, wandb_writer)  # type: ignore[arg-type]
 
 
 TrainerCallback.register("tensorboard", constructor="tensorboard")(LogWriterCallback)
