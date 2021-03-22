@@ -28,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Makes sure tensors that are stored in `TensorCache` always live on CPUs
 - Fixed a bug where `FromParams` objects wrapped in `Lazy()` couldn't be pickled.
+- Fixed a bug where the `ROUGE` metric couldn't be picked.
 
 
 ## [v2.1.0](https://github.com/allenai/allennlp/releases/tag/v2.1.0) - 2021-02-24
@@ -46,6 +47,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added an example for fields of type `ListField[TextField]` to `apply_token_indexers` API docs.
 - Added `text_key` and `label_key` parameters to `TextClassificationJsonReader` class.
 - Added `MultiOptimizer`, which allows you to use different optimizers for different parts of your model.
+- Added a clarification to `predictions_to_labeled_instances` API docs for attack from json
 
 ### Fixed
 
