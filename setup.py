@@ -72,6 +72,7 @@ setup(
         "filelock>=3.0,<3.1",
         "lmdb",
         "more-itertools",
+        "checklist",
     ],
     entry_points={"console_scripts": ["allennlp=allennlp.__main__:run"]},
     include_package_data=True,

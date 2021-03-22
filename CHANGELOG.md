@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `LogCallback` and `ConsoleLoggerCallback` classes. `TensorBoardCallback` inherits from `LogCallback`. 
 - Added `NormalizationBiasVerification` and `SanityCheckCallback` for model sanity checks.
 - `SanityCheckCallback` runs by default. It can be turned off by setting `run_sanity_check`=`False` in trainer parameters.
+- `Added wrappers and command line functionality to run checklist test suites.`
 
 ### Fixed
 
