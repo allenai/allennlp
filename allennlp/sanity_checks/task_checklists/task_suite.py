@@ -2,6 +2,7 @@ import sys
 from typing import Type, Optional, Dict, Any, Callable
 from checklist.test_suite import TestSuite
 from allennlp.common.registrable import Registrable
+from allennlp.common.file_utils import cached_path
 from allennlp.predictors.predictor import Predictor
 
 
@@ -25,8 +26,7 @@ class TaskSuite(Registrable):
     def __init__(self, suite: Optional[TestSuite] = None, **kwargs):
         self.suite = suite or TestSuite()
 
-    @classmethod
-    def _prediction_and_confidence_scores(cls, predictor: Predictor) -> Callable:
+    def _prediction_and_confidence_scores(self, predictor: Predictor) -> Callable:
         """
         This makes certain assumptions about the task predictor
         input and output expectations. This should return a function
@@ -81,7 +81,7 @@ class TaskSuite(Registrable):
             extra_args = {}
 
         if suite_file is not None:
-            return suite_class(TestSuite.from_file(suite_file), **extra_args)
+            return suite_class(TestSuite.from_file(cached_path(suite_file)), **extra_args)
         return suite_class(**extra_args)
 
     def save_suite(self, suite_file: str):

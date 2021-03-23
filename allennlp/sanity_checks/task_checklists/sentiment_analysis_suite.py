@@ -257,8 +257,7 @@ class SentimentAnalysisSuite(TaskSuite):
 
         super().__init__(suite)
 
-    @classmethod
-    def _prediction_and_confidence_scores(cls, predictor):
+    def _prediction_and_confidence_scores(self, predictor):
         def preds_and_confs_fn(data):
             labels = []
             confs = []
@@ -267,7 +266,7 @@ class SentimentAnalysisSuite(TaskSuite):
             for pred in predictions:
                 label = pred["probs"].index(max(pred["probs"]))
                 labels.append(label)
-                confs.append([pred["probs"][0], pred["probs"][1], 0])
+                confs.append([pred["probs"][self._positive], pred["probs"][self._negative]])
             return np.array(labels), np.array(confs)
 
         return preds_and_confs_fn
