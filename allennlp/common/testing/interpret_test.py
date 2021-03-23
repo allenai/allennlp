@@ -43,3 +43,14 @@ class FakePredictorForTestingInterpret(TextClassifierPredictor):
 
     def get_interpretable_text_field_embedder(self):
         return self._model.embedder
+
+
+class DummyBilinearModelForTestingIF(Model):
+    def __init__(self, vocab, params):
+        super().__init__(vocab)
+        self.x = torch.nn.Parameter(params.float(), requires_grad=True)
+
+    def forward(self, tensors):
+        A = tensors  # (batch_size, ..., ...)
+        output_dict = {"loss": 1 / 2 * (A @ self.x @ self.x)}
+        return output_dict
