@@ -1,5 +1,6 @@
 import faiss
 from typing import Optional
+from overrides import overrides
 import torch
 from .faiss_utils import FAISSIndex
 from allennlp.data import TextFieldTensors, Vocabulary
@@ -21,12 +22,12 @@ class FAISSWrapper(FAISSIndex, Model):
         self._seq2vec_encoder = seq2vec_encoder
         FAISSIndex.__init__(self, self._seq2vec_encoder.get_output_dim(), description, index)
 
-    def extract_tokens_from_input(self, *inputs) -> TextFieldTensors:
+    def extract_tokens_from_input(self, **inputs) -> TextFieldTensors:
         raise NotImplementedError
 
-    def __call__(self, *inputs) -> torch.Tensor:
+    def __call__(self, inputs) -> torch.Tensor:
         # TODO (Leo): this might not be general enough, e.g. use label as part of seq2vec
-        # however, currently, this seems fine.
+        # however, currently, this seems fine. Also, curious about how to
         tokens = self.extract_tokens_from_input(**inputs)
         embedded_text = self._text_field_embedder(tokens)
         mask = get_text_field_mask(tokens)
@@ -35,3 +36,8 @@ class FAISSWrapper(FAISSIndex, Model):
 
         return embedded_text
 
+
+class FAISSSnliWrapper(FAISSWrapper):
+    @overrides
+    def extract_tokens_from_input(self, tokens: TextFieldTensors, label: torch.IntTensor = None):
+        return tokens

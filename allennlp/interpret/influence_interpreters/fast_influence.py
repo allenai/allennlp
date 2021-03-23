@@ -106,15 +106,11 @@ class FastInfluence(InfluenceInterpreter):
         # vectorize the training set, so t
         # TODO (@Leo): might give user the option to choose whether to use FAISS
         self.faiss_wrapper = faiss_dataset_wrapper
-        # self.faiss_index = faiss_utils.FAISSIndex(seq2vec_encoder.get_output_dim(), faiss_description)
-        # self.faiss_token_indexer = faiss_token_indexer
-        # self.faiss_vocab = faiss_vocab
-        # self.faiss_tokenizer = faiss_tokenizer
-        # self.faiss_text_field_embedder = faiss_text_field_embedder
         self._faiss_train_loader = MultiProcessDataLoader(
-            faiss_dataset_reader, train_filepath, batch_size=128, shuffle=False
+            faiss_dataset_reader, train_filepath, batch_size=8, shuffle=False
         )
-        self._faiss_train_loader.index_with(self.faiss_wrapper.vocab)
+        vocab = Vocabulary.from_instances(self._faiss_train_loader._instances)
+        self._faiss_train_loader.index_with(vocab)
         self._create_faiss_index()
         self.damping = damping
         self.num_samples = num_samples
