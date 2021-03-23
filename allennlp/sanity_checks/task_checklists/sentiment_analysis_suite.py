@@ -267,7 +267,7 @@ class SentimentAnalysisSuite(TaskSuite):
             for pred in predictions:
                 label = pred["probs"].index(max(pred["probs"]))
                 labels.append(label)
-                confs.append([pred["probs"][0], pred["probs"][1]])
+                confs.append([pred["probs"][0], pred["probs"][1], 0])
             return np.array(labels), np.array(confs)
 
         return preds_and_confs_fn

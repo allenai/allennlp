@@ -12,7 +12,7 @@ class TestCheckList(AllenNlpTestCase):
         self.archive_file = (
             self.FIXTURES_ROOT / "basic_classifier" / "serialization" / "model.tar.gz"
         )
-        self.task_suite = "sentiment-analysis"
+        self.task = "sentiment-analysis"
 
     def test_add_checklist_subparser(self):
         parser = argparse.ArgumentParser(description="Testing")
@@ -22,7 +22,9 @@ class TestCheckList(AllenNlpTestCase):
         kebab_args = [
             "checklist",  # command
             "/path/to/archive",  # archive
-            "task-suite-name-or-path",  # task suite
+            "task-suite-name",
+            "--checklist-suite",
+            "/path/to/checklist/pkl",
             "--output-file",
             "/dev/null",
             "--cuda-device",
@@ -33,7 +35,7 @@ class TestCheckList(AllenNlpTestCase):
 
         assert args.func.__name__ == "_run_suite"
         assert args.archive_file == "/path/to/archive"
-        assert args.task_suite == "task-suite-name-or-path"
+        assert args.task == "task-suite-name"
         assert args.output_file == "/dev/null"
         assert args.cuda_device == 0
 
@@ -43,7 +45,7 @@ class TestCheckList(AllenNlpTestCase):
             "__main__.py",  # executable
             "checklist",  # command
             str(self.archive_file),
-            str(self.task_suite),
+            str(self.task),
             "--task-suite-args",
             '{"positive": 1, "negative": 0, "neutral": null}',
         ]

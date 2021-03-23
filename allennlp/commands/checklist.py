@@ -33,7 +33,10 @@ class CheckList(Subcommand):
         subparser.add_argument(
             "archive_file", type=str, help="the archived model to make predictions with"
         )
-        subparser.add_argument("task_suite", type=str, help="the suite name or path")
+
+        subparser.add_argument("task", type=str, help="the name of the task suite")
+
+        subparser.add_argument("--checklist-suite", type=str, help="the checklist suite path")
 
         subparser.add_argument(
             "--task-suite-args",
@@ -100,12 +103,12 @@ def _get_predictor(args: argparse.Namespace) -> Predictor:
 
 
 def _get_task_suite(args: argparse.Namespace) -> TaskSuite:
-    if args.task_suite in TaskSuite.list_available():
-        suite_name = args.task_suite
-        file_path = None
+    if args.task in TaskSuite.list_available():
+        suite_name = args.task
     else:
         suite_name = None
-        file_path = args.task_suite
+
+    file_path = args.checklist_suite
 
     task_suite_args = args.task_suite_args.strip()
     if len(task_suite_args) <= 0:
