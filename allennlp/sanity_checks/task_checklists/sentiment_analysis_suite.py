@@ -7,8 +7,8 @@ from checklist.editor import Editor
 import numpy as np
 
 
-@TaskSuite.register("sentiment-analysis-vocabulary")
-class SentimentAnalysisVocabularySuite(TaskSuite):
+@TaskSuite.register("sentiment-analysis")
+class SentimentAnalysisSuite(TaskSuite):
     """
     This suite was built using the checklist process with the editor
     suggestions. Users are encouraged to add/modify as they see fit.

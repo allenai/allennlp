@@ -1,3 +1,4 @@
+import sys
 from typing import Type, Optional, Dict, Any, Callable
 from checklist.test_suite import TestSuite
 from allennlp.common.registrable import Registrable
@@ -34,6 +35,24 @@ class TaskSuite(Registrable):
         """
         return NotImplementedError
 
+    def summary(self, capabilities=None, file=sys.stdout, **kwargs):
+        """
+        Prints a summary of the test results.
+
+        # Parameters
+
+        capabilities : list(string)
+            If not None, will only show tests with these capabilities.
+        **kwargs : type
+            Will be passed as arguments to each test.summary()
+        """
+        old_stdout = sys.stdout
+        try:
+            sys.stdout = file
+            self.suite.summary(capabilities=capabilities, **kwargs)
+        finally:
+            sys.stdout = old_stdout
+
     def run(self, predictor: Predictor):
         """
         Runs the predictor on the test suite data and
@@ -46,7 +65,6 @@ class TaskSuite(Registrable):
                 "to be implemented for the class `{}`".format(self.__class__)
             )
         self.suite.run(preds_and_confs_fn, overwrite=True)
-        self.suite.summary()
 
     @classmethod
     def constructor(

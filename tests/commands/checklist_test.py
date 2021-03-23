@@ -12,7 +12,7 @@ class TestCheckList(AllenNlpTestCase):
         self.archive_file = (
             self.FIXTURES_ROOT / "basic_classifier" / "serialization" / "model.tar.gz"
         )
-        self.task_suite = "sentiment-analysis-vocabulary"
+        self.task_suite = "sentiment-analysis"
 
     def test_add_checklist_subparser(self):
         parser = argparse.ArgumentParser(description="Testing")
@@ -27,7 +27,6 @@ class TestCheckList(AllenNlpTestCase):
             "/dev/null",
             "--cuda-device",
             "0",
-            "--silent",
         ]
 
         args = parser.parse_args(kebab_args)
@@ -37,7 +36,6 @@ class TestCheckList(AllenNlpTestCase):
         assert args.task_suite == "task-suite-name-or-path"
         assert args.output_file == "/dev/null"
         assert args.cuda_device == 0
-        assert args.silent
 
     def test_works_with_known_model(self):
 

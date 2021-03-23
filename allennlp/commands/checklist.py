@@ -4,7 +4,7 @@ model's predictions using a trained model and its
 [`Predictor`](../predictors/predictor.md#predictor) wrapper.
 """
 
-from typing import Optional
+from typing import Optional, Dict, Any
 import argparse
 import sys
 import json
@@ -44,11 +44,17 @@ class CheckList(Subcommand):
             ),
         )
 
-        subparser.add_argument("--output-file", type=str, help="path to output file")
-
         subparser.add_argument(
-            "--silent", action="store_true", help="do not print output to stdout"
+            "--print-summary-args",
+            type=str,
+            default="",
+            help=(
+                "an optional JSON structure used to provide additional "
+                "parameters for printing test summary"
+            ),
         )
+
+        subparser.add_argument("--output-file", type=str, help="path to output file")
 
         cuda_device = subparser.add_mutually_exclusive_group(required=False)
         cuda_device.add_argument(
@@ -120,15 +126,17 @@ class _CheckListManager:
         task_suite: TaskSuite,
         predictor: Predictor,
         output_file: Optional[str],
-        print_to_console: bool,
+        print_summary_args: Optional[Dict[str, Any]],
     ) -> None:
         self._task_suite = task_suite
         self._predictor = predictor
         self._output_file = None if output_file is None else open(output_file, "w")
-        self._print_to_console = print_to_console
+        self._print_summary_args = print_summary_args or {}
 
     def run(self) -> None:
         self._task_suite.run(self._predictor)
+        output_file = self._output_file or sys.stdout
+        self._task_suite.summary(file=output_file, **self._print_summary_args)
 
         if self._output_file is not None:
             self._output_file.close()
@@ -139,15 +147,16 @@ def _run_suite(args: argparse.Namespace) -> None:
     task_suite = _get_task_suite(args)
     predictor = _get_predictor(args)
 
-    if args.silent and not args.output_file:
-        print("--silent specified without --output-file.")
-        print("Exiting early because no output will be created.")
-        sys.exit(0)
+    print_summary_args = args.print_summary_args.strip()
+    if len(print_summary_args) <= 0:
+        print_summary_args = {}
+    else:
+        print_summary_args = json.loads(print_summary_args)
 
     manager = _CheckListManager(
         task_suite,
         predictor,
         args.output_file,
-        not args.silent,
+        print_summary_args,
     )
     manager.run()
