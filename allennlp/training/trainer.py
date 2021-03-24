@@ -6,7 +6,7 @@ import re
 import time
 import traceback
 from contextlib import contextmanager
-from typing import Any, Dict, Iterator, List, Optional, Tuple, Union, Iterable
+from typing import Any, Dict, Iterator, List, Optional, Tuple, Union
 
 from allennlp.common.util import int_to_device
 

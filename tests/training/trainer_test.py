@@ -847,7 +847,7 @@ class TestTrainer(TrainerTestBase):
             serialization_dir=self.TEST_DIR,
             data_loader=data_loader,
             num_epochs=1,
-            run_sanity_check=False,
+            callbacks=[],
         )
 
         # Check is not run, so no failure.
