@@ -209,7 +209,12 @@ class LogWriter(Registrable):
         Called at the end of every epoch to log training and validation metrics.
         """
         self.log_scalars(
-            {k: v for k, v in train_metrics.items() if isinstance(v, (int, float))},
+            {
+                k: v
+                for k, v in train_metrics.items()
+                if isinstance(v, (int, float))
+                if "_memory_MB" not in k  # W&B gives us much better system metrics
+            },
             log_prefix="train",
             epoch=epoch,
         )
