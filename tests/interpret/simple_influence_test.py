@@ -3,12 +3,9 @@ from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.data.fields import TensorField
 from allennlp.data import Instance
+from allennlp.models.model import Model
 from allennlp.data.data_loaders import SimpleDataLoader
 
-
-from allennlp.common.testing.interpret_test import (
-    DummyBilinearModelForTestingIF,
-)
 from allennlp.interpret.influence_interpreters import SimpleInfluence
 
 
@@ -71,3 +68,14 @@ class TestSimplInfluence(AllenNlpTestCase):
         assert ["x"] == [n for n, p in model.named_parameters() if p.requires_grad]
         SimpleInfluence.freeze_model(model, ["x"])
         assert [] == [n for n, p in model.named_parameters() if p.requires_grad]
+
+
+class DummyBilinearModelForTestingIF(Model):
+    def __init__(self, vocab, params):
+        super().__init__(vocab)
+        self.x = torch.nn.Parameter(params.float(), requires_grad=True)
+
+    def forward(self, tensors):
+        A = tensors  # (batch_size, ..., ...)
+        output_dict = {"loss": 1 / 2 * (A @ self.x @ self.x)}
+        return output_dict
