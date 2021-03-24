@@ -1,24 +1,27 @@
 import os
-from typing import Optional, Dict, Any, List, Union, Tuple
+from typing import Optional, Dict, Any, List, Union, Tuple, TYPE_CHECKING
 
 from overrides import overrides
 import torch
 
 from allennlp.common import Params
-from allennlp.models.model import Model
-from allennlp.training.log_writer import LogWriter
-from allennlp.training.optimizers import Optimizer
+from allennlp.training.callbacks.callback import TrainerCallback
+from allennlp.training.callbacks.log_writer import LogWriterCallback
 
 
-@LogWriter.register("wandb")
-class WandBWriter(LogWriter):
+if TYPE_CHECKING:
+    from allennlp.training.trainer import GradientDescentTrainer
+
+
+@TrainerCallback.register("wandb")
+class WandBCallback(LogWriterCallback):
     """
     Logs training runs to Weights & Biases.
 
     !!! Note
         This requires the environment variable 'WANDB_API_KEY' to be set.
 
-    In addition to the parameters that `LogWriter` takes, there are several other
+    In addition to the parameters that `LogWriterCallback` takes, there are several other
     parameters specific to `WandBWriter` listed below.
 
     # Parameters
@@ -36,8 +39,6 @@ class WandBWriter(LogWriter):
     def __init__(
         self,
         serialization_dir: str,
-        model: Model,
-        optimizer: Optimizer,
         summary_interval: int = 100,
         distribution_interval: Optional[int] = None,
         batch_size_interval: Optional[int] = None,
@@ -53,8 +54,6 @@ class WandBWriter(LogWriter):
 
         super().__init__(
             serialization_dir,
-            model,
-            optimizer,
             summary_interval=summary_interval,
             distribution_interval=distribution_interval,
             batch_size_interval=batch_size_interval,
@@ -62,24 +61,21 @@ class WandBWriter(LogWriter):
             should_log_learning_rate=should_log_learning_rate,
         )
 
+        self._watch_model = watch_model
         self._files_to_save = files_to_save
 
         import wandb
 
         self.wandb = wandb
-        config_path = os.path.join(self._serialization_dir, "config.json")
         self.wandb.init(
             dir=os.path.abspath(serialization_dir),
             project=project,
-            config=Params.from_file(config_path).as_dict(),
+            config=Params.from_file(os.path.join(serialization_dir, "config.json")).as_dict(),
             tags=tags,
         )
 
         for fpath in self._files_to_save:
             self.wandb.save(os.path.join(serialization_dir, fpath), base_path=serialization_dir)
-
-        if watch_model:
-            self.wandb.watch(model)
 
     @overrides
     def log_scalars(
@@ -107,8 +103,12 @@ class WandBWriter(LogWriter):
             dict_to_log = {f"{log_prefix}/{k}": v for k, v in dict_to_log.items()}
         if epoch is not None:
             dict_to_log["epoch"] = epoch
-        self.wandb.log(dict_to_log, step=self._batch_num_total)
+        self.wandb.log(dict_to_log, step=self.trainer._batch_num_total)  # type: ignore[union-attr]
 
     @overrides
-    def close(self) -> None:
-        super().close()
+    def on_start(
+        self, trainer: "GradientDescentTrainer", is_primary: bool = True, **kwargs
+    ) -> None:
+        super().on_start(trainer, is_primary=is_primary, **kwargs)
+        if self._watch_model:
+            self.wandb.watch(self.trainer.model)  # type: ignore[union-attr]

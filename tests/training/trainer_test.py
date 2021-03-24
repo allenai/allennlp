@@ -24,10 +24,12 @@ from allennlp.models.simple_tagger import SimpleTagger
 from allennlp.training import (
     GradientDescentTrainer,
     Checkpointer,
+)
+from allennlp.training.callbacks import (
     TrainerCallback,
     TrackEpochCallback,
-    LogWriterCallback,
-    SanityCheckCallback,
+    TensorBoardCallback,
+    SanityChecksCallback,
     ConsoleLoggerCallback,
 )
 from allennlp.training.learning_rate_schedulers import CosineWithRestarts
@@ -701,9 +703,9 @@ class TestTrainer(TrainerTestBase):
             num_epochs=3,
             serialization_dir=self.TEST_DIR,
             callbacks=[
-                LogWriterCallback.from_params(
-                    Params({"log_writer": {"type": "tensorboard", "distribution_interval": 2}}),
+                TensorBoardCallback(
                     serialization_dir=self.TEST_DIR,
+                    distribution_interval=2,
                 )
             ],
         )
@@ -801,17 +803,10 @@ class TestTrainer(TrainerTestBase):
             num_epochs=2,
             serialization_dir=self.TEST_DIR,
             callbacks=[
-                LogWriterCallback.from_params(
-                    Params(
-                        {
-                            "log_writer": {
-                                "type": "tensorboard",
-                                "summary_interval": 2,
-                                "should_log_learning_rate": True,
-                            }
-                        }
-                    ),
+                TensorBoardCallback(
                     serialization_dir=self.TEST_DIR,
+                    summary_interval=2,
+                    should_log_learning_rate=True,
                 )
             ],
         )
@@ -829,7 +824,7 @@ class TestTrainer(TrainerTestBase):
             data_loader,
             num_epochs=1,
             serialization_dir=self.TEST_DIR,
-            callbacks=[SanityCheckCallback(serialization_dir=self.TEST_DIR)],
+            callbacks=[SanityChecksCallback(serialization_dir=self.TEST_DIR)],
         )
         with pytest.raises(AssertionError):
             trainer.train()
@@ -1196,17 +1191,9 @@ class TestTrainer(TrainerTestBase):
             num_epochs=2,
             serialization_dir=self.TEST_DIR,
             callbacks=[
-                LogWriterCallback.from_params(
-                    Params(
-                        {
-                            "log_writer": {
-                                "type": "tensorboard",
-                                "distribution_interval": 2,
-                                "should_log_inputs": True,
-                            }
-                        }
-                    ),
+                TensorBoardCallback(
                     serialization_dir=self.TEST_DIR,
+                    distribution_interval=2,
                 )
             ],
         )

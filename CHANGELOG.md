@@ -11,18 +11,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Add new method on `Field` class: `.human_readable_repr() -> Any`
 - Add new method on `Instance` class: `.human_readable_dict() -> JsonDict`.
-- Added `WandBWriter` class for [Weights & Biases](https://wandb.ai) integration. This can be used through
-  the `LogWriterCallback` trainer callback, under the registered name "wandb".
-- Added `LogWriter` class. `TensorBoardWriter` now inherits from `LogWriter` as well as `WandBWriter`.
-- Added `LogWriterCallback` and `ConsoleLoggerCallback` classes.
-- Added `NormalizationBiasVerification` and `SanityCheckCallback` for model sanity checks.
-- `SanityCheckCallback` runs by default. It can be turned off by setting `run_sanity_check`=`False` in trainer parameters.
+- Added `WandBCallback` class for [Weights & Biases](https://wandb.ai) integration, registered as a callback under
+  the name "wandb".
+- Added `TensorBoardCallback` to replace the `TensorBoardWriter`. Registered as a callback
+  under the name "tensorboard".
+- Added `NormalizationBiasVerification` and `SanityChecksCallback` for model sanity checks.
+- `SanityChecksCallback` runs by default. It can be turned off by setting `run_sanity_check`=`False` in trainer parameters.
 
 ### Changed
 
-- `histogram_interval` parameter is now deprecated in `TensorboardWriter`, please use `distribution_interval` instead.
-- All `LogWriter`s now log a moving average of batch loss.
-- Memory usage is not logged in tensorboard during training now. `ConsoleLoggerCallback` should be used instead.
 - Use attributes of `ModelOutputs` object in `PretrainedTransformerEmbedder` instead of indexing.
 - Added support for PyTorch version 1.8 and `torchvision` version 0.9 .
 - `Model.get_parameters_for_histogram_tensorboard_logging` is deprecated in favor of
@@ -33,6 +30,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Makes sure tensors that are stored in `TensorCache` always live on CPUs
 - Fixed a bug where `FromParams` objects wrapped in `Lazy()` couldn't be pickled.
 - Fixed a bug where the `ROUGE` metric couldn't be picked.
+
+### Removed
+
+- Removed `TensorBoardWriter`. Please use the `TensorBoardCallback` instead.
 
 
 ## [v2.1.0](https://github.com/allenai/allennlp/releases/tag/v2.1.0) - 2021-02-24
