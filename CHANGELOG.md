@@ -16,7 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `TensorBoardCallback` to replace the `TensorBoardWriter`. Registered as a callback
   under the name "tensorboard".
 - Added `NormalizationBiasVerification` and `SanityChecksCallback` for model sanity checks.
-- `SanityChecksCallback` runs by default. It can be turned off by setting `run_sanity_check`=`False` in trainer parameters.
+- `SanityChecksCallback` runs by default from the `allennlp train` command.
+  It can be turned off overriding the default callbacks.
 
 ### Changed
 

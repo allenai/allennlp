@@ -6,7 +6,7 @@ import re
 import time
 import traceback
 from contextlib import contextmanager
-from typing import Any, Dict, Iterator, List, Optional, Tuple, Union
+from typing import Any, Dict, Iterator, List, Optional, Tuple, Union, Iterable
 
 from allennlp.common.util import int_to_device
 
@@ -23,7 +23,7 @@ from allennlp.common.checks import ConfigurationError, check_for_gpu
 from allennlp.data import DataLoader, TensorDict
 from allennlp.models.model import Model
 from allennlp.training import util as training_util
-from allennlp.training.callbacks import TrainerCallback, SanityChecksCallback
+from allennlp.training.callbacks import TrainerCallback, SanityChecksCallback, ConsoleLoggerCallback
 from allennlp.training.checkpointer import Checkpointer
 from allennlp.training.learning_rate_schedulers import LearningRateScheduler
 from allennlp.training.metric_tracker import MetricTracker
@@ -215,9 +215,9 @@ class GradientDescentTrainer(Trainer):
         parameters. This is necessary because we want the saved model to perform as well as the validated
         model if we load it later. But this may cause problems if you restart the training from checkpoint.
 
-    callbacks : `List[TrainerCallback]`, optional (default = `None`)
+    callbacks : `List[Lazy[TrainerCallback]]`, optional (default = `None`)
         A list of callbacks that can be called at certain events: e.g. each batch, epoch, and at the start
-        and end of training, etc.
+        and end of training, etc. If not specified, `DEFAULT_CALLBACKS` will be used.
 
     distributed : `bool`, optional, (default = `False`)
         If set, PyTorch's `DistributedDataParallel` is used to train the model in multiple GPUs. This also
@@ -969,8 +969,6 @@ class GradientDescentTrainer(Trainer):
         moving_average: Lazy[MovingAverage] = None,
         checkpointer: Lazy[Checkpointer] = Lazy(Checkpointer),
         callbacks: List[Lazy[TrainerCallback]] = None,
-        trainer_callbacks: List[Lazy[TrainerCallback]] = None,
-        run_sanity_check: bool = True,
     ) -> "Trainer":
         """
         This method exists so that we can have a documented method to construct this class using
@@ -1035,19 +1033,10 @@ class GradientDescentTrainer(Trainer):
         )
         checkpointer_ = checkpointer.construct(serialization_dir=serialization_dir)
 
-        callbacks = callbacks or trainer_callbacks or []
-
         callbacks_: List[TrainerCallback] = []
-
-        for callback in callbacks:
+        for callback in callbacks if callbacks is not None else DEFAULT_CALLBACKS:
             callback_ = callback.construct(serialization_dir=serialization_dir)
             callbacks_.append(callback_)
-
-        # Even if it is already specified in the callbacks, the hooks will be
-        # destroyed after the first run, therefore, the second instance of the
-        # callback will do nothing.
-        if run_sanity_check:
-            callbacks_.append(SanityChecksCallback(serialization_dir=serialization_dir))
 
         return cls(
             model,
@@ -1072,3 +1061,12 @@ class GradientDescentTrainer(Trainer):
             num_gradient_accumulation_steps=num_gradient_accumulation_steps,
             use_amp=use_amp,
         )
+
+
+DEFAULT_CALLBACKS = (
+    Lazy(SanityChecksCallback),
+    Lazy(ConsoleLoggerCallback),
+)
+"""
+The default callbacks used by `GradientDescentTrainer`.
+"""
