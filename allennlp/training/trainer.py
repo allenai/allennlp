@@ -202,7 +202,7 @@ class TrainerCallback(Registrable):
 TrainerCallback.register("null")(TrainerCallback)
 
 
-@TrainerCallback.register("sanity-checks")
+@TrainerCallback.register("sanity_checks")
 class SanityCheckCallback(TrainerCallback):
     """
     Performs model sanity checks.
@@ -251,7 +251,7 @@ class SanityCheckCallback(TrainerCallback):
             ), "The NormalizationBiasVerification check failed. See logs for more details."
 
 
-@TrainerCallback.register("log-writer")
+@TrainerCallback.register("log_writer")
 class LogWriterCallback(TrainerCallback):
     """
     Log training statistics and metrics using a `LogWriter`.
@@ -369,7 +369,7 @@ TrainerCallback.register("tensorboard", constructor="tensorboard")(LogWriterCall
 TrainerCallback.register("wandb", constructor="wandb")(LogWriterCallback)
 
 
-@TrainerCallback.register("console-logger")
+@TrainerCallback.register("console_logger")
 class ConsoleLoggerCallback(TrainerCallback):
     def __init__(
         self,
