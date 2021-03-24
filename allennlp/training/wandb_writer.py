@@ -1,5 +1,5 @@
 import os
-from typing import Optional, Dict, Any, List, Union
+from typing import Optional, Dict, Any, List, Union, Tuple
 
 from overrides import overrides
 import torch
@@ -15,7 +15,22 @@ class WandBWriter(LogWriter):
     """
     Logs training runs to Weights & Biases.
 
-    Requires the environment variable 'WANDB_API_KEY' to be set.
+    !!! Note
+        This requires the environment variable 'WANDB_API_KEY' to be set.
+
+    In addition to the parameters that `LogWriter` takes, there are several other
+    parameters specific to `WandBWriter` listed below.
+
+    # Parameters
+
+    project : `Optional[str]`, optional (default = `None`)
+        The name of the W&B project to save the training run to.
+    tags : `Optional[List[str]]`, optional (default = `None`)
+        Tags to assign to the training run in W&B.
+    watch_model : `bool`, optional (default = `True`)
+        Whether or not W&B should watch the `Model`.
+    files_to_save : `Tuple[str, ...]`, optional (default = `("config.json", "out.log")`)
+        Extra files in the serialization directory to save to the W&B training run.
     """
 
     def __init__(
@@ -31,6 +46,7 @@ class WandBWriter(LogWriter):
         project: Optional[str] = None,
         tags: Optional[List[str]] = None,
         watch_model: bool = True,
+        files_to_save: Tuple[str, ...] = ("config.json", "out.log"),
     ) -> None:
         if "WANDB_API_KEY" not in os.environ:
             raise ValueError("Missing environment variable 'WANDB_API_KEY'")
@@ -46,16 +62,30 @@ class WandBWriter(LogWriter):
             should_log_learning_rate=should_log_learning_rate,
         )
 
+        self._files_to_save = files_to_save
+
         import wandb
 
         self.wandb = wandb
         config_path = os.path.join(self._serialization_dir, "config.json")
         self.wandb.init(
+            dir=os.path.abspath(serialization_dir),
             project=project,
             config=Params.from_file(config_path).as_dict(),
             tags=tags,
         )
-        self.wandb.save(config_path)
+
+        for fpath in self._files_to_save:
+            # NOTE: this just tells W&B to watch for these files in the run directory
+            # and upload them at the end. They don't have to exist at this moment,
+            # and they won't. In `.close()`, we symlink these files from the serialization_dir
+            # to the run directory.
+            # We could just call `self.wandb.save(os.path.join(serialization_dir, fpath))`
+            # and let W&B worry about creating the symlinks,
+            # but then we'd see a nested file structure in the W&B files tab when we really
+            # just want a flat structure.
+            self.wandb.save(os.path.join(self.wandb.run.dir, fpath))
+
         if watch_model:
             self.wandb.watch(model)
 
@@ -85,17 +115,13 @@ class WandBWriter(LogWriter):
             dict_to_log = {f"{log_prefix}/{k}": v for k, v in dict_to_log.items()}
         if epoch is not None:
             dict_to_log["epoch"] = epoch
-            self.wandb.log(dict_to_log)
-        else:
-            self.wandb.log(dict_to_log, step=self._batch_num_total)
+        self.wandb.log(dict_to_log, step=self._batch_num_total)
 
     @overrides
     def close(self) -> None:
-        """
-        Close out and log final metrics.
-        """
         super().close()
-        for name in ("metrics.json", "out.log"):
-            path = os.path.join(self._serialization_dir, name)
-            if os.path.exists(path):
-                self.wandb.save(path)
+        for fpath in self._files_to_save:
+            os.symlink(
+                os.path.abspath(os.path.join(self._serialization_dir, fpath)),
+                os.path.join(self.wandb.run.dir, fpath),
+            )
