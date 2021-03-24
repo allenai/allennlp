@@ -255,7 +255,9 @@ def prepare_environment(params: Params):
 LOADED_SPACY_MODELS: Dict[Tuple[str, bool, bool, bool], SpacyModelType] = {}
 
 
-def get_spacy_model(spacy_model_name: str, parse: bool, ner: bool, pos_tags: bool = True) -> SpacyModelType:
+def get_spacy_model(
+    spacy_model_name: str, parse: bool, ner: bool, pos_tags: bool = True
+) -> SpacyModelType:
     """
     In order to avoid loading spacy models a whole bunch of times, we'll save references to them,
     keyed by the options we used to create the spacy model, so any particular configuration only
