@@ -148,7 +148,7 @@ class LogWriter(Registrable):
         """
         Called every batch to perform all of the logging that is due.
         """
-        if batch_number == 0:
+        if batch_number <= 1:  # batch_number is usually 1-indexed
             self._cumulative_batch_group_size = 0
             self.log_inputs(batch_group)
 
@@ -191,8 +191,8 @@ class LogWriter(Registrable):
             # assumption becomes wrong, this code will break.
             batch_group_size = sum(training_util.get_batch_size(batch) for batch in batch_group)  # type: ignore
             self._cumulative_batch_group_size += batch_group_size
-            if (batch_number + 1) % self._batch_size_interval == 0:
-                average = self._cumulative_batch_group_size / (batch_number + 1)
+            if batch_number % self._batch_size_interval == 0:
+                average = self._cumulative_batch_group_size / batch_number
                 self.log_scalars(
                     {"batch_size": batch_group_size, "mean_batch_size": average}, log_prefix="train"
                 )
