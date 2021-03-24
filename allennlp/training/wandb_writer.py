@@ -76,15 +76,7 @@ class WandBWriter(LogWriter):
         )
 
         for fpath in self._files_to_save:
-            # NOTE: this just tells W&B to watch for these files in the run directory
-            # and upload them at the end. They don't have to exist at this moment,
-            # and they won't. In `.close()`, we symlink these files from the serialization_dir
-            # to the run directory.
-            # We could just call `self.wandb.save(os.path.join(serialization_dir, fpath))`
-            # and let W&B worry about creating the symlinks,
-            # but then we'd see a nested file structure in the W&B files tab when we really
-            # just want a flat structure.
-            self.wandb.save(os.path.join(self.wandb.run.dir, fpath))
+            self.wandb.save(os.path.join(serialization_dir, fpath), base_path=serialization_dir)
 
         if watch_model:
             self.wandb.watch(model)
@@ -120,8 +112,3 @@ class WandBWriter(LogWriter):
     @overrides
     def close(self) -> None:
         super().close()
-        for fpath in self._files_to_save:
-            os.symlink(
-                os.path.abspath(os.path.join(self._serialization_dir, fpath)),
-                os.path.join(self.wandb.run.dir, fpath),
-            )
