@@ -278,7 +278,7 @@ class TestTextClassificationJsonReader:
         instances = list(reader.read(ag_path))
 
         splitter = SpacySentenceSplitter()
-        spacy_tokenizer = get_spacy_model("en_core_web_sm", False, False)
+        spacy_tokenizer = get_spacy_model("en_core_web_sm", parse=False, ner=False)
 
         text1 = (
             "Memphis Rout Still Stings for No. 14 Louisville; Coach "

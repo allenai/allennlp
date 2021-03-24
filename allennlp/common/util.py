@@ -252,19 +252,21 @@ def prepare_environment(params: Params):
     log_pytorch_version_info()
 
 
-LOADED_SPACY_MODELS: Dict[Tuple[str, bool, bool], SpacyModelType] = {}
+LOADED_SPACY_MODELS: Dict[Tuple[str, bool, bool, bool], SpacyModelType] = {}
 
 
-def get_spacy_model(spacy_model_name: str, parse: bool, ner: bool) -> SpacyModelType:
+def get_spacy_model(spacy_model_name: str, parse: bool, ner: bool, pos_tags: bool = True) -> SpacyModelType:
     """
     In order to avoid loading spacy models a whole bunch of times, we'll save references to them,
     keyed by the options we used to create the spacy model, so any particular configuration only
     gets loaded once.
     """
 
-    options = (spacy_model_name, parse, ner)
+    options = (spacy_model_name, pos_tags, parse, ner)
     if options not in LOADED_SPACY_MODELS:
         disable = ["vectors", "textcat"]
+        if not pos_tags:
+            disable.append("tagger")
         if not parse:
             disable.append("parser")
         if not ner:
