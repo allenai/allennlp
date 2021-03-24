@@ -60,7 +60,7 @@ class SpacyTokenizer(Tokenizer):
         start_tokens: Optional[List[str]] = None,
         end_tokens: Optional[List[str]] = None,
     ) -> None:
-        self.spacy = get_spacy_model(language, parse, ner, pos_tags=pos_tags)
+        self.spacy = get_spacy_model(language, pos_tags, parse, ner)
         if split_on_spaces:
             self.spacy.tokenizer = _WhitespaceSpacyTokenizer(self.spacy.vocab)
 
