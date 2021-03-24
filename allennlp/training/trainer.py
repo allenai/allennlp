@@ -1035,7 +1035,7 @@ class GradientDescentTrainer(Trainer):
 
         callbacks_: List[TrainerCallback] = []
         for callback in callbacks if callbacks is not None else DEFAULT_CALLBACKS:
-            callback_ = callback.construct(serialization_dir=serialization_dir)
+            callback_ = callback.construct(serialization_dir=serialization_dir)  # type: ignore
             callbacks_.append(callback_)
 
         return cls(
