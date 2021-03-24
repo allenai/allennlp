@@ -52,6 +52,7 @@ class SpacyTokenizer(Tokenizer):
     def __init__(
         self,
         language: str = "en_core_web_sm",
+        pos_tags: bool = True,
         parse: bool = False,
         ner: bool = False,
         keep_spacy_tokens: bool = False,
@@ -59,7 +60,7 @@ class SpacyTokenizer(Tokenizer):
         start_tokens: Optional[List[str]] = None,
         end_tokens: Optional[List[str]] = None,
     ) -> None:
-        self.spacy = get_spacy_model(language, parse, ner)
+        self.spacy = get_spacy_model(language, parse, ner, pos_tags=pos_tags)
         if split_on_spaces:
             self.spacy.tokenizer = _WhitespaceSpacyTokenizer(self.spacy.vocab)
 
