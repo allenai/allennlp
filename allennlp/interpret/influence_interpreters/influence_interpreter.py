@@ -13,7 +13,7 @@ from allennlp.data.data_loaders import MultiProcessDataLoader
 class InfluenceInterpreter(Registrable):
     """
     A `SaliencyInterpreter` interprets an AllenNLP Predictor's outputs by assigning an influence
-    score to each training instance with respect to each input.
+    score to each training instance with respect to each test input.
     """
 
     def __init__(
