@@ -85,25 +85,6 @@ class InfluenceInterpreter(Registrable):
         self._used_params = None
         self._used_params_name = None
 
-    def influence_interpret_from_json(self, inputs: JsonDict) -> JsonDict:
-        """
-        This function finds influence scores for each training examples with respect to each input.
-
-        # Parameters
-
-        inputs  :    `JsonDict`
-            The input you want to interpret (the same as the argument to a Predictor, e.g., predict_json()).
-
-        # Returns
-
-        interpretation  :   `JsonDict`
-            Contains a sorted list (length = k) of most influenctial training examples for each
-            instance in the inputs JsonDict, e.g., `{instance_1: ..., instance_2, ...}`.
-            Each of those entries has a sorted list of length k in the format of
-            `[(train_instance_1, score_1), ..., (train_instance_k, score_k),]`
-        """
-        raise NotImplementedError("Implement this for saliency interpretations")
-
     @staticmethod
     def freeze_model(model, params_to_freeze: List[str], verbose: bool = True):
         """
