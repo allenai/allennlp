@@ -7,21 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-### Changed
-
-- `histogram_interval` parameter is now deprecated in `TensorboardWriter`, please use `distribution_interval` instead.
-- Memory usage is not logged in tensorboard during training now. `ConsoleLoggerCallback` should be used instead.
-- Use attributes of `ModelOutputs` object in `PretrainedTransformerEmbedder` instead of indexing.
-- Added support for PyTorch version 1.8 and `torchvision` version 0.9 .
-
 ### Added
 
 - Add new method on `Field` class: `.human_readable_repr() -> Any`
 - Add new method on `Instance` class: `.human_readable_dict() -> JsonDict`.
-- Added `LogWriter` class. `TensorBoardWriter` now inherits from `LogWriter`.
-- Added `LogCallback` and `ConsoleLoggerCallback` classes. `TensorBoardCallback` inherits from `LogCallback`. 
-- Added `NormalizationBiasVerification` and `SanityCheckCallback` for model sanity checks.
-- `SanityCheckCallback` runs by default. It can be turned off by setting `run_sanity_check`=`False` in trainer parameters.
+- Added `WandBCallback` class for [Weights & Biases](https://wandb.ai) integration, registered as a callback under
+  the name "wandb".
+- Added `TensorBoardCallback` to replace the `TensorBoardWriter`. Registered as a callback
+  under the name "tensorboard".
+- Added `NormalizationBiasVerification` and `SanityChecksCallback` for model sanity checks.
+- `SanityChecksCallback` runs by default from the `allennlp train` command.
+  It can be turned off by setting `trainer.enable_default_callbacks` to `false` in your config.
+
+### Changed
+
+- Use attributes of `ModelOutputs` object in `PretrainedTransformerEmbedder` instead of indexing.
+- Added support for PyTorch version 1.8 and `torchvision` version 0.9 .
+- `Model.get_parameters_for_histogram_tensorboard_logging` is deprecated in favor of
+  `Model.get_parameters_for_histogram_logging`.
 
 ### Fixed
 
@@ -29,6 +32,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed a bug where `FromParams` objects wrapped in `Lazy()` couldn't be pickled.
 - Fixed a bug where the `ROUGE` metric couldn't be picked.
 - Fixed a bug reported by https://github.com/allenai/allennlp/issues/5036. We keeps our spacy POS tagger on.
+
+### Removed
+
+- Removed `TensorBoardWriter`. Please use the `TensorBoardCallback` instead.
 
 
 ## [v2.1.0](https://github.com/allenai/allennlp/releases/tag/v2.1.0) - 2021-02-24
