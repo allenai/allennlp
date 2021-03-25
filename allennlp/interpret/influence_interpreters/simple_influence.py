@@ -217,7 +217,6 @@ class SimpleInfluence(InfluenceInterpreter):
             output_per_test[f"bottom_{self._k}_train_instances"] = bottom_k_train_instances
 
             output_content.append(output_per_test)
-            output_content.append(output_per_test)
 
         with open(output_file, "w") as f:
             for line in output_content:
