@@ -129,7 +129,7 @@ class SimpleInfluence(InfluenceInterpreter):
         ):
             test_instance: Instance
 
-            test_instance_dict = test_instance.to_json()
+            test_instance_dict = test_instance.human_readable_dict()
             test_batch = Batch([test_instance])
             test_batch.index_instances(self.vocab)
             self.model.eval()
@@ -200,7 +200,7 @@ class SimpleInfluence(InfluenceInterpreter):
             top_k_train_instances = []
             for idx in indices:
                 train_instance = self._train_loader._instances[idx]
-                train_instance_dict = train_instance.to_json()
+                train_instance_dict = train_instance.human_readable_dict()
                 train_instance_dict["loss"] = train_outputs[idx]["loss"]
                 top_k_train_instances.append(train_instance_dict)
             output_per_test[f"top_{self._k}_train_instances"] = top_k_train_instances
@@ -211,7 +211,7 @@ class SimpleInfluence(InfluenceInterpreter):
             bottom_k_train_instances = []
             for idx in indices:
                 train_instance = self._train_loader._instances[idx]
-                train_instance_dict = train_instance.to_json()
+                train_instance_dict = train_instance.human_readable_dict()
                 train_instance_dict["loss"] = train_outputs[idx]["loss"]
                 bottom_k_train_instances.append(train_instance_dict)
             output_per_test[f"bottom_{self._k}_train_instances"] = bottom_k_train_instances
