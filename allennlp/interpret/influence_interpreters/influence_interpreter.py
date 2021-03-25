@@ -27,10 +27,6 @@ class InfluenceInterpreter(Registrable):
         k: int = 20,
         device: int = -1,
     ) -> None:
-        if type(device) is not int:
-            raise ValueError("'device' has to be int, -1 for cpu")
-        if type(device) is not int:
-            raise ValueError("'k' (i.e. number of supporting examples) has to be int")
 
         self.predictor = predictor
         self.model: Model = self.predictor._model
