@@ -14,6 +14,28 @@ class InfluenceInterpreter(Registrable):
     """
     A `SaliencyInterpreter` interprets an AllenNLP Predictor's outputs by assigning an influence
     score to each training instance with respect to each test input.
+
+    # Parameter
+    predictor: `Predictor`
+        Required. This is a wrapper around the model to be tested. We only assume only `Model` is not None.
+    train_filepath: `str`
+        Required. This is the file path to the train data
+    test_filepath: `str`
+        Required. This is the file path to the test data
+    train_dataset_reader: `DatasetReader`
+        Required. This is the dataset reader to read the train set file
+    test_dataset_reader: `Optional[DatasetReader]` = None,
+        Optional. This is the dataset reader to read the test set file. If not provided, we would uses the
+        `train_dataset_reader`
+    params_to_freeze: Optional[List[str]] = None
+        Optional. This is a provided list of string that for freezeing the parameters. Expectedly, each string
+        is a substring within the paramter name you intend to freeze.
+    k: int = 20
+        Optional. To demonstrate each test data, we found it most informative to just provide `k` examples with the
+        highest and lowest influence score. If not provided, we set to 20.
+    device: int = -1,
+        Optional. The index of GPU device we want to calculate scores on. If not provided, we uses -1
+        which correspond to using CPU.
     """
 
     def __init__(
