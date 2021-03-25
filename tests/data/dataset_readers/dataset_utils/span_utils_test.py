@@ -129,7 +129,7 @@ class SpanUtilsTest(AllenNlpTestCase):
         }
 
     def test_enumerate_spans_enumerates_all_spans(self):
-        tokenizer = SpacyTokenizer(pos_tags=True)
+        tokenizer = SpacyTokenizer()
         sentence = tokenizer.tokenize("This is a sentence.")
 
         spans = span_utils.enumerate_spans(sentence)
