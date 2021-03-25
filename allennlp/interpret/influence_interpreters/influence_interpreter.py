@@ -49,7 +49,7 @@ class InfluenceInterpreter(Registrable):
         self._test_loader.set_target_device(self._device)
         self._test_loader.index_with(self.vocab)
 
-        # Number of supporting training instances has to be lass than the size of train set
+        # Number of supporting training instances has to be less than the size of train set
         self._k = min(k, len(self._train_loader))
 
         self.model.to(self._device)
