@@ -81,7 +81,6 @@ class InfluenceInterpreter(Registrable):
         # flag will be re-initialized to be true
         if params_to_freeze is not None:
             self.freeze_model(self.model, params_to_freeze, verbose=True)
-        # self._used_name2params = None  # some parameters might not be used.
         # this is not set until we actually run the calculation, because some parameters might not be used.
         self._used_params = None
         self._used_params_name = None
