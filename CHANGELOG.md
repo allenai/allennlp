@@ -17,7 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   under the name "tensorboard".
 - Added `NormalizationBiasVerification` and `SanityChecksCallback` for model sanity checks.
 - `SanityChecksCallback` runs by default from the `allennlp train` command.
-  It can be turned off overriding the default callbacks.
+  It can be turned off by setting `trainer.enable_default_callbacks` to `false` in your config.
 
 ### Changed
 

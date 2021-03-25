@@ -217,7 +217,7 @@ class GradientDescentTrainer(Trainer):
 
     callbacks : `List[Lazy[TrainerCallback]]`, optional (default = `None`)
         A list of callbacks that can be called at certain events: e.g. each batch, epoch, and at the start
-        and end of training, etc. If not specified, `DEFAULT_CALLBACKS` will be used.
+        and end of training, etc.
 
     distributed : `bool`, optional, (default = `False`)
         If set, PyTorch's `DistributedDataParallel` is used to train the model in multiple GPUs. This also
@@ -969,6 +969,7 @@ class GradientDescentTrainer(Trainer):
         moving_average: Lazy[MovingAverage] = None,
         checkpointer: Lazy[Checkpointer] = Lazy(Checkpointer),
         callbacks: List[Lazy[TrainerCallback]] = None,
+        enable_default_callbacks: bool = True,
     ) -> "Trainer":
         """
         This method exists so that we can have a documented method to construct this class using
@@ -1034,9 +1035,15 @@ class GradientDescentTrainer(Trainer):
         checkpointer_ = checkpointer.construct(serialization_dir=serialization_dir)
 
         callbacks_: List[TrainerCallback] = []
-        for callback in callbacks if callbacks is not None else DEFAULT_CALLBACKS:
-            callback_ = callback.construct(serialization_dir=serialization_dir)  # type: ignore
-            callbacks_.append(callback_)
+        for callback_ in callbacks or []:
+            callbacks_.append(callback_.construct(serialization_dir=serialization_dir))
+        if enable_default_callbacks:
+            for callback_cls in DEFAULT_CALLBACKS:
+                for callback in callbacks_:
+                    if callback.__class__ == callback_cls:
+                        break
+                else:
+                    callbacks_.append(callback_cls(serialization_dir))
 
         return cls(
             model,
@@ -1064,8 +1071,8 @@ class GradientDescentTrainer(Trainer):
 
 
 DEFAULT_CALLBACKS = (
-    Lazy(SanityChecksCallback),
-    Lazy(ConsoleLoggerCallback),
+    SanityChecksCallback,
+    ConsoleLoggerCallback,
 )
 """
 The default callbacks used by `GradientDescentTrainer`.
