@@ -41,6 +41,8 @@ class SimpleInfluence(InfluenceInterpreter):
     recur_depth: Optional[Union[float, int]] = 0.25,
         Optional. This is a hyperparameter for LiSSA algorithm that we
         determine the recursion depth we would like to go through.
+        If float, it means X% of the training examples
+        If int, it means recur for X times.
     scale: float = 1e4,
         Optional. This is a hyperparameter for LiSSA algorithm to tune such that the Taylor expansion converges.
     """
@@ -114,8 +116,6 @@ class SimpleInfluence(InfluenceInterpreter):
         for test_idx, test_instance in enumerate(
             tqdm(test_dataloader._instances, desc="Test set index")
         ):
-            test_instance: Instance
-
             test_instance_dict = test_instance.human_readable_dict()
             test_batch = Batch([test_instance])
             test_batch.index_instances(self.vocab)
@@ -131,7 +131,7 @@ class SimpleInfluence(InfluenceInterpreter):
 
             self.model.zero_grad()
 
-            if self._used_params is None:
+            if not self._used_params:
                 # we only know what parameters in the models requires gradient after
                 # we do the first .backward() and we store those used parameters
                 test_loss.backward(retain_graph=True)
@@ -140,19 +140,27 @@ class SimpleInfluence(InfluenceInterpreter):
                     for _, p in self.model.named_parameters()
                     if p.requires_grad and p.grad is not None
                 ]
+                self._used_params_name = [
+                    n
+                    for n, p in self.model.named_parameters()
+                    if p.requires_grad and p.grad is not None
+                ]
 
             # list of (parameters) gradients w.r.t. the test loss
             test_grads: List[Tensor] = autograd.grad(test_loss, self._used_params)
             assert len(test_grads) == len(self._used_params)
 
             # Approximate the inverse of Hessian-Vector Product through LiSSA algorithm
-            recursion_depth = self.recur_depth
-            if type(recursion_depth) is float:
+            if isinstance(self.recur_depth, float):
                 recursion_depth = int(
                     len(self._lissa_dataloader)
                     * self._lissa_dataloader.batch_size
-                    * recursion_depth
+                    * self.recur_depth
                 )
+            else:
+                assert isinstance(self.recur_depth, int)
+                recursion_depth = self.recur_depth
+
             inv_hvp = self.get_inverse_hvp_lissa(
                 vs=test_grads,
                 model=self.model,
@@ -184,7 +192,7 @@ class SimpleInfluence(InfluenceInterpreter):
             # For each test example, we output top-k and training instances
             # Then, we record the top-k training instances
             _, indices = torch.topk(torch.tensor(influences), self._k)
-            top_k_train_instances = []
+            top_k_train_instances: List[Instance] = []
             for idx in indices:
                 train_instance = self._train_loader._instances[idx]
                 train_instance_dict = train_instance.human_readable_dict()

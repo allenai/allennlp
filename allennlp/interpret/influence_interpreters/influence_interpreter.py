@@ -73,8 +73,8 @@ class InfluenceInterpreter(Registrable):
         if params_to_freeze is not None:
             self.freeze_model(self.model, params_to_freeze, verbose=True)
         # this is not set until we actually run the calculation, because some parameters might not be used.
-        self._used_params = None
-        self._used_params_name = None
+        self._used_params: List = []
+        self._used_params_name: List = []
 
     @staticmethod
     def freeze_model(model, params_to_freeze: List[str], verbose: bool = True):
@@ -90,6 +90,7 @@ class InfluenceInterpreter(Registrable):
         for n, p in model.named_parameters():
             if any(pfreeze in n for pfreeze in params_to_freeze):
                 p.requires_grad = False
+
         if verbose:
             num_trainable_params = sum(
                 [p.numel() for n, p in model.named_parameters() if p.requires_grad]
