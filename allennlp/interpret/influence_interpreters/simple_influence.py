@@ -48,8 +48,7 @@ class SimpleInfluence(InfluenceInterpreter):
     def __init__(
         self,
         predictor: Predictor,
-        train_filepath: str,
-        test_filepath: str,
+        train_data_path: str,
         train_dataset_reader: DatasetReader,
         test_dataset_reader: Optional[DatasetReader] = None,
         params_to_freeze: Optional[List[str]] = None,
@@ -65,15 +64,14 @@ class SimpleInfluence(InfluenceInterpreter):
             predictor=predictor,
             train_dataset_reader=train_dataset_reader,
             test_dataset_reader=test_dataset_reader,
-            train_filepath=train_filepath,
-            test_filepath=test_filepath,
+            train_data_path=train_data_path,
             params_to_freeze=params_to_freeze,
             k=k,
             device=device,
         )
         self._lissa_batch_size = lissa_batch_size
         self._lissa_dataloader = MultiProcessDataLoader(
-            self.train_dataset_reader, train_filepath, batch_size=self._lissa_batch_size
+            self.train_dataset_reader, train_data_path, batch_size=self._lissa_batch_size
         )
         self._lissa_dataloader.set_target_device(self._device)
         self._lissa_dataloader.index_with(self.vocab)
@@ -83,7 +81,7 @@ class SimpleInfluence(InfluenceInterpreter):
         self.recur_depth = recur_depth
         self.scale = scale
 
-    def calculate_inflence_and_save(self, output_file):
+    def interpret_and_save(self, test_data_path: str, output_file: str):
         """
         This is the "main" function of influence score calcualtion. This function will go through
         example by example in the provided test set, and run the LiSSA algorithm to
@@ -97,15 +95,22 @@ class SimpleInfluence(InfluenceInterpreter):
                 "bottom_{k}_train_instances": [{<same format as test_instance>} {<....>}]
             }
 
+        # Parameter
+        test_data_path: `str`
+            Required. This is the file path to the test data. Here, we make the assumption that
+            each instance in the test file will contain as least information as each one from train file.
 
         output_file: `str`
             Required. This is the path way to save output. Here we assume the directory contained
             in the path is valid
 
         """
+        test_dataloader = MultiProcessDataLoader(self.test_dataset_reader, test_data_path, batch_size=1)
+        test_dataloader.set_target_device(self._device)
+        test_dataloader.index_with(self.vocab)
         output_content = []
         for test_idx, test_instance in enumerate(
-            tqdm(self._test_loader._instances, desc="Test set index")
+            tqdm(test_dataloader._instances, desc="Test set index")
         ):
             test_instance: Instance
 
@@ -207,7 +212,7 @@ class SimpleInfluence(InfluenceInterpreter):
     def get_inverse_hvp_lissa(
         vs: List[torch.Tensor],
         model: Model,
-        used_params: List[Parameter],
+        used_params: List[Union[Parameter, Tensor]],
         lissa_dataloader: DataLoader,
         num_samples: int,
         recursion_depth: int,

@@ -20,8 +20,6 @@ class InfluenceInterpreter(Registrable):
         Required. This is a wrapper around the model to be tested. We only assume only `Model` is not None.
     train_filepath: `str`
         Required. This is the file path to the train data
-    test_filepath: `str`
-        Required. This is the file path to the test data
     train_dataset_reader: `DatasetReader`
         Required. This is the dataset reader to read the train set file
     test_dataset_reader: `Optional[DatasetReader]` = None,
@@ -41,8 +39,7 @@ class InfluenceInterpreter(Registrable):
     def __init__(
         self,
         predictor: Predictor,
-        train_filepath: str,
-        test_filepath: str,
+        train_data_path: str,
         train_dataset_reader: DatasetReader,
         test_dataset_reader: Optional[DatasetReader] = None,
         params_to_freeze: List[str] = None,
@@ -61,15 +58,10 @@ class InfluenceInterpreter(Registrable):
         )
         # Dataloaders for going through train/test set (1 by 1)
         self._train_loader = MultiProcessDataLoader(
-            self.train_dataset_reader, train_filepath, batch_size=1
+            self.train_dataset_reader, train_data_path, batch_size=1
         )
         self._train_loader.set_target_device(self._device)
         self._train_loader.index_with(self.vocab)
-        self._test_loader = MultiProcessDataLoader(
-            self.test_dataset_reader, test_filepath, batch_size=1
-        )
-        self._test_loader.set_target_device(self._device)
-        self._test_loader.index_with(self.vocab)
 
         # Number of supporting training instances has to be less than the size of train set
         self._k = min(k, len(self._train_loader))
