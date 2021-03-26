@@ -6,7 +6,7 @@ from allennlp.common import Registrable
 from allennlp.models.model import Model
 from allennlp.predictors import Predictor
 from allennlp.data.dataset_readers import DatasetReader
-from allennlp.data.data_loaders import MultiProcessDataLoader
+from allennlp.data.data_loaders import SimpleDataLoader
 
 
 class InfluenceInterpreter(Registrable):
@@ -56,15 +56,15 @@ class InfluenceInterpreter(Registrable):
             f"cuda:{int(device)}" if torch.cuda.is_available() and not device >= 0 else "cpu"
         )
         # Dataloaders for going through train/test set (1 by 1)
-        self._train_loader = MultiProcessDataLoader(
-            self.train_dataset_reader, train_data_path, batch_size=1
+        self._train_loader = SimpleDataLoader(
+            list(self.train_dataset_reader.read(train_data_path)), batch_size=1, shuffle=False
         )
         self._train_loader.set_target_device(self._device)
         self._train_loader.index_with(self.vocab)
-        self.train_instances = [instance for instance in self._train_loader._instances]
+        self._train_instances = self._train_loader.instances
 
         # Number of supporting training instances has to be less than the size of train set
-        self._k = min(k, len(self._train_loader))
+        self._k = min(k, len(self._train_instances))
 
         self.model.to(self._device)
 

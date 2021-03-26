@@ -153,9 +153,7 @@ class SimpleInfluence(InfluenceInterpreter):
             # Approximate the inverse of Hessian-Vector Product through LiSSA algorithm
             if isinstance(self.recur_depth, float):
                 recursion_depth = int(
-                    len(self._lissa_dataloader)
-                    * self._lissa_batch_size
-                    * self.recur_depth
+                    len(self._lissa_dataloader) * self._lissa_batch_size * self.recur_depth
                 )
             else:
                 assert isinstance(self.recur_depth, int)
@@ -194,7 +192,7 @@ class SimpleInfluence(InfluenceInterpreter):
             _, indices = torch.topk(torch.tensor(influences), self._k)
             top_k_train_instances: List[Instance] = []
             for idx in indices:
-                train_instance = self.train_instances[idx]
+                train_instance = self._train_instances[idx]
                 train_instance_dict = train_instance.human_readable_dict()
                 train_instance_dict["loss"] = train_outputs[idx]["loss"]
                 top_k_train_instances.append(train_instance_dict)
@@ -205,7 +203,7 @@ class SimpleInfluence(InfluenceInterpreter):
             assert len(train_outputs) == len(influences)
             bottom_k_train_instances: List[Instance] = []
             for idx in indices:
-                train_instance = self.train_instances[idx]
+                train_instance = self._train_instances[idx]
                 train_instance_dict = train_instance.human_readable_dict()
                 train_instance_dict["loss"] = train_outputs[idx]["loss"]
                 bottom_k_train_instances.append(train_instance_dict)
