@@ -56,7 +56,6 @@ class InfluenceInterpreter(Registrable):
             f"cuda:{int(device)}" if torch.cuda.is_available() and not device >= 0 else "cpu"
         )
         # Dataloaders for going through train/test set (1 by 1)
-        self._train_instances = list(self.train_dataset_reader.read(train_data_path))
         self._train_loader = SimpleDataLoader(
             list(self.train_dataset_reader.read(train_data_path)), batch_size=1, shuffle=False
         )
