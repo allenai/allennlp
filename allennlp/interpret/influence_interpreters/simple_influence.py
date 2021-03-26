@@ -83,7 +83,7 @@ class SimpleInfluence(InfluenceInterpreter):
         self.recur_depth = recur_depth
         self.scale = scale
 
-    def interpret_and_save(self, test_data_path: str, output_file: str):
+    def interpret_and_save(self, test_data_path: str, output_file: str, k: Optional[int] = None):
         """
         This is the "main" function of influence score calcualtion. This function will go through
         example by example in the provided test set, and run the LiSSA algorithm to
@@ -106,7 +106,11 @@ class SimpleInfluence(InfluenceInterpreter):
             Required. This is the path way to save output. Here we assume the directory contained
             in the path is valid
 
+        k: `int`
+            Optional. Allow user to overwrite the intially set k value.
+
         """
+        k = k or self._k
         test_dataloader = MultiProcessDataLoader(
             self.test_dataset_reader, test_data_path, batch_size=1
         )
@@ -189,17 +193,17 @@ class SimpleInfluence(InfluenceInterpreter):
 
             # For each test example, we output top-k and training instances
             # Then, we record the top-k training instances
-            _, indices = torch.topk(torch.tensor(influences), self._k)
+            _, indices = torch.topk(torch.tensor(influences), k)
             top_k_train_instances: List[Instance] = []
             for idx in indices:
                 train_instance = self._train_instances[idx]
                 train_instance_dict = train_instance.human_readable_dict()
                 train_instance_dict["loss"] = train_outputs[idx]["loss"]
                 top_k_train_instances.append(train_instance_dict)
-            output_per_test[f"top_{self._k}_train_instances"] = top_k_train_instances
+            output_per_test[f"top_{k}_train_instances"] = top_k_train_instances
 
             # Then, we record the bottom-k training instances
-            _, indices = torch.topk(-torch.tensor(influences), self._k)
+            _, indices = torch.topk(-torch.tensor(influences), k)
             assert len(train_outputs) == len(influences)
             bottom_k_train_instances: List[Instance] = []
             for idx in indices:
@@ -207,7 +211,7 @@ class SimpleInfluence(InfluenceInterpreter):
                 train_instance_dict = train_instance.human_readable_dict()
                 train_instance_dict["loss"] = train_outputs[idx]["loss"]
                 bottom_k_train_instances.append(train_instance_dict)
-            output_per_test[f"bottom_{self._k}_train_instances"] = bottom_k_train_instances
+            output_per_test[f"bottom_{k}_train_instances"] = bottom_k_train_instances
 
             output_content.append(output_per_test)
 
