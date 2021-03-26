@@ -105,7 +105,9 @@ class SimpleInfluence(InfluenceInterpreter):
             in the path is valid
 
         """
-        test_dataloader = MultiProcessDataLoader(self.test_dataset_reader, test_data_path, batch_size=1)
+        test_dataloader = MultiProcessDataLoader(
+            self.test_dataset_reader, test_data_path, batch_size=1
+        )
         test_dataloader.set_target_device(self._device)
         test_dataloader.index_with(self.vocab)
         output_content = []
