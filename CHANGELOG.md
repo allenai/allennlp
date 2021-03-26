@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+
+## [v2.2.0](https://github.com/allenai/allennlp/releases/tag/v2.2.0) - 2021-04-26
+
 ### Added
 
 - Add new method on `Field` class: `.human_readable_repr() -> Any`
