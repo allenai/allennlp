@@ -3,7 +3,6 @@ from typing import List, Optional
 import torch
 
 from allennlp.common import Registrable
-from allennlp.common.util import JsonDict
 from allennlp.models.model import Model
 from allennlp.predictors import Predictor
 from allennlp.data.dataset_readers import DatasetReader
