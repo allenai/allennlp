@@ -154,7 +154,7 @@ class SimpleInfluence(InfluenceInterpreter):
             if isinstance(self.recur_depth, float):
                 recursion_depth = int(
                     len(self._lissa_dataloader)
-                    * self._lissa_dataloader.batch_size
+                    * self._lissa_batch_size
                     * self.recur_depth
                 )
             else:
@@ -203,7 +203,7 @@ class SimpleInfluence(InfluenceInterpreter):
             # Then, we record the bottom-k training instances
             _, indices = torch.topk(-torch.tensor(influences), self._k)
             assert len(train_outputs) == len(influences)
-            bottom_k_train_instances = []
+            bottom_k_train_instances: List[Instance] = []
             for idx in indices:
                 train_instance = self._train_loader._instances[idx]
                 train_instance_dict = train_instance.human_readable_dict()
