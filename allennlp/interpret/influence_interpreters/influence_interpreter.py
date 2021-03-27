@@ -5,6 +5,7 @@ import torch
 from allennlp.common import Registrable
 from allennlp.models.model import Model
 from allennlp.predictors import Predictor
+from allennlp.data import Instance
 from allennlp.data.dataset_readers import DatasetReader
 from allennlp.data.data_loaders import SimpleDataLoader
 
@@ -61,10 +62,10 @@ class InfluenceInterpreter(Registrable):
         )
         self._train_loader.set_target_device(self._device)
         self._train_loader.index_with(self.vocab)
-        self._train_instances = self._train_loader.instances
+        self.train_instances = self._train_loader.instances
 
         # Number of supporting training instances has to be less than the size of train set
-        self._k = min(k, len(self._train_instances))
+        self._k = min(k, len(self.train_instances))
 
         self.model.to(self._device)
 
@@ -100,3 +101,39 @@ class InfluenceInterpreter(Registrable):
             print(
                 f"Params Trainable: {num_trainable_params}\n\t" + "\n\t".join(trainable_param_names)
             )
+
+    def interpret(self, test_instance: Instance, k: Optional[int] = None):
+        """
+        Run the current influence function scorer on the given instance
+
+        # Parameters
+        test_instance: `Instance`
+            Required. This is the interested test instance to interpret for
+        """
+        raise NotImplementedError
+
+    def interpret_instances(self, test_instances: List[Instance], k: Optional[int] = None):
+        """
+        Run the current influence function scorer on the given instances
+
+        # Parameters
+        test_instances: `List[Instance]`
+            Required. This is the interested test instance to interpret for
+
+        k: `int`
+            Optional. Allow user to overwrite the intially set k value.
+        """
+        raise NotImplementedError
+
+    def interpret_from_file(self, test_data_path: str, k: Optional[int] = None):
+        """
+        Read the given file and run the current influence function scorer on it
+
+        # Parameters
+        test_data_path: `str`
+            Required. This is the path to the interested test file.
+
+        k: `int`
+            Optional. Allow user to overwrite the intially set k value.
+        """
+        raise NotImplementedError

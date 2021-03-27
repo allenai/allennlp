@@ -1,6 +1,5 @@
-import json
-
-from typing import List, Optional, Tuple, Union
+from overrides import overrides
+from typing import List, Optional, Tuple, Union, Dict, Any
 import numpy as np
 from torch import Tensor
 from tqdm import tqdm
@@ -14,7 +13,8 @@ from allennlp.interpret.influence_interpreters.influence_interpreter import (
 from allennlp.predictors import Predictor
 from allennlp.models.model import Model
 from allennlp.data import DatasetReader, Batch, Instance
-from allennlp.data.data_loaders import DataLoader, MultiProcessDataLoader
+from allennlp.data.fields import MetadataField
+from allennlp.data.data_loaders import DataLoader, MultiProcessDataLoader, SimpleDataLoader
 from allennlp.nn import util
 
 
@@ -83,44 +83,38 @@ class SimpleInfluence(InfluenceInterpreter):
         self.recur_depth = recur_depth
         self.scale = scale
 
-    def interpret_and_save(self, test_data_path: str, output_file: str, k: Optional[int] = None):
+    @overrides
+    def interpret(self, test_instance: Instance, k: Optional[int] = None) -> List[Dict[str, Any]]:
+        return self.interpret_instances([test_instance], k)
+
+    @overrides
+    def interpret_instances(
+        self, test_instances: List[Instance], k: Optional[int] = None
+    ) -> List[Dict[str, Any]]:
         """
         This is the "main" function of influence score calcualtion. This function will go through
         example by example in the provided test set, and run the LiSSA algorithm to
         approximate the inverse Hessian for each test examples. Then, it will use this inverse
         to calculate the score for each train examples. As a result, we will output
         `k` examples with the highest and `k` examples with the lowest influence scores.
-        The output file contains lines of dictionary (one per line). Each line looks like:
+        The output contains dictionary. Each looks like:
             {
-                "test_instance": {<input and output field in human readble form>, "loss": ...}
-                "top_{k}_train_instances": [{<same format as test_instance>} {<....>}],
-                "bottom_{k}_train_instances": [{<same format as test_instance>} {<....>}]
+                "test_instance": Instance({<test_instance_fields>, "loss": ...})
+                "top_{k}_train_instances": [Instance({<same format as test_instance>, "influence_score": ...},
+                                            {<....>}],
+                "bottom_{k}_train_instances": [Instance({<same format as test_instance>, "influence_score": ...},
+                                            {<....>}]
             }
-
-        # Parameter
-        test_data_path: `str`
-            Required. This is the file path to the test data. Here, we make the assumption that
-            each instance in the test file will contain as least information as each one from train file.
-
-        output_file: `str`
-            Required. This is the path way to save output. Here we assume the directory contained
-            in the path is valid
-
-        k: `int`
-            Optional. Allow user to overwrite the intially set k value.
 
         """
         k = k or self._k
-        test_dataloader = MultiProcessDataLoader(
-            self.test_dataset_reader, test_data_path, batch_size=1
-        )
+        test_dataloader = SimpleDataLoader(test_instances, batch_size=1)
         test_dataloader.set_target_device(self._device)
         test_dataloader.index_with(self.vocab)
         output_content = []
         for test_idx, test_instance in enumerate(
             tqdm(test_dataloader._instances, desc="Test set index")
         ):
-            test_instance_dict = test_instance.human_readable_dict()
             test_batch = Batch([test_instance])
             test_batch.index_instances(self.vocab)
             self.model.eval()
@@ -129,9 +123,9 @@ class SimpleInfluence(InfluenceInterpreter):
 
             # get test example's gradient
             test_loss = test_output_dict["loss"]
-            test_instance_dict["loss"] = test_loss.detach().item()
+            test_instance.fields["loss"] = MetadataField(test_loss.detach().item())
             # We record information about the test instance
-            output_per_test = {"test_instance": test_instance_dict}
+            output_per_test = {"test_instance": test_instance}
 
             self.model.zero_grad()
 
@@ -196,10 +190,10 @@ class SimpleInfluence(InfluenceInterpreter):
             _, indices = torch.topk(torch.tensor(influences), k)
             top_k_train_instances: List[Instance] = []
             for idx in indices:
-                train_instance = self._train_instances[idx]
-                train_instance_dict = train_instance.human_readable_dict()
-                train_instance_dict["loss"] = train_outputs[idx]["loss"]
-                top_k_train_instances.append(train_instance_dict)
+                train_instance = self.train_instances[idx]
+                train_instance["loss"] = MetadataField(train_outputs[idx]["loss"])
+                train_instance["influence_score"] = MetadataField(influences[idx])
+                top_k_train_instances.append(train_instance)
             output_per_test[f"top_{k}_train_instances"] = top_k_train_instances
 
             # Then, we record the bottom-k training instances
@@ -207,18 +201,21 @@ class SimpleInfluence(InfluenceInterpreter):
             assert len(train_outputs) == len(influences)
             bottom_k_train_instances: List[Instance] = []
             for idx in indices:
-                train_instance = self._train_instances[idx]
-                train_instance_dict = train_instance.human_readable_dict()
-                train_instance_dict["loss"] = train_outputs[idx]["loss"]
-                bottom_k_train_instances.append(train_instance_dict)
+                train_instance = self.train_instances[idx]
+                train_instance["loss"] = MetadataField(train_outputs[idx]["loss"])
+                train_instance["influence_score"] = MetadataField(influences[idx])
+                bottom_k_train_instances.append(train_instance)
             output_per_test[f"bottom_{k}_train_instances"] = bottom_k_train_instances
 
             output_content.append(output_per_test)
+        return output_content
 
-        with open(output_file, "w") as f:
-            for line in output_content:
-                json.dump(line, f)
-                f.write("\n")
+    @overrides
+    def interpret_from_file(
+        self, test_data_path: str, k: Optional[int] = None
+    ) -> List[Dict[str, Any]]:
+        instances = list(self.test_dataset_reader.read(test_data_path))
+        return self.interpret_instances(instances, k)
 
     @staticmethod
     def get_inverse_hvp_lissa(
@@ -251,7 +248,6 @@ class SimpleInfluence(InfluenceInterpreter):
         recursion_depth :   `int`
             number of recursion to run in approximating the inverse
         damping :   `float`
-
 
         """
         inverse_hvps = [0 for _ in vs]
