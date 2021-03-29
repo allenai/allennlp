@@ -52,7 +52,7 @@ class SpacyTokenizer(Tokenizer):
     def __init__(
         self,
         language: str = "en_core_web_sm",
-        pos_tags: bool = False,
+        pos_tags: bool = True,
         parse: bool = False,
         ner: bool = False,
         keep_spacy_tokens: bool = False,

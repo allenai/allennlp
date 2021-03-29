@@ -282,6 +282,23 @@ def get_metrics(
     return metrics
 
 
+def get_train_and_validation_metrics(metrics: Dict) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+    """
+    Utility function to separate out train_metrics and val_metrics.
+    """
+    train_metrics: Dict[str, Any] = {}
+    val_metrics: Dict[str, Any] = {}
+    for key, value in metrics.items():
+        if key.startswith("training_"):
+            key = key.replace("training_", "", 1)
+            if key not in {"duration", "start_epoch", "epochs"}:
+                train_metrics[key] = value
+        elif key.startswith("validation_"):
+            key = key.replace("validation_", "", 1)
+            val_metrics[key] = value
+    return train_metrics, val_metrics
+
+
 def evaluate(
     model: Model,
     data_loader: DataLoader,
