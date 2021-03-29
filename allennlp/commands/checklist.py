@@ -4,7 +4,7 @@ model's predictions using a trained model and its
 [`Predictor`](../predictors/predictor.md#predictor) wrapper.
 """
 
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 import argparse
 import sys
 import json
@@ -37,6 +37,20 @@ class CheckList(Subcommand):
         subparser.add_argument("task", type=str, help="the name of the task suite")
 
         subparser.add_argument("--checklist-suite", type=str, help="the checklist suite path")
+
+        subparser.add_argument(
+            "--capabilities",
+            nargs="+",
+            default=[],
+            help=('an optional list of strings of capabilities. Eg. "[Vocabulary, Robustness]"'),
+        )
+
+        subparser.add_argument(
+            "--max-examples",
+            type=int,
+            default=None,
+            help="Maximum number of examples to check per test.",
+        )
 
         subparser.add_argument(
             "--task-suite-args",
@@ -128,16 +142,26 @@ class _CheckListManager:
         self,
         task_suite: TaskSuite,
         predictor: Predictor,
-        output_file: Optional[str],
-        print_summary_args: Optional[Dict[str, Any]],
+        capabilities: Optional[List[str]] = None,
+        max_examples: Optional[int] = None,
+        output_file: Optional[str] = None,
+        print_summary_args: Optional[Dict[str, Any]] = None,
     ) -> None:
         self._task_suite = task_suite
         self._predictor = predictor
+        self._capabilities = capabilities
+        self._max_examples = max_examples
         self._output_file = None if output_file is None else open(output_file, "w")
         self._print_summary_args = print_summary_args or {}
 
+        if capabilities:
+            self._print_summary_args["capabilities"] = capabilities
+
     def run(self) -> None:
-        self._task_suite.run(self._predictor)
+        self._task_suite.run(
+            self._predictor, capabilities=self._capabilities, max_examples=self._max_examples
+        )
+
         output_file = self._output_file or sys.stdout
         self._task_suite.summary(file=output_file, **self._print_summary_args)
 
@@ -156,9 +180,14 @@ def _run_suite(args: argparse.Namespace) -> None:
     else:
         print_summary_args = json.loads(print_summary_args)
 
+    capabilities = args.capabilities
+    max_examples = args.max_examples
+
     manager = _CheckListManager(
         task_suite,
         predictor,
+        capabilities,
+        max_examples,
         args.output_file,
         print_summary_args,
     )

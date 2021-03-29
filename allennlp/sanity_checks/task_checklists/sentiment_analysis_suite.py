@@ -21,7 +21,7 @@ class SentimentAnalysisSuite(TaskSuite):
         suite: Optional[TestSuite] = None,
         positive: Optional[int] = 0,
         negative: Optional[int] = 1,
-        neutral: Optional[int] = 2,
+        neutral: Optional[int] = None,
     ):
 
         self._positive = positive
@@ -209,12 +209,14 @@ class SentimentAnalysisSuite(TaskSuite):
             )
 
             suite.add(
-                MFT(**template),
-                name="Sentiment-laden words in context",
-                capability="Vocabulary",
-                description="Use positive and negative verbs and adjectives "
-                "with airline nouns such as seats, pilot, flight, etc. "
-                'E.g. "This was a bad flight"',
+                MFT(
+                    **template,
+                    name="Sentiment-laden words in context",
+                    capability="Vocabulary",
+                    description="Use positive and negative verbs and adjectives "
+                    "with airline nouns such as seats, pilot, flight, etc. "
+                    'E.g. "This was a bad flight"',
+                )
             )
 
             if self._neutral is not None:
@@ -247,12 +249,16 @@ class SentimentAnalysisSuite(TaskSuite):
                     save=True,
                 )
                 suite.add(
-                    MFT(template.data, labels=self._neutral, templates=template.templates),
-                    name="Neutral words in context",
-                    capability="Vocabulary",
-                    description="Use neutral verbs and adjectives with airline "
-                    "nouns such as seats, pilot, flight, etc. "
-                    'E.g. "The pilot is American"',
+                    MFT(
+                        template.data,
+                        labels=self._neutral,
+                        templates=template.templates,
+                        name="Neutral words in context",
+                        capability="Vocabulary",
+                        description="Use neutral verbs and adjectives with airline "
+                        "nouns such as seats, pilot, flight, etc. "
+                        'E.g. "The pilot is American"',
+                    )
                 )
 
         super().__init__(suite)

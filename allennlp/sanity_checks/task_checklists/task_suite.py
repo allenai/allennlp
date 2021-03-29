@@ -1,5 +1,5 @@
 import sys
-from typing import Type, Optional, Dict, Any, Callable
+from typing import Type, Optional, Dict, Any, Callable, List
 from checklist.test_suite import TestSuite
 from allennlp.common.registrable import Registrable
 from allennlp.common.file_utils import cached_path
@@ -23,6 +23,19 @@ class TaskSuite(Registrable):
     https://github.com/marcotcr/checklist/blob/master/notebooks/tutorials/
     """
 
+    _capabilities = [
+        "Vocabulary",
+        "Taxonomy",
+        "Robustness",
+        "NER",
+        "Fairness",
+        "Temporal",
+        "Negation",
+        "Coref",
+        "SRL",
+        "Logic",
+    ]
+
     def __init__(self, suite: Optional[TestSuite] = None, **kwargs):
         self.suite = suite or TestSuite()
 
@@ -35,13 +48,38 @@ class TaskSuite(Registrable):
         """
         return NotImplementedError
 
+    def describe(self):
+        """
+        Gives a description of the test suite.
+        """
+        capabilities = set([val["capability"] for key, val in self.suite.info.items()])
+        print(
+            "\n\nThis suite contains {} tests across {} capabilities.".format(
+                len(self.suite.tests), len(capabilities)
+            )
+        )
+        print()
+        for capability in self._capabilities:
+            tests = [
+                name for name, test in self.suite.info.items() if test["capability"] == capability
+            ]
+            if len(tests) > 0:
+                print("\n\t{} ({} tests)\n".format(capability, len(tests)))
+                for test in tests:
+                    description = self.suite.info[test]["description"]
+                    num_test_cases = len(self.suite.tests[test].data)
+                    about_test = "\t * {} ({} test cases)".format(test, num_test_cases)
+                    if description:
+                        about_test += " : {}".format(description)
+                    print(about_test)
+
     def summary(self, capabilities=None, file=sys.stdout, **kwargs):
         """
         Prints a summary of the test results.
 
         # Parameters
 
-        capabilities : list(string)
+        capabilities : List[str], optional
             If not None, will only show tests with these capabilities.
         **kwargs : type
             Will be passed as arguments to each test.summary()
@@ -53,10 +91,22 @@ class TaskSuite(Registrable):
         finally:
             sys.stdout = old_stdout
 
-    def run(self, predictor: Predictor):
+    def run(
+        self,
+        predictor: Predictor,
+        capabilities: Optional[List[str]] = None,
+        max_examples: Optional[int] = None,
+    ):
         """
-        Runs the predictor on the test suite data and
-        prints a summary of the test results.
+        Runs the predictor on the test suite data.
+
+        # Parameters
+
+        predictor : Predictor
+        capabilities : List[str], optional
+            If not None, will only run tests with these capabilities.
+        max_examples : int, optional
+            Maximum number of examples to run. If None, all examples will be run.
         """
         preds_and_confs_fn = self._prediction_and_confidence_scores(predictor)
         if preds_and_confs_fn is NotImplementedError:
@@ -64,7 +114,12 @@ class TaskSuite(Registrable):
                 "The `_prediction_and_confidence_scores` function needs "
                 "to be implemented for the class `{}`".format(self.__class__)
             )
-        self.suite.run(preds_and_confs_fn, overwrite=True)
+        if not capabilities:
+            self.suite.run(preds_and_confs_fn, overwrite=True, n=max_examples)
+        else:
+            for _, test in self.suite.tests.items():
+                if test.capability in capabilities:
+                    test.run(preds_and_confs_fn, verbose=True, overwrite=True, n=max_examples)
 
     @classmethod
     def constructor(
