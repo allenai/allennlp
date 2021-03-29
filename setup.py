@@ -73,6 +73,7 @@ setup(
         "lmdb",
         "more-itertools",
         "checklist",
+        "wandb>=0.10.0,<0.11.0",
     ],
     entry_points={"console_scripts": ["allennlp=allennlp.__main__:run"]},
     include_package_data=True,
