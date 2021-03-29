@@ -762,6 +762,8 @@ class GradientDescentTrainer(Trainer):
             this_epoch_val_metric: float = 0.0
             if self._validation_data_loader is not None:
                 with torch.no_grad():
+                    # Make results deterministic on the validation set
+                    self.model.eval()
                     # We have a validation set, so compute all the metrics on it.
                     val_loss, val_reg_loss, num_batches = self._validation_loss(epoch)
 
