@@ -79,9 +79,9 @@ class TaskSuite(Registrable):
 
         # Parameters
 
-        capabilities : List[str], optional
+        capabilities : `List[str]`, optional (default = `None`)
             If not None, will only show tests with these capabilities.
-        **kwargs : type
+        **kwargs : `type`
             Will be passed as arguments to each test.summary()
         """
         old_stdout = sys.stdout
@@ -102,10 +102,11 @@ class TaskSuite(Registrable):
 
         # Parameters
 
-        predictor : Predictor
-        capabilities : List[str], optional
+        predictor : `Predictor`
+            The predictor object.
+        capabilities : `List[str]`, optional (default = `None`)
             If not None, will only run tests with these capabilities.
-        max_examples : int, optional
+        max_examples : `int`, optional (default = `None`)
             Maximum number of examples to run. If None, all examples will be run.
         """
         preds_and_confs_fn = self._prediction_and_confidence_scores(predictor)

@@ -5,3 +5,6 @@ from allennlp.sanity_checks.task_checklists.sentiment_analysis_suite import (
 from allennlp.sanity_checks.task_checklists.question_answering_suite import (
     QuestionAnsweringSuite,
 )
+from allennlp.sanity_checks.task_checklists.textual_entailment_suite import (
+    TextualEntailmentSuite,
+)
