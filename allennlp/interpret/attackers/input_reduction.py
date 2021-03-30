@@ -33,7 +33,7 @@ class InputReduction(Attacker):
 
     def attack_from_json(
         self,
-        inputs: JsonDict = None,
+        inputs: JsonDict,
         input_field_to_attack: str = "tokens",
         grad_input_field: str = "grad_input_1",
         ignore_tokens: List[str] = None,
@@ -117,9 +117,9 @@ class InputReduction(Attacker):
                 else:
                     # remove the mask where you remove the input token from.
                     if smallest_idx != -1:  # Don't delete on the very first iteration
-                        del beam_tag_mask[smallest_idx]
+                        del beam_tag_mask[smallest_idx]  # type: ignore
                     cur_tags = [
-                        outputs["tags"][x] for x in range(len(outputs["tags"])) if beam_tag_mask[x]
+                        outputs["tags"][x] for x in range(len(outputs["tags"])) if beam_tag_mask[x]  # type: ignore
                     ]
                     if cur_tags != original_tags:
                         continue
@@ -133,7 +133,7 @@ class InputReduction(Attacker):
                     grads[grad_input_field][0],
                     ignore_tokens,
                     self.beam_size,
-                    beam_tag_mask,
+                    beam_tag_mask,  # type: ignore
                 )
                 candidates.extend(reduced_instances_and_smallest)
         return current_tokens

@@ -4,7 +4,7 @@ import torch
 
 from allennlp.common import Registrable
 from allennlp.common.util import pad_sequence_to_length
-from allennlp.data.tokenizers.token import Token
+from allennlp.data.tokenizers import Token
 from allennlp.data.vocabulary import Vocabulary
 
 # An indexed token list represents the arguments that will be passed to a TokenEmbedder
@@ -61,6 +61,15 @@ class TokenIndexer(Registrable):
         Or (for instance, in the case of byte-pair encoding) there might not be a clean
         mapping from individual tokens to indices, and the `IndexedTokenList` could be a complex
         data structure.
+        """
+        raise NotImplementedError
+
+    def indices_to_tokens(
+        self, indexed_tokens: IndexedTokenList, vocabulary: Vocabulary
+    ) -> List[Token]:
+        """
+        Inverse operations of tokens_to_indices. Takes an `IndexedTokenList` and converts it back
+        into a list of tokens.
         """
         raise NotImplementedError
 

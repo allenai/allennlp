@@ -10,6 +10,8 @@ from typing import Any, List
 
 from ruamel.yaml import YAML
 
+from allennlp.version import VERSION
+
 
 API_TOC_KEY = "API"
 
@@ -22,6 +24,7 @@ def parse_args():
     parser.add_argument(
         "api_docs_path", help="The root of the API docs within the markdown docs root folder."
     )
+    parser.add_argument("--docs-version", type=str, default=f"v{VERSION}")
     return parser.parse_args()
 
 
@@ -46,6 +49,9 @@ def main():
     source_yaml = yaml.load(Path(opts.source_yaml))
 
     nav_entries = build_api_toc(Path(opts.api_docs_path), Path(opts.docs_root))
+
+    # Add version to name.
+    source_yaml["site_name"] = f"AllenNLP {opts.docs_version}"
 
     # Find the yaml sub-object corresponding to the API table of contents.
     site_nav = source_yaml["nav"]

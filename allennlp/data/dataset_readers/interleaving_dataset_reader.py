@@ -1,8 +1,8 @@
-from typing import Dict, Iterable
+from typing import Dict, Mapping, Iterable, Union
 import json
 
 from allennlp.common.checks import ConfigurationError
-from allennlp.data.dataset_readers.dataset_reader import DatasetReader
+from allennlp.data.dataset_readers.dataset_reader import DatasetReader, PathOrStr
 from allennlp.data.fields import MetadataField
 from allennlp.data.instance import Instance
 
@@ -27,9 +27,9 @@ class InterleavingDatasetReader(DatasetReader):
     readers : `Dict[str, DatasetReader]`
         The dataset readers to wrap. The keys of this dictionary will be used
         as the values in the MetadataField indicating provenance.
-    dataset_field_name : str, optional (default = "dataset")
+    dataset_field_name : `str`, optional (default = `"dataset"`)
         The name of the MetadataField indicating which dataset an instance came from.
-    scheme : str, optional (default = "round_robin")
+    scheme : `str`, optional (default = `"round_robin"`)
         Indicates how to interleave instances. Currently the two options are "round_robin",
         which repeatedly cycles through the datasets grabbing one instance from each;
         and "all_at_once", which yields all the instances from the first dataset,
@@ -52,7 +52,7 @@ class InterleavingDatasetReader(DatasetReader):
             raise ConfigurationError(f"invalid scheme: {scheme}")
         self._scheme = scheme
 
-    def _read_round_robin(self, datasets: Dict[str, Iterable[Instance]]) -> Iterable[Instance]:
+    def _read_round_robin(self, datasets: Mapping[str, Iterable[Instance]]) -> Iterable[Instance]:
         remaining = set(datasets)
         dataset_iterators = {key: iter(dataset) for key, dataset in datasets.items()}
 
@@ -66,20 +66,23 @@ class InterleavingDatasetReader(DatasetReader):
                     except StopIteration:
                         remaining.remove(key)
 
-    def _read_all_at_once(self, datasets: Dict[str, Iterable[Instance]]) -> Iterable[Instance]:
+    def _read_all_at_once(self, datasets: Mapping[str, Iterable[Instance]]) -> Iterable[Instance]:
         for key, dataset in datasets.items():
             for instance in dataset:
                 instance.fields[self._dataset_field_name] = MetadataField(key)
                 yield instance
 
-    def _read(self, file_path: str) -> Iterable[Instance]:
-        try:
-            file_paths = json.loads(file_path)
-        except json.JSONDecodeError:
-            raise ConfigurationError(
-                "the file_path for the InterleavingDatasetReader "
-                "needs to be a JSON-serialized dictionary {reader_name -> file_path}"
-            )
+    def _read(self, file_path: Union[str, Dict[str, PathOrStr]]) -> Iterable[Instance]:
+        if isinstance(file_path, str):
+            try:
+                file_paths = json.loads(file_path)
+            except json.JSONDecodeError:
+                raise ConfigurationError(
+                    "the file_path for the InterleavingDatasetReader "
+                    "needs to be a JSON-serialized dictionary {reader_name -> file_path}"
+                )
+        else:
+            file_paths = file_path
 
         if file_paths.keys() != self._readers.keys():
             raise ConfigurationError("mismatched keys")

@@ -4,7 +4,9 @@ import sys
 
 from overrides import overrides
 import torch
+import torch.distributed as dist
 
+from allennlp.common.util import is_distributed
 from allennlp.common.checks import ConfigurationError
 from allennlp.training.metrics.metric import Metric
 
@@ -35,10 +37,11 @@ class UnigramRecall(Metric):
             A tensor of predictions of shape (batch_size, k, sequence_length).
         gold_labels : `torch.Tensor`, required.
             A tensor of integer class label of shape (batch_size, sequence_length).
-        mask : `torch.BoolTensor`, optional (default = None).
+        mask : `torch.BoolTensor`, optional (default = `None`).
             A masking tensor the same size as `gold_labels`.
         """
         predictions, gold_labels, mask = self.detach_tensors(predictions, gold_labels, mask)
+        device = predictions.device
 
         # Some sanity checks.
         if gold_labels.dim() != predictions.dim() - 1:
@@ -76,8 +79,19 @@ class UnigramRecall(Metric):
                         stillsearch = False
             correct += retval
 
-        self.correct_count += correct
-        self.total_count += predictions.size()[0]
+        _correct_count = correct
+        _total_count = predictions.size()[0]
+
+        if is_distributed():
+            correct_count = torch.tensor(_correct_count, device=device)
+            total_count = torch.tensor(_total_count, device=device)
+            dist.all_reduce(correct_count, op=dist.ReduceOp.SUM)
+            dist.all_reduce(total_count, op=dist.ReduceOp.SUM)
+            _correct_count = correct_count.item()
+            _total_count = total_count.item()
+
+        self.correct_count += _correct_count
+        self.total_count += _total_count
 
     def get_metric(self, reset: bool = False):
         """
@@ -85,10 +99,11 @@ class UnigramRecall(Metric):
 
         The accumulated recall.
         """
+
         recall = self.correct_count / self.total_count if self.total_count > 0 else 0
         if reset:
             self.reset()
-        return recall
+        return {"unigram_recall": recall}
 
     @overrides
     def reset(self):

@@ -49,7 +49,9 @@ class SequenceTaggingDatasetReader(DatasetReader):
         token_indexers: Dict[str, TokenIndexer] = None,
         **kwargs,
     ) -> None:
-        super().__init__(**kwargs)
+        super().__init__(
+            manual_distributed_sharding=True, manual_multiprocess_sharding=True, **kwargs
+        )
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
         self._word_tag_delimiter = word_tag_delimiter
         self._token_delimiter = token_delimiter
@@ -60,9 +62,8 @@ class SequenceTaggingDatasetReader(DatasetReader):
         file_path = cached_path(file_path)
 
         with open(file_path, "r") as data_file:
-
             logger.info("Reading instances from lines in file at: %s", file_path)
-            for line in data_file:
+            for line in self.shard_iterable(data_file):
                 line = line.strip("\n")
 
                 # skip blank lines
@@ -85,9 +86,13 @@ class SequenceTaggingDatasetReader(DatasetReader):
         """
 
         fields: Dict[str, Field] = {}
-        sequence = TextField(tokens, self._token_indexers)
+        sequence = TextField(tokens)
         fields["tokens"] = sequence
         fields["metadata"] = MetadataField({"words": [x.text for x in tokens]})
         if tags is not None:
             fields["tags"] = SequenceLabelField(tags, sequence)
         return Instance(fields)
+
+    @overrides
+    def apply_token_indexers(self, instance: Instance) -> None:
+        instance.fields["tokens"]._token_indexers = self._token_indexers  # type: ignore

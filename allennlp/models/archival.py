@@ -1,20 +1,23 @@
 """
 Helper functions for archiving models and restoring archived models.
 """
-
-from typing import NamedTuple
-import atexit
+from os import PathLike
+from typing import NamedTuple, Union, Dict, Any, List, Optional
 import logging
 import os
 import tempfile
 import tarfile
 import shutil
+from pathlib import Path
+from contextlib import contextmanager
+import glob
 
 from torch.nn import Module
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path
 from allennlp.common.params import Params
+from allennlp.data.dataset_readers import DatasetReader
 from allennlp.models.model import Model, _DEFAULT_WEIGHTS
 
 logger = logging.getLogger(__name__)
@@ -25,6 +28,8 @@ class Archive(NamedTuple):
 
     model: Model
     config: Params
+    dataset_reader: DatasetReader
+    validation_dataset_reader: DatasetReader
 
     def extract_module(self, path: str, freeze: bool = True) -> Module:
         """
@@ -58,7 +63,7 @@ class Archive(NamedTuple):
         path : `str`, required
             Path of target module to be loaded from the model.
             Eg. "_textfield_embedder.token_embedder_tokens"
-        freeze : `bool`, optional (default=True)
+        freeze : `bool`, optional (default=`True`)
             Whether to freeze the module parameters or not.
 
         """
@@ -88,8 +93,22 @@ CONFIG_NAME = "config.json"
 _WEIGHTS_NAME = "weights.th"
 
 
+def verify_include_in_archive(include_in_archive: Optional[List[str]] = None):
+    if include_in_archive is None:
+        return
+    saved_names = [CONFIG_NAME, _WEIGHTS_NAME, _DEFAULT_WEIGHTS, "vocabulary"]
+    for archival_target in include_in_archive:
+        if archival_target in saved_names:
+            raise ConfigurationError(
+                f"{', '.join(saved_names)} are saved names and cannot be used for include_in_archive."
+            )
+
+
 def archive_model(
-    serialization_dir: str, weights: str = _DEFAULT_WEIGHTS, archive_path: str = None
+    serialization_dir: Union[str, PathLike],
+    weights: str = _DEFAULT_WEIGHTS,
+    archive_path: Union[str, PathLike] = None,
+    include_in_archive: Optional[List[str]] = None,
 ) -> None:
     """
     Archive the model weights, its training configuration, and its vocabulary to `model.tar.gz`.
@@ -98,12 +117,14 @@ def archive_model(
 
     serialization_dir : `str`
         The directory where the weights and vocabulary are written out.
-    weights : `str`, optional (default=_DEFAULT_WEIGHTS)
+    weights : `str`, optional (default=`_DEFAULT_WEIGHTS`)
         Which weights file to include in the archive. The default is `best.th`.
-    archive_path : `str`, optional, (default = None)
+    archive_path : `str`, optional, (default = `None`)
         A full path to serialize the model to. The default is "model.tar.gz" inside the
         serialization_dir. If you pass a directory here, we'll serialize the model
         to "model.tar.gz" inside the directory.
+    include_in_archive : `List[str]`, optional, (default = `None`)
+        Paths relative to `serialization_dir` that should be archived in addition to the default ones.
     """
     weights_file = os.path.join(serialization_dir, weights)
     if not os.path.exists(weights_file):
@@ -126,12 +147,19 @@ def archive_model(
         archive.add(weights_file, arcname=_WEIGHTS_NAME)
         archive.add(os.path.join(serialization_dir, "vocabulary"), arcname="vocabulary")
 
+        if include_in_archive is not None:
+            for archival_target in include_in_archive:
+                archival_target_path = os.path.join(serialization_dir, archival_target)
+                for path in glob.glob(archival_target_path):
+                    if os.path.exists(path):
+                        arcname = path[len(os.path.join(serialization_dir, "")) :]
+                        archive.add(path, arcname=arcname)
+
 
 def load_archive(
-    archive_file: str,
+    archive_file: Union[str, Path],
     cuda_device: int = -1,
-    opt_level: str = None,
-    overrides: str = "",
+    overrides: Union[str, Dict[str, Any]] = "",
     weights_file: str = None,
 ) -> Archive:
     """
@@ -139,20 +167,14 @@ def load_archive(
 
     # Parameters
 
-    archive_file : `str`
+    archive_file : `Union[str, Path]`
         The archive file to load the model from.
-    cuda_device : `int`, optional (default = -1)
+    cuda_device : `int`, optional (default = `-1`)
         If `cuda_device` is >= 0, the model will be loaded onto the
         corresponding GPU. Otherwise it will be loaded onto the CPU.
-    opt_level : `str`, optional, (default = `None`)
-        Each `opt_level` establishes a set of properties that govern Amp’s implementation of pure or mixed
-        precision training. Must be a choice of `"O0"`, `"O1"`, `"O2"`, or `"O3"`.
-        See the Apex [documentation](https://nvidia.github.io/apex/amp.html#opt-levels-and-properties) for
-        more details. If `None`, defaults to the `opt_level` found in the model params. If `cuda_device==-1`,
-        Amp is not used and this argument is ignored.
-    overrides : `str`, optional (default = "")
+    overrides : `Union[str, Dict[str, Any]]`, optional (default = `""`)
         JSON overrides to apply to the unarchived `Params` object.
-    weights_file : `str`, optional (default = None)
+    weights_file : `str`, optional (default = `None`)
         The weights file to use.  If unspecified, weights.th in the archive_file will be used.
     """
     # redirect to the cache, if necessary
@@ -163,44 +185,86 @@ def load_archive(
     else:
         logger.info(f"loading archive file {archive_file} from cache at {resolved_archive_file}")
 
-    if os.path.isdir(resolved_archive_file):
-        serialization_dir = resolved_archive_file
-    else:
-        # Extract archive to temp dir
+    tempdir = None
+    try:
+        if os.path.isdir(resolved_archive_file):
+            serialization_dir = resolved_archive_file
+        else:
+            with extracted_archive(resolved_archive_file, cleanup=False) as tempdir:
+                serialization_dir = tempdir
+
+        if weights_file:
+            weights_path = weights_file
+        else:
+            weights_path = get_weights_path(serialization_dir)
+
+        # Load config
+        config = Params.from_file(os.path.join(serialization_dir, CONFIG_NAME), overrides)
+
+        # Instantiate model and dataset readers. Use a duplicate of the config, as it will get consumed.
+        dataset_reader, validation_dataset_reader = _load_dataset_readers(
+            config.duplicate(), serialization_dir
+        )
+        model = _load_model(config.duplicate(), weights_path, serialization_dir, cuda_device)
+    finally:
+        if tempdir is not None:
+            logger.info(f"removing temporary unarchived model dir at {tempdir}")
+            shutil.rmtree(tempdir, ignore_errors=True)
+
+    return Archive(
+        model=model,
+        config=config,
+        dataset_reader=dataset_reader,
+        validation_dataset_reader=validation_dataset_reader,
+    )
+
+
+def _load_dataset_readers(config, serialization_dir):
+    dataset_reader_params = config.get("dataset_reader")
+
+    # Try to use the validation dataset reader if there is one - otherwise fall back
+    # to the default dataset_reader used for both training and validation.
+    validation_dataset_reader_params = config.get(
+        "validation_dataset_reader", dataset_reader_params.duplicate()
+    )
+
+    dataset_reader = DatasetReader.from_params(
+        dataset_reader_params, serialization_dir=serialization_dir
+    )
+    validation_dataset_reader = DatasetReader.from_params(
+        validation_dataset_reader_params, serialization_dir=serialization_dir
+    )
+
+    return dataset_reader, validation_dataset_reader
+
+
+def _load_model(config, weights_path, serialization_dir, cuda_device):
+    return Model.load(
+        config,
+        weights_file=weights_path,
+        serialization_dir=serialization_dir,
+        cuda_device=cuda_device,
+    )
+
+
+def get_weights_path(serialization_dir):
+    weights_path = os.path.join(serialization_dir, _WEIGHTS_NAME)
+    # Fallback for serialization directories.
+    if not os.path.exists(weights_path):
+        weights_path = os.path.join(serialization_dir, _DEFAULT_WEIGHTS)
+    return weights_path
+
+
+@contextmanager
+def extracted_archive(resolved_archive_file, cleanup=True):
+    tempdir = None
+    try:
         tempdir = tempfile.mkdtemp()
         logger.info(f"extracting archive file {resolved_archive_file} to temp dir {tempdir}")
         with tarfile.open(resolved_archive_file, "r:gz") as archive:
             archive.extractall(tempdir)
-        # Postpone cleanup until exit in case the unarchived contents are needed outside
-        # this function.
-        atexit.register(_cleanup_archive_dir, tempdir)
-
-        serialization_dir = tempdir
-
-    # Load config
-    config = Params.from_file(os.path.join(serialization_dir, CONFIG_NAME), overrides)
-
-    if weights_file:
-        weights_path = weights_file
-    else:
-        weights_path = os.path.join(serialization_dir, _WEIGHTS_NAME)
-        # Fallback for serialization directories.
-        if not os.path.exists(weights_path):
-            weights_path = os.path.join(serialization_dir, _DEFAULT_WEIGHTS)
-
-    # Instantiate model. Use a duplicate of the config, as it will get consumed.
-    model = Model.load(
-        config.duplicate(),
-        weights_file=weights_path,
-        serialization_dir=serialization_dir,
-        cuda_device=cuda_device,
-        opt_level=opt_level,
-    )
-
-    return Archive(model=model, config=config)
-
-
-def _cleanup_archive_dir(path: str):
-    if os.path.exists(path):
-        logger.info("removing temporary unarchived model dir at %s", path)
-        shutil.rmtree(path)
+        yield tempdir
+    finally:
+        if tempdir is not None and cleanup:
+            logger.info(f"removing temporary unarchived model dir at {tempdir}")
+            shutil.rmtree(tempdir, ignore_errors=True)

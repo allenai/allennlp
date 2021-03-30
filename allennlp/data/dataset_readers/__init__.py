@@ -7,10 +7,15 @@ and produce datasets in the formats required by specific models.
 """
 
 
+from allennlp.data.dataset_readers.dataset_reader import (
+    DatasetReader,
+    WorkerInfo,
+    DatasetReaderInput,
+)
+from allennlp.data.dataset_readers.babi import BabiReader
 from allennlp.data.dataset_readers.conll2003 import Conll2003DatasetReader
-from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.dataset_readers.interleaving_dataset_reader import InterleavingDatasetReader
+from allennlp.data.dataset_readers.multitask import MultiTaskDatasetReader
 from allennlp.data.dataset_readers.sequence_tagging import SequenceTaggingDatasetReader
 from allennlp.data.dataset_readers.sharded_dataset_reader import ShardedDatasetReader
-from allennlp.data.dataset_readers.babi import BabiReader
 from allennlp.data.dataset_readers.text_classification_json import TextClassificationJsonReader

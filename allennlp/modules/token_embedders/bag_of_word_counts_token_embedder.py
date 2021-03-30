@@ -1,7 +1,7 @@
 import torch
 
 from allennlp.common.checks import ConfigurationError
-from allennlp.data import Vocabulary
+from allennlp.data.vocabulary import Vocabulary
 from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
 from allennlp.nn.util import get_text_field_mask
 
@@ -22,7 +22,7 @@ class BagOfWordCountsTokenEmbedder(TokenEmbedder):
     # Parameters
 
     vocab : `Vocabulary`
-    vocab_namespace : `str`, optional (default = "tokens")
+    vocab_namespace : `str`, optional (default = `"tokens"`)
         namespace of vocabulary to embed
     projection_dim : `int`, optional (default = `None`)
         if specified, will project the resulting bag of words representation

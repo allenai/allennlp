@@ -1,8 +1,10 @@
-"""
-A custom 'logging.Logger' that has additional {warning,debug,etc.}_once() methods
-which allow for logged methods to be logged only once.
-"""
 import logging
+from logging import Filter
+import os
+from os import PathLike
+from typing import Union
+
+import sys
 
 
 class AllenNlpLogger(logging.Logger):
@@ -42,3 +44,86 @@ class AllenNlpLogger(logging.Logger):
 
 
 logging.setLoggerClass(AllenNlpLogger)
+logger = logging.getLogger(__name__)
+
+
+FILE_FRIENDLY_LOGGING: bool = False
+"""
+If this flag is set to `True`, we add newlines to tqdm output, even on an interactive terminal, and we slow
+down tqdm's output to only once every 10 seconds.
+
+By default, it is set to `False`.
+"""
+
+
+class ErrorFilter(Filter):
+    """
+    Filters out everything that is at the ERROR level or higher. This is meant to be used
+    with a stdout handler when a stderr handler is also configured. That way ERROR
+    messages aren't duplicated.
+    """
+
+    def filter(self, record):
+        return record.levelno < logging.ERROR
+
+
+def prepare_global_logging(
+    serialization_dir: Union[str, PathLike],
+    rank: int = 0,
+    world_size: int = 1,
+) -> None:
+    root_logger = logging.getLogger()
+
+    # create handlers
+    if world_size == 1:
+        log_file = os.path.join(serialization_dir, "out.log")
+        formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(name)s - %(message)s")
+    else:
+        log_file = os.path.join(serialization_dir, f"out_worker{rank}.log")
+        formatter = logging.Formatter(
+            f"{rank} | %(asctime)s - %(levelname)s - %(name)s - %(message)s"
+        )
+    file_handler = logging.FileHandler(log_file)
+    stdout_handler = logging.StreamHandler(sys.stdout)
+    stderr_handler = logging.StreamHandler(sys.stderr)
+
+    handler: logging.Handler
+    for handler in [file_handler, stdout_handler, stderr_handler]:
+        handler.setFormatter(formatter)
+
+    # Remove the already set handlers in root logger.
+    # Not doing this will result in duplicate log messages
+    root_logger.handlers.clear()
+
+    if os.environ.get("ALLENNLP_DEBUG"):
+        LEVEL = logging.DEBUG
+    else:
+        level_name = os.environ.get("ALLENNLP_LOG_LEVEL", "INFO")
+        LEVEL = logging._nameToLevel.get(level_name, logging.INFO)
+
+    file_handler.setLevel(LEVEL)
+    stdout_handler.setLevel(LEVEL)
+    stdout_handler.addFilter(ErrorFilter())  # Make sure errors only go to stderr
+    stderr_handler.setLevel(logging.ERROR)
+    root_logger.setLevel(LEVEL)
+
+    # put all the handlers on the root logger
+    root_logger.addHandler(file_handler)
+    if rank == 0:
+        root_logger.addHandler(stdout_handler)
+        root_logger.addHandler(stderr_handler)
+
+    # write uncaught exceptions to the logs
+    def excepthook(exctype, value, traceback):
+        # For a KeyboardInterrupt, call the original exception handler.
+        if issubclass(exctype, KeyboardInterrupt):
+            sys.__excepthook__(exctype, value, traceback)
+            return
+        root_logger.critical("Uncaught exception", exc_info=(exctype, value, traceback))
+
+    sys.excepthook = excepthook
+
+    # also log tqdm
+    from allennlp.common.tqdm import logger as tqdm_logger
+
+    tqdm_logger.addHandler(file_handler)

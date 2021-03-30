@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, Any, Optional
 import logging
 
 from overrides import overrides
@@ -6,7 +6,7 @@ import torch
 
 from allennlp.common.util import pad_sequence_to_length
 from allennlp.data.vocabulary import Vocabulary
-from allennlp.data.tokenizers.token import Token
+from allennlp.data.tokenizers import Token
 from allennlp.data.token_indexers import PretrainedTransformerIndexer, TokenIndexer
 from allennlp.data.token_indexers.token_indexer import IndexedTokenList
 
@@ -34,20 +34,33 @@ class PretrainedTransformerMismatchedIndexer(TokenIndexer):
         We use a somewhat confusing default value of `tags` so that we do not add padding or UNK
         tokens to this namespace, which would break on loading because we wouldn't find our default
         OOV token.
-    max_length : `int`, optional (default = None)
+    max_length : `int`, optional (default = `None`)
         If positive, split the document into segments of this many tokens (including special tokens)
         before feeding into the embedder. The embedder embeds these segments independently and
         concatenate the results to get the original document representation. Should be set to
         the same value as the `max_length` option on the `PretrainedTransformerMismatchedEmbedder`.
-    """
+    tokenizer_kwargs : `Dict[str, Any]`, optional (default = `None`)
+        Dictionary with
+        [additional arguments](https://github.com/huggingface/transformers/blob/155c782a2ccd103cf63ad48a2becd7c76a7d2115/transformers/tokenization_utils.py#L691)
+        for `AutoTokenizer.from_pretrained`.
+    """  # noqa: E501
 
     def __init__(
-        self, model_name: str, namespace: str = "tags", max_length: int = None, **kwargs
+        self,
+        model_name: str,
+        namespace: str = "tags",
+        max_length: int = None,
+        tokenizer_kwargs: Optional[Dict[str, Any]] = None,
+        **kwargs,
     ) -> None:
         super().__init__(**kwargs)
         # The matched version v.s. mismatched
         self._matched_indexer = PretrainedTransformerIndexer(
-            model_name, namespace, max_length, **kwargs
+            model_name,
+            namespace=namespace,
+            max_length=max_length,
+            tokenizer_kwargs=tokenizer_kwargs,
+            **kwargs,
         )
         self._allennlp_tokenizer = self._matched_indexer._allennlp_tokenizer
         self._tokenizer = self._matched_indexer._tokenizer
@@ -62,7 +75,14 @@ class PretrainedTransformerMismatchedIndexer(TokenIndexer):
     def tokens_to_indices(self, tokens: List[Token], vocabulary: Vocabulary) -> IndexedTokenList:
         self._matched_indexer._add_encoding_to_vocabulary_if_needed(vocabulary)
 
-        wordpieces, offsets = self._allennlp_tokenizer.intra_word_tokenize([t.text for t in tokens])
+        wordpieces, offsets = self._allennlp_tokenizer.intra_word_tokenize(
+            [t.ensure_text() for t in tokens]
+        )
+
+        # For tokens that don't correspond to any word pieces, we put (-1, -1) into the offsets.
+        # That results in the embedding for the token to be all zeros.
+        offsets = [x if x is not None else (-1, -1) for x in offsets]
+
         output: IndexedTokenList = {
             "token_ids": [t.text_id for t in wordpieces],
             "mask": [True] * len(tokens),  # for original tokens (i.e. word-level)

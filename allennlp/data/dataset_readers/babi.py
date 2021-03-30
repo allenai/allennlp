@@ -4,7 +4,7 @@ from typing import Dict, List
 from overrides import overrides
 
 from allennlp.common.file_utils import cached_path
-from allennlp.data.dataset_readers.dataset_reader import DatasetReader
+from allennlp.data.dataset_readers.dataset_reader import DatasetReader, PathOrStr
 from allennlp.data.instance import Instance
 from allennlp.data.fields import Field, TextField, ListField, IndexField
 from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
@@ -45,7 +45,7 @@ class BabiReader(DatasetReader):
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
 
     @overrides
-    def _read(self, file_path: str):
+    def _read(self, file_path: PathOrStr):
         # if `file_path` is a URL, redirect to the cache
         file_path = cached_path(file_path)
 
@@ -85,22 +85,29 @@ class BabiReader(DatasetReader):
 
         if self._keep_sentences:
             context_field_ks = ListField(
-                [
-                    TextField([Token(word) for word in line], self._token_indexers)
-                    for line in context
-                ]
+                [TextField([Token(word) for word in line]) for line in context]
             )
 
             fields["supports"] = ListField(
                 [IndexField(support, context_field_ks) for support in supports]
             )
         else:
-            context_field = TextField(
-                [Token(word) for line in context for word in line], self._token_indexers
-            )
+            context_field = TextField([Token(word) for line in context for word in line])
 
         fields["context"] = context_field_ks if self._keep_sentences else context_field
-        fields["question"] = TextField([Token(word) for word in question], self._token_indexers)
-        fields["answer"] = TextField([Token(answer)], self._token_indexers)
+        fields["question"] = TextField(
+            [Token(word) for word in question],
+        )
+        fields["answer"] = TextField([Token(answer)])
 
         return Instance(fields)
+
+    @overrides
+    def apply_token_indexers(self, instance: Instance) -> None:
+        if self._keep_sentences:
+            for text_field in instance.fields["context"]:  # type: ignore
+                text_field._token_indexers = self._token_indexers  # type: ignore
+        else:
+            instance.fields["context"]._token_indexers = self._token_indexers  # type: ignore
+        instance.fields["question"]._token_indexers = self._token_indexers  # type: ignore
+        instance.fields["answer"]._token_indexers = self._token_indexers  # type: ignore

@@ -13,7 +13,8 @@ class AdditiveAttention(Attention):
     `x` and the matrix `y` is computed as `V tanh(Wx + Uy)`.
 
     This attention is often referred as concat or additive attention. It was introduced in
-    <https://arxiv.org/abs/1409.0473> by Bahdanau et al.
+    [Neural Machine Translation by Jointly Learning to Align and Translate (Bahdanau et al, 2015)]
+    (https://api.semanticscholar.org/CorpusID:11212020).
 
     Registered as an `Attention` with name "additive".
 
@@ -27,7 +28,7 @@ class AdditiveAttention(Attention):
         The dimension of the matrix, `y`, described above.  This is `y.size()[-1]` - the length
         of the vector that will go into the similarity computation.  We need this so we can build
         the weight matrix correctly.
-    normalize : `bool`, optional (default : `True`)
+    normalize : `bool`, optional (default = `True`)
         If true, we normalize the computed similarities with a softmax, to return a probability
         distribution for your attention.  If false, this is just computing a similarity score.
     """

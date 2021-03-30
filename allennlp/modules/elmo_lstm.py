@@ -2,7 +2,7 @@
 A stacked bidirectional LSTM with skip connections between layers.
 """
 import warnings
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Any
 
 import numpy
 import torch
@@ -47,12 +47,12 @@ class ElmoLstm(_EncoderBase):
         The number of bidirectional LSTMs to use.
     requires_grad : `bool`, optional
         If True, compute gradient of ELMo parameters for fine tuning.
-    recurrent_dropout_probability : `float`, optional (default = 0.0)
+    recurrent_dropout_probability : `float`, optional (default = `0.0`)
         The dropout probability to be used in a dropout scheme as stated in
         [A Theoretically Grounded Application of Dropout in Recurrent Neural Networks][0].
-    state_projection_clip_value : `float`, optional, (default = None)
+    state_projection_clip_value : `float`, optional, (default = `None`)
         The magnitude with which to clip the hidden_state after projecting it.
-    memory_cell_clip_value : `float`, optional, (default = None)
+    memory_cell_clip_value : `float`, optional, (default = `None`)
         The magnitude with which to clip the memory cell.
     """
 
@@ -176,7 +176,7 @@ class ElmoLstm(_EncoderBase):
 
         inputs : `PackedSequence`, required.
             A batch first `PackedSequence` to run the stacked LSTM over.
-        initial_state : `Tuple[torch.Tensor, torch.Tensor]`, optional, (default = None)
+        initial_state : `Tuple[torch.Tensor, torch.Tensor]`, optional, (default = `None`)
             A tuple (state, memory) representing the initial hidden state and memory
             of the LSTM, with shape (num_layers, batch_size, 2 * hidden_size) and
             (num_layers, batch_size, 2 * cell_size) respectively.
@@ -216,14 +216,13 @@ class ElmoLstm(_EncoderBase):
             forward_cache = forward_output_sequence
             backward_cache = backward_output_sequence
 
+            forward_state: Optional[Tuple[Any, Any]] = None
+            backward_state: Optional[Tuple[Any, Any]] = None
             if state is not None:
                 forward_hidden_state, backward_hidden_state = state[0].split(self.hidden_size, 2)
                 forward_memory_state, backward_memory_state = state[1].split(self.cell_size, 2)
                 forward_state = (forward_hidden_state, forward_memory_state)
                 backward_state = (backward_hidden_state, backward_memory_state)
-            else:
-                forward_state = None
-                backward_state = None
 
             forward_output_sequence, forward_state = forward_layer(
                 forward_output_sequence, batch_lengths, forward_state
@@ -243,8 +242,8 @@ class ElmoLstm(_EncoderBase):
             # the final states for all the layers.
             final_states.append(
                 (
-                    torch.cat([forward_state[0], backward_state[0]], -1),
-                    torch.cat([forward_state[1], backward_state[1]], -1),
+                    torch.cat([forward_state[0], backward_state[0]], -1),  # type: ignore
+                    torch.cat([forward_state[1], backward_state[1]], -1),  # type: ignore
                 )
             )
 

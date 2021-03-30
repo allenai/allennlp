@@ -13,7 +13,7 @@ class Scheduler:
     During training using the AllenNLP `Trainer`, this is the API and calling
     sequence for `step` and `step_batch`::
 
-       scheduler = ... # creates scheduler, calls self.step(epoch=-1) in __init__
+       scheduler = ... # creates scheduler
 
        batch_num_total = 0
        for epoch in range(num_epochs):

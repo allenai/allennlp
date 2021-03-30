@@ -4,7 +4,9 @@ from typing import Iterable, Tuple, Dict, Set
 
 from overrides import overrides
 import torch
+import torch.distributed as dist
 
+from allennlp.common.util import is_distributed
 from allennlp.training.metrics.metric import Metric
 
 
@@ -14,20 +16,19 @@ class BLEU(Metric):
     Bilingual Evaluation Understudy (BLEU).
 
     BLEU is a common metric used for evaluating the quality of machine translations
-    against a set of reference translations. See [Papineni et. al.,
-    "BLEU: a method for automatic evaluation of machine translation", 2002]
-    (https://www.semanticscholar.org/paper/8ff93cfd37dced279134c9d642337a2085b31f59/).
+    against a set of reference translations. See
+    [Papineni et. al., "BLEU: a method for automatic evaluation of machine translation", 2002][1].
 
     # Parameters
 
-    ngram_weights : `Iterable[float]`, optional (default = (0.25, 0.25, 0.25, 0.25))
+    ngram_weights : `Iterable[float]`, optional (default = `(0.25, 0.25, 0.25, 0.25)`)
         Weights to assign to scores for each ngram size.
-    exclude_indices : `Set[int]`, optional (default = None)
+    exclude_indices : `Set[int]`, optional (default = `None`)
         Indices to exclude when calculating ngrams. This should usually include
         the indices of the start, end, and pad tokens.
 
-    Notes
-    -----
+    # Notes
+
     We chose to implement this from scratch instead of wrapping an existing implementation
     (such as `nltk.translate.bleu_score`) for a two reasons. First, so that we could
     pass tensors directly to this metric instead of first converting the tensors to lists of strings.
@@ -37,6 +38,9 @@ class BLEU(Metric):
 
     This implementation only considers a reference set of size 1, i.e. a single
     gold target sequence for each predicted sequence.
+
+
+    [1]: https://www.semanticscholar.org/paper/8ff93cfd37dced279134c9d642337a2085b31f59/
     """
 
     def __init__(
@@ -58,20 +62,6 @@ class BLEU(Metric):
         self._prediction_lengths = 0
         self._reference_lengths = 0
 
-    def _ngrams(self, tensor: torch.LongTensor, ngram_size: int) -> Dict[Tuple[int, ...], int]:
-        ngram_counts: Dict[Tuple[int, ...], int] = Counter()
-        if ngram_size > tensor.size(-1):
-            return ngram_counts
-        for start_position in range(ngram_size):
-            for tensor_slice in tensor[start_position:].split(ngram_size, dim=-1):
-                if tensor_slice.size(-1) < ngram_size:
-                    break
-                ngram = tuple(x.item() for x in tensor_slice)
-                if any(x in self._exclude_indices for x in ngram):
-                    continue
-                ngram_counts[ngram] += 1
-        return ngram_counts
-
     def _get_modified_precision_counts(
         self,
         predicted_tokens: torch.LongTensor,
@@ -90,11 +80,11 @@ class BLEU(Metric):
         """
         clipped_matches = 0
         total_predicted = 0
-        for batch_num in range(predicted_tokens.size(0)):
-            predicted_row = predicted_tokens[batch_num, :]
-            reference_row = reference_tokens[batch_num, :]
-            predicted_ngram_counts = self._ngrams(predicted_row, ngram_size)
-            reference_ngram_counts = self._ngrams(reference_row, ngram_size)
+        from allennlp.training.util import ngrams
+
+        for predicted_row, reference_row in zip(predicted_tokens, reference_tokens):
+            predicted_ngram_counts = ngrams(predicted_row, ngram_size, self._exclude_indices)
+            reference_ngram_counts = ngrams(reference_row, ngram_size, self._exclude_indices)
             for ngram, count in predicted_ngram_counts.items():
                 clipped_matches += min(count, reference_ngram_counts[ngram])
                 total_predicted += count
@@ -106,12 +96,6 @@ class BLEU(Metric):
         if self._reference_lengths == 0 or self._prediction_lengths == 0:
             return 0.0
         return math.exp(1.0 - self._reference_lengths / self._prediction_lengths)
-
-    def _get_valid_tokens_mask(self, tensor: torch.LongTensor) -> torch.ByteTensor:
-        valid_tokens_mask = torch.ones_like(tensor, dtype=torch.bool)
-        for index in self._exclude_indices:
-            valid_tokens_mask = valid_tokens_mask & (tensor != index)
-        return valid_tokens_mask
 
     @overrides
     def __call__(
@@ -134,23 +118,51 @@ class BLEU(Metric):
         None
         """
         predictions, gold_targets = self.detach_tensors(predictions, gold_targets)
+        device = gold_targets.device
+        if is_distributed():
+            world_size = dist.get_world_size()
+
         for ngram_size, _ in enumerate(self._ngram_weights, start=1):
             precision_matches, precision_totals = self._get_modified_precision_counts(
                 predictions, gold_targets, ngram_size
             )
+            if is_distributed():
+                _precision_matches = torch.tensor(precision_matches, device=device)
+                _precision_totals = torch.tensor(precision_totals, device=device)
+                dist.all_reduce(_precision_matches, op=dist.ReduceOp.SUM)
+                dist.all_reduce(_precision_totals, op=dist.ReduceOp.SUM)
+                precision_matches = _precision_matches.item() / world_size
+                precision_totals = _precision_totals.item() / world_size
+
             self._precision_matches[ngram_size] += precision_matches
             self._precision_totals[ngram_size] += precision_totals
+
         if not self._exclude_indices:
-            self._prediction_lengths += predictions.size(0) * predictions.size(1)
-            self._reference_lengths += gold_targets.size(0) * gold_targets.size(1)
+            _prediction_lengths = predictions.size(0) * predictions.size(1)
+            _reference_lengths = gold_targets.size(0) * gold_targets.size(1)
+
         else:
-            valid_predictions_mask = self._get_valid_tokens_mask(predictions)
-            self._prediction_lengths += valid_predictions_mask.sum().item()
-            valid_gold_targets_mask = self._get_valid_tokens_mask(gold_targets)
-            self._reference_lengths += valid_gold_targets_mask.sum().item()
+            from allennlp.training.util import get_valid_tokens_mask
+
+            valid_predictions_mask = get_valid_tokens_mask(predictions, self._exclude_indices)
+            valid_gold_targets_mask = get_valid_tokens_mask(gold_targets, self._exclude_indices)
+            _prediction_lengths = valid_predictions_mask.sum().item()
+            _reference_lengths = valid_gold_targets_mask.sum().item()
+
+        if is_distributed():
+            prediction_lengths = torch.tensor(_prediction_lengths, device=device)
+            reference_lengths = torch.tensor(_reference_lengths, device=device)
+            dist.all_reduce(prediction_lengths, op=dist.ReduceOp.SUM)
+            dist.all_reduce(reference_lengths, op=dist.ReduceOp.SUM)
+            _prediction_lengths = prediction_lengths.item()
+            _reference_lengths = reference_lengths.item()
+
+        self._prediction_lengths += _prediction_lengths
+        self._reference_lengths += _reference_lengths
 
     @overrides
     def get_metric(self, reset: bool = False) -> Dict[str, float]:
+
         brevity_penalty = self._get_brevity_penalty()
         ngram_scores = (
             weight
@@ -161,6 +173,7 @@ class BLEU(Metric):
             for n, weight in enumerate(self._ngram_weights, start=1)
         )
         bleu = brevity_penalty * math.exp(sum(ngram_scores))
+
         if reset:
             self.reset()
         return {"BLEU": bleu}

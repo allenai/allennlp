@@ -5,21 +5,24 @@ import datetime
 import logging
 import os
 import shutil
-from typing import Any, Dict, Iterable, List, Optional, Union
+import json
+from os import PathLike
+from typing import Any, Dict, Iterable, Optional, Union, Tuple, Set, List
+from collections import Counter
 
 import torch
-import torch.distributed as dist
-from torch.utils.data import DataLoader, Dataset
+from torch.nn.utils import clip_grad_norm_
 
 from allennlp.common.checks import check_for_gpu, ConfigurationError
 from allennlp.common.params import Params
 from allennlp.common.tqdm import Tqdm
-from allennlp.data import Instance, Vocabulary
-from allennlp.data.batch import Batch
+from allennlp.common.util import dump_metrics, sanitize, int_to_device
+from allennlp.data import Instance, Vocabulary, Batch, DataLoader
 from allennlp.data.dataset_readers import DatasetReader
 from allennlp.models.archival import CONFIG_NAME
 from allennlp.models.model import Model
 from allennlp.nn import util as nn_util
+
 
 logger = logging.getLogger(__name__)
 
@@ -28,52 +31,6 @@ logger = logging.getLogger(__name__)
 # exactly once. This variable keeps track of whether we have.
 class HasBeenWarned:
     tqdm_ignores_underscores = False
-
-
-def sparse_clip_norm(parameters, max_norm, norm_type=2) -> float:
-    """Clips gradient norm of an iterable of parameters.
-
-    The norm is computed over all gradients together, as if they were
-    concatenated into a single vector. Gradients are modified in-place.
-    Supports sparse gradients.
-
-    # Parameters
-
-    parameters : `(Iterable[torch.Tensor])`
-        An iterable of Tensors that will have gradients normalized.
-    max_norm : `float`
-        The max norm of the gradients.
-    norm_type : `float`
-        The type of the used p-norm. Can be `'inf'` for infinity norm.
-
-    # Returns
-
-    Total norm of the parameters (viewed as a single vector).
-    """
-    parameters = list(filter(lambda p: p.grad is not None, parameters))
-    max_norm = float(max_norm)
-    norm_type = float(norm_type)
-    if norm_type == float("inf"):
-        total_norm = max(p.grad.data.abs().max() for p in parameters)
-    else:
-        total_norm = 0
-        for p in parameters:
-            if p.grad.is_sparse:
-                # need to coalesce the repeated indices before finding norm
-                grad = p.grad.data.coalesce()
-                param_norm = grad._values().norm(norm_type)
-            else:
-                param_norm = p.grad.data.norm(norm_type)
-            total_norm += param_norm ** norm_type
-        total_norm = total_norm ** (1.0 / norm_type)
-    clip_coef = max_norm / (total_norm + nn_util.tiny_value_of_dtype(total_norm.dtype))
-    if clip_coef < 1:
-        for p in parameters:
-            if p.grad.is_sparse:
-                p.grad.data._values().mul_(clip_coef)
-            else:
-                p.grad.data.mul_(clip_coef)
-    return total_norm
 
 
 def move_optimizer_to_cuda(optimizer):
@@ -127,102 +84,76 @@ def str_to_time(time_str: str) -> datetime.datetime:
     return datetime.datetime(*pieces)
 
 
-def read_all_datasets(
-    train_data_path: str,
-    dataset_reader: DatasetReader,
-    validation_dataset_reader: DatasetReader = None,
-    validation_data_path: str = None,
-    test_data_path: str = None,
-) -> Dict[str, Dataset]:
+def data_loaders_from_params(
+    params: Params,
+    train: bool = True,
+    validation: bool = True,
+    test: bool = True,
+    serialization_dir: Optional[Union[str, PathLike]] = None,
+) -> Dict[str, DataLoader]:
     """
-    Reads all datasets (perhaps lazily, if the corresponding dataset readers are lazy) and returns a
-    dictionary mapping dataset name ("train", "validation" or "test") to the iterable resulting from
-    `reader.read(filename)`.
+    Instantiate data loaders specified by the config.
     """
+    data_loaders: Dict[str, DataLoader] = {}
 
-    logger.info("Reading training data from %s", train_data_path)
-    train_data = dataset_reader.read(train_data_path)
+    train = train and ("train_data_path" in params)
+    validation = validation and ("validation_data_path" in params)
+    test = test and ("test_data_path" in params)
+    if not any((train, validation, test)):
+        # Return early so don't unnecessarily initialize the train data reader.
+        return data_loaders
 
-    datasets: Dict[str, Dataset] = {"train": train_data}
-
-    validation_dataset_reader = validation_dataset_reader or dataset_reader
-
-    if validation_data_path is not None:
-        logger.info("Reading validation data from %s", validation_data_path)
-        validation_data = validation_dataset_reader.read(validation_data_path)
-        datasets["validation"] = validation_data
-
-    if test_data_path is not None:
-        logger.info("Reading test data from %s", test_data_path)
-        test_data = validation_dataset_reader.read(test_data_path)
-        datasets["test"] = test_data
-
-    return datasets
-
-
-def datasets_from_params(params: Params) -> Dict[str, Dataset]:
-    """
-    Load all the datasets specified by the config.
-
-    # Parameters
-
-    params : `Params`
-    cache_directory : `str`, optional
-        If given, we will instruct the `DatasetReaders` that we construct to cache their
-        instances in this location (or read their instances from caches in this location, if a
-        suitable cache already exists).  This is essentially a `base` directory for the cache, as
-        we will additionally add the `cache_prefix` to this directory, giving an actual cache
-        location of `cache_directory + cache_prefix`.
-    cache_prefix : `str`, optional
-        This works in conjunction with the `cache_directory`.  The idea is that the
-        `cache_directory` contains caches for all different parameter settings, while the
-        `cache_prefix` captures a specific set of parameters that led to a particular cache file.
-        That is, if you change the tokenization settings inside your `DatasetReader`, you don't
-        want to read cached data that used the old settings.  In order to avoid this, we compute a
-        hash of the parameters used to construct each `DatasetReader` and use that as a "prefix"
-        to the cache files inside the base `cache_directory`.  So, a given `input_file` would
-        be cached essentially as `cache_directory + cache_prefix + input_file`, where you specify
-        a `cache_directory`, the `cache_prefix` is based on the dataset reader parameters, and
-        the `input_file` is whatever path you provided to `DatasetReader.read()`.  In order to
-        allow you to give recognizable names to these prefixes if you want them, you can manually
-        specify the `cache_prefix`.  Note that in some rare cases this can be dangerous, as we'll
-        use the `same` prefix for both train and validation dataset readers.
-    """
     dataset_reader_params = params.pop("dataset_reader")
-    validation_dataset_reader_params = params.pop("validation_dataset_reader", None)
+    dataset_reader = DatasetReader.from_params(
+        dataset_reader_params, serialization_dir=serialization_dir
+    )
+    data_loader_params = params.pop("data_loader")
 
-    dataset_reader = DatasetReader.from_params(dataset_reader_params)
+    if train:
+        train_data_path = params.pop("train_data_path")
+        logger.info("Reading training data from %s", train_data_path)
+        data_loaders["train"] = DataLoader.from_params(
+            data_loader_params.duplicate(), reader=dataset_reader, data_path=train_data_path
+        )
+
+    if not validation and not test:
+        # Return early so we don't unnecessarily initialize the validation/test data
+        # reader.
+        return data_loaders
 
     validation_and_test_dataset_reader: DatasetReader = dataset_reader
+    validation_dataset_reader_params = params.pop("validation_dataset_reader", None)
     if validation_dataset_reader_params is not None:
         logger.info("Using a separate dataset reader to load validation and test data.")
         validation_and_test_dataset_reader = DatasetReader.from_params(
-            validation_dataset_reader_params
+            validation_dataset_reader_params, serialization_dir=serialization_dir
         )
 
-    train_data_path = params.pop("train_data_path")
-    logger.info("Reading training data from %s", train_data_path)
-    train_data = dataset_reader.read(train_data_path)
+    validation_data_loader_params = params.pop("validation_data_loader", data_loader_params)
 
-    datasets: Dict[str, Iterable[Instance]] = {"train": train_data}
-
-    validation_data_path = params.pop("validation_data_path", None)
-    if validation_data_path is not None:
+    if validation:
+        validation_data_path = params.pop("validation_data_path")
         logger.info("Reading validation data from %s", validation_data_path)
-        validation_data = validation_and_test_dataset_reader.read(validation_data_path)
-        datasets["validation"] = validation_data
+        data_loaders["validation"] = DataLoader.from_params(
+            validation_data_loader_params.duplicate(),
+            reader=validation_and_test_dataset_reader,
+            data_path=validation_data_path,
+        )
 
-    test_data_path = params.pop("test_data_path", None)
-    if test_data_path is not None:
+    if test:
+        test_data_path = params.pop("test_data_path")
         logger.info("Reading test data from %s", test_data_path)
-        test_data = validation_and_test_dataset_reader.read(test_data_path)
-        datasets["test"] = test_data
+        data_loaders["test"] = DataLoader.from_params(
+            validation_data_loader_params,
+            reader=validation_and_test_dataset_reader,
+            data_path=test_data_path,
+        )
 
-    return datasets
+    return data_loaders
 
 
 def create_serialization_dir(
-    params: Params, serialization_dir: str, recover: bool, force: bool
+    params: Params, serialization_dir: Union[str, PathLike], recover: bool, force: bool
 ) -> None:
     """
     This function creates the serialization directory if it doesn't exist.  If it already exists
@@ -318,54 +249,100 @@ def rescale_gradients(model: Model, grad_norm: Optional[float] = None) -> Option
     """
     if grad_norm:
         parameters_to_clip = [p for p in model.parameters() if p.grad is not None]
-        return sparse_clip_norm(parameters_to_clip, grad_norm)
+        return clip_grad_norm_(parameters_to_clip, grad_norm)
     return None
 
 
 def get_metrics(
     model: Model,
     total_loss: float,
-    total_reg_loss: float,
+    total_reg_loss: Optional[float],
+    batch_loss: Optional[float],
+    batch_reg_loss: Optional[float],
     num_batches: int,
     reset: bool = False,
     world_size: int = 1,
-    cuda_device: Union[int, List] = 0,
+    cuda_device: Union[int, torch.device] = torch.device("cpu"),
 ) -> Dict[str, float]:
     """
     Gets the metrics but sets `"loss"` to
     the total loss divided by the `num_batches` so that
     the `"loss"` metric is "average loss per batch".
+    Returns the `"batch_loss"` separately.
     """
     metrics = model.get_metrics(reset=reset)
+    if batch_loss is not None:
+        metrics["batch_loss"] = batch_loss
     metrics["loss"] = float(total_loss / num_batches) if num_batches > 0 else 0.0
-    metrics["reg_loss"] = float(total_reg_loss / num_batches) if num_batches > 0 else 0.0
+    if total_reg_loss is not None:
+        if batch_reg_loss is not None:
+            metrics["batch_reg_loss"] = batch_reg_loss
+        metrics["reg_loss"] = float(total_reg_loss / num_batches) if num_batches > 0 else 0.0
 
-    if world_size > 1:
-        # In distributed mode, average out all metrics across GPUs
-        aggregated_metrics = {}
-        for metric_name, metric_val in metrics.items():
-            if isinstance(cuda_device, list):
-                metric_tensor = torch.tensor(metric_val).to(torch.device(cuda_device[0]))
-            else:
-                metric_tensor = torch.tensor(metric_val).to(torch.device(cuda_device))
-            dist.all_reduce(metric_tensor, op=dist.ReduceOp.SUM)
-            reduced_metric = metric_tensor.item() / world_size
-            aggregated_metrics[metric_name] = reduced_metric
-        return aggregated_metrics
-    else:
-        return metrics
+    return metrics
+
+
+def get_train_and_validation_metrics(metrics: Dict) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+    """
+    Utility function to separate out train_metrics and val_metrics.
+    """
+    train_metrics: Dict[str, Any] = {}
+    val_metrics: Dict[str, Any] = {}
+    for key, value in metrics.items():
+        if key.startswith("training_"):
+            key = key.replace("training_", "", 1)
+            if key not in {"duration", "start_epoch", "epochs"}:
+                train_metrics[key] = value
+        elif key.startswith("validation_"):
+            key = key.replace("validation_", "", 1)
+            val_metrics[key] = value
+    return train_metrics, val_metrics
 
 
 def evaluate(
-    model: Model, data_loader: DataLoader, cuda_device: int, batch_weight_key: str,
+    model: Model,
+    data_loader: DataLoader,
+    cuda_device: int = -1,
+    batch_weight_key: str = None,
+    output_file: str = None,
+    predictions_output_file: str = None,
 ) -> Dict[str, Any]:
+    """
+    # Parameters
+
+    model : `Model`
+        The model to evaluate
+    data_loader : `DataLoader`
+        The `DataLoader` that will iterate over the evaluation data (data loaders already contain
+        their data).
+    cuda_device : `int`, optional (default=`-1`)
+        The cuda device to use for this evaluation.  The model is assumed to already be using this
+        device; this parameter is only used for moving the input data to the correct device.
+    batch_weight_key : `str`, optional (default=`None`)
+        If given, this is a key in the output dictionary for each batch that specifies how to weight
+        the loss for that batch.  If this is not given, we use a weight of 1 for every batch.
+    metrics_output_file : `str`, optional (default=`None`)
+        Optional path to write the final metrics to.
+    predictions_output_file : `str`, optional (default=`None`)
+        Optional path to write the predictions to.
+
+    # Returns
+
+    `Dict[str, Any]`
+        The final metrics.
+    """
     check_for_gpu(cuda_device)
+    data_loader.set_target_device(int_to_device(cuda_device))
+    predictions_file = (
+        None if predictions_output_file is None else open(predictions_output_file, "w")
+    )
+
     with torch.no_grad():
         model.eval()
 
         iterator = iter(data_loader)
         logger.info("Iterating over dataset")
-        generator_tqdm = Tqdm.tqdm(iterator, total=len(data_loader))
+        generator_tqdm = Tqdm.tqdm(iterator)
 
         # Number of batches in instances.
         batch_count = 0
@@ -416,14 +393,24 @@ def evaluate(
             )
             generator_tqdm.set_description(description, refresh=False)
 
+            if predictions_file is not None:
+                predictions = json.dumps(sanitize(model.make_output_human_readable(output_dict)))
+                predictions_file.write(predictions + "\n")
+
+        if predictions_file is not None:
+            predictions_file.close()
+
         final_metrics = model.get_metrics(reset=True)
         if loss_count > 0:
             # Sanity check
             if loss_count != batch_count:
                 raise RuntimeError(
-                    "The model you are trying to evaluate only sometimes " + "produced a loss!"
+                    "The model you are trying to evaluate only sometimes produced a loss!"
                 )
             final_metrics["loss"] = total_loss / total_weight
+
+        if output_file is not None:
+            dump_metrics(output_file, final_metrics, log=True)
 
         return final_metrics
 
@@ -449,7 +436,7 @@ def description_from_metrics(metrics: Dict[str, float]) -> str:
 
 
 def make_vocab_from_params(
-    params: Params, serialization_dir: str, print_statistics: bool = False
+    params: Params, serialization_dir: Union[str, PathLike], print_statistics: bool = False
 ) -> Vocabulary:
     vocab_params = params.pop("vocabulary", {})
     os.makedirs(serialization_dir, exist_ok=True)
@@ -460,23 +447,37 @@ def make_vocab_from_params(
             "The 'vocabulary' directory in the provided serialization directory is non-empty"
         )
 
-    all_datasets = datasets_from_params(params)
-    datasets_for_vocab_creation = set(params.pop("datasets_for_vocab_creation", all_datasets))
-
-    for dataset in datasets_for_vocab_creation:
-        if dataset not in all_datasets:
-            raise ConfigurationError(f"invalid 'dataset_for_vocab_creation' {dataset}")
-
-    logger.info(
-        "From dataset instances, %s will be considered for vocabulary creation.",
-        ", ".join(datasets_for_vocab_creation),
+    datasets_for_vocab_creation: Optional[List[str]] = params.pop(
+        "datasets_for_vocab_creation", None
     )
+    # Do a quick sanity check here. There's no need to load any datasets if the vocab
+    # type is "empty" or "from_files".
+    if datasets_for_vocab_creation is None and vocab_params.get("type") in {"empty", "from_files"}:
+        datasets_for_vocab_creation = []
+
+    data_loaders: Dict[str, DataLoader]
+    if datasets_for_vocab_creation is None:
+        # If `datasets_for_vocab_creation` was not specified, we'll use all datasets
+        # from the config.
+        data_loaders = data_loaders_from_params(params, serialization_dir=serialization_dir)
+    else:
+        for dataset_name in datasets_for_vocab_creation:
+            data_path = f"{dataset_name}_data_path"
+            if data_path not in params:
+                raise ConfigurationError(f"invalid 'datasets_for_vocab_creation' {dataset_name}")
+        data_loaders = data_loaders_from_params(
+            params,
+            serialization_dir=serialization_dir,
+            train=("train" in datasets_for_vocab_creation),
+            validation=("validation" in datasets_for_vocab_creation),
+            test=("test" in datasets_for_vocab_creation),
+        )
 
     instances: Iterable[Instance] = (
         instance
-        for key, dataset in all_datasets.items()
-        if key in datasets_for_vocab_creation
-        for instance in dataset
+        for key, data_loader in data_loaders.items()
+        if datasets_for_vocab_creation is None or key in datasets_for_vocab_creation
+        for instance in data_loader.iter_instances()
     )
 
     if print_statistics:
@@ -495,3 +496,27 @@ def make_vocab_from_params(
         vocab.print_statistics()
 
     return vocab
+
+
+def ngrams(
+    tensor: torch.LongTensor, ngram_size: int, exclude_indices: Set[int]
+) -> Dict[Tuple[int, ...], int]:
+    ngram_counts: Dict[Tuple[int, ...], int] = Counter()
+    if ngram_size > tensor.size(-1):
+        return ngram_counts
+    for start_position in range(ngram_size):
+        for tensor_slice in tensor[start_position:].split(ngram_size, dim=-1):
+            if tensor_slice.size(-1) < ngram_size:
+                break
+            ngram = tuple(x.item() for x in tensor_slice)
+            if any(x in exclude_indices for x in ngram):
+                continue
+            ngram_counts[ngram] += 1
+    return ngram_counts
+
+
+def get_valid_tokens_mask(tensor: torch.LongTensor, exclude_indices: Set[int]) -> torch.ByteTensor:
+    valid_tokens_mask = torch.ones_like(tensor, dtype=torch.bool)
+    for index in exclude_indices:
+        valid_tokens_mask &= tensor != index
+    return valid_tokens_mask

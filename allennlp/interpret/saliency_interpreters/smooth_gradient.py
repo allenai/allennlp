@@ -8,7 +8,6 @@ from allennlp.common.util import JsonDict, sanitize
 from allennlp.data import Instance
 from allennlp.interpret.saliency_interpreters.saliency_interpreter import SaliencyInterpreter
 from allennlp.predictors import Predictor
-from allennlp.nn import util
 
 
 @SaliencyInterpreter.register("smooth-gradient")
@@ -58,13 +57,13 @@ class SmoothGradient(SaliencyInterpreter):
         def forward_hook(module, inputs, output):
             # Random noise = N(0, stdev * (max-min))
             scale = output.detach().max() - output.detach().min()
-            noise = torch.randn(output.shape).to(output.device) * stdev * scale
+            noise = torch.randn(output.shape, device=output.device) * stdev * scale
 
             # Add the random noise
             output.add_(noise)
 
         # Register the hook
-        embedding_layer = util.find_embedding_layer(self.predictor._model)
+        embedding_layer = self.predictor.get_interpretable_layer()
         handle = embedding_layer.register_forward_hook(forward_hook)
         return handle
 
@@ -72,8 +71,10 @@ class SmoothGradient(SaliencyInterpreter):
         total_gradients: Dict[str, Any] = {}
         for _ in range(self.num_samples):
             handle = self._register_forward_hook(self.stdev)
-            grads = self.predictor.get_gradients([instance])[0]
-            handle.remove()
+            try:
+                grads = self.predictor.get_gradients([instance])[0]
+            finally:
+                handle.remove()
 
             # Sum gradients
             if total_gradients == {}:

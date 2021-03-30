@@ -28,15 +28,15 @@ class StackedBidirectionalLstm(torch.nn.Module):
         The dimension of the outputs of the LSTM.
     num_layers : `int`, required
         The number of stacked Bidirectional LSTMs to use.
-    recurrent_dropout_probability : `float`, optional (default = 0.0)
+    recurrent_dropout_probability : `float`, optional (default = `0.0`)
         The recurrent dropout probability to be used in a dropout scheme as
         stated in [A Theoretically Grounded Application of Dropout in Recurrent
         Neural Networks][0].
-    layer_dropout_probability : `float`, optional (default = 0.0)
+    layer_dropout_probability : `float`, optional (default = `0.0`)
         The layer wise dropout probability to be used in a dropout scheme as
         stated in [A Theoretically Grounded Application of Dropout in Recurrent
         Neural Networks][0].
-    use_highway : `bool`, optional (default = True)
+    use_highway : `bool`, optional (default = `True`)
         Whether or not to use highway connections between layers. This effectively involves
         reparameterising the normal output of an LSTM as::
 
@@ -97,7 +97,7 @@ class StackedBidirectionalLstm(torch.nn.Module):
 
         inputs : `PackedSequence`, required.
             A batch first `PackedSequence` to run the stacked LSTM over.
-        initial_state : Tuple[torch.Tensor, torch.Tensor], optional, (default = None)
+        initial_state : `Tuple[torch.Tensor, torch.Tensor]`, optional, (default = `None`)
             A tuple (state, memory) representing the initial hidden state and memory
             of the LSTM. Each tensor has shape (num_layers, batch_size, output_dimension * 2).
 

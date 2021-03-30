@@ -1,57 +1,3 @@
-"""
-In order to create a package for pypi, you need to follow several steps.
-
-1. Create a .pypirc in your home directory. It should look like this:
-
-```
-[distutils]
-index-servers =
-  pypi
-  pypitest
-
-[pypi]
-username=allennlp
-password= Get the password from LastPass.
-
-[pypitest]
-repository=https://test.pypi.org/legacy/
-username=allennlp
-password= Get the password from LastPass.
-```
-run chmod 600 ~/.pypirc so only you can read/write.
-
-2. Change the version in docs/conf.py and setup.py.
-
-3. Commit these changes with the message: "Release: VERSION"
-
-4. Add a tag in git to mark the release: "git tag VERSION -m'Adds tag VERSION for pypi' "
-   Push the tag to git: git push --tags origin master
-
-5. Build both the sources and the wheel. Do not change anything in setup.py between
-   creating the wheel and the source distribution (obviously).
-
-   For the wheel, run: "python setup.py bdist_wheel" in the top level allennlp directory.
-   (this will build a wheel for the python version you use to build it - make sure you use python 3.x).
-
-   For the sources, run: "python setup.py sdist"
-   You should now have a /dist directory with both .whl and .tar.gz source versions of allennlp.
-
-6. Check that everything looks correct by uploading the package to the pypi test server:
-
-   twine upload dist/* -r pypitest
-   (pypi suggest using twine as other methods upload files via plaintext.)
-
-   Check that you can install it in a virtualenv by running:
-   pip install -i https://testpypi.python.org/pypi allennlp
-
-7. Upload the final version to actual pypi:
-   twine upload dist/* -r pypi
-
-8. Copy the release notes from RELEASE.md to the tag in github once everything is looking hunky-dory.
-
-"""
-import sys
-
 from setuptools import find_packages, setup
 
 # PEP0440 compatible formatted version, see:
@@ -69,18 +15,9 @@ from setuptools import find_packages, setup
 
 # version.py defines the VERSION and VERSION_SHORT variables.
 # We use exec here so we don't import allennlp whilst setting up.
-VERSION = {}
+VERSION = {}  # type: ignore
 with open("allennlp/version.py", "r") as version_file:
     exec(version_file.read(), VERSION)
-
-# make pytest-runner a conditional requirement,
-# per: https://github.com/pytest-dev/pytest-runner#considerations
-needs_pytest = {"pytest", "test", "ptr"}.intersection(sys.argv)
-pytest_runner = ["pytest-runner"] if needs_pytest else []
-
-setup_requirements = [
-    # add other setup requirements as necessary
-] + pytest_runner
 
 setup(
     name="allennlp",
@@ -92,7 +29,7 @@ setup(
         "Intended Audience :: Science/Research",
         "Development Status :: 3 - Alpha",
         "License :: OSI Approved :: Apache Software License",
-        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3",
         "Topic :: Scientific/Engineering :: Artificial Intelligence",
     ],
     keywords="allennlp NLP deep learning machine reading",
@@ -100,34 +37,44 @@ setup(
     author="Allen Institute for Artificial Intelligence",
     author_email="allennlp@allenai.org",
     license="Apache",
-    packages=find_packages(exclude=["*.tests", "*.tests.*", "tests.*", "tests"]),
+    packages=find_packages(
+        exclude=[
+            "*.tests",
+            "*.tests.*",
+            "tests.*",
+            "tests",
+            "test_fixtures",
+            "test_fixtures.*",
+            "benchmarks",
+            "benchmarks.*",
+        ]
+    ),
     install_requires=[
-        "torch>1.3.1,<=1.4.0",
+        "torch>=1.6.0,<1.9.0",
+        "torchvision>=0.8.1,<0.10.0",
         "jsonnet>=0.10.0 ; sys.platform != 'win32'",
-        "overrides==2.8.0",
+        "overrides==3.1.0",
         "nltk",
-        "spacy>=2.1.0,<2.3",
+        "spacy>=2.1.0,<3.1",
         "numpy",
         "tensorboardX>=1.2",
-        "boto3",
+        "boto3>=1.14,<2.0",
         "requests>=2.18",
         "tqdm>=4.19",
         "h5py",
         "scikit-learn",
         "scipy",
         "pytest",
-        "flaky",
-        "responses>=0.7",
-        "conllu==2.3.2",
-        "transformers>=2.8.0,<2.9.0",
+        "transformers>=4.1,<4.5",
+        "sentencepiece",
         "jsonpickle",
-        "semantic_version",
         "dataclasses;python_version<'3.7'",
+        "filelock>=3.0,<3.1",
+        "lmdb",
+        "more-itertools",
+        "wandb>=0.10.0,<0.11.0",
     ],
     entry_points={"console_scripts": ["allennlp=allennlp.__main__:run"]},
-    setup_requires=setup_requirements,
-    # For running via `python setup.py test`.
-    tests_require=["pytest", "flaky", "responses>=0.7", "semantic_version"],
     include_package_data=True,
     python_requires=">=3.6.1",
     zip_safe=False,

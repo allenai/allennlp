@@ -11,6 +11,8 @@ class FlagField(Field[Any]):
     This will be passed to a `forward` method as a single value of whatever type you pass in.
     """
 
+    __slots__ = ["flag_value"]
+
     def __init__(self, flag_value: Any) -> None:
         self.flag_value = flag_value
 
@@ -41,3 +43,9 @@ class FlagField(Field[Any]):
                 f"Got different values in a FlagField when trying to batch them: {tensor_list}"
             )
         return tensor_list[0]
+
+    @overrides
+    def human_readable_repr(self) -> Any:
+        if hasattr(self.flag_value, "human_readable_repr"):
+            return self.flag_value.human_readable_repr()
+        return self.flag_value

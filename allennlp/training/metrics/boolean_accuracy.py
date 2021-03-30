@@ -2,7 +2,9 @@ from typing import Optional
 
 from overrides import overrides
 import torch
+import torch.distributed as dist
 
+from allennlp.common.util import is_distributed
 from allennlp.training.metrics.metric import Metric
 
 
@@ -40,7 +42,7 @@ class BooleanAccuracy(Metric):
             A tensor of predictions of shape (batch_size, ...).
         gold_labels : `torch.Tensor`, required.
             A tensor of the same shape as `predictions`.
-        mask : `torch.BoolTensor`, optional (default = None).
+        mask : `torch.BoolTensor`, optional (default = `None`).
             A tensor of the same shape as `predictions`.
         """
         predictions, gold_labels, mask = self.detach_tensors(predictions, gold_labels, mask)
@@ -82,8 +84,14 @@ class BooleanAccuracy(Metric):
 
         # Since masked positions are correct, we need to explicitly exclude instance predictions
         # where the entire prediction is masked (because they look "correct").
-        self._correct_count += (correct * keep).sum()
-        self._total_count += keep.sum()
+        _correct_count = (correct * keep).sum()
+        _total_count = keep.sum()
+
+        if is_distributed():
+            dist.all_reduce(_correct_count, op=dist.ReduceOp.SUM)
+            dist.all_reduce(_total_count, op=dist.ReduceOp.SUM)
+        self._correct_count += _correct_count.item()
+        self._total_count += _total_count.item()
 
     def get_metric(self, reset: bool = False):
         """

@@ -1,4 +1,4 @@
-from typing import Dict, List, Iterator
+from typing import Dict, List, Iterator, Sequence, Any
 
 from overrides import overrides
 
@@ -24,13 +24,15 @@ class ListField(SequenceField[DataArray]):
         contained `Field` objects must be of the same type.
     """
 
-    def __init__(self, field_list: List[Field]) -> None:
+    __slots__ = ["field_list"]
+
+    def __init__(self, field_list: Sequence[Field]) -> None:
         field_class_set = {field.__class__ for field in field_list}
         assert (
             len(field_class_set) == 1
         ), "ListFields must contain a single field type, found " + str(field_class_set)
         # Not sure why mypy has a hard time with this type...
-        self.field_list: List[Field] = field_list
+        self.field_list = field_list
 
     # Sequence[Field] methods
     def __iter__(self) -> Iterator[Field]:
@@ -116,3 +118,7 @@ class ListField(SequenceField[DataArray]):
         field_class = self.field_list[0].__class__.__name__
         base_string = f"ListField of {len(self.field_list)} {field_class}s : \n"
         return " ".join([base_string] + [f"\t {field} \n" for field in self.field_list])
+
+    @overrides
+    def human_readable_repr(self) -> List[Any]:
+        return [f.human_readable_repr() for f in self.field_list]

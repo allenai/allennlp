@@ -8,6 +8,7 @@ from allennlp.training.metrics.attachment_scores import AttachmentScores
 from allennlp.training.metrics.average import Average
 from allennlp.training.metrics.boolean_accuracy import BooleanAccuracy
 from allennlp.training.metrics.bleu import BLEU
+from allennlp.training.metrics.rouge import ROUGE
 from allennlp.training.metrics.categorical_accuracy import CategoricalAccuracy
 from allennlp.training.metrics.covariance import Covariance
 from allennlp.training.metrics.entropy import Entropy
@@ -16,6 +17,10 @@ from allennlp.training.metrics.evalb_bracketing_scorer import (
     DEFAULT_EVALB_DIR,
 )
 from allennlp.training.metrics.fbeta_measure import FBetaMeasure
+from allennlp.training.metrics.fbeta_multi_label_measure import (
+    FBetaMultiLabelMeasure,
+    F1MultiLabelMeasure,
+)
 from allennlp.training.metrics.f1_measure import F1Measure
 from allennlp.training.metrics.mean_absolute_error import MeanAbsoluteError
 from allennlp.training.metrics.metric import Metric

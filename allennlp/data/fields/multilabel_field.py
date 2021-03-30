@@ -26,7 +26,7 @@ class MultiLabelField(Field[torch.Tensor]):
     # Parameters
 
     labels : `Sequence[Union[str, int]]`
-    label_namespace : `str`, optional (default="labels")
+    label_namespace : `str`, optional (default=`"labels"`)
         The namespace to use for converting label strings into integers.  We map label strings to
         integers for you (e.g., "entailment" and "contradiction" get converted to 0, 1, ...),
         and this namespace tells the `Vocabulary` object which mapping from strings to integers
@@ -34,15 +34,17 @@ class MultiLabelField(Field[torch.Tensor]):
         word).  If you have multiple different label fields in your data, you should make sure you
         use different namespaces for each one, always using the suffix "labels" (e.g.,
         "passage_labels" and "question_labels").
-    skip_indexing : `bool`, optional (default=False)
+    skip_indexing : `bool`, optional (default=`False`)
         If your labels are 0-indexed integers, you can pass in this flag, and we'll skip the indexing
         step.  If this is `False` and your labels are not strings, this throws a `ConfigurationError`.
-    num_labels : `int`, optional (default=None)
+    num_labels : `int`, optional (default=`None`)
         If `skip_indexing=True`, the total number of possible labels should be provided, which is required
         to decide the size of the output tensor. `num_labels` should equal largest label id + 1.
         If `skip_indexing=False`, `num_labels` is not required.
 
     """
+
+    __slots__ = ["labels", "_label_namespace", "_label_ids", "_num_labels"]
 
     # It is possible that users want to use this field with a namespace which uses OOV/PAD tokens.
     # This warning will be repeated for every instantiation of this class (i.e for every data
@@ -139,3 +141,7 @@ class MultiLabelField(Field[torch.Tensor]):
 
     def __len__(self):
         return 1
+
+    @overrides
+    def human_readable_repr(self) -> Sequence[Union[str, int]]:
+        return self.labels

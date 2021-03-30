@@ -30,9 +30,9 @@ class CnnHighwayEncoder(Seq2VecEncoder):
         The number of highway layers.
     projection_dim : `int`, required
         The output dimension of the projection layer.
-    activation : `str`, optional (default = 'relu')
+    activation : `str`, optional (default = `'relu'`)
         The activation function for the convolutional layers.
-    projection_location : `str`, optional (default = 'after_highway')
+    projection_location : `str`, optional (default = `'after_highway'`)
         Where to apply the projection layer. Valid values are
         'after_highway', 'after_cnn', and None.
     """
@@ -106,10 +106,10 @@ class CnnHighwayEncoder(Seq2VecEncoder):
 
         # Parameters
 
-        inputs:
+        inputs: `torch.Tensor`
             Shape `(batch_size, num_characters, embedding_dim)`
             Character embeddings representing the current batch.
-        mask:
+        mask: `torch.BoolTensor`
             Shape `(batch_size, num_characters)`
             Currently unused. The mask for characters is implicit. See TokenCharactersEncoder.forward.
 

@@ -23,7 +23,7 @@ class LabelField(Field[torch.Tensor]):
     # Parameters
 
     label : `Union[str, int]`
-    label_namespace : `str`, optional (default="labels")
+    label_namespace : `str`, optional (default=`"labels"`)
         The namespace to use for converting label strings into integers.  We map label strings to
         integers for you (e.g., "entailment" and "contradiction" get converted to 0, 1, ...),
         and this namespace tells the `Vocabulary` object which mapping from strings to integers
@@ -31,10 +31,12 @@ class LabelField(Field[torch.Tensor]):
         word).  If you have multiple different label fields in your data, you should make sure you
         use different namespaces for each one, always using the suffix "labels" (e.g.,
         "passage_labels" and "question_labels").
-    skip_indexing : `bool`, optional (default=False)
+    skip_indexing : `bool`, optional (default=`False`)
         If your labels are 0-indexed integers, you can pass in this flag, and we'll skip the indexing
         step.  If this is `False` and your labels are not strings, this throws a `ConfigurationError`.
     """
+
+    __slots__ = ["label", "_label_namespace", "_label_id", "_skip_indexing"]
 
     # Most often, you probably don't want to have OOV/PAD tokens with a LabelField, so we warn you
     # about it when you pick a namespace that will getting these tokens by default.  It is
@@ -103,8 +105,12 @@ class LabelField(Field[torch.Tensor]):
     def empty_field(self):
         return LabelField(-1, self._label_namespace, skip_indexing=True)
 
+    @overrides
+    def human_readable_repr(self) -> Union[str, int]:
+        return self.label
+
     def __str__(self) -> str:
-        return f"LabelField with label: {self.label} in namespace: '{self._label_namespace}'.'"
+        return f"LabelField with label: {self.label} in namespace: '{self._label_namespace}'."
 
     def __len__(self):
         return 1

@@ -1,6 +1,7 @@
 from overrides import overrides
 
 from allennlp.training.metrics.metric import Metric
+from allennlp.nn.util import dist_reduce_sum
 
 
 @Metric.register("average")
@@ -24,8 +25,8 @@ class Average(Metric):
         value : `float`
             The value to average.
         """
-        self._total_value += list(self.detach_tensors(value))[0]
-        self._count += 1
+        self._count += dist_reduce_sum(1)
+        self._total_value += dist_reduce_sum(float(list(self.detach_tensors(value))[0]))
 
     @overrides
     def get_metric(self, reset: bool = False):
@@ -34,10 +35,11 @@ class Average(Metric):
 
         The average of all values that were passed to `__call__`.
         """
-        average_value = self._total_value / self._count if self._count > 0 else 0
+
+        average_value = self._total_value / self._count if self._count > 0 else 0.0
         if reset:
             self.reset()
-        return average_value
+        return float(average_value)
 
     @overrides
     def reset(self):

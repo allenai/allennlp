@@ -1,4 +1,3 @@
-from copy import deepcopy
 from typing import List, Dict
 
 from overrides import overrides
@@ -31,18 +30,20 @@ class TextClassifierPredictor(Predictor):
         Runs the underlying model, and adds the `"label"` to the output.
         """
         sentence = json_dict["sentence"]
-        if not hasattr(self._dataset_reader, "tokenizer") and not hasattr(
-            self._dataset_reader, "_tokenizer"
-        ):
+        reader_has_tokenizer = (
+            getattr(self._dataset_reader, "tokenizer", None) is not None
+            or getattr(self._dataset_reader, "_tokenizer", None) is not None
+        )
+        if not reader_has_tokenizer:
             tokenizer = SpacyTokenizer()
-            sentence = [str(t) for t in tokenizer.tokenize(sentence)]
+            sentence = tokenizer.tokenize(sentence)
         return self._dataset_reader.text_to_instance(sentence)
 
     @overrides
     def predictions_to_labeled_instances(
         self, instance: Instance, outputs: Dict[str, numpy.ndarray]
     ) -> List[Instance]:
-        new_instance = deepcopy(instance)
+        new_instance = instance.duplicate()
         label = numpy.argmax(outputs["probs"])
         new_instance.add_field("label", LabelField(int(label), skip_indexing=True))
         return [new_instance]

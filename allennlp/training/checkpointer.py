@@ -1,4 +1,4 @@
-from typing import Union, Dict, Any, List, Tuple
+from typing import Union, Dict, Any, List, Tuple, Optional
 
 import logging
 import os
@@ -26,24 +26,29 @@ class Checkpointer(Registrable):
 
     # Parameters
 
-    num_serialized_models_to_keep : `int`, optional (default=2)
+    num_serialized_models_to_keep : `int`, optional (default=`2`)
         Number of previous model checkpoints to retain.  Default is to keep 2 checkpoints.
         A value of None or -1 means all checkpoints will be kept.
-    keep_serialized_model_every_num_seconds : `int`, optional (default=None)
+
+        In a typical AllenNLP configuration file, this argument does not get an entry under the
+        "checkpointer", it gets passed in separately.
+    keep_serialized_model_every_num_seconds : `int`, optional (default=`None`)
         If num_serialized_models_to_keep is not None, then occasionally it's useful to
         save models at a given interval in addition to the last num_serialized_models_to_keep.
         To do so, specify keep_serialized_model_every_num_seconds as the number of seconds
         between permanently saved checkpoints.  Note that this option is only used if
         num_serialized_models_to_keep is not None, otherwise all checkpoints are kept.
-    model_save_interval : `float`, optional (default=None)
+    model_save_interval : `float`, optional (default=`None`)
         If provided, then serialize models every `model_save_interval`
         seconds within single epochs.  In all cases, models are also saved
         at the end of every epoch if `serialization_dir` is provided.
     """
 
+    default_implementation = "default"
+
     def __init__(
         self,
-        serialization_dir: str = None,
+        serialization_dir: str,
         keep_serialized_model_every_num_seconds: int = None,
         num_serialized_models_to_keep: int = 2,
         model_save_interval: float = None,
@@ -85,6 +90,7 @@ class Checkpointer(Registrable):
         epoch: Union[int, str],
         trainer: "allennlp.training.trainer.Trainer",
         is_best_so_far: bool = False,
+        save_model_only=False,
     ) -> None:
         if self._serialization_dir is not None:
             with trainer.get_checkpoint_state() as state:
@@ -92,11 +98,16 @@ class Checkpointer(Registrable):
                 model_path = os.path.join(
                     self._serialization_dir, "model_state_epoch_{}.th".format(epoch)
                 )
-                torch.save(model_state, model_path)
+                if not os.path.isfile(model_path):
+                    torch.save(model_state, model_path)
+                if save_model_only:
+                    return
+
                 training_path = os.path.join(
                     self._serialization_dir, "training_state_epoch_{}.th".format(epoch)
                 )
-                torch.save({**training_states, "epoch": epoch}, training_path)
+                if not os.path.isfile(training_path):
+                    torch.save({**training_states, "epoch": epoch}, training_path)
 
             # The main checkpointing logic is now done, this is just shuffling files around, to keep
             # track of best weights, and to remove old checkpoints, if desired.
@@ -135,7 +146,7 @@ class Checkpointer(Registrable):
                             if os.path.isfile(fname):
                                 os.remove(fname)
 
-    def find_latest_checkpoint(self) -> Tuple[str, str]:
+    def find_latest_checkpoint(self) -> Optional[Tuple[str, str]]:
         """
         Return the location of the latest model and training state files.
         If there isn't a valid checkpoint then return None.
@@ -153,7 +164,7 @@ class Checkpointer(Registrable):
         # int (for end of epoch files) or with epoch and timestamp for
         # within epoch checkpoints, e.g. 5.2018-02-02-15-33-42
         found_epochs = [
-            re.search(r"model_state_epoch_([0-9\.\-]+)\.th", x).group(1) for x in model_checkpoints
+            re.search(r"model_state_epoch_([0-9\.\-]+)\.th", x).group(1) for x in model_checkpoints  # type: ignore
         ]
         int_epochs: Any = []
         for epoch in found_epochs:
@@ -223,3 +234,6 @@ class Checkpointer(Registrable):
                 "so you're just getting the last weights"
             )
             return {}
+
+
+Checkpointer.register("default")(Checkpointer)

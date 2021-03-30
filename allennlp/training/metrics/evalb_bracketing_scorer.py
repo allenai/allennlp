@@ -8,6 +8,10 @@ import shutil
 from overrides import overrides
 from nltk import Tree
 
+import torch
+import torch.distributed as dist
+
+from allennlp.common.util import is_distributed
 from allennlp.common.checks import ConfigurationError
 from allennlp.training.metrics.metric import Metric
 
@@ -43,11 +47,11 @@ class EvalbBracketingScorer(Metric):
 
     evalb_directory_path : `str`, required.
         The directory containing the EVALB executable.
-    evalb_param_filename : `str`, optional (default = "COLLINS.prm")
+    evalb_param_filename : `str`, optional (default = `"COLLINS.prm"`)
         The relative name of the EVALB configuration file used when scoring the trees.
         By default, this uses the COLLINS.prm configuration file which comes with EVALB.
         This configuration ignores POS tags and some punctuation labels.
-    evalb_num_errors_to_kill : `int`, optional (default = "10")
+    evalb_num_errors_to_kill : `int`, optional (default = `"10"`)
         The number of errors to tolerate from EVALB before terminating evaluation.
     """
 
@@ -134,16 +138,36 @@ class EvalbBracketingScorer(Metric):
             command, stdout=subprocess.PIPE, universal_newlines=True, check=True
         )
 
+        _correct_predicted_brackets = 0.0
+        _gold_brackets = 0.0
+        _predicted_brackets = 0.0
+
         for line in completed_process.stdout.split("\n"):
             stripped = line.strip().split()
             if len(stripped) == 12 and stripped != self._header_line:
                 # This line contains results for a single tree.
                 numeric_line = [float(x) for x in stripped]
-                self._correct_predicted_brackets += numeric_line[5]
-                self._gold_brackets += numeric_line[6]
-                self._predicted_brackets += numeric_line[7]
+                _correct_predicted_brackets += numeric_line[5]
+                _gold_brackets += numeric_line[6]
+                _predicted_brackets += numeric_line[7]
 
         shutil.rmtree(tempdir)
+
+        if is_distributed():
+            device = torch.device("cuda" if dist.get_backend() == "nccl" else "cpu")
+            correct_predicted_brackets = torch.tensor(_correct_predicted_brackets, device=device)
+            predicted_brackets = torch.tensor(_predicted_brackets, device=device)
+            gold_brackets = torch.tensor(_gold_brackets, device=device)
+            dist.all_reduce(correct_predicted_brackets, op=dist.ReduceOp.SUM)
+            dist.all_reduce(predicted_brackets, op=dist.ReduceOp.SUM)
+            dist.all_reduce(gold_brackets, op=dist.ReduceOp.SUM)
+            _correct_predicted_brackets = correct_predicted_brackets.item()
+            _predicted_brackets = predicted_brackets.item()
+            _gold_brackets = gold_brackets.item()
+
+        self._correct_predicted_brackets += _correct_predicted_brackets
+        self._gold_brackets += _gold_brackets
+        self._predicted_brackets += _predicted_brackets
 
     @overrides
     def get_metric(self, reset: bool = False):
@@ -152,6 +176,7 @@ class EvalbBracketingScorer(Metric):
 
         The average precision, recall and f1.
         """
+
         recall = (
             self._correct_predicted_brackets / self._gold_brackets
             if self._gold_brackets > 0

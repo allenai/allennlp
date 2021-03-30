@@ -18,8 +18,8 @@ logger.removeHandler(handler)
 
 
 class ResumeDaemonTest(AllenNlpTestCase):
-    def setUp(self):
-        super().setUp()
+    def setup_method(self):
+        super().setup_method()
         self.connection = sqlite3.connect(":memory:")
         create_table(self.connection)
 

@@ -24,6 +24,8 @@ class MetadataField(Field[DataArray], Mapping[str, Any]):
         this to be a dictionary, but it could be anything you want.
     """
 
+    __slots__ = ["metadata"]
+
     def __init__(self, metadata: Any) -> None:
         self.metadata = metadata
 
@@ -63,4 +65,10 @@ class MetadataField(Field[DataArray], Mapping[str, Any]):
         return tensor_list
 
     def __str__(self) -> str:
-        return f"MetadataField (print field.metadata to see specific information)."
+        return "MetadataField (print field.metadata to see specific information)."
+
+    @overrides
+    def human_readable_repr(self):
+        if hasattr(self.metadata, "human_readable_repr"):
+            return self.metadata.human_readable_repr()
+        return self.metadata

@@ -1,11 +1,12 @@
-from typing import Any, Dict, List
-from collections.abc import MutableMapping
-from collections import OrderedDict
 import copy
 import json
 import logging
 import os
 import zlib
+from collections import OrderedDict
+from collections.abc import MutableMapping
+from os import PathLike
+from typing import Any, Dict, List, Union, Optional
 
 from overrides import overrides
 
@@ -23,7 +24,7 @@ except ImportError:
 
     def evaluate_snippet(_filename: str, expr: str, **_kwargs) -> str:
         logger.warning(
-            f"error loading _jsonnet (this is expected on Windows), treating snippet as plain json"
+            "error loading _jsonnet (this is expected on Windows), treating snippet as plain json"
         )
         return expr
 
@@ -249,7 +250,7 @@ class Params(MutableMapping):
         else:
             return self._check_is_dict(key, value)
 
-    def pop_int(self, key: str, default: Any = DEFAULT) -> int:
+    def pop_int(self, key: str, default: Any = DEFAULT) -> Optional[int]:
         """
         Performs a pop and coerces to an int.
         """
@@ -259,7 +260,7 @@ class Params(MutableMapping):
         else:
             return int(value)
 
-    def pop_float(self, key: str, default: Any = DEFAULT) -> float:
+    def pop_float(self, key: str, default: Any = DEFAULT) -> Optional[float]:
         """
         Performs a pop and coerces to a float.
         """
@@ -269,7 +270,7 @@ class Params(MutableMapping):
         else:
             return float(value)
 
-    def pop_bool(self, key: str, default: Any = DEFAULT) -> bool:
+    def pop_bool(self, key: str, default: Any = DEFAULT) -> Optional[bool]:
         """
         Performs a pop and coerces to a bool.
         """
@@ -321,7 +322,7 @@ class Params(MutableMapping):
             the param dictionary is not in `choices`, we raise a `ConfigurationError`, because
             the user specified an invalid value in their parameter file.
 
-        default_to_first_choice: `bool`, optional (default=False)
+        default_to_first_choice: `bool`, optional (default = `False`)
 
             If this is `True`, we allow the `key` to not be present in the parameter
             dictionary.  If the key is not present, we will use the return as the value the first
@@ -330,7 +331,7 @@ class Params(MutableMapping):
             specify your model class when running an experiment, but you can feel free to use
             default settings for encoders if you want).
 
-        allow_class_names: `bool`, optional (default = True)
+        allow_class_names: `bool`, optional (default = `True`)
 
             If this is `True`, then we allow unknown choices that look like fully-qualified class names.
             This is to allow e.g. specifying a model type as my_library.my_model.MyModel
@@ -358,11 +359,11 @@ class Params(MutableMapping):
 
         # Parameters
 
-        quiet: `bool`, optional (default = False)
+        quiet: `bool`, optional (default = `False`)
 
             Whether to log the parameters before returning them as a dict.
 
-        infer_type_and_cast: `bool`, optional (default = False)
+        infer_type_and_cast: `bool`, optional (default = `False`)
 
             If True, we infer types and cast (e.g. things that look like floats to floats).
         """
@@ -382,16 +383,10 @@ class Params(MutableMapping):
                 else:
                     logger.info(f"{history}{key} = {value}")
 
-        logger.info(
-            "Converting Params object to dict; logging of default "
-            "values will not occur when dictionary parameters are "
-            "used subsequently."
-        )
-        logger.info("CURRENTLY DEFINED PARAMETERS: ")
         log_recursively(self.params, self.history)
         return params_as_dict
 
-    def as_flat_dict(self):
+    def as_flat_dict(self) -> Dict[str, Any]:
         """
         Returns the parameters of a flat dictionary from keys to values.
         Nested structure is collapsed with periods.
@@ -456,7 +451,10 @@ class Params(MutableMapping):
 
     @classmethod
     def from_file(
-        cls, params_file: str, params_overrides: str = "", ext_vars: dict = None
+        cls,
+        params_file: Union[str, PathLike],
+        params_overrides: Union[str, Dict[str, Any]] = "",
+        ext_vars: dict = None,
     ) -> "Params":
         """
         Load a `Params` object from a configuration file.
@@ -467,7 +465,7 @@ class Params(MutableMapping):
 
             The path to the configuration file to load.
 
-        params_overrides: `str`, optional
+        params_overrides: `Union[str, Dict[str, Any]]`, optional (default = `""`)
 
             A dict of overrides that can be applied to final object.
             e.g. {"model.embedding_dim": 10}
@@ -489,6 +487,8 @@ class Params(MutableMapping):
 
         file_dict = json.loads(evaluate_file(params_file, ext_vars=ext_vars))
 
+        if isinstance(params_overrides, dict):
+            params_overrides = json.dumps(params_overrides)
         overrides_dict = parse_overrides(params_overrides)
         param_dict = with_fallback(preferred=overrides_dict, fallback=file_dict)
 
@@ -598,3 +598,14 @@ def _replace_none(params: Any) -> Any:
     elif isinstance(params, list):
         return [_replace_none(value) for value in params]
     return params
+
+
+def remove_keys_from_params(params: Params, keys: List[str] = ["pretrained_file", "initializer"]):
+    if isinstance(params, Params):  # The model could possibly be a string, for example.
+        param_keys = params.keys()
+        for key in keys:
+            if key in param_keys:
+                del params[key]
+        for value in params.values():
+            if isinstance(value, Params):
+                remove_keys_from_params(value, keys)

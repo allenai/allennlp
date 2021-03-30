@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, Tuple
 
 from overrides import overrides
 import torch
@@ -23,6 +23,8 @@ class SpanField(Field[torch.Tensor]):
     sequence_field : `SequenceField`, required.
         A field containing the sequence that this `SpanField` is a span inside.
     """
+
+    __slots__ = ["span_start", "span_end", "sequence_field"]
 
     def __init__(self, span_start: int, span_end: int, sequence_field: SequenceField) -> None:
         self.span_start = span_start
@@ -71,3 +73,7 @@ class SpanField(Field[torch.Tensor]):
 
     def __len__(self):
         return 2
+
+    @overrides
+    def human_readable_repr(self) -> Tuple[int, int]:
+        return self.span_start, self.span_end

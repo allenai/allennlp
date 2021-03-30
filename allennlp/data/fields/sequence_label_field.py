@@ -33,11 +33,19 @@ class SequenceLabelField(Field[torch.Tensor]):
     sequence_field : `SequenceField`
         A field containing the sequence that this `SequenceLabelField` is labeling.  Most often, this is a
         `TextField`, for tagging individual tokens in a sentence.
-    label_namespace : `str`, optional (default='labels')
+    label_namespace : `str`, optional (default=`'labels'`)
         The namespace to use for converting tag strings into integers.  We convert tag strings to
         integers for you, and this parameter tells the `Vocabulary` object which mapping from
         strings to integers to use (so that "O" as a tag doesn't get the same id as "O" as a word).
     """
+
+    __slots__ = [
+        "labels",
+        "sequence_field",
+        "_label_namespace",
+        "_indexed_labels",
+        "_skip_indexing",
+    ]
 
     # It is possible that users want to use this field with a namespace which uses OOV/PAD tokens.
     # This warning will be repeated for every instantiation of this class (i.e for every data
@@ -116,6 +124,10 @@ class SequenceLabelField(Field[torch.Tensor]):
 
     @overrides
     def as_tensor(self, padding_lengths: Dict[str, int]) -> torch.Tensor:
+        if self._indexed_labels is None:
+            raise ConfigurationError(
+                "You must call .index(vocabulary) on a field before calling .as_tensor()"
+            )
         desired_num_tokens = padding_lengths["num_tokens"]
         padded_tags = pad_sequence_to_length(self._indexed_labels, desired_num_tokens)
         tensor = torch.LongTensor(padded_tags)
@@ -138,3 +150,7 @@ class SequenceLabelField(Field[torch.Tensor]):
             f"SequenceLabelField of length {length} with "
             f"labels:\n {formatted_labels} \t\tin namespace: '{self._label_namespace}'."
         )
+
+    @overrides
+    def human_readable_repr(self) -> Union[List[str], List[int]]:
+        return self.labels

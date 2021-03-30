@@ -11,4 +11,8 @@ coverage:
     changes: false
 comment: false
 ignore:
-  - "allennlp/tests/"
+  - "tests/"
+github_checks:
+  # TODO(epwalsh): re-enable if there is a way to only enable annotations
+  # on diff lines for a PR.
+  annotations: false

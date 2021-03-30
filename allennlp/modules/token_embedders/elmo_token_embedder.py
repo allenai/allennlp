@@ -25,7 +25,7 @@ class ElmoTokenEmbedder(TokenEmbedder):
         An ELMo hdf5 weight file.
     do_layer_norm : `bool`, optional.
         Should we apply layer normalization (passed to `ScalarMix`)?
-    dropout : `float`, optional, (default = 0.5).
+    dropout : `float`, optional, (default = `0.5`).
         The dropout value to be applied to the ELMo representations.
     requires_grad : `bool`, optional
         If True, compute gradient of ELMo parameters for fine tuning.
@@ -39,7 +39,7 @@ class ElmoTokenEmbedder(TokenEmbedder):
         indices of shape (batch_size, timesteps) to forward, instead
         of character indices. If you use this option and pass a word which
         wasn't pre-cached, this will break.
-    scalar_mix_parameters : `List[int]`, optional, (default=None)
+    scalar_mix_parameters : `List[int]`, optional, (default=`None`)
         If not `None`, use these scalar mix parameters to weight the representations
         produced by different layers. These mixing weights are not updated during
         training. The mixing weights here should be the unnormalized (i.e., pre-softmax)
@@ -82,11 +82,11 @@ class ElmoTokenEmbedder(TokenEmbedder):
     def get_output_dim(self) -> int:
         return self.output_dim
 
-    def forward(self, tokens: torch.Tensor, word_inputs: torch.Tensor = None) -> torch.Tensor:
+    def forward(self, elmo_tokens: torch.Tensor, word_inputs: torch.Tensor = None) -> torch.Tensor:
         """
         # Parameters
 
-        tokens : `torch.Tensor`
+        elmo_tokens : `torch.Tensor`
             Shape `(batch_size, timesteps, 50)` of character ids representing the current batch.
         word_inputs : `torch.Tensor`, optional.
             If you passed a cached vocab, you can in addition pass a tensor of shape
@@ -98,7 +98,7 @@ class ElmoTokenEmbedder(TokenEmbedder):
             The ELMo representations for the input sequence, shape
             `(batch_size, timesteps, embedding_dim)`
         """
-        elmo_output = self._elmo(tokens, word_inputs)
+        elmo_output = self._elmo(elmo_tokens, word_inputs)
         elmo_representations = elmo_output["elmo_representations"][0]
         if self._projection:
             projection = self._projection

@@ -5,17 +5,15 @@ an AllenNLP model.
 
 import logging
 import os
-from typing import Dict, Union, List, Set, Type, Optional
+from os import PathLike
+import re
+from typing import Dict, List, Set, Type, Optional, Union
 
-try:
-    from apex import amp
-except ImportError:
-    amp = None
 import numpy
 import torch
 
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.params import Params
+from allennlp.common.params import Params, remove_keys_from_params
 from allennlp.common.registrable import Registrable
 from allennlp.data import Instance, Vocabulary
 from allennlp.data.batch import Batch
@@ -62,32 +60,65 @@ class Model(torch.nn.Module, Registrable):
         when constructing embedding matrices or output classifiers (as the vocabulary holds the
         number of classes in your output, also), and translating model output into human-readable
         form.
+
+        In a typical AllenNLP configuration file, this parameter does not get an entry under the
+        "model", it gets specified as a top-level parameter, then is passed in to the model
+        separately.
     regularizer: `RegularizerApplicator`, optional
         If given, the `Trainer` will use this to regularize model parameters.
+    serialization_dir: `str`, optional
+        The directory in which the training output is saved to, or the directory the model is loaded from.
     """
 
     _warn_for_unseparable_batches: Set[str] = set()
+    default_predictor: Optional[str] = None
 
-    def __init__(self, vocab: Vocabulary, regularizer: RegularizerApplicator = None) -> None:
+    def __init__(
+        self,
+        vocab: Vocabulary,
+        regularizer: RegularizerApplicator = None,
+        serialization_dir: Optional[str] = None,
+    ) -> None:
         super().__init__()
         self.vocab = vocab
         self._regularizer = regularizer
+        self.serialization_dir = serialization_dir
 
-    def get_regularization_penalty(self) -> Union[float, torch.Tensor]:
+    def get_regularization_penalty(self) -> Optional[torch.Tensor]:
         """
         Computes the regularization penalty for the model.
-        Returns 0 if the model was not configured to use regularization.
+        Returns None if the model was not configured to use regularization.
         """
         if self._regularizer is None:
-            return 0.0
+            regularization_penalty = None
         else:
-            return self._regularizer(self)
+            try:
+                regularization_penalty = self._regularizer(self)
+                if isinstance(regularization_penalty, float):
+                    assert regularization_penalty == 0.0
+                    regularization_penalty = torch.tensor(regularization_penalty)
+            except AssertionError:
+                raise RuntimeError("The regularizer cannot be a non-zero float.")
+        return regularization_penalty
+
+    def get_parameters_for_histogram_logging(self) -> List[str]:
+        """
+        Returns the name of model parameters used for logging histograms to tensorboard.
+        """
+        return [name for name, _ in self.named_parameters()]
 
     def get_parameters_for_histogram_tensorboard_logging(self) -> List[str]:
         """
         Returns the name of model parameters used for logging histograms to tensorboard.
         """
-        return [name for name, _ in self.named_parameters()]
+        import warnings
+
+        warnings.warn(
+            "'Model.get_parameters_for_histogram_tensorboard_logging' is deprecated, please use "
+            "'Model.get_parameters_for_histogram_logging' instead.",
+            DeprecationWarning,
+        )
+        return self.get_parameters_for_histogram_logging()
 
     def forward(self, *inputs) -> Dict[str, torch.Tensor]:
         """
@@ -116,7 +147,7 @@ class Model(torch.nn.Module, Registrable):
 
         # Parameters
 
-        *inputs :
+        *inputs : `Any`
             Tensors comprising everything needed to perform a training update, `including` labels,
             which should be optional (i.e have a default value of `None`).  At inference time,
             simply pass the relevant inputs, not including the labels.
@@ -256,10 +287,9 @@ class Model(torch.nn.Module, Registrable):
     def _load(
         cls,
         config: Params,
-        serialization_dir: str,
-        weights_file: Optional[str] = None,
+        serialization_dir: Union[str, PathLike],
+        weights_file: Optional[Union[str, PathLike]] = None,
         cuda_device: int = -1,
-        opt_level: Optional[str] = None,
     ) -> "Model":
         """
         Instantiates an already-trained model, based on the experiment
@@ -279,15 +309,14 @@ class Model(torch.nn.Module, Registrable):
 
         model_params = config.get("model")
 
-        training_params = config.get("trainer", Params({}))
-        opt_level = opt_level or training_params.get("opt_level")
-
         # The experiment config tells us how to _train_ a model, including where to get pre-trained
-        # embeddings from.  We're now _loading_ the model, so those embeddings will already be
-        # stored in our weights.  We don't need any pretrained weight file anymore, and we don't
-        # want the code to look for it, so we remove it from the parameters here.
-        remove_pretrained_embedding_params(model_params)
-        model = Model.from_params(vocab=vocab, params=model_params)
+        # embeddings/weights from. We're now _loading_ the model, so those weights will already be
+        # stored in our model. We don't need any pretrained weight file or initializers anymore,
+        # and we don't want the code to look for it, so we remove it from the parameters here.
+        remove_keys_from_params(model_params)
+        model = Model.from_params(
+            vocab=vocab, params=model_params, serialization_dir=serialization_dir
+        )
 
         # Force model to cpu or gpu, as appropriate, to make sure that the embeddings are
         # in sync with the weights
@@ -295,30 +324,6 @@ class Model(torch.nn.Module, Registrable):
             model.cuda(cuda_device)
         else:
             model.cpu()
-
-        # If opt_level is not None (i.e. it exists in the loaded models params or was provided
-        # as argument to this method), call amp.initialize on the loaded model.
-        # Log a warning if amp is not installed or we are loading onto the cpu so that these
-        # cases do not pass silently.
-        if opt_level is not None:
-            if amp is None:
-                logger.warning(
-                    (
-                        f"Apex must be installed to enable mixed-precision via amp."
-                        f" Got opt_level is not None (opt_level={opt_level}) but Apex is not installed."
-                        " Any further training or inference will happen at full-precision."
-                    )
-                )
-            if cuda_device == -1:
-                logger.warning(
-                    (
-                        f"A CUDA device must be specified to enable mixed-precision via amp."
-                        f" Got cuda_device=={cuda_device} but opt_level is not None (opt_level={opt_level})."
-                        " Any further training or inference will happen at full-precision."
-                    )
-                )
-            if amp is not None and cuda_device >= 0:
-                model = amp.initialize(model, opt_level=opt_level)
 
         # If vocab+embedding extension was done, the model initialized from from_params
         # and one defined by state dict in weights_file might not have same embedding shapes.
@@ -328,8 +333,36 @@ class Model(torch.nn.Module, Registrable):
         # If vocab and model embeddings are in sync, following would be just a no-op.
         model.extend_embedder_vocab()
 
+        # Load state dict. We pass `strict=False` so PyTorch doesn't raise a RuntimeError
+        # if the state dict is missing keys because we handle this case below.
         model_state = torch.load(weights_file, map_location=util.device_mapping(cuda_device))
-        model.load_state_dict(model_state)
+        missing_keys, unexpected_keys = model.load_state_dict(model_state, strict=False)
+
+        # Modules might define a class variable called `authorized_missing_keys`,
+        # a list of regex patterns, that tells us to ignore missing keys that match
+        # any of the patterns.
+        # We sometimes need this in order to load older models with newer versions of AllenNLP.
+
+        def filter_out_authorized_missing_keys(module, prefix=""):
+            nonlocal missing_keys
+            for pat in getattr(module.__class__, "authorized_missing_keys", None) or []:
+                missing_keys = [
+                    k
+                    for k in missing_keys
+                    if k.startswith(prefix) and re.search(pat[len(prefix) :], k) is None
+                ]
+            for name, child in module._modules.items():
+                if child is not None:
+                    filter_out_authorized_missing_keys(child, prefix + name + ".")
+
+        filter_out_authorized_missing_keys(model)
+
+        if unexpected_keys or missing_keys:
+            raise RuntimeError(
+                f"Error loading state dict for {model.__class__.__name__}\n\t"
+                f"Missing keys: {missing_keys}\n\t"
+                f"Unexpected keys: {unexpected_keys}"
+            )
 
         return model
 
@@ -337,10 +370,9 @@ class Model(torch.nn.Module, Registrable):
     def load(
         cls,
         config: Params,
-        serialization_dir: str,
-        weights_file: Optional[str] = None,
+        serialization_dir: Union[str, PathLike],
+        weights_file: Optional[Union[str, PathLike]] = None,
         cuda_device: int = -1,
-        opt_level: Optional[str] = None,
     ) -> "Model":
         """
         Instantiates an already-trained model, based on the experiment
@@ -361,12 +393,6 @@ class Model(torch.nn.Module, Registrable):
         cuda_device: `int = -1`
             By default we load the model on the CPU, but if you want to load it
             for GPU usage you can specify the id of your GPU here
-        opt_level : `str`, optional (default = `None`)
-            Each `opt_level` establishes a set of properties that govern Amp’s implementation of pure or mixed
-            precision training. Must be a choice of `"O0"`, `"O1"`, `"O2"`, or `"O3"`.
-            See the Apex [documentation](https://nvidia.github.io/apex/amp.html#opt-levels-and-properties) for
-            more details. If `None`, defaults to the `opt_level` found in the model params. If `cuda_device==-1`,
-            Amp is not used and this argument is ignored.
 
         # Returns
 
@@ -384,7 +410,13 @@ class Model(torch.nn.Module, Registrable):
         # This allows subclasses of Model to override _load.
 
         model_class: Type[Model] = cls.by_name(model_type)  # type: ignore
-        return model_class._load(config, serialization_dir, weights_file, cuda_device, opt_level)
+        if not isinstance(model_class, type):
+            # If you're using from_archive to specify your model (e.g., for fine tuning), then you
+            # can't currently override the behavior of _load; we just use the default Model._load.
+            # If we really need to change this, we would need to implement a recursive
+            # get_model_class method, that recurses whenever it finds a from_archive model type.
+            model_class = Model
+        return model_class._load(config, serialization_dir, weights_file, cuda_device)
 
     def extend_embedder_vocab(self, embedding_sources_mapping: Dict[str, str] = None) -> None:
         """
@@ -410,7 +442,9 @@ class Model(torch.nn.Module, Registrable):
             if hasattr(module, "extend_vocab"):
                 pretrained_file = embedding_sources_mapping.get(model_path)
                 module.extend_vocab(
-                    self.vocab, extension_pretrained_file=pretrained_file, model_path=model_path,
+                    self.vocab,
+                    extension_pretrained_file=pretrained_file,
+                    model_path=model_path,
                 )
 
     @classmethod
@@ -438,11 +472,13 @@ class Model(torch.nn.Module, Registrable):
 Model.register("from_archive", constructor="from_archive")(Model)
 
 
+def remove_weights_related_keys_from_params(
+    params: Params, keys: List[str] = ["pretrained_file", "initializer"]
+):
+    remove_keys_from_params(params, keys)
+
+
 def remove_pretrained_embedding_params(params: Params):
-    if isinstance(params, Params):  # The model could possibly be a string, for example.
-        keys = params.keys()
-        if "pretrained_file" in keys:
-            del params["pretrained_file"]
-        for value in params.values():
-            if isinstance(value, Params):
-                remove_pretrained_embedding_params(value)
+    """This function only exists for backwards compatibility.
+    Please use `remove_weights_related_keys_from_params()` instead."""
+    remove_keys_from_params(params, ["pretrained_file"])

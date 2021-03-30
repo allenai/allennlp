@@ -1,9 +1,11 @@
-FROM python:3.6.10-stretch
+# This Dockerfile creates an environment suitable for downstream usage of AllenNLP.
+# It's built from a wheel installation of allennlp.
+
+FROM python:3.8
 
 ENV LC_ALL=C.UTF-8
 ENV LANG=C.UTF-8
 
-ENV PATH /usr/local/nvidia/bin/:$PATH
 ENV LD_LIBRARY_PATH /usr/local/nvidia/lib:/usr/local/nvidia/lib64
 
 # Tell nvidia-docker the driver spec that we need as well as to
@@ -16,62 +18,29 @@ LABEL com.nvidia.volumes.needed="nvidia_driver"
 
 WORKDIR /stage/allennlp
 
-# Install base packages.
-RUN apt-get update --fix-missing && apt-get install -y \
-    bzip2 \
-    ca-certificates \
-    curl \
-    gcc \
-    git \
-    libc-dev \
-    libglib2.0-0 \
-    libsm6 \
-    libxext6 \
-    libxrender1 \
-    wget \
-    libevent-dev \
-    build-essential && \
-    rm -rf /var/lib/apt/lists/*
+# Install torch ecosystem first. This build arg should be in the form of a version requirement,
+# like 'torch==1.7' or 'torch==1.7+cu102 -f https://download.pytorch.org/whl/torch_stable.html'.
+ARG TORCH
+RUN pip install --no-cache-dir ${TORCH}
 
-# Copy select files needed for installing requirements.
-# We only copy what we need here so small changes to the repository does not trigger re-installation of the requirements.
-COPY setup.py .
-COPY README.md .
+# Installing AllenNLP's dependencies is the most time-consuming part of building
+# this Docker image, so we make use of layer caching here by adding the minimal files
+# necessary to install the dependencies.
 COPY allennlp/version.py allennlp/version.py
-RUN pip install -e .
-COPY dev-requirements.txt .
-RUN pip install -r dev-requirements.txt
+COPY setup.py .
+RUN touch allennlp/__init__.py \
+    && touch README.md \
+    && pip install --no-cache-dir -e .
 
-COPY scripts/ scripts/
-COPY allennlp/ allennlp/
-COPY pytest.ini pytest.ini
-COPY .flake8 .flake8
-COPY tutorials/ tutorials/
-COPY setup.py setup.py
-COPY README.md README.md
-COPY mkdocs-skeleton.yml mkdocs-skeleton.yml
+# Now add the full package source and re-install just the package.
+COPY allennlp allennlp
+RUN pip install --no-cache-dir --no-deps -e .
 
-RUN pip install --editable .
-
-# Compile EVALB - required for parsing evaluation.
-# EVALB produces scary looking c-level output which we don't
-# care about, so we redirect the output to /dev/null.
-RUN cd allennlp/tools/EVALB && make &> /dev/null && cd ../../../
-
-# Caching models when building the image makes a dockerized server start up faster, but is slow for
-# running tests and things, so we skip it by default.
-ARG CACHE_MODELS=false
-RUN ./scripts/cache_models.py
-
-
-# Optional argument to set an environment variable with the Git SHA
-ARG SOURCE_COMMIT
-ENV ALLENNLP_SOURCE_COMMIT $SOURCE_COMMIT
+WORKDIR /app/
 
 # Copy wrapper script to allow beaker to run resumable training workloads.
-COPY scripts/ai2_internal/resumable_train.sh /stage/allennlp
+COPY scripts/ai2_internal/resumable_train.sh .
 
 LABEL maintainer="allennlp-contact@allenai.org"
 
-EXPOSE 8000
-CMD ["/bin/bash"]
+ENTRYPOINT ["allennlp"]

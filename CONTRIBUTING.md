@@ -5,7 +5,9 @@ get there without community support.
 
 ## How Can I Contribute?
 
-### Did you find a bug?
+### Bug fixes and new features
+
+**Did you find a bug?**
 
 First, do [a quick search](https://github.com/allenai/allennlp/issues) to see whether your issue has already been reported.
 If your issue has already been reported, please comment on the existing issue.
@@ -15,34 +17,7 @@ and description.  The description should include as much relevant information as
 explain how to reproduce the erroneous behavior as well as the behavior you expect to see.  Ideally you would include a
 code sample or an executable test case demonstrating the expected behavior.
 
-### Did you write a fix for a bug?
-
-Please be sure to run the `black` application to first format your contribution.
-Next open [a new GitHub pull request](https://github.com/allenai/allennlp/pulls) with the fix.
-Make sure you have a clear description of the problem and the solution, and include a link to relevant issues.
-
-Once your pull request is created, our continuous build system will check your pull request.  Continuous
-build will test that:
-
-* [`pytest`](https://docs.pytest.org/en/latest/) All tests pass
-* [`flake8`](http://flake8.pycqa.org/) accepts the code style (our guidelines are based on PEP8)
-* [`black`](https://black.readthedocs.io) accepts the code formatting
-* [`mypy`](http://mypy-lang.org/) typechecks the Python code
-* The docs can be generated successfully
-* Test coverage remains high.  Please add unit tests so we maintain our code coverage.
-
-If your code fails one of these checks, you will be expected to fix your pull request before it is considered.
-
-You can run most of these tests locally with `./scripts/verify.py`, which will be faster than waiting for
-cloud systems to run tests.
-
-In addition, the `requirements.txt` includes the Python `pre-commit` library,
-and we provide a suggested configuration at `.pre-commit-config.yaml`.
-If you run `pre-commit install` at the root of your fork,
-it will create [git precommit hooks](https://git-scm.com/book/en/v2/Customizing-Git-Git-Hooks)
-that run `black` and `flake8` over the files in every commit.
-
-### Do you have a suggestion for an enhancement?
+**Do you have a suggestion for an enhancement?**
 
 We use GitHub issues to track enhancement requests.  Before you create an enhancement request:
 
@@ -61,14 +36,139 @@ When creating your enhancement request, please:
 
 * Include code examples to demonstrate how the enhancement would be used.
 
-### Do you have a new state-of-the-art model?
+### Making a pull request
 
-We are always looking for new models to add to our collection.  If you have trained a model and would like to include it in
-AllenNLP, please create [a pull request](https://github.com/allenai/allennlp/pulls) that includes:
+When you're ready to contribute code to address an open issue, please follow these guidelines to help us be able to review your pull request (PR) quickly.
+
+1. **Initial setup** (only do this once)
+
+    <details><summary>Expand details 👇</summary><br/>
+
+    If you haven't already done so, please [fork](https://help.github.com/en/enterprise/2.13/user/articles/fork-a-repo) this repository on GitHub.
+    
+    Then clone your fork locally with
+    
+        git clone https://github.com/USERNAME/allennlp.git
+    
+    or 
+    
+        git clone git@github.com:USERNAME/allennlp.git
+    
+    At this point the local clone of your fork only knows that it came from *your* repo, github.com/USERNAME/allennlp.git, but doesn't know anything the *main* repo, [https://github.com/allenai/allennlp.git](https://github.com/allenai/allennlp). You can see this by running
+    
+        git remote -v
+    
+    which will output something like this:
+    
+        origin https://github.com/USERNAME/allennlp.git (fetch)
+        origin https://github.com/USERNAME/allennlp.git (push)
+    
+    This means that your local clone can only track changes from your fork, but not from the main repo, and so you won't be able to keep your fork up-to-date with the main repo over time. Therefor you'll need to add another "remote" to your clone that points to [https://github.com/allenai/allennlp.git](https://github.com/allenai/allennlp). To do this, run the following:
+    
+        git remote add upstream https://github.com/allenai/allennlp.git
+    
+    Now if you do `git remote -v` again, you'll see
+    
+        origin https://github.com/USERNAME/allennlp.git (fetch)
+        origin https://github.com/USERNAME/allennlp.git (push)
+        upstream https://github.com/allenai/allennlp.git (fetch)
+        upstream https://github.com/allenai/allennlp.git (push)
+
+    Finally, you'll need to create a Python 3 virtual environment suitable for working on AllenNLP. There a number of tools out there that making working with virtual environments easier, but the most direct way is with the [`venv` module](https://docs.python.org/3.7/library/venv.html) in the standard library.
+
+    Once your virtual environment is activated, you can install your local clone in "editable mode" with
+
+        pip install -e . 
+        pip install -r dev-requirements.txt
+
+    The "editable mode" comes from the `-e` argument to `pip`, and essential just creates a symbolic link from the site-packages directory of your virtual environment to the source code in your local clone. That way any changes you make will be immediately reflected in your virtual environment.
+
+    </details>
+
+2. **Ensure your fork is up-to-date**
+
+    <details><summary>Expand details 👇</summary><br/>
+
+    Once you've added an "upstream" remote pointing to [https://github.com/allenai/allennlp.git](https://github.com/allenai/allennlp), keeping your fork up-to-date is easy:
+    
+        git checkout main  # if not already on main
+        git pull --rebase upstream main
+        git push
+
+    </details>
+
+3. **Create a new branch to work on your fix or enhancement**
+
+    <details><summary>Expand details 👇</summary><br/>
+
+    Commiting directly to the main branch of your fork is not recommended. It will be easier to keep your fork clean if you work on a seperate branch for each contribution you intend to make.
+    
+    You can create a new branch with
+    
+        # replace BRANCH with whatever name you want to give it
+        git checkout -b BRANCH
+        git push -u origin BRANCH
+
+    </details>
+
+4. **Test your changes**
+
+    <details><summary>Expand details 👇</summary><br/>
+
+    Our continuous integration (CI) testing runs [a number of checks](https://github.com/allenai/allennlp/actions?query=workflow%3APR) for each pull request on [GitHub Actions](https://github.com/features/actions). You can run most of these tests locally, which is something you should do *before* opening a PR to help speed up the review process and make it easier for us.
+    
+    First, you should run [`black`](https://github.com/psf/black) to make sure you code is formatted consistently. Many IDEs support code formatters as plugins, so you may be able to setup black to run automatically everytime you save. [`black.vim`](https://github.com/psf/black/tree/master/plugin) will give you this functionality in Vim, for example. But `black` is also easy to run directly from the command line. Just run this from the root of your clone:
+    
+        black .
+
+    Our CI also uses [`flake8`](https://github.com/allenai/allennlp/tree/main/tests) to lint the code base and [`mypy`](http://mypy-lang.org/) for type-checking. You should run both of these next with
+
+        make lint
+
+    and
+
+        make typecheck
+
+    We also strive to maintain high test coverage, so most contributions should include additions to [the unit tests](https://github.com/allenai/allennlp/tree/main/tests). These tests are run with [`pytest`](https://docs.pytest.org/en/latest/), which you can use to locally run any test modules that you've added or changed.
+
+    For example, if you've fixed a bug in `allennlp/nn/util.py`, you can run the tests specific to that module with
+    
+        pytest -v tests/nn/util_test.py
+    
+    Our CI will automatically check that test coverage stays above a certain threshold (around 90%). To check the coverage locally in this example, you could run
+    
+        pytest -v --cov allennlp.nn.util tests/nn/util_test.py
+
+     If your contribution involves changes to any docstrings, you should make sure the API documentation can build without errors. For that, just run
+
+        make build-docs
+
+    If the build fails, it's most likely due to small formatting issues. If the error message isn't clear, feel free to comment on this in your pull request.
+
+    You can also serve and view the docs locally with
+    
+        make serve-docs
+
+    And finally, please update the [CHANGELOG](https://github.com/allenai/allennlp/blob/main/CHANGELOG.md) with notes on your contribution in the "Unreleased" section at the top.
+
+    After all of the above checks have passed, you can now open [a new GitHub pull request](https://github.com/allenai/allennlp/pulls).
+    Make sure you have a clear description of the problem and the solution, and include a link to relevant issues.
+
+    We look forward to reviewing your PR!
+
+    </details>
+
+### New models
+
+**Do you have a new state-of-the-art model?**
+
+We are always looking for new models to add to our collection. The most popular models are usually added to the official [AllenNLP Models](https://github.com/allenai/allennlp-models) repository, and in some cases to the [AllenNLP Demo](https://demo.allennlp.org/).
+
+If you think your model should be part of AllenNLP Models, please [create a pull request](https://github.com/allenai/allennlp-models/pulls) in the models repo that includes:
 
 * Any code changes needed to support your new model.
+
 * A link to the model itself.  Please do not check your model into the GitHub repository, but instead upload it in the
 PR conversation or provide a link to it at an external location.
 
-In the description of your PR, please clearly explain the task your model performs along with precision and recall statistics
-on an established dataset.
+In the description of your PR, please clearly explain the task your model performs along with the relevant metrics on an established dataset.

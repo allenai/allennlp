@@ -1,3 +1,5 @@
+from typing import Optional
+
 import torch
 from overrides import overrides
 from torch.nn.parameter import Parameter
@@ -42,20 +44,20 @@ class BidirectionalEndpointSpanExtractor(SpanExtractor):
 
     input_dim : `int`, required
         The final dimension of the `sequence_tensor`.
-    forward_combination : `str`, optional (default = "y-x").
+    forward_combination : `str`, optional (default = `"y-x"`).
         The method used to combine the `forward_start_embeddings` and `forward_end_embeddings`
         for the forward direction of the bidirectional representation.
         See above for a full description.
-    backward_combination : `str`, optional (default = "x-y").
+    backward_combination : `str`, optional (default = `"x-y"`).
         The method used to combine the `backward_start_embeddings` and `backward_end_embeddings`
         for the backward direction of the bidirectional representation.
         See above for a full description.
-    num_width_embeddings : `int`, optional (default = None).
+    num_width_embeddings : `int`, optional (default = `None`).
         Specifies the number of buckets to use when representing
         span width features.
-    span_width_embedding_dim : `int`, optional (default = None).
+    span_width_embedding_dim : `int`, optional (default = `None`).
         The embedding size for the span_width features.
-    bucket_widths : `bool`, optional (default = False).
+    bucket_widths : `bool`, optional (default = `False`).
         Whether to bucket the span widths into log-space buckets. If `False`,
         the raw span widths are used.
     use_sentinels : `bool`, optional (default = `True`).
@@ -90,6 +92,8 @@ class BidirectionalEndpointSpanExtractor(SpanExtractor):
                 "BidirectionalEndpointSpanExtractor assumes the embedded representation "
                 "is bidirectional (and hence divisible by 2)."
             )
+
+        self._span_width_embedding: Optional[Embedding] = None
         if num_width_embeddings is not None and span_width_embedding_dim is not None:
             self._span_width_embedding = Embedding(
                 num_embeddings=num_width_embeddings, embedding_dim=span_width_embedding_dim
@@ -99,8 +103,6 @@ class BidirectionalEndpointSpanExtractor(SpanExtractor):
                 "To use a span width embedding representation, you must"
                 "specify both num_width_buckets and span_width_embedding_dim."
             )
-        else:
-            self._span_width_embedding = None
 
         self._use_sentinels = use_sentinels
         if use_sentinels:
@@ -240,7 +242,7 @@ class BidirectionalEndpointSpanExtractor(SpanExtractor):
             # Embed the span widths and concatenate to the rest of the representations.
             if self._bucket_widths:
                 span_widths = util.bucket_values(
-                    span_ends - span_starts, num_total_buckets=self._num_width_embeddings
+                    span_ends - span_starts, num_total_buckets=self._num_width_embeddings  # type: ignore
                 )
             else:
                 span_widths = span_ends - span_starts

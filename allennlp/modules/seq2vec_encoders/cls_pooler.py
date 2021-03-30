@@ -16,19 +16,19 @@ class ClsPooler(Seq2VecEncoder):
 
     # Parameters
 
-    embedding_dim: int, optional
+    embedding_dim: `int`
         This isn't needed for any computation that we do, but we sometimes rely on `get_input_dim`
         and `get_output_dim` to check parameter settings, or to instantiate final linear layers.  In
         order to give the right values there, we need to know the embedding dimension.  If you're
         using this with a transformer from the `transformers` library, this can often be found with
         `model.config.hidden_size`, if you're not sure.
-    cls_is_last_token: bool, optional
+    cls_is_last_token: `bool`, optional
         The [CLS] token is the first token for most of the pretrained transformer models.
         For some models such as XLNet, however, it is the last token, and we therefore need to
         select at the end.
     """
 
-    def __init__(self, embedding_dim: int = None, cls_is_last_token: bool = False):
+    def __init__(self, embedding_dim: int, cls_is_last_token: bool = False):
         super().__init__()
         self._embedding_dim = embedding_dim
         self._cls_is_last_token = cls_is_last_token

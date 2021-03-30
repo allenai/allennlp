@@ -3,6 +3,7 @@ from collections import defaultdict
 
 import torch
 
+from allennlp.common.util import is_distributed
 from allennlp.common.checks import ConfigurationError
 from allennlp.nn.util import get_lengths_from_binary_sequence_mask
 from allennlp.data.vocabulary import Vocabulary
@@ -53,7 +54,7 @@ class SpanBasedF1Measure(Metric):
             This metric assumes that a BIO format is used in which the
             labels are of the format: ["B-LABEL", "I-LABEL"].
 
-        ignore_classes : List[str], optional.
+        ignore_classes : `List[str]`, optional.
             Span labels which will be ignored when computing span metrics.
             A "span label" is the part that comes after the BIO label, so it
             would be "ARG1" for the tag "B-ARG1". For example by passing:
@@ -67,7 +68,7 @@ class SpanBasedF1Measure(Metric):
             This is helpful for instance, to avoid computing metrics for "V"
             spans in a BIO tagging scheme which are typically not included.
 
-        label_encoding : `str`, optional (default = "BIO")
+        label_encoding : `str`, optional (default = `"BIO"`)
             The encoding used to specify label span endpoints in the sequence.
             Valid options are "BIO", "IOB1", "BIOUL" or "BMES".
 
@@ -115,9 +116,9 @@ class SpanBasedF1Measure(Metric):
         gold_labels : `torch.Tensor`, required.
             A tensor of integer class label of shape (batch_size, sequence_length). It must be the same
             shape as the `predictions` tensor without the `num_classes` dimension.
-        mask : `torch.BoolTensor`, optional (default = None).
+        mask : `torch.BoolTensor`, optional (default = `None`).
             A masking tensor the same size as `gold_labels`.
-        prediction_map : `torch.Tensor`, optional (default = None).
+        prediction_map : `torch.Tensor`, optional (default = `None`).
             A tensor of size (batch_size, num_classes) which provides a mapping from the index of predictions
             to the indices of the label vocabulary. If provided, the output label at each timestep will be
             `vocabulary.get_index_to_token_vocabulary(prediction_map[batch, argmax(predictions[batch, t]))`,
@@ -170,7 +171,7 @@ class SpanBasedF1Measure(Metric):
                 for label_id in sequence_gold_label[:length].tolist()
             ]
 
-            tags_to_spans_function = None
+            tags_to_spans_function: TAGS_TO_SPANS_FUNCTION_TYPE
             # `label_encoding` is empty and `tags_to_spans_function` is provided.
             if self._label_encoding is None and self._tags_to_spans_function:
                 tags_to_spans_function = self._tags_to_spans_function
@@ -183,6 +184,8 @@ class SpanBasedF1Measure(Metric):
                 tags_to_spans_function = bioul_tags_to_spans
             elif self._label_encoding == "BMES":
                 tags_to_spans_function = bmes_tags_to_spans
+            else:
+                raise ValueError(f"Unexpected label encoding scheme '{self._label_encoding}'")
 
             predicted_spans = tags_to_spans_function(predicted_string_labels, self._ignore_classes)
             gold_spans = tags_to_spans_function(gold_string_labels, self._ignore_classes)
@@ -251,6 +254,10 @@ class SpanBasedF1Measure(Metric):
             Additionally, an `overall` key is included, which provides the precision,
             recall and f1-measure for all spans.
         """
+        if is_distributed():
+            raise RuntimeError(
+                "Distributed aggregation for SpanBasedF1Measure is currently not supported."
+            )
         all_tags: Set[str] = set()
         all_tags.update(self._true_positives.keys())
         all_tags.update(self._false_positives.keys())

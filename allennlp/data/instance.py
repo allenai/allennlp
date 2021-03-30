@@ -2,6 +2,7 @@ from typing import Dict, MutableMapping, Mapping
 
 from allennlp.data.fields.field import DataArray, Field
 from allennlp.data.vocabulary import Vocabulary
+from allennlp.common.util import JsonDict
 
 
 class Instance(Mapping[str, Field]):
@@ -22,6 +23,8 @@ class Instance(Mapping[str, Field]):
     fields : `Dict[str, Field]`
         The `Field` objects that will be used to produce data arrays for this instance.
     """
+
+    __slots__ = ["fields", "indexed"]
 
     def __init__(self, fields: MutableMapping[str, Field]) -> None:
         self.fields = fields
@@ -46,7 +49,7 @@ class Instance(Mapping[str, Field]):
         it is necessary to supply the vocab.
         """
         self.fields[field_name] = field
-        if self.indexed:
+        if self.indexed and vocab is not None:
             field.index(vocab)
 
     def count_vocab_items(self, counter: Dict[str, Dict[str, int]]):
@@ -68,9 +71,9 @@ class Instance(Mapping[str, Field]):
         indexed your instances, you might get unexpected behavior.
         """
         if not self.indexed:
-            self.indexed = True
             for field in self.fields.values():
                 field.index(vocab)
+            self.indexed = True
 
     def get_padding_lengths(self) -> Dict[str, Dict[str, int]]:
         """
@@ -100,7 +103,20 @@ class Instance(Mapping[str, Field]):
         return tensors
 
     def __str__(self) -> str:
-        base_string = f"Instance with fields:\n"
+        base_string = "Instance with fields:\n"
         return " ".join(
             [base_string] + [f"\t {name}: {field} \n" for name, field in self.fields.items()]
         )
+
+    def duplicate(self) -> "Instance":
+        new = Instance({k: field.duplicate() for k, field in self.fields.items()})
+        new.indexed = self.indexed
+        return new
+
+    def human_readable_dict(self) -> JsonDict:
+        """
+        This function help to output instances to json files or print for human readability.
+        Use case includes example-based explanation, where it's better to have a output file or
+        rather than printing or logging.
+        """
+        return {key: field.human_readable_repr() for key, field in self.fields.items()}

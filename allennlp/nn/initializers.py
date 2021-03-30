@@ -28,6 +28,7 @@ import math
 from typing import Callable, List, Tuple, Dict
 import itertools
 from overrides import overrides
+import tarfile
 
 import torch
 import torch.nn.init
@@ -72,7 +73,7 @@ def uniform_unit_scaling(tensor: torch.Tensor, nonlinearity: str = "linear"):
 
     tensor : `torch.Tensor`, required.
         The tensor to initialise.
-    nonlinearity : `str`, optional (default = "linear")
+    nonlinearity : `str`, optional (default = `"linear"`)
         The non-linearity which is performed after the projection that this
         tensor is involved in. This must be the name of a function contained
         in the `torch.nn.functional` package.
@@ -107,12 +108,12 @@ def block_orthogonal(tensor: torch.Tensor, split_sizes: List[int], gain: float =
 
     tensor : `torch.Tensor`, required.
         A tensor to initialize.
-    split_sizes : List[int], required.
+    split_sizes : `List[int]`, required.
         A list of length `tensor.ndim()` specifying the size of the
         blocks along that particular dimension. E.g. `[10, 20]` would
         result in the tensor being split into chunks of size 10 along the
         first dimension and 20 along the second.
-    gain : float, optional (default = 1.0)
+    gain : `float`, optional (default = `1.0`)
         The gain (scaling) applied to the orthogonal initialization.
     """
     data = tensor.data
@@ -375,7 +376,7 @@ class PretrainedModelInitializer(Initializer):
 
     weights_file_path : `str`, required
         The path to the weights file which has the pretrained model parameters.
-    parameter_name_overrides : `Dict[str, str]`, optional (default = None)
+    parameter_name_overrides : `Dict[str, str]`, optional (default = `None`)
         The mapping from the new parameter name to the name which should be used
         to index into the pretrained model parameters. If a parameter name is not
         specified, the initializer will use the parameter's default name as the key.
@@ -384,7 +385,18 @@ class PretrainedModelInitializer(Initializer):
     def __init__(
         self, weights_file_path: str, parameter_name_overrides: Dict[str, str] = None
     ) -> None:
-        self.weights: Dict[str, torch.Tensor] = torch.load(weights_file_path)
+        from allennlp.models.archival import (
+            extracted_archive,
+            get_weights_path,
+        )  # import here to avoid circular imports
+
+        self.weights: Dict[str, torch.Tensor]
+        if tarfile.is_tarfile(weights_file_path):
+            with extracted_archive(weights_file_path) as extraction_path:
+                self.weights = torch.load(get_weights_path(extraction_path), map_location="cpu")
+        else:
+            self.weights = torch.load(weights_file_path, map_location="cpu")
+
         self.parameter_name_overrides = parameter_name_overrides or {}
 
     @overrides
@@ -403,7 +415,7 @@ class PretrainedModelInitializer(Initializer):
             )
 
         # Copy the parameters from the source to the destination
-        tensor.data[:] = source_weights[:]
+        tensor.data.copy_(source_weights.data)
 
 
 class InitializerApplicator(FromParams):
@@ -440,13 +452,12 @@ class InitializerApplicator(FromParams):
 
     # Parameters
 
-    regexes : `List[Tuple[str, Initializer]]`, optional (default = [])
+    regexes : `List[Tuple[str, Initializer]]`, optional (default = `[]`)
         A list mapping parameter regexes to initializers.  We will check each parameter against
         each regex in turn, and apply the initializer paired with the first matching regex, if
-        any. If "prevent" is assigned to any regex, then it will override and prevent the matched
-        parameters to be initialzed.
+        any.
 
-    prevent_regexes: `List[str]`, optional (default=None)
+    prevent_regexes: `List[str]`, optional (default=`None`)
         Any parameter name matching one of these regexes will not be initialized, regardless of
         whether it matches one of the regexes passed in the `regexes` parameter.
     """
@@ -466,13 +477,13 @@ class InitializerApplicator(FromParams):
 
         # Parameters
 
-        module : torch.nn.Module, required.
+        module : `torch.nn.Module`, required.
             The Pytorch module to apply the initializers to.
         """
         logger.info("Initializing parameters")
         unused_regexes = {initializer[0] for initializer in self._initializers}
         uninitialized_parameters = set()
-        # Store which initialisers were applied to which parameters.
+        # Store which initializers were applied to which parameters.
         for name, parameter in module.named_parameters():
             for initializer_regex, initializer in self._initializers:
                 allow = self._prevent_regex is None or not bool(

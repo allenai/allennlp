@@ -5,7 +5,7 @@ import spacy
 from spacy.tokens import Doc
 
 from allennlp.common.util import get_spacy_model
-from allennlp.data.tokenizers.token import Token
+from allennlp.data.tokenizers.token_class import Token
 from allennlp.data.tokenizers.tokenizer import Tokenizer
 
 
@@ -26,33 +26,33 @@ class SpacyTokenizer(Tokenizer):
 
     # Parameters
 
-    language : `str`, optional, (default="en_core_web_sm")
+    language : `str`, optional, (default=`"en_core_web_sm"`)
         Spacy model name.
-    pos_tags : `bool`, optional, (default=False)
+    pos_tags : `bool`, optional, (default=`False`)
         If `True`, performs POS tagging with spacy model on the tokens.
         Generally used in conjunction with :class:`~allennlp.data.token_indexers.pos_tag_indexer.PosTagIndexer`.
-    parse : `bool`, optional, (default=False)
+    parse : `bool`, optional, (default=`False`)
         If `True`, performs dependency parsing with spacy model on the tokens.
         Generally used in conjunction with :class:`~allennlp.data.token_indexers.pos_tag_indexer.DepLabelIndexer`.
-    ner : `bool`, optional, (default=False)
+    ner : `bool`, optional, (default=`False`)
         If `True`, performs dependency parsing with spacy model on the tokens.
         Generally used in conjunction with :class:`~allennlp.data.token_indexers.ner_tag_indexer.NerTagIndexer`.
-    keep_spacy_tokens : `bool`, optional, (default=False)
+    keep_spacy_tokens : `bool`, optional, (default=`False`)
         If `True`, will preserve spacy token objects, We copy spacy tokens into our own class by default instead
         because spacy Cython Tokens can't be pickled.
-    split_on_spaces : `bool`, optional, (default=False)
+    split_on_spaces : `bool`, optional, (default=`False`)
         If `True`, will split by spaces without performing tokenization.
         Used when your data is already tokenized, but you want to perform pos, ner or parsing on the tokens.
-    start_tokens : `Optional[List[str]]`, optional, (default=None)
+    start_tokens : `Optional[List[str]]`, optional, (default=`None`)
         If given, these tokens will be added to the beginning of every string we tokenize.
-    end_tokens : `Optional[List[str]]`, optional, (default=None)
+    end_tokens : `Optional[List[str]]`, optional, (default=`None`)
         If given, these tokens will be added to the end of every string we tokenize.
     """
 
     def __init__(
         self,
         language: str = "en_core_web_sm",
-        pos_tags: bool = False,
+        pos_tags: bool = True,
         parse: bool = False,
         ner: bool = False,
         keep_spacy_tokens: bool = False,
@@ -69,6 +69,7 @@ class SpacyTokenizer(Tokenizer):
         # We reverse the tokens here because we're going to insert them with `insert(0)` later;
         # this makes sure they show up in the right order.
         self._start_tokens.reverse()
+        self._is_version_3 = spacy.__version__ >= "3.0"
         self._end_tokens = end_tokens or []
 
     def _sanitize(self, tokens: List[spacy.tokens.Token]) -> List[Token]:
@@ -81,6 +82,7 @@ class SpacyTokenizer(Tokenizer):
                 Token(
                     token.text,
                     token.idx,
+                    token.idx + len(token.text),
                     token.lemma_,
                     token.pos_,
                     token.tag_,
@@ -97,10 +99,16 @@ class SpacyTokenizer(Tokenizer):
 
     @overrides
     def batch_tokenize(self, texts: List[str]) -> List[List[Token]]:
-        return [
-            self._sanitize(_remove_spaces(tokens))
-            for tokens in self.spacy.pipe(texts, n_threads=-1)
-        ]
+        if self._is_version_3:
+            return [
+                self._sanitize(_remove_spaces(tokens))
+                for tokens in self.spacy.pipe(texts, n_process=-1)
+            ]
+        else:
+            return [
+                self._sanitize(_remove_spaces(tokens))
+                for tokens in self.spacy.pipe(texts, n_threads=-1)
+            ]
 
     @overrides
     def tokenize(self, text: str) -> List[Token]:

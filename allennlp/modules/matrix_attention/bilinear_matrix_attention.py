@@ -25,14 +25,14 @@ class BilinearMatrixAttention(MatrixAttention):
         The dimension of the matrix `Y`, described above.  This is `Y.size()[-1]` - the length
         of the vector that will go into the similarity computation.  We need this so we can build
         the weight matrix correctly.
-    activation : `Activation`, optional (default=linear (i.e. no activation))
-        An activation function applied after the `X W Y^T + b` calculation.  Default is no
-        activation.
-    use_input_biases : `bool`, optional (default = False)
+    activation : `Activation`, optional (default=`linear`)
+        An activation function applied after the `X W Y^T + b` calculation.  Default is
+        linear, i.e. no activation.
+    use_input_biases : `bool`, optional (default = `False`)
         If True, we add biases to the inputs such that the final computation
         is equivalent to the original bilinear matrix multiplication plus a
         projection of both inputs.
-    label_dim : `int`, optional (default = 1)
+    label_dim : `int`, optional (default = `1`)
         The number of output classes. Typically in an attention setting this will be one,
         but this parameter allows this class to function as an equivalent to `torch.nn.Bilinear`
         for matrices, rather than vectors.

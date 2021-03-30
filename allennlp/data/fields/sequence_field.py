@@ -9,6 +9,8 @@ class SequenceField(Field[DataArray]):
     pointing to words in a `TextField`, items in a `ListField`, or something else.
     """
 
+    __slots__ = []  # type: ignore
+
     def sequence_length(self) -> int:
         """
         How many elements are there in this sequence?

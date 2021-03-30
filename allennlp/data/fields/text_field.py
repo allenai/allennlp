@@ -3,6 +3,7 @@ A `TextField` represents a string of text, the kind that you might want to repre
 standard word vectors, or pass through an LSTM.
 """
 from collections import defaultdict
+from copy import deepcopy
 from typing import Dict, List, Optional, Iterator
 import textwrap
 
@@ -12,7 +13,7 @@ import torch
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.data.fields.sequence_field import SequenceField
-from allennlp.data.tokenizers.token import Token
+from allennlp.data.tokenizers import Token
 from allennlp.data.token_indexers.token_indexer import TokenIndexer, IndexedTokenList
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.nn import util
@@ -41,7 +42,11 @@ class TextField(SequenceField[TextFieldTensors]):
     `TokenCharactersIndexer` produces an array of shape (num_tokens, num_characters).
     """
 
-    def __init__(self, tokens: List[Token], token_indexers: Dict[str, TokenIndexer]) -> None:
+    __slots__ = ["tokens", "_token_indexers", "_indexed_tokens"]
+
+    def __init__(
+        self, tokens: List[Token], token_indexers: Optional[Dict[str, TokenIndexer]] = None
+    ) -> None:
         self.tokens = tokens
         self._token_indexers = token_indexers
         self._indexed_tokens: Optional[Dict[str, IndexedTokenList]] = None
@@ -52,16 +57,32 @@ class TextField(SequenceField[TextFieldTensors]):
                 "Found: {} with types {}.".format(tokens, [type(x) for x in tokens])
             )
 
+    @property
+    def token_indexers(self) -> Dict[str, TokenIndexer]:
+        if self._token_indexers is None:
+            raise ValueError(
+                "TextField's token_indexers have not been set.\n"
+                "Did you forget to call DatasetReader.apply_token_indexers(instance) "
+                "on your instance?\n"
+                "If apply_token_indexers() is being called but "
+                "you're still seeing this error, it may not be implemented correctly."
+            )
+        return self._token_indexers
+
+    @token_indexers.setter
+    def token_indexers(self, token_indexers: Dict[str, TokenIndexer]) -> None:
+        self._token_indexers = token_indexers
+
     @overrides
     def count_vocab_items(self, counter: Dict[str, Dict[str, int]]):
-        for indexer in self._token_indexers.values():
+        for indexer in self.token_indexers.values():
             for token in self.tokens:
                 indexer.count_vocab_items(token, counter)
 
     @overrides
     def index(self, vocab: Vocabulary):
         self._indexed_tokens = {}
-        for indexer_name, indexer in self._token_indexers.items():
+        for indexer_name, indexer in self.token_indexers.items():
             self._indexed_tokens[indexer_name] = indexer.tokens_to_indices(self.tokens, vocab)
 
     @overrides
@@ -77,7 +98,7 @@ class TextField(SequenceField[TextFieldTensors]):
             )
 
         padding_lengths = {}
-        for indexer_name, indexer in self._token_indexers.items():
+        for indexer_name, indexer in self.token_indexers.items():
             indexer_lengths = indexer.get_padding_lengths(self._indexed_tokens[indexer_name])
             for key, length in indexer_lengths.items():
                 padding_lengths[f"{indexer_name}___{key}"] = length
@@ -88,7 +109,12 @@ class TextField(SequenceField[TextFieldTensors]):
         return len(self.tokens)
 
     @overrides
-    def as_tensor(self, padding_lengths: Dict[str, int]) -> Dict[str, torch.Tensor]:
+    def as_tensor(self, padding_lengths: Dict[str, int]) -> TextFieldTensors:
+        if self._indexed_tokens is None:
+            raise ConfigurationError(
+                "You must call .index(vocabulary) on a field before calling .as_tensor()"
+            )
+
         tensors = {}
 
         indexer_lengths: Dict[str, Dict[str, int]] = defaultdict(dict)
@@ -98,7 +124,7 @@ class TextField(SequenceField[TextFieldTensors]):
             indexer_name, padding_key = key.split("___")
             indexer_lengths[indexer_name][padding_key] = value
 
-        for indexer_name, indexer in self._token_indexers.items():
+        for indexer_name, indexer in self.token_indexers.items():
             tensors[indexer_name] = indexer.as_padded_tensor_dict(
                 self._indexed_tokens[indexer_name], indexer_lengths[indexer_name]
             )
@@ -108,8 +134,9 @@ class TextField(SequenceField[TextFieldTensors]):
     def empty_field(self):
         text_field = TextField([], self._token_indexers)
         text_field._indexed_tokens = {}
-        for indexer_name, indexer in self._token_indexers.items():
-            text_field._indexed_tokens[indexer_name] = indexer.get_empty_token_list()
+        if self._token_indexers is not None:
+            for indexer_name, indexer in self.token_indexers.items():
+                text_field._indexed_tokens[indexer_name] = indexer.get_empty_token_list()
         return text_field
 
     @overrides
@@ -131,18 +158,20 @@ class TextField(SequenceField[TextFieldTensors]):
         return batched_tensors
 
     def __str__(self) -> str:
-        indexers = {
-            name: indexer.__class__.__name__ for name, indexer in self._token_indexers.items()
-        }
-
         # Double tab to indent under the header.
         formatted_text = "".join(
             "\t\t" + text + "\n" for text in textwrap.wrap(repr(self.tokens), 100)
         )
-        return (
-            f"TextField of length {self.sequence_length()} with "
-            f"text: \n {formatted_text} \t\tand TokenIndexers : {indexers}"
-        )
+        if self._token_indexers is not None:
+            indexers = {
+                name: indexer.__class__.__name__ for name, indexer in self._token_indexers.items()
+            }
+            return (
+                f"TextField of length {self.sequence_length()} with "
+                f"text: \n {formatted_text} \t\tand TokenIndexers : {indexers}"
+            )
+        else:
+            return f"TextField of length {self.sequence_length()} with text: \n {formatted_text}"
 
     # Sequence[Token] methods
     def __iter__(self) -> Iterator[Token]:
@@ -153,3 +182,24 @@ class TextField(SequenceField[TextFieldTensors]):
 
     def __len__(self) -> int:
         return len(self.tokens)
+
+    @overrides
+    def duplicate(self):
+        """
+        Overrides the behavior of `duplicate` so that `self._token_indexers` won't
+        actually be deep-copied.
+
+        Not only would it be extremely inefficient to deep-copy the token indexers,
+        but it also fails in many cases since some tokenizers (like those used in
+        the 'transformers' lib) cannot actually be deep-copied.
+        """
+        if self._token_indexers is not None:
+            new = TextField(deepcopy(self.tokens), {k: v for k, v in self._token_indexers.items()})
+        else:
+            new = TextField(deepcopy(self.tokens))
+        new._indexed_tokens = deepcopy(self._indexed_tokens)
+        return new
+
+    @overrides
+    def human_readable_repr(self) -> List[str]:
+        return [str(t) for t in self.tokens]

@@ -1,4 +1,9 @@
-from typing import Callable, Generic, TypeVar, Optional
+import copy
+import inspect
+from typing import Callable, Generic, TypeVar, Type, Union, Optional, Dict, Any
+
+from allennlp.common.params import Params
+
 
 T = TypeVar("T")
 
@@ -6,9 +11,10 @@ T = TypeVar("T")
 class Lazy(Generic[T]):
     """
     This class is for use when constructing objects using `FromParams`, when an argument to a
-    constructor has a _sequential dependency_ with another argument to the same constructor.  For
-    example, in a `Trainer` class you might want to take a `Model` and an `Optimizer` as arguments,
-    but the `Optimizer` needs to be constructed using the parameters from the `Model`.  You can give
+    constructor has a _sequential dependency_ with another argument to the same constructor.
+
+    For example, in a `Trainer` class you might want to take a `Model` and an `Optimizer` as arguments,
+    but the `Optimizer` needs to be constructed using the parameters from the `Model`. You can give
     the type annotation `Lazy[Optimizer]` to the optimizer argument, then inside the constructor
     call `optimizer.construct(parameters=model.parameters)`.
 
@@ -21,26 +27,54 @@ class Lazy(Generic[T]):
     construction is actually found in `FromParams`, where we have a special case for a `Lazy` type
     annotation.
 
-    !!! Warning
-        The way this class is used in from_params means that optional constructor arguments CANNOT
-        be compared to `None` _before_ it is constructed. See the example below for correct usage.
-
-    ```
+    ```python
     @classmethod
-    def my_constructor(cls, some_object: Lazy[MyObject] = None) -> MyClass:
-        ...
-        # WRONG! some_object will never be None at this point, it will be
-        # a Lazy[] that returns None
-        obj = some_object or MyObjectDefault()
-        # CORRECT:
-        obj = some_object.construct(kwarg=kwarg) or MyObjectDefault()
-        ...
+    def my_constructor(
+        cls,
+        some_object: Lazy[MyObject],
+        optional_object: Lazy[MyObject] = None,
+        # or:
+        #  optional_object: Optional[Lazy[MyObject]] = None,
+        optional_object_with_default: Optional[Lazy[MyObject]] = Lazy(MyObjectDefault),
+        required_object_with_default: Lazy[MyObject] = Lazy(MyObjectDefault),
+    ) -> MyClass:
+        obj1 = some_object.construct()
+        obj2 = None if optional_object is None else optional_object.construct()
+        obj3 = None optional_object_with_default is None else optional_object_with_default.construct()
+        obj4 = required_object_with_default.construct()
     ```
 
     """
 
-    def __init__(self, constructor: Callable[..., T]):
+    def __init__(
+        self,
+        constructor: Union[Type[T], Callable[..., T]],
+        params: Optional[Params] = None,
+        contructor_extras: Optional[Dict[str, Any]] = None,
+    ) -> None:
         self._constructor = constructor
+        self._params = params or Params({})
+        self._constructor_extras = contructor_extras or {}
 
-    def construct(self, **kwargs) -> Optional[T]:
-        return self._constructor(**kwargs)
+    @property
+    def constructor(self) -> Callable[..., T]:
+        if inspect.isclass(self._constructor):
+
+            def constructor_to_use(**kwargs):
+                return self._constructor.from_params(  # type: ignore[union-attr]
+                    copy.deepcopy(self._params),
+                    **kwargs,
+                )
+
+            return constructor_to_use
+        else:
+            return self._constructor
+
+    def construct(self, **kwargs) -> T:
+        """
+        Call the constructor to create an instance of `T`.
+        """
+        # If there are duplicate keys between self._constructor_extras and kwargs,
+        # this will overwrite the ones in self._constructor_extras with what's in kwargs.
+        contructor_kwargs = {**self._constructor_extras, **kwargs}
+        return self.constructor(**contructor_kwargs)

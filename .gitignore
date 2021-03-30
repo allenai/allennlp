@@ -6,6 +6,7 @@ allennlp.egg-info/
 build/
 dist/
 pip-wheel-metadata/
+context.tar.gz
 
 
 # dev tools
@@ -43,6 +44,7 @@ __pycache__
 
 .coverage
 .pytest_cache/
+.benchmarks
 
 # documentation build artifacts
 

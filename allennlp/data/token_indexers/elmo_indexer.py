@@ -3,9 +3,8 @@ from typing import Dict, List
 from overrides import overrides
 import torch
 
-from allennlp.common.checks import ConfigurationError
 from allennlp.common.util import pad_sequence_to_length
-from allennlp.data.tokenizers.token import Token
+from allennlp.data.tokenizers import Token
 from allennlp.data.token_indexers.token_indexer import TokenIndexer, IndexedTokenList
 from allennlp.data.vocabulary import Vocabulary
 
@@ -128,7 +127,7 @@ class ELMoTokenCharactersIndexer(TokenIndexer):
 
     @overrides
     def get_empty_token_list(self) -> IndexedTokenList:
-        return {"tokens": []}
+        return {"elmo_tokens": []}
 
     @overrides
     def tokens_to_indices(
@@ -136,15 +135,11 @@ class ELMoTokenCharactersIndexer(TokenIndexer):
     ) -> Dict[str, List[List[int]]]:
         # TODO(brendanr): Retain the token to index mappings in the vocabulary and remove this
 
-        # https://github.com/allenai/allennlp/blob/master/allennlp/data/token_indexers/wordpiece_indexer.py#L113
+        # https://github.com/allenai/allennlp/blob/main/allennlp/data/token_indexers/wordpiece_indexer.py#L113
 
-        texts = [token.text for token in tokens]
-
-        if any(text is None for text in texts):
-            raise ConfigurationError(
-                "ELMoTokenCharactersIndexer needs a tokenizer that retains text"
-            )
-        return {"tokens": [self._mapper.convert_word_to_char_ids(text) for text in texts]}
+        return {
+            "elmo_tokens": [self._mapper.convert_word_to_char_ids(t.ensure_text()) for t in tokens]
+        }
 
     @overrides
     def as_padded_tensor_dict(
@@ -156,9 +151,9 @@ class ELMoTokenCharactersIndexer(TokenIndexer):
         def padding_token():
             return [0] * ELMoCharacterMapper.max_word_length
 
-        tensor_dict["tokens"] = torch.LongTensor(
+        tensor_dict["elmo_tokens"] = torch.LongTensor(
             pad_sequence_to_length(
-                tokens["tokens"], padding_lengths["tokens"], default_value=padding_token
+                tokens["elmo_tokens"], padding_lengths["elmo_tokens"], default_value=padding_token
             )
         )
         return tensor_dict

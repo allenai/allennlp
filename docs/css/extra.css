@@ -7,3 +7,15 @@ h4 {
 h2, h3, h4 {
     color: #213744;
 }
+
+.alignleft {
+	float: left;
+}
+
+.alignright {
+	float: right;
+}
+
+a.sourcelink {
+    color: #888;
+}

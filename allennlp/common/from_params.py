@@ -77,7 +77,24 @@ def can_construct_from_params(type_: Type) -> bool:
             return True
         args = getattr(type_, "__args__")
         return all(can_construct_from_params(arg) for arg in args)
+
     return hasattr(type_, "from_params")
+
+
+def is_base_registrable(cls) -> bool:
+    """
+    Checks whether this is a class that directly inherits from Registrable, or is a subclass of such
+    a class.
+    """
+    from allennlp.common.registrable import Registrable  # import here to avoid circular imports
+
+    if not issubclass(cls, Registrable):
+        return False
+    method_resolution_order = inspect.getmro(cls)[1:]
+    for base_class in method_resolution_order:
+        if issubclass(base_class, Registrable) and base_class is not Registrable:
+            return False
+    return True
 
 
 def remove_optional(annotation: type):
@@ -88,13 +105,16 @@ def remove_optional(annotation: type):
     """
     origin = getattr(annotation, "__origin__", None)
     args = getattr(annotation, "__args__", ())
-    if origin == Union and len(args) == 2 and args[1] == type(None):  # noqa
-        return args[0]
+
+    if origin == Union:
+        return Union[tuple([arg for arg in args if arg != type(None)])]  # noqa: E721
     else:
         return annotation
 
 
-def infer_params(cls: Type[T], constructor: Callable[..., T] = None):
+def infer_params(
+    cls: Type[T], constructor: Union[Callable[..., T], Callable[[T], None]] = None
+) -> Dict[str, Any]:
     if constructor is None:
         constructor = cls.__init__
 
@@ -102,9 +122,15 @@ def infer_params(cls: Type[T], constructor: Callable[..., T] = None):
     parameters = dict(signature.parameters)
 
     has_kwargs = False
+    var_positional_key = None
     for param in parameters.values():
         if param.kind == param.VAR_KEYWORD:
             has_kwargs = True
+        elif param.kind == param.VAR_POSITIONAL:
+            var_positional_key = param.name
+
+    if var_positional_key:
+        del parameters[var_positional_key]
 
     if not has_kwargs:
         return parameters
@@ -117,9 +143,10 @@ def infer_params(cls: Type[T], constructor: Callable[..., T] = None):
         if issubclass(super_class_candidate, FromParams):
             super_class = super_class_candidate
             break
-    if not super_class:
-        raise RuntimeError("found a kwargs parameter with no inspectable super class")
-    super_parameters = infer_params(super_class)
+    if super_class:
+        super_parameters = infer_params(super_class)
+    else:
+        super_parameters = {}
 
     return {**super_parameters, **parameters}  # Subclass parameters overwrite superclass ones
 
@@ -143,6 +170,7 @@ def create_kwargs(
     kwargs: Dict[str, Any] = {}
 
     parameters = infer_params(cls, constructor)
+    accepts_kwargs = False
 
     # Iterate over all the constructor parameters and their annotations.
     for param_name, param in parameters.items():
@@ -151,8 +179,15 @@ def create_kwargs(
         # "self" you kind of deserve what happens.
         if param_name == "self":
             continue
-        # Also skip **kwargs parameters; we handled them above.
+
         if param.kind == param.VAR_KEYWORD:
+            # When a class takes **kwargs, we do two things: first, we assume that the **kwargs are
+            # getting passed to the super class, so we inspect super class constructors to get
+            # allowed arguments (that happens in `infer_params` above).  Second, we store the fact
+            # that the method allows extra keys; if we get extra parameters, instead of crashing,
+            # we'll just pass them as-is to the constructor, and hope that you know what you're
+            # doing.
+            accepts_kwargs = True
             continue
 
         # If the annotation is a compound type like typing.Dict[str, int],
@@ -160,19 +195,24 @@ def create_kwargs(
         # and an __args__ field indicating `(str, int)`. We capture both.
         annotation = remove_optional(param.annotation)
 
+        explicitly_set = param_name in params
         constructed_arg = pop_and_construct_arg(
             cls.__name__, param_name, annotation, param.default, params, **extras
         )
 
-        # If we just ended up constructing the default value for the parameter, we can just omit it.
+        # If the param wasn't explicitly set in `params` and we just ended up constructing
+        # the default value for the parameter, we can just omit it.
         # Leaving it in can cause issues with **kwargs in some corner cases, where you might end up
         # with multiple values for a single parameter (e.g., the default value gives you lazy=False
         # for a dataset reader inside **kwargs, but a particular dataset reader actually hard-codes
         # lazy=True - the superclass sees both lazy=True and lazy=False in its constructor).
-        if constructed_arg is not param.default:
+        if explicitly_set or constructed_arg is not param.default:
             kwargs[param_name] = constructed_arg
 
-    params.assert_empty(cls.__name__)
+    if accepts_kwargs:
+        kwargs.update(params)
+    else:
+        params.assert_empty(cls.__name__)
     return kwargs
 
 
@@ -262,9 +302,6 @@ def pop_and_construct_arg(
 
     popped_params = params.pop(name, default) if default != _NO_DEFAULT else params.pop(name)
     if popped_params is None:
-        origin = getattr(annotation, "__origin__", None)
-        if origin == Lazy:
-            return Lazy(lambda **kwargs: None)
         return None
 
     return construct_arg(class_name, name, popped_params, annotation, default, **extras)
@@ -338,8 +375,11 @@ def construct_arg(
         and can_construct_from_params(args[-1])
     ):
         value_cls = annotation.__args__[-1]
-
         value_dict = {}
+        if not isinstance(popped_params, Mapping):
+            raise TypeError(
+                f"Expected {argument_name} to be a Mapping (probably a dict or a Params object)."
+            )
 
         for key, value_params in popped_params.items():
             value_dict[key] = construct_arg(
@@ -414,21 +454,11 @@ def construct_arg(
         )
     elif origin == Lazy:
         if popped_params is default:
-            return Lazy(lambda **kwargs: default)
+            return default
+
         value_cls = args[0]
         subextras = create_extras(value_cls, extras)
-
-        def constructor(**kwargs):
-            # If there are duplicate keys between subextras and kwargs, this will overwrite the ones
-            # in subextras with what's in kwargs.  If an argument shows up twice, we should take it
-            # from what's passed to Lazy.construct() instead of what we got from create_extras().
-            # Almost certainly these will be identical objects, anyway.
-            # We do this by constructing a new dictionary, instead of mutating subextras, just in
-            # case this constructor is called multiple times.
-            constructor_extras = {**subextras, **kwargs}
-            return value_cls.from_params(params=deepcopy(popped_params), **constructor_extras)
-
-        return Lazy(constructor)  # type: ignore
+        return Lazy(value_cls, params=deepcopy(popped_params), contructor_extras=subextras)  # type: ignore
 
     # For any other kind of iterable, we will just assume that a list is good enough, and treat
     # it the same as List. This condition needs to be at the end, so we don't catch other kinds
@@ -458,7 +488,7 @@ def construct_arg(
     else:
         # Pass it on as is and hope for the best.   ¯\_(ツ)_/¯
         if isinstance(popped_params, Params):
-            return popped_params.as_dict(quiet=True)
+            return popped_params.as_dict()
         return popped_params
 
 
@@ -473,7 +503,7 @@ class FromParams:
         cls: Type[T],
         params: Params,
         constructor_to_call: Callable[..., T] = None,
-        constructor_to_inspect: Callable[..., T] = None,
+        constructor_to_inspect: Union[Callable[..., T], Callable[[T], None]] = None,
         **extras,
     ) -> T:
         """
@@ -521,6 +551,17 @@ class FromParams:
 
         registered_subclasses = Registrable._registry.get(cls)
 
+        if is_base_registrable(cls) and registered_subclasses is None:
+            # NOTE(mattg): There are some potential corner cases in this logic if you have nested
+            # Registrable types.  We don't currently have any of those, but if we ever get them,
+            # adding some logic to check `constructor_to_call` should solve the issue.  Not
+            # bothering to add that unnecessary complexity for now.
+            raise ConfigurationError(
+                "Tried to construct an abstract Registrable base class that has no registered "
+                "concrete types. This might mean that you need to use --include-package to get "
+                "your concrete classes actually registered."
+            )
+
         if registered_subclasses is not None and not constructor_to_call:
             # We know `cls` inherits from Registrable, so we'll use a cast to make mypy happy.
 
@@ -537,7 +578,7 @@ class FromParams:
                 constructor_to_inspect = subclass.__init__
                 constructor_to_call = subclass  # type: ignore
             else:
-                constructor_to_inspect = getattr(subclass, constructor_name)
+                constructor_to_inspect = cast(Callable[..., T], getattr(subclass, constructor_name))
                 constructor_to_call = constructor_to_inspect
 
             if hasattr(subclass, "from_params"):
@@ -558,9 +599,7 @@ class FromParams:
                 # instead of adding a `from_params` method for them somehow.  We just trust that
                 # you've done the right thing in passing your parameters, and nothing else needs to
                 # be recursively constructed.
-                extras = create_extras(subclass, extras)
-                constructor_args = {**params, **extras}
-                return subclass(**constructor_args)  # type: ignore
+                return subclass(**params)  # type: ignore
         else:
             # This is not a base class, so convert our params and extras into a dict of kwargs.
 
@@ -575,8 +614,10 @@ class FromParams:
                 # Without this logic, create_kwargs will look at object.__init__ and see that
                 # it takes *args and **kwargs and look for those.
                 kwargs: Dict[str, Any] = {}
+                params.assert_empty(cls.__name__)
             else:
                 # This class has a constructor, so create kwargs for it.
+                constructor_to_inspect = cast(Callable[..., T], constructor_to_inspect)
                 kwargs = create_kwargs(constructor_to_inspect, cls, params, **extras)
 
             return constructor_to_call(**kwargs)  # type: ignore

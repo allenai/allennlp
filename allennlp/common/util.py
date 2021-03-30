@@ -1,17 +1,19 @@
 """
 Various utilities that don't fit anywhere else.
 """
+import hashlib
+import io
+import pickle
+from datetime import timedelta
 import importlib
 import json
 import logging
 import os
 import pkgutil
 import random
-import subprocess
 import sys
 from contextlib import contextmanager
 from itertools import islice, zip_longest
-from logging import Filter
 from pathlib import Path
 from typing import (
     Any,
@@ -25,6 +27,7 @@ from typing import (
     Tuple,
     TypeVar,
     Union,
+    Sequence,
 )
 
 import numpy
@@ -36,13 +39,12 @@ from spacy.language import Language as SpacyModelType
 
 from allennlp.common.checks import log_pytorch_version_info
 from allennlp.common.params import Params
-from allennlp.common.tqdm import Tqdm
 
 try:
     import resource
 except ImportError:
     # resource doesn't exist on Windows systems
-    resource = None
+    resource = None  # type: ignore
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +70,7 @@ def sanitize(x: Any) -> Any:
     can be serialized into JSON.
     """
     # Import here to avoid circular references
-    from allennlp.data.tokenizers.token import Token
+    from allennlp.data.tokenizers import Token
 
     if isinstance(x, (str, float, int, bool)):
         # x is already serializable
@@ -91,8 +93,8 @@ def sanitize(x: Any) -> Any:
     elif isinstance(x, (spacy.tokens.Token, Token)):
         # Tokens get sanitized to just their text.
         return x.text
-    elif isinstance(x, (list, tuple)):
-        # Lists and Tuples need their values sanitized
+    elif isinstance(x, (list, tuple, set)):
+        # Lists, tuples, and sets need their values sanitized
         return [sanitize(x_i) for x_i in x]
     elif x is None:
         return "None"
@@ -121,7 +123,7 @@ def group_by_count(iterable: List[Any], count: int, default_value: Any) -> List[
     This is a short method, but it's complicated and hard to remember as a one-liner, so we just
     make a function out of it.
     """
-    return [list(l) for l in zip_longest(*[iter(iterable)] * count, fillvalue=default_value)]
+    return [list(x) for x in zip_longest(*[iter(iterable)] * count, fillvalue=default_value)]
 
 
 A = TypeVar("A")
@@ -142,7 +144,7 @@ def lazy_groups_of(iterable: Iterable[A], group_size: int) -> Iterator[List[A]]:
 
 
 def pad_sequence_to_length(
-    sequence: List,
+    sequence: Sequence,
     desired_length: int,
     default_value: Callable[[], Any] = lambda: 0,
     padding_on_right: bool = True,
@@ -153,26 +155,27 @@ def pad_sequence_to_length(
 
     # Parameters
 
-    sequence : List
+    sequence : `List`
         A list of objects to be padded.
 
-    desired_length : int
+    desired_length : `int`
         Maximum length of each sequence. Longer sequences are truncated to this length, and
         shorter ones are padded to it.
 
-    default_value: Callable, default=lambda: 0
+    default_value: `Callable`, optional (default=`lambda: 0`)
         Callable that outputs a default value (of any type) to use as padding values.  This is
         a lambda to avoid using the same object when the default value is more complex, like a
         list.
 
-    padding_on_right : bool, default=True
+    padding_on_right : `bool`, optional (default=`True`)
         When we add padding tokens (or truncate the sequence), should we do it on the right or
         the left?
 
     # Returns
 
-    padded_sequence : List
+    padded_sequence : `List`
     """
+    sequence = list(sequence)
     # Truncates the sequence to the desired length.
     if padding_on_right:
         padded_sequence = sequence[:desired_length]
@@ -229,7 +232,7 @@ def prepare_environment(params: Params):
 
     # Parameters
 
-    params: Params object or dict, required.
+    params: `Params`
         A `Params` object or dict holding the json parameters.
     """
     seed = params.pop_int("random_seed", 13370)
@@ -249,127 +252,11 @@ def prepare_environment(params: Params):
     log_pytorch_version_info()
 
 
-class FileFriendlyLogFilter(Filter):
-    """
-    TQDM and requests use carriage returns to get the training line to update for each batch
-    without adding more lines to the terminal output.  Displaying those in a file won't work
-    correctly, so we'll just make sure that each batch shows up on its one line.
-    """
-
-    def filter(self, record):
-        if "\r" in record.msg:
-            record.msg = record.msg.replace("\r", "")
-            if not record.msg or record.msg[-1] != "\n":
-                record.msg += "\n"
-        return True
-
-
-class WorkerLogFilter(Filter):
-    def __init__(self, rank=-1):
-        super().__init__()
-        self._rank = rank
-
-    def filter(self, record):
-        if self._rank != -1:
-            record.msg = f"Rank {self._rank} | {record.msg}"
-        return True
-
-
-def prepare_global_logging(
-    serialization_dir: str, file_friendly_logging: bool, rank: int = 0, world_size: int = 1
-) -> None:
-    # If we don't have a terminal as stdout,
-    # force tqdm to be nicer.
-    if not sys.stdout.isatty():
-        file_friendly_logging = True
-
-    Tqdm.set_slower_interval(file_friendly_logging)
-
-    # Handlers for stdout/err logging
-    output_stream_log_handler = logging.StreamHandler(sys.stdout)
-    error_stream_log_handler = logging.StreamHandler(sys.stderr)
-
-    if world_size == 1:
-        # This case is not distributed training and hence will stick to the older
-        # log file names
-        output_file_log_handler = logging.FileHandler(
-            filename=os.path.join(serialization_dir, "stdout.log")
-        )
-        error_file_log_handler = logging.FileHandler(
-            filename=os.path.join(serialization_dir, "stderr.log")
-        )
-    else:
-        # Create log files with worker ids
-        output_file_log_handler = logging.FileHandler(
-            filename=os.path.join(serialization_dir, f"stdout_worker{rank}.log")
-        )
-        error_file_log_handler = logging.FileHandler(
-            filename=os.path.join(serialization_dir, f"stderr_worker{rank}.log")
-        )
-
-        # This adds the worker's rank to messages being logged to files.
-        # This will help when combining multiple worker log files using `less` command.
-        worker_filter = WorkerLogFilter(rank)
-        output_file_log_handler.addFilter(worker_filter)
-        error_file_log_handler.addFilter(worker_filter)
-
-    formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(name)s - %(message)s")
-
-    root_logger = logging.getLogger()
-
-    # Remove the already set stream handler in root logger.
-    # Not doing this will result in duplicate log messages
-    # printed in the console
-    if len(root_logger.handlers) > 0:
-        for handler in root_logger.handlers:
-            root_logger.removeHandler(handler)
-
-    # file handlers need to be handled for tqdm's \r char
-    file_friendly_log_filter = FileFriendlyLogFilter()
-
-    if os.environ.get("ALLENNLP_DEBUG"):
-        LEVEL = logging.DEBUG
-    else:
-        level_name = os.environ.get("ALLENNLP_LOG_LEVEL")
-        LEVEL = logging._nameToLevel.get(level_name, logging.INFO)
-
-    if rank == 0:
-        # stdout/stderr handlers are added only for the
-        # master worker. This is to avoid cluttering the console
-        # screen with too many log messages from all workers.
-        output_stream_log_handler.setFormatter(formatter)
-        error_stream_log_handler.setFormatter(formatter)
-
-        output_stream_log_handler.setLevel(LEVEL)
-        error_stream_log_handler.setLevel(logging.ERROR)
-
-        if file_friendly_logging:
-            output_stream_log_handler.addFilter(file_friendly_log_filter)
-            error_stream_log_handler.addFilter(file_friendly_log_filter)
-
-        root_logger.addHandler(output_stream_log_handler)
-        root_logger.addHandler(error_stream_log_handler)
-
-    output_file_log_handler.addFilter(file_friendly_log_filter)
-    error_file_log_handler.addFilter(file_friendly_log_filter)
-
-    output_file_log_handler.setFormatter(formatter)
-    error_file_log_handler.setFormatter(formatter)
-
-    output_file_log_handler.setLevel(LEVEL)
-    error_file_log_handler.setLevel(logging.ERROR)
-
-    root_logger.addHandler(output_file_log_handler)
-    root_logger.addHandler(error_file_log_handler)
-
-    root_logger.setLevel(LEVEL)
-
-
 LOADED_SPACY_MODELS: Dict[Tuple[str, bool, bool, bool], SpacyModelType] = {}
 
 
 def get_spacy_model(
-    spacy_model_name: str, pos_tags: bool, parse: bool, ner: bool
+    spacy_model_name: str, pos_tags: bool = True, parse: bool = False, ner: bool = False
 ) -> SpacyModelType:
     """
     In order to avoid loading spacy models a whole bunch of times, we'll save references to them,
@@ -463,67 +350,92 @@ def import_module_and_submodules(package_name: str) -> None:
         for module_finder, name, _ in pkgutil.walk_packages(path):
             # Sometimes when you import third-party libraries that are on your path,
             # `pkgutil.walk_packages` returns those too, so we need to skip them.
-            if path_string and module_finder.path != path_string:
+            if path_string and module_finder.path != path_string:  # type: ignore[union-attr]
                 continue
             subpackage = f"{package_name}.{name}"
             import_module_and_submodules(subpackage)
 
 
-def peak_memory_mb() -> float:
+def peak_cpu_memory() -> Dict[int, int]:
     """
-    Get peak memory usage for this process, as measured by
-    max-resident-set size:
+    Get peak memory usage for each worker, as measured by max-resident-set size:
 
     https://unix.stackexchange.com/questions/30940/getrusage-system-call-what-is-maximum-resident-set-size
 
-    Only works on OSX and Linux, returns 0.0 otherwise.
+    Only works on OSX and Linux, otherwise the result will be 0.0 for every worker.
     """
     if resource is None or sys.platform not in ("linux", "darwin"):
-        return 0.0
-
-    # TODO(joelgrus): For whatever, our pinned version 0.521 of mypy does not like
-    # next line, but later versions (e.g. 0.530) are fine with it. Once we get that
-    # figured out, remove the type: ignore.
-    peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss  # type: ignore
-
-    if sys.platform == "darwin":
-        # On OSX the result is in bytes.
-        return peak / 1_000_000
-
+        peak_bytes = 0
     else:
-        # On Linux the result is in kilobytes.
-        return peak / 1_000
+        peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+        if sys.platform == "darwin":
+            # On OSX the result is in bytes.
+            peak_bytes = peak
+        else:
+            # On Linux the result is in kilobytes.
+            peak_bytes = peak * 1_024
+
+    if is_distributed():
+        global_rank = dist.get_rank()
+        world_size = dist.get_world_size()
+
+        peak_bytes_tensor = torch.tensor([global_rank, peak_bytes])
+        # All of these tensors will be gathered into this list.
+        gather_results = [torch.tensor([0, 0]) for _ in range(world_size)]
+
+        # If the backend is 'nccl', this means we're training on GPUs, so these tensors
+        # need to be on GPU.
+        if dist.get_backend() == "nccl":
+            peak_bytes_tensor = peak_bytes_tensor.cuda()
+            gather_results = [x.cuda() for x in gather_results]
+
+        dist.all_gather(gather_results, peak_bytes_tensor)
+
+        results_dict: Dict[int, int] = {}
+        for peak_bytes_tensor in gather_results:
+            results_dict[int(peak_bytes_tensor[0])] = int(peak_bytes_tensor[1])
+
+        return results_dict
+    else:
+        return {0: peak_bytes}
 
 
-def gpu_memory_mb() -> Dict[int, int]:
+def peak_gpu_memory() -> Dict[int, int]:
     """
-    Get the current GPU memory usage.
-    Based on https://discuss.pytorch.org/t/access-gpu-memory-usage-in-pytorch/3192/4
+    Get the peak GPU memory usage in bytes by device.
 
     # Returns
 
     `Dict[int, int]`
         Keys are device ids as integers.
-        Values are memory usage as integers in MB.
+        Values are memory usage as integers in bytes.
         Returns an empty `dict` if GPUs are not available.
     """
-    try:
-        result = subprocess.check_output(
-            ["nvidia-smi", "--query-gpu=memory.used", "--format=csv,nounits,noheader"],
-            encoding="utf-8",
-        )
-        gpu_memory = [int(x) for x in result.strip().split("\n")]
-        return {gpu: memory for gpu, memory in enumerate(gpu_memory)}
-    except FileNotFoundError:
-        # `nvidia-smi` doesn't exist, assume that means no GPU.
+    if not torch.cuda.is_available():
         return {}
-    except:  # noqa
-        # Catch *all* exceptions, because this memory check is a nice-to-have
-        # and we'd never want a training run to fail because of it.
-        logger.warning(
-            "unable to check gpu_memory_mb() due to occasional failure, continuing", exc_info=True
-        )
-        return {}
+
+    if is_distributed():
+        # If the backend is not 'nccl', we're training on CPU.
+        if dist.get_backend() != "nccl":
+            return {}
+
+        device = torch.cuda.current_device()
+        global_rank = dist.get_rank()
+        world_size = dist.get_world_size()
+        peak_bytes = torch.cuda.max_memory_allocated(device)
+        peak_bytes_tensor = torch.tensor([global_rank, peak_bytes], device=device)
+        # All of these tensors will be gathered into this list.
+        gather_results = [torch.tensor([0, 0], device=device) for _ in range(world_size)]
+
+        dist.all_gather(gather_results, peak_bytes_tensor)
+
+        results_dict: Dict[int, int] = {}
+        for peak_bytes_tensor in gather_results:
+            results_dict[int(peak_bytes_tensor[0])] = int(peak_bytes_tensor[1])
+
+        return results_dict
+    else:
+        return {0: torch.cuda.max_memory_allocated()}
 
 
 def ensure_list(iterable: Iterable[A]) -> List[A]:
@@ -543,6 +455,14 @@ def is_lazy(iterable: Iterable[A]) -> bool:
     which here just means it's not a list.
     """
     return not isinstance(iterable, list)
+
+
+def int_to_device(device: Union[int, torch.device]) -> torch.device:
+    if isinstance(device, torch.device):
+        return device
+    if device < 0:
+        return torch.device("cpu")
+    return torch.device(device)
 
 
 def log_frozen_and_tunable_parameter_names(model: torch.nn.Module) -> None:
@@ -580,47 +500,6 @@ def dump_metrics(file_path: Optional[str], metrics: Dict[str, Any], log: bool = 
 
 def flatten_filename(file_path: str) -> str:
     return file_path.replace("/", "_SLASH_")
-
-
-def is_master(
-    global_rank: int = None, world_size: int = None, num_procs_per_node: int = None
-) -> bool:
-    """
-    Checks if the process is a "master" of its node in a distributed process group. If a
-    process group is not initialized, this returns `True`.
-
-    # Parameters
-
-    global_rank : int ( default = None )
-        Global rank of the process if in a distributed process group. If not
-        given, rank is obtained using `torch.distributed.get_rank()`
-    world_size : int ( default = None )
-        Number of processes in the distributed group. If not
-        given, this is obtained using `torch.distributed.get_world_size()`
-    num_procs_per_node: int ( default = None ),
-        Number of GPU processes running per node
-    """
-    distributed = dist.is_available() and dist.is_initialized()
-
-    # In non-distributed case, a "master" process doesn't make any
-    # sense. So instead of raising an error, returning True would
-    # make things less painful
-    if not distributed:
-        return True
-
-    if global_rank is None:
-        global_rank = dist.get_rank()
-
-    if world_size is None:
-        world_size = dist.get_world_size()
-
-    if num_procs_per_node is None and os.environ:
-        num_procs_per_node = int(os.environ.get("ALLENNLP_PROCS_PER_NODE", world_size))
-
-    # rank == 0 would do in a single-node multi-GPU setup. However,
-    # in a multi-node case, every node has a logical master and hence
-    # the mod(%) op.
-    return global_rank % (world_size / num_procs_per_node) == 0
 
 
 def is_distributed() -> bool:
@@ -708,3 +587,124 @@ def sanitize_ptb_tokenized_string(text: str) -> str:
             new_tokens.append(tokens[i])
 
     return " ".join(new_tokens)
+
+
+def find_open_port() -> int:
+    """
+    Find a random open port on local host.
+    """
+    import socket
+
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        # Passes 0 means find any open port.
+        # See https://stackoverflow.com/questions/1365265/on-localhost-how-do-i-pick-a-free-port-number
+        sock.bind(("", 0))
+        return sock.getsockname()[1]
+
+
+def format_timedelta(td: timedelta) -> str:
+    """
+    Format a timedelta for humans.
+    """
+    if td.days > 1:
+        return f"{td.days} days"
+    elif td.days > 0:
+        return f"{td.days} day"
+    else:
+        hours, remainder = divmod(td.seconds, 3600)
+        minutes, _ = divmod(remainder, 60)
+        if hours > 1:
+            return f"{hours} hours"
+        elif hours > 0:
+            return f"{hours} hour, {minutes} mins"
+        else:
+            return f"{minutes} mins"
+
+
+def format_size(size: int) -> str:
+    """
+    Format a size (in bytes) for humans.
+    """
+    GBs = size / (1024 * 1024 * 1024)
+    if GBs >= 10:
+        return f"{int(round(GBs, 0))}G"
+    if GBs >= 1:
+        return f"{round(GBs, 1):.1f}G"
+    MBs = size / (1024 * 1024)
+    if MBs >= 10:
+        return f"{int(round(MBs, 0))}M"
+    if MBs >= 1:
+        return f"{round(MBs, 1):.1f}M"
+    KBs = size / 1024
+    if KBs >= 10:
+        return f"{int(round(KBs, 0))}K"
+    if KBs >= 1:
+        return f"{round(KBs, 1):.1f}K"
+    return f"{size}B"
+
+
+def nan_safe_tensor_divide(numerator, denominator):
+    """Performs division and handles divide-by-zero.
+
+    On zero-division, sets the corresponding result elements to zero.
+    """
+    result = numerator / denominator
+    mask = denominator == 0.0
+    if not mask.any():
+        return result
+
+    # remove nan
+    result[mask] = 0.0
+    return result
+
+
+def shuffle_iterable(i: Iterable[T], pool_size: int = 1024) -> Iterable[T]:
+    import random
+
+    i = iter(i)
+    pool = []
+
+    # fill up the pool
+    for item in i:
+        pool.append(item)
+        if len(pool) >= pool_size:
+            break
+
+    # play in it
+    while len(pool) > 0:
+        index = random.randrange(len(pool))
+        yield pool[index]
+        try:
+            pool[index] = next(i)
+        except StopIteration:
+            del pool[index]
+            break
+
+    # drain it
+    random.shuffle(pool)
+    yield from pool
+
+
+def cycle_iterator_function(iterator_function: Callable[[], Iterable[T]]) -> Iterator[T]:
+    """
+    Functionally equivalent to `itertools.cycle(iterator_function())`, but this function does not
+    cache the result of calling the iterator like `cycle` does.  Instead, we just call
+    `iterator_function()` again whenever we get a `StopIteration`.  This should only be preferred
+    over `itertools.cycle` in cases where you're sure you don't want the caching behavior that's
+    done in `itertools.cycle`.
+    """
+    iterator = iter(iterator_function())
+    while True:
+        try:
+            yield next(iterator)
+        except StopIteration:
+            iterator = iter(iterator_function())
+
+
+def hash_object(o: Any) -> str:
+    """Returns a 32-character hash code of arbitrary Python objects."""
+    m = hashlib.blake2b()
+    with io.BytesIO() as buffer:
+        pickle.dump(o, buffer)
+        m.update(buffer.getbuffer())
+        return m.hexdigest()

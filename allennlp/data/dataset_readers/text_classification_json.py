@@ -17,7 +17,6 @@ logger = logging.getLogger(__name__)
 class TextClassificationJsonReader(DatasetReader):
     """
     Reads tokens and their labels from a labeled text classification dataset.
-    Expects a "text" field and a "label" field in JSON format.
 
     The output of `read` is a list of `Instance` s with the fields:
         tokens : `TextField` and
@@ -44,6 +43,10 @@ class TextClassificationJsonReader(DatasetReader):
     skip_label_indexing : `bool`, optional (default = `False`)
         Whether or not to skip label indexing. You might want to skip label indexing if your
         labels are numbers, so the dataset reader doesn't re-number them starting from 0.
+    text_key: `str`, optional (default=`"text"`)
+        The key name of the source field in the JSON data file.
+    label_key: `str`, optional (default=`"label"`)
+        The key name of the target field in the JSON data file.
     """
 
     def __init__(
@@ -53,26 +56,32 @@ class TextClassificationJsonReader(DatasetReader):
         segment_sentences: bool = False,
         max_sequence_length: int = None,
         skip_label_indexing: bool = False,
+        text_key: str = "text",
+        label_key: str = "label",
         **kwargs,
     ) -> None:
-        super().__init__(**kwargs)
+        super().__init__(
+            manual_distributed_sharding=True, manual_multiprocess_sharding=True, **kwargs
+        )
         self._tokenizer = tokenizer or SpacyTokenizer()
         self._segment_sentences = segment_sentences
         self._max_sequence_length = max_sequence_length
         self._skip_label_indexing = skip_label_indexing
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
+        self._text_key = text_key
+        self._label_key = label_key
         if self._segment_sentences:
             self._sentence_segmenter = SpacySentenceSplitter()
 
     @overrides
     def _read(self, file_path):
         with open(cached_path(file_path), "r") as data_file:
-            for line in data_file.readlines():
+            for line in self.shard_iterable(data_file.readlines()):
                 if not line:
                     continue
                 items = json.loads(line)
-                text = items["text"]
-                label = items.get("label")
+                text = items[self._text_key]
+                label = items.get(self._label_key)
                 if label is not None:
                     if self._skip_label_indexing:
                         try:
@@ -83,9 +92,7 @@ class TextClassificationJsonReader(DatasetReader):
                             )
                     else:
                         label = str(label)
-                instance = self.text_to_instance(text=text, label=label)
-                if instance is not None:
-                    yield instance
+                yield self.text_to_instance(text=text, label=label)
 
     def _truncate(self, tokens):
         """
@@ -104,16 +111,16 @@ class TextClassificationJsonReader(DatasetReader):
 
         text : `str`, required.
             The text to classify
-        label : `str`, optional, (default = None).
+        label : `str`, optional, (default = `None`).
             The label for this text.
 
         # Returns
 
         An `Instance` containing the following fields:
-            tokens : `TextField`
-                The tokens in the sentence or phrase.
-            label : `LabelField`
-                The label label of the sentence or phrase.
+            - tokens (`TextField`) :
+              The tokens in the sentence or phrase.
+            - label (`LabelField`) :
+              The label label of the sentence or phrase.
         """
 
         fields: Dict[str, Field] = {}
@@ -124,13 +131,21 @@ class TextClassificationJsonReader(DatasetReader):
                 word_tokens = self._tokenizer.tokenize(sentence)
                 if self._max_sequence_length is not None:
                     word_tokens = self._truncate(word_tokens)
-                sentences.append(TextField(word_tokens, self._token_indexers))
+                sentences.append(TextField(word_tokens))
             fields["tokens"] = ListField(sentences)
         else:
             tokens = self._tokenizer.tokenize(text)
             if self._max_sequence_length is not None:
                 tokens = self._truncate(tokens)
-            fields["tokens"] = TextField(tokens, self._token_indexers)
+            fields["tokens"] = TextField(tokens)
         if label is not None:
             fields["label"] = LabelField(label, skip_indexing=self._skip_label_indexing)
         return Instance(fields)
+
+    @overrides
+    def apply_token_indexers(self, instance: Instance) -> None:
+        if self._segment_sentences:
+            for text_field in instance.fields["tokens"]:  # type: ignore
+                text_field._token_indexers = self._token_indexers
+        else:
+            instance.fields["tokens"]._token_indexers = self._token_indexers  # type: ignore

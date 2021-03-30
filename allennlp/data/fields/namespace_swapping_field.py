@@ -1,11 +1,11 @@
-from typing import Dict, List
+from typing import Dict, List, Any
 
 from overrides import overrides
 import torch
 
 from allennlp.common.util import pad_sequence_to_length
 from allennlp.data.vocabulary import Vocabulary
-from allennlp.data.tokenizers.token import Token
+from allennlp.data.tokenizers import Token
 from allennlp.data.fields.field import Field
 
 
@@ -23,15 +23,18 @@ class NamespaceSwappingField(Field[torch.Tensor]):
         The namespace that the tokens from the source sentence will be mapped to.
     """
 
+    __slots__ = ["_source_tokens", "_target_namespace", "_mapping_array"]
+
     def __init__(self, source_tokens: List[Token], target_namespace: str) -> None:
         self._source_tokens = source_tokens
         self._target_namespace = target_namespace
-        self._mapping_array: List[int] = None
+        self._mapping_array: List[int] = []
 
     @overrides
     def index(self, vocab: Vocabulary):
         self._mapping_array = [
-            vocab.get_token_index(x.text, self._target_namespace) for x in self._source_tokens
+            vocab.get_token_index(x.ensure_text(), self._target_namespace)
+            for x in self._source_tokens
         ]
 
     @overrides
@@ -47,7 +50,17 @@ class NamespaceSwappingField(Field[torch.Tensor]):
 
     @overrides
     def empty_field(self) -> "NamespaceSwappingField":
-        return NamespaceSwappingField([], self._target_namespace)
+        empty_field = NamespaceSwappingField([], self._target_namespace)
+        empty_field._mapping_array = []
+
+        return empty_field
 
     def __len__(self):
         return len(self._source_tokens)
+
+    @overrides
+    def human_readable_repr(self) -> Dict[str, Any]:
+        return {
+            "source_tokens": [str(t) for t in self._source_tokens],
+            "target_namespace": self._target_namespace,
+        }

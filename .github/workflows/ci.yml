@@ -1,0 +1,504 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+    - main
+  push:
+    branches:
+    - main
+  release:
+    types: [published]
+  schedule:
+  - cron: '37 11 * * 1,2,3,4,5'  # early morning (11:37 UTC / 4:37 AM PDT) Monday - Friday
+
+jobs:
+  changelog:
+    name: CHANGELOG
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+    - uses: actions/checkout@v1
+
+    - name: Check that CHANGELOG has been updated
+      run: |
+        # If this step fails, this means you haven't updated the CHANGELOG.md
+        # file with notes on your contribution.
+        git diff --name-only $(git merge-base origin/main HEAD) | grep '^CHANGELOG.md$' && echo "Thanks for helping keep our CHANGELOG up-to-date!"
+
+  gpu_checks:
+    name: GPU Checks
+    if: github.repository == 'allenai/allennlp'  # self-hosted runner only available on main repo
+    timeout-minutes: 15
+    runs-on: [self-hosted, GPU]
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set Docker tag
+      run: |
+        if [[ $GITHUB_EVENT_NAME == 'release' ]]; then
+            echo "DOCKER_TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV;
+        else
+            echo "DOCKER_TAG=$GITHUB_SHA" >> $GITHUB_ENV;
+        fi
+
+    - name: Build test image
+      run: |
+        make docker-test-image DOCKER_TAG=$DOCKER_TAG
+
+    - name: Run GPU tests
+      run: |
+        make docker-test-run DOCKER_TAG=$DOCKER_TAG ARGS='gpu-test'
+
+  check_core:
+    name: Check Core
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ['3.7', '3.8']
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Setup Python
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python }}
+
+    - uses: actions/cache@v2
+      with:
+        path: ${{ env.pythonLocation }}
+        key: ${{ runner.os }}-pydeps-${{ env.pythonLocation }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
+
+    - name: Install requirements
+      run: |
+        make install
+
+    - name: Debug info
+      run: |
+        pip freeze
+
+    - name: Format
+      if: always()
+      run: |
+        make format
+
+    - name: Lint
+      if: always()
+      run: |
+        make lint
+
+    - name: Type check
+      if: always()
+      run: |
+        make typecheck
+
+    - name: Run tests
+      if: always()
+      run: |
+        make test-with-cov
+
+    - name: Upload coverage to Codecov
+      if: matrix.python == '3.7' && github.repository == 'allenai/allennlp' && (github.event_name == 'push' || github.event_name == 'pull_request')
+      uses: codecov/codecov-action@v1
+      with:
+        file: ./coverage.xml
+        # Ignore codecov failures as the codecov server is not
+        # very reliable but we don't want to report a failure
+        # in the github UI just because the coverage report failed to
+        # be published.
+        fail_ci_if_error: false
+
+    - name: Clean up
+      if: always()
+      run: |
+        # Could run into issues with the cache if we don't uninstall the editable.
+        # See https://github.com/pypa/pip/issues/4537.
+        pip uninstall --yes allennlp
+
+  check_models:
+    name: Check Models
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ['3.7', '3.8']
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Setup Python
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python }}
+
+    - uses: actions/cache@v2
+      with:
+        path: ${{ env.pythonLocation }}
+        key: ${{ runner.os }}-pydeps-${{ env.pythonLocation }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
+
+    - name: Install requirements
+      run: |
+        make install
+
+    - name: Debug info
+      run: |
+        pip freeze
+
+    - name: Pull and install models repo
+      env:
+        ALLENNLP_VERSION_OVERRIDE: ""  # Don't replace the core library.
+      run: |
+        git clone https://github.com/allenai/allennlp-models.git
+        cd allennlp-models
+        pip install --upgrade --upgrade-strategy eager -e . -r dev-requirements.txt
+
+    - name: Run models tests
+      run: |
+        cd allennlp-models && make test
+
+    - name: Clean up
+      if: always()
+      run: |
+        pip uninstall --yes allennlp allennlp-models
+
+  # Builds package distribution files for PyPI.
+  build_package:
+    name: Build Package
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Setup Python
+      uses: actions/setup-python@v1
+      with:
+        python-version: 3.7
+
+    - uses: actions/cache@v2
+      with:
+        path: ${{ env.pythonLocation }}
+        key: ${{ runner.os }}-pydeps-${{ env.pythonLocation }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
+
+    - name: Install requirements
+      run: |
+        make install
+
+    - name: Check and set nightly version
+      if: github.event_name == 'schedule'
+      run: |
+        # Verify that current version is ahead of the last release.
+        LATEST=$(scripts/get_version.py latest)
+        CURRENT=$(scripts/get_version.py current)
+        if [ "$CURRENT" == "$LATEST" ]; then
+            echo "Current version needs to be ahead of latest release in order to build nightly release";
+            exit 1;
+        fi
+        # This is somewhat bizarre, but you can't set env variables to bash
+        # commands in the action workflow - so we have to use this odd way of
+        # exporting a variable instead.
+        echo "ALLENNLP_VERSION_SUFFIX=dev$(date -u +%Y%m%d)" >> $GITHUB_ENV
+
+    - name: Check version and release tag match
+      if: github.event_name == 'release'
+      run: |
+        # Remove 'refs/tags/' to get the actual tag from the release.
+        TAG=${GITHUB_REF#refs/tags/};
+        VERSION=$(scripts/get_version.py current)
+        if [ "$TAG" != "$VERSION" ]; then
+            echo "Bad tag or version. Tag $TAG does not match $VERSION";
+            exit 1;
+        fi
+
+    - name: Build core package
+      run: |
+        echo "Building packages for core release"
+        # Just print out the version for debugging.
+        make version
+        python setup.py bdist_wheel sdist
+
+    - name: Save core package
+      uses: actions/upload-artifact@v1
+      with:
+        name: core-package
+        path: dist
+
+    - name: Clean up
+      if: always()
+      run: |
+        pip uninstall --yes allennlp
+
+  # Tests installing from the distribution files.
+  test_package:
+    name: Test Package
+    needs: [build_package]  # needs the package artifact created from 'build_package' job.
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ['3.7', '3.8']
+
+    steps:
+    - name: Setup Python
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python }}
+
+    - name: Install requirements
+      run: |
+        pip install --upgrade pip setuptools wheel
+
+    - name: Download core package
+      uses: actions/download-artifact@v1
+      with:
+        name: core-package
+        path: dist
+
+    - name: Install core package
+      run: |
+        pip install $(ls dist/*.whl)
+
+    - name: Pip freeze
+      run: |
+        pip freeze
+
+    - name: Test install
+      run: |
+        allennlp test-install
+
+  # Builds Docker image from the core distribution files and uploads to Docker Hub.
+  docker:
+    name: Docker (CUDA ${{ matrix.cuda }})
+    if: github.repository == 'allenai/allennlp'
+    runs-on: [self-hosted, GPU]
+    strategy:
+      matrix:
+        cuda: ['10.1', '10.2', '11.1']
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set torch version
+      env:
+        CUDA: ${{ matrix.cuda }}
+      run: |
+        # Check the install instructions on https://pytorch.org/ to keep these up-to-date.
+        if [[ $CUDA == '10.1' ]]; then
+            echo "DOCKER_TORCH_VERSION='torch==1.8.0+cu101 torchvision==0.9.0+cu101 -f https://download.pytorch.org/whl/torch_stable.html'" >> $GITHUB_ENV;
+        elif [[ $CUDA == '10.2' ]]; then
+            echo "DOCKER_TORCH_VERSION='torch==1.8.0'" >> $GITHUB_ENV;
+        elif [[ $CUDA == '11.1' ]]; then
+            echo "DOCKER_TORCH_VERSION='torch==1.8.0+cu111 torchvision==0.9.0+cu111 -f https://download.pytorch.org/whl/torch_stable.html'" >> $GITHUB_ENV;
+        else
+            echo "Unhandled CUDA version $CUDA";
+            exit 1;
+        fi
+
+    - name: Set image name
+      env:
+        CUDA: ${{ matrix.cuda }}
+      run: |
+        if [[ $GITHUB_EVENT_NAME == 'release' ]]; then
+            echo "DOCKER_IMAGE_NAME=allennlp/allennlp:${GITHUB_REF#refs/tags/}-cuda${CUDA}" >> $GITHUB_ENV;
+        else
+            echo "DOCKER_IMAGE_NAME=allennlp/commit:${GITHUB_SHA}-cuda${CUDA}" >> $GITHUB_ENV;
+        fi
+
+    - name: Build image
+      run: |
+        make docker-image DOCKER_IMAGE_NAME="$DOCKER_IMAGE_NAME" DOCKER_TORCH_VERSION="$DOCKER_TORCH_VERSION"
+
+    - name: Test image
+      run: |
+        make docker-run DOCKER_IMAGE_NAME=$DOCKER_IMAGE_NAME ARGS='test-install'
+
+    - name: Authenticate to Docker Hub
+      if: github.event_name == 'release' || github.event_name == 'push'
+      run: |
+        docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
+
+    - name: Upload image
+      if: github.event_name == 'release' || github.event_name == 'push'
+      run: |
+        docker push $DOCKER_IMAGE_NAME
+
+    - name: Upload default commit image
+      # CUDA 10.2 is currently our default.
+      if: github.event_name == 'push' && matrix.cuda == '10.2'
+      run: |
+        docker tag $DOCKER_IMAGE_NAME allennlp/commit:${GITHUB_SHA}
+        docker push allennlp/commit:${GITHUB_SHA}
+
+    - name: Upload latest image
+      # CUDA 10.2 is currently our default.
+      if: github.event_name == 'release' && matrix.cuda == '10.2'
+      run: |
+        docker tag $DOCKER_IMAGE_NAME allennlp/allennlp:latest
+        docker push allennlp/allennlp:latest
+
+  # Builds the API documentation and pushes it to the appropriate folder in the
+  # allennlp-docs repo.
+  docs:
+    name: Docs
+    # Don't run for forks.
+    if: github.repository == 'allenai/allennlp'
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v1
+
+    - name: Setup SSH Client 🔑
+      if: github.event_name == 'release' || github.event_name == 'push'
+      uses: webfactory/ssh-agent@v0.4.1
+      with:
+        ssh-private-key: ${{ secrets.DOCS_DEPLOY_KEY }}
+
+    - name: Setup Python
+      uses: actions/setup-python@v1
+      with:
+        python-version: 3.7
+
+    - uses: actions/cache@v2
+      with:
+        path: ${{ env.pythonLocation }}
+        key: ${{ runner.os }}-pydeps-${{ env.pythonLocation }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
+
+    - name: Install requirements
+      run: |
+        make install
+
+    - name: Debug info
+      run: |
+        pip freeze
+
+    - name: Prepare environment
+      run: |
+        if [[ $GITHUB_EVENT_NAME == 'release' ]]; then
+            echo "DOCS_FOLDER=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV;
+            echo "BASE_SOURCE_LINK=https://github.com/allenai/allennlp/blob/${GITHUB_REF#refs/tags/}/allennlp/" >> $GITHUB_ENV;
+        else
+            echo "DOCS_FOLDER=main" >> $GITHUB_ENV;
+            echo "BASE_SOURCE_LINK=https://github.com/allenai/allennlp/blob/main/allennlp/" >> $GITHUB_ENV;
+        fi
+
+    - name: Build docs
+      run: |
+        ./scripts/build_docs.sh
+
+    - name: Print the ref
+      run: |
+        echo ${{ github.ref }}
+
+    - name: Configure Git
+      if: github.event_name == 'release' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+      run: |
+        git config --global user.email "ai2service@allenai.org"
+        git config --global user.name "ai2service"
+        git config --global push.default simple
+
+    - name: Stage docs
+      if: github.event_name == 'release' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+      run: |
+        echo "Staging docs to $DOCS_FOLDER"
+
+        # Checkout allennlp-docs to /allennlp-docs
+        git clone git@github.com:allenai/allennlp-docs.git ~/allennlp-docs
+        
+        # Copy the generated docs to the checked out docs repo
+        rm -rf ~/allennlp-docs/$DOCS_FOLDER/
+        mkdir -p ~/allennlp-docs/$DOCS_FOLDER
+        cp -r site/* ~/allennlp-docs/$DOCS_FOLDER
+
+    - name: Update shortcuts
+      if: github.event_name == 'release'
+      run: |
+        # Fail immediately if any step fails.
+        set -e
+
+        LATEST=$(./scripts/get_version.py latest)
+        STABLE=$(./scripts/get_version.py stable)
+
+        cd ~/allennlp-docs/
+
+        echo "Updating latest/index.html to point to $LATEST"
+        mkdir -p latest
+        cat >latest/index.html << EOL
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <meta http-equiv="Refresh" content="0; url=/${LATEST}/" />
+          </head>
+          <body>
+            <p>Please follow <a href="/${LATEST}/">this link</a>.</p>
+          </body>
+        </html>
+        EOL
+
+        echo "Updating stable/index.html to point to $STABLE"
+        mkdir -p stable
+        cat >stable/index.html << EOL
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <meta http-equiv="Refresh" content="0; url=/${STABLE}/" />
+          </head>
+          <body>
+            <p>Please follow <a href="/${STABLE}/">this link</a>.</p>
+          </body>
+        </html>
+        EOL
+
+    - name: Deploy docs
+      if: github.event_name == 'release' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+      run: |
+        # And push them up to GitHub
+        cd ~/allennlp-docs/
+        git add -A
+        git commit -m "automated update of the docs"
+        git push
+
+    - name: Re-write docs commit history
+      if: github.event_name == 'release' && github.ref == 'refs/heads/main'
+      run: |
+        cd ~/allennlp-docs/
+        git checkout --orphan latest_branch
+        git add -A
+        git commit -m "Re-write commit history"
+        git branch -D master  # remove old master branch
+        git branch -m master  # rename clean new branch to master branch
+        git push -f origin master
+
+    - name: Clean up
+      if: always()
+      run: |
+        pip uninstall --yes allennlp
+
+  # Publish the core distribution files to PyPI.
+  publish:
+    name: PyPI
+    needs: [check_core, check_models, gpu_checks, build_package, test_package, docker, docs]
+    # Only publish to PyPI on releases and nightly builds to "allenai/allennlp" (not forks).
+    if: github.repository == 'allenai/allennlp' && (github.event_name == 'release' || github.event_name == 'schedule')
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Setup Python
+      uses: actions/setup-python@v1
+      with:
+        python-version: 3.7
+
+    - name: Install requirements
+      run: |
+        pip install --upgrade pip setuptools wheel twine
+
+    - name: Download core package
+      uses: actions/download-artifact@v1
+      with:
+        name: core-package
+        path: dist
+
+    - name: Publish core package
+      run: |
+        twine upload -u allennlp -p ${{ secrets.PYPI_PASSWORD }} dist/*

@@ -3,17 +3,20 @@
 any base class with a named registry for its subclasses and a decorator
 for registering them.
 """
-from collections import defaultdict
-from typing import TypeVar, Type, Callable, Dict, List, Optional, Tuple
 import importlib
 import logging
+from collections import defaultdict
+from typing import Callable, ClassVar, DefaultDict, Dict, List, Optional, Tuple, Type, TypeVar, cast
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.from_params import FromParams
 
 logger = logging.getLogger(__name__)
 
-T = TypeVar("T", bound="Registrable")
+_T = TypeVar("_T")
+_RegistrableT = TypeVar("_RegistrableT", bound="Registrable")
+
+_SubclassRegistry = Dict[str, Tuple[type, Optional[str]]]
 
 
 class Registrable(FromParams):
@@ -38,11 +41,14 @@ class Registrable(FromParams):
     a subclass to load all other subclasses and the abstract class).
     """
 
-    _registry: Dict[Type, Dict[str, Tuple[Type, str]]] = defaultdict(dict)
-    default_implementation: str = None
+    _registry: ClassVar[DefaultDict[type, _SubclassRegistry]] = defaultdict(dict)
+
+    default_implementation: Optional[str] = None
 
     @classmethod
-    def register(cls: Type[T], name: str, constructor: str = None, exist_ok: bool = False):
+    def register(
+        cls, name: str, constructor: Optional[str] = None, exist_ok: bool = False
+    ) -> Callable[[Type[_T]], Type[_T]]:
         """
         Register a class under a particular name.
 
@@ -50,11 +56,11 @@ class Registrable(FromParams):
 
         name : `str`
             The name to register the class under.
-        constructor : `str`, optional (default=None)
+        constructor : `str`, optional (default=`None`)
             The name of the method to use on the class to construct the object.  If this is given,
             we will use this method (which must be a `@classmethod`) instead of the default
             constructor.
-        exist_ok : `bool`, optional (default=False)
+        exist_ok : `bool`, optional (default=`False`)
             If True, overwrites any existing models registered under `name`. Else,
             throws an error if a model is already registered under `name`.
 
@@ -106,7 +112,7 @@ class Registrable(FromParams):
         """
         registry = Registrable._registry[cls]
 
-        def add_subclass_to_registry(subclass: Type[T]):
+        def add_subclass_to_registry(subclass: Type[_T]) -> Type[_T]:
             # Add to registry, raise an error if key has already been used.
             if name in registry:
                 if exist_ok:
@@ -127,7 +133,7 @@ class Registrable(FromParams):
         return add_subclass_to_registry
 
     @classmethod
-    def by_name(cls: Type[T], name: str) -> Callable[..., T]:
+    def by_name(cls: Type[_RegistrableT], name: str) -> Callable[..., _RegistrableT]:
         """
         Returns a callable function that constructs an argument of the registered class.  Because
         you can register particular functions as constructors for specific names, this isn't
@@ -136,12 +142,14 @@ class Registrable(FromParams):
         logger.debug(f"instantiating registered subclass {name} of {cls}")
         subclass, constructor = cls.resolve_class_name(name)
         if not constructor:
-            return subclass
+            return cast(Type[_RegistrableT], subclass)
         else:
-            return getattr(subclass, constructor)
+            return cast(Callable[..., _RegistrableT], getattr(subclass, constructor))
 
     @classmethod
-    def resolve_class_name(cls: Type[T], name: str) -> Tuple[Type[T], Optional[str]]:
+    def resolve_class_name(
+        cls: Type[_RegistrableT], name: str
+    ) -> Tuple[Type[_RegistrableT], Optional[str]]:
         """
         Returns the subclass that corresponds to the given `name`, along with the name of the
         method that was registered as a constructor for that `name`, if any.
@@ -152,7 +160,7 @@ class Registrable(FromParams):
         function to use).
         """
         if name in Registrable._registry[cls]:
-            subclass, constructor = Registrable._registry[cls].get(name)
+            subclass, constructor = Registrable._registry[cls][name]
             return subclass, constructor
         elif "." in name:
             # This might be a fully qualified class name, so we'll try importing its "module"

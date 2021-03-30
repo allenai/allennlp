@@ -12,7 +12,9 @@ from allennlp.common import FromParams
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path
 from allennlp.common.util import lazy_groups_of
-from allennlp.data import Instance, Token, Vocabulary
+from allennlp.data.instance import Instance
+from allennlp.data.tokenizers.token_class import Token
+from allennlp.data.vocabulary import Vocabulary
 from allennlp.data.batch import Batch
 from allennlp.data.fields import TextField
 from allennlp.data.token_indexers.elmo_indexer import (
@@ -63,26 +65,26 @@ class Elmo(torch.nn.Module, FromParams):
         character-convnet output, 1st lstm output, 2nd lstm output).
     requires_grad : `bool`, optional
         If True, compute gradient of ELMo parameters for fine tuning.
-    do_layer_norm : `bool`, optional, (default = False).
+    do_layer_norm : `bool`, optional, (default = `False`).
         Should we apply layer normalization (passed to `ScalarMix`)?
-    dropout : `float`, optional, (default = 0.5).
+    dropout : `float`, optional, (default = `0.5`).
         The dropout to be applied to the ELMo representations.
-    vocab_to_cache : `List[str]`, optional, (default = None).
+    vocab_to_cache : `List[str]`, optional, (default = `None`).
         A list of words to pre-compute and cache character convolutions
         for. If you use this option, Elmo expects that you pass word
         indices of shape (batch_size, timesteps) to forward, instead
         of character indices. If you use this option and pass a word which
         wasn't pre-cached, this will break.
-    keep_sentence_boundaries : `bool`, optional, (default = False)
+    keep_sentence_boundaries : `bool`, optional, (default = `False`)
         If True, the representation of the sentence boundary tokens are
         not removed.
-    scalar_mix_parameters : `List[float]`, optional, (default = None)
+    scalar_mix_parameters : `List[float]`, optional, (default = `None`)
         If not `None`, use these scalar mix parameters to weight the representations
         produced by different layers. These mixing weights are not updated during
         training. The mixing weights here should be the unnormalized (i.e., pre-softmax)
         weights. So, if you wanted to use only the 1st layer of a 2-layer ELMo,
         you can set this to [-9e10, 1, -9e10 ].
-    module : `torch.nn.Module`, optional, (default = None).
+    module : `torch.nn.Module`, optional, (default = `None`).
         If provided, then use this module instead of the pre-trained ELMo biLM.
         If using this option, then pass `None` for both `options_file`
         and `weight_file`.  The module must provide a public attribute
@@ -113,7 +115,7 @@ class Elmo(torch.nn.Module, FromParams):
                 raise ConfigurationError("Don't provide options_file or weight_file with module")
             self._elmo_lstm = module
         else:
-            self._elmo_lstm = _ElmoBiLm(
+            self._elmo_lstm = _ElmoBiLm(  # type: ignore
                 options_file,
                 weight_file,
                 requires_grad=requires_grad,
@@ -125,7 +127,7 @@ class Elmo(torch.nn.Module, FromParams):
         self._scalar_mixes: Any = []
         for k in range(num_output_representations):
             scalar_mix = ScalarMix(
-                self._elmo_lstm.num_layers,
+                self._elmo_lstm.num_layers,  # type: ignore
                 do_layer_norm=do_layer_norm,
                 initial_scalar_parameters=scalar_mix_parameters,
                 trainable=scalar_mix_parameters is None,
@@ -181,7 +183,7 @@ class Elmo(torch.nn.Module, FromParams):
             reshaped_word_inputs = word_inputs
 
         # run the biLM
-        bilm_output = self._elmo_lstm(reshaped_inputs, reshaped_word_inputs)
+        bilm_output = self._elmo_lstm(reshaped_inputs, reshaped_word_inputs)  # type: ignore
         layer_activations = bilm_output["activations"]
         mask_with_bos_eos = bilm_output["mask"]
 
@@ -246,7 +248,7 @@ def batch_to_ids(batch: List[List[str]]) -> torch.Tensor:
     dataset = Batch(instances)
     vocab = Vocabulary()
     dataset.index_instances(vocab)
-    return dataset.as_tensor_dict()["elmo"]["character_ids"]["tokens"]
+    return dataset.as_tensor_dict()["elmo"]["character_ids"]["elmo_tokens"]
 
 
 class _ElmoCharacterEncoder(torch.nn.Module):
@@ -269,8 +271,9 @@ class _ElmoCharacterEncoder(torch.nn.Module):
         ELMo JSON options file
     weight_file : `str`
         ELMo hdf5 weight file
-    requires_grad : `bool`, optional, (default = False).
+    requires_grad : `bool`, optional, (default = `False`).
         If True, compute gradient of ELMo parameters for fine tuning.
+
 
     The relevant section of the options file is something like:
 
@@ -439,7 +442,7 @@ class _ElmoCharacterEncoder(torch.nn.Module):
         # create the layers, and load the weights
         self._highways = Highway(n_filters, n_highway, activation=torch.nn.functional.relu)
         for k in range(n_highway):
-            # The AllenNLP highway is one matrix multplication with concatenation of
+            # The AllenNLP highway is one matrix multiplication with concatenation of
             # transform and carry weights.
             with h5py.File(cached_path(self._weight_file), "r") as fin:
                 # The weights are transposed due to multiplication order assumptions in tf
@@ -486,9 +489,9 @@ class _ElmoBiLm(torch.nn.Module):
         ELMo JSON options file
     weight_file : `str`
         ELMo hdf5 weight file
-    requires_grad : `bool`, optional, (default = False).
+    requires_grad : `bool`, optional, (default = `False`).
         If True, compute gradient of ELMo parameters for fine tuning.
-    vocab_to_cache : `List[str]`, optional, (default = None).
+    vocab_to_cache : `List[str]`, optional, (default = `None`).
         A list of words to pre-compute and cache character convolutions
         for. If you use this option, _ElmoBiLm expects that you pass word
         indices of shape (batch_size, timesteps) to forward, instead
@@ -582,7 +585,7 @@ class _ElmoBiLm(torch.nn.Module):
                 type_representation, mask = add_sentence_boundary_token_ids(
                     embedded_inputs, mask_without_bos_eos, self._bos_embedding, self._eos_embedding
                 )
-            except RuntimeError:
+            except (RuntimeError, IndexError):
                 # Back off to running the character convolutions,
                 # as we might not have the words in the cache.
                 token_embedding = self._token_embedder(inputs)

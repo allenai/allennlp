@@ -45,7 +45,7 @@ class SimpleTagger(Model):
     label_namespace : `str`, optional (default=`labels`)
         This is needed to compute the SpanBasedF1Measure metric, if desired.
         Unless you did something unusual, the default value should be what you want.
-    verbose_metrics : `bool`, optional (default = False)
+    verbose_metrics : `bool`, optional (default = `False`)
         If true, metrics will be returned per label class in addition
         to the overall statistics.
     initializer : `InitializerApplicator`, optional (default=`InitializerApplicator()`)
@@ -82,24 +82,27 @@ class SimpleTagger(Model):
             "encoder input dim",
         )
 
-        # We keep calculate_span_f1 as a constructor argument for API consistency with
-        # the CrfTagger, even it is redundant in this class
-        # (label_encoding serves the same purpose).
-        if calculate_span_f1 and not label_encoding:
-            raise ConfigurationError(
-                "calculate_span_f1 is True, but no label_encoding was specified."
-            )
         self.metrics = {
             "accuracy": CategoricalAccuracy(),
             "accuracy3": CategoricalAccuracy(top_k=3),
         }
 
-        if calculate_span_f1 or label_encoding:
+        # We keep calculate_span_f1 as a constructor argument for API consistency with
+        # the CrfTagger, even it is redundant in this class
+        # (label_encoding serves the same purpose).
+        if calculate_span_f1 is None:
+            calculate_span_f1 = label_encoding is not None
+
+        self.calculate_span_f1 = calculate_span_f1
+        self._f1_metric: Optional[SpanBasedF1Measure] = None
+        if calculate_span_f1:
+            if not label_encoding:
+                raise ConfigurationError(
+                    "calculate_span_f1 is True, but no label_encoding was specified."
+                )
             self._f1_metric = SpanBasedF1Measure(
                 vocab, tag_namespace=label_namespace, label_encoding=label_encoding
             )
-        else:
-            self._f1_metric = None
 
         initializer(self)
 
@@ -115,7 +118,7 @@ class SimpleTagger(Model):
         """
         # Parameters
 
-        tokens : TextFieldTensors, required
+        tokens : `TextFieldTensors`, required
             The output of `TextField.as_array()`, which should typically be passed directly to a
             `TextFieldEmbedder`. This output is a dictionary mapping keys to `TokenIndexer`
             tensors.  At its most basic, using a `SingleIdTokenIndexer` this is : `{"tokens":
@@ -124,12 +127,12 @@ class SimpleTagger(Model):
             sequence.  The dictionary is designed to be passed directly to a `TextFieldEmbedder`,
             which knows how to combine different word representations into a single vector per
             token in your input.
-        tags : torch.LongTensor, optional (default = None)
+        tags : `torch.LongTensor`, optional (default = `None`)
             A torch tensor representing the sequence of integer gold class labels of shape
             `(batch_size, num_tokens)`.
-        metadata : `List[Dict[str, Any]]`, optional, (default = None)
+        metadata : `List[Dict[str, Any]]`, optional, (default = `None`)
             metadata containing the original words in the sentence to be tagged under a 'words' key.
-        ignore_loss_on_o_tags : `bool`, optional (default = False)
+        ignore_loss_on_o_tags : `bool`, optional (default = `False`)
             If True, we compute the loss only for actual spans in `tags`, and not on `O` tokens.
             This is useful for computing gradients of the loss on a _single span_, for
             interpretation / attacking.
@@ -169,8 +172,8 @@ class SimpleTagger(Model):
             loss = sequence_cross_entropy_with_logits(logits, tags, tag_mask)
             for metric in self.metrics.values():
                 metric(logits, tags, mask)
-            if self._f1_metric is not None:
-                self._f1_metric(logits, tags, mask)
+            if self.calculate_span_f1:
+                self._f1_metric(logits, tags, mask)  # type: ignore
             output_dict["loss"] = loss
 
         if metadata is not None:
@@ -208,10 +211,12 @@ class SimpleTagger(Model):
             metric_name: metric.get_metric(reset) for metric_name, metric in self.metrics.items()
         }
 
-        if self._f1_metric is not None:
-            f1_dict = self._f1_metric.get_metric(reset=reset)
+        if self.calculate_span_f1:
+            f1_dict = self._f1_metric.get_metric(reset)  # type: ignore
             if self._verbose_metrics:
                 metrics_to_return.update(f1_dict)
             else:
                 metrics_to_return.update({x: y for x, y in f1_dict.items() if "overall" in x})
         return metrics_to_return
+
+    default_predictor = "sentence_tagger"

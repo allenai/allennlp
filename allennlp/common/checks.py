@@ -2,12 +2,12 @@
 Functions and exceptions for checking that
 AllenNLP and its models are configured correctly.
 """
-from typing import Union, List
-
 import logging
 import re
 import subprocess
+from typing import List, Union
 
+import torch
 from torch import cuda
 
 logger = logging.getLogger(__name__)
@@ -19,7 +19,7 @@ class ConfigurationError(Exception):
     (e.g. missing properties, invalid properties, unknown properties).
     """
 
-    def __init__(self, message):
+    def __init__(self, message: str):
         super().__init__()
         self.message = message
 
@@ -100,24 +100,42 @@ def parse_cuda_device(cuda_device: Union[str, int, List[int]]) -> int:
         return int(cuda_device)  # type: ignore
 
 
-def check_for_gpu(device_id: Union[int, List[int]]):
-    if isinstance(device_id, list):
-        for did in device_id:
+def check_for_gpu(device: Union[int, torch.device, List[Union[int, torch.device]]]):
+    if isinstance(device, list):
+        for did in device:
             check_for_gpu(did)
-    elif device_id is not None and device_id >= 0:
-        num_devices_available = cuda.device_count()
-        if num_devices_available == 0:
-            raise ConfigurationError(
-                "Experiment specified a GPU but none is available;"
-                " if you want to run on CPU use the override"
-                " 'trainer.cuda_device=-1' in the json config file."
-            )
-        elif device_id >= num_devices_available:
-            raise ConfigurationError(
-                f"Experiment specified GPU device {device_id}"
-                f" but there are only {num_devices_available} devices "
-                f" available."
-            )
+    elif device is None:
+        return
+    else:
+        from allennlp.common.util import int_to_device
+
+        device = int_to_device(device)
+        if device != torch.device("cpu"):
+            num_devices_available = cuda.device_count()
+            if num_devices_available == 0:
+                # Torch will give a more informative exception than ours, so we want to include
+                # that context as well if it's available.  For example, if you try to run torch 1.5
+                # on a machine with CUDA10.1 you'll get the following:
+                #
+                #     The NVIDIA driver on your system is too old (found version 10010).
+                #
+                torch_gpu_error = ""
+                try:
+                    cuda._check_driver()
+                except Exception as e:
+                    torch_gpu_error = "\n{0}".format(e)
+
+                raise ConfigurationError(
+                    "Experiment specified a GPU but none is available;"
+                    " if you want to run on CPU use the override"
+                    " 'trainer.cuda_device=-1' in the json config file." + torch_gpu_error
+                )
+            elif device.index >= num_devices_available:
+                raise ConfigurationError(
+                    f"Experiment specified GPU device {device.index}"
+                    f" but there are only {num_devices_available} devices "
+                    f" available."
+                )
 
 
 def check_for_java() -> bool:

@@ -5,6 +5,7 @@ that are used as components in AllenNLP `Model` s.
 """
 
 from allennlp.modules.attention import Attention
+from allennlp.modules.backbones import Backbone
 from allennlp.modules.bimpm_matching import BiMpmMatching
 from allennlp.modules.conditional_random_field import ConditionalRandomField
 from allennlp.modules.elmo import Elmo

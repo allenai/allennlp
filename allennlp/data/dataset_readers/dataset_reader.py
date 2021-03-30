@@ -1,243 +1,214 @@
+from dataclasses import dataclass
 import itertools
-from typing import Iterable, Iterator, Callable, Optional, List
+from os import PathLike
+from typing import Iterable, Iterator, Optional, Union, TypeVar, Dict, List
 import logging
-import os
-import pathlib
+import warnings
 
-import jsonpickle
-from torch.utils.data import Dataset, IterableDataset
+import torch.distributed as dist
 
 from allennlp.data.instance import Instance
-from allennlp.data.vocabulary import Vocabulary
-from allennlp.common import Tqdm, util
-from allennlp.common.checks import ConfigurationError
+from allennlp.common import util
 from allennlp.common.registrable import Registrable
+
 
 logger = logging.getLogger(__name__)
 
 
-class AllennlpDataset(Dataset):
-    def __init__(self, instances: List[Instance], vocab: Vocabulary = None):
-        self.instances = instances
-        self.vocab = vocab
-
-    def __getitem__(self, idx):
-        if self.vocab is not None:
-            self.instances[idx].index_fields(self.vocab)
-        return self.instances[idx]
-
-    def __len__(self):
-        return len(self.instances)
-
-    def index_with(self, vocab: Vocabulary):
-        self.vocab = vocab
-
-
-class _LazyInstances(IterableDataset):
+@dataclass
+class WorkerInfo:
     """
-    An `Iterable` that just wraps a thunk for generating instances and calls it for
-    each call to `__iter__`.
+    Contains information about the worker context when a `DatasetReader`
+    is being used within a multi-process `DataLoader`.
+
+    From a `DatasetReader` this can accessed with the [`get_worker_info()`](#get_worker_info) method.
     """
 
-    def __init__(
-        self,
-        instance_generator: Callable[[str], Iterable[Instance]],
-        file_path: str,
-        cache_file: str = None,
-        deserialize: Callable[[str], Instance] = None,
-        serialize: Callable[[Instance], str] = None,
-        vocab: Vocabulary = None,
-    ) -> None:
-        super().__init__()
-        self.instance_generator = instance_generator
-        self.file_path = file_path
-        self.cache_file = cache_file
-        self.deserialize = deserialize
-        self.serialize = serialize
-        self.vocab = vocab
+    num_workers: int
+    """
+    The total number of workers.
+    """
 
-    def __iter__(self) -> Iterator[Instance]:
-        # Case 1: Use cached instances
-        if self.cache_file is not None and os.path.exists(self.cache_file):
-            with open(self.cache_file) as data_file:
-                for line in data_file:
-                    instance = self.deserialize(line)
-                    if self.vocab is not None:
-                        instance.index_fields(self.vocab)
-                    yield instance
+    id: int
+    """
+    The 0-indexed ID of the current worker.
+    """
 
-        # Case 2: Need to cache instances
-        elif self.cache_file is not None:
-            with open(self.cache_file, "w") as data_file:
-                for instance in self.instance_generator(self.file_path):
-                    data_file.write(self.serialize(instance))
-                    data_file.write("\n")
-                    if self.vocab is not None:
-                        instance.index_fields(self.vocab)
-                    yield instance
-        # Case 3: No cache
-        else:
-            instances = self.instance_generator(self.file_path)
-            if isinstance(instances, list):
-                raise ConfigurationError(
-                    "For a lazy dataset reader, _read() must return a generator"
-                )
-            for instance in instances:
-                if self.vocab is not None:
-                    instance.index_fields(self.vocab)
-                yield instance
 
-    def index_with(self, vocab: Vocabulary):
-        self.vocab = vocab
+@dataclass
+class DistributedInfo:
+    """
+    Contains information about the global process rank and total world size when the reader is being
+    used within distributed training.
 
-    def __len__(self):
-        """
-        We rely in a couple of places that calling len on the dataloader
-        (which in turn calls len on the dataset) doesn't raise an error.
-        In the case that you have an IterableDataset and you call len, the pytorch dataloader
-        actually spits out a warning - but we need actually calling it to not crash.
-        """
-        return 1
+    From a `DatasetReader` this can be accessed with the [`get_distributed_info()`](#get_distributed_info) method.
+    """
+
+    world_size: int
+    """
+    The total number of processes in the distributed group.
+    """
+
+    global_rank: int
+    """
+    The 0-indexed ID of the current process within the distributed group.
+    This will be between 0 and `world_size - 1`, inclusive.
+    """
+
+
+_T = TypeVar("_T")
+
+PathOrStr = Union[PathLike, str]
+DatasetReaderInput = Union[PathOrStr, List[PathOrStr], Dict[str, PathOrStr]]
 
 
 class DatasetReader(Registrable):
     """
     A `DatasetReader` knows how to turn a file containing a dataset into a collection
-    of `Instances`.  To implement your own, just override the `_read(file_path)` method
-    to return an `Iterable` of the instances. This could be a list containing the instances
-    or a lazy generator that returns them one at a time.
+    of `Instance`s.  To implement your own, just override the [`_read(file_path)`](#_read) method
+    to return an `Iterable` of the instances. Ideally this should be a lazy generator
+    that yields them one at a time.
 
-    All parameters necessary to _read the data apart from the filepath should be passed
+    All parameters necessary to `_read` the data apart from the filepath should be passed
     to the constructor of the `DatasetReader`.
+
+    You should also implement [`text_to_instance(*inputs)`](#text_to_instance),
+    which should be used to turn raw data into `Instance`s. This method is required
+    in order to use a `Predictor` with your reader.
+
+    Usually the `_read()` method is implemented to call `text_to_instance()`.
 
     # Parameters
 
-    lazy : `bool`, optional (default=False)
-        If this is true, `instances()` will return an object whose `__iter__` method
-        reloads the dataset each time it's called. Otherwise, `instances()` returns a list.
-    cache_directory : `str`, optional (default=None)
-        If given, we will use this directory to store a cache of already-processed `Instances` in
-        every file passed to :func:`read`, serialized (by default, though you can override this) as
-        one string-formatted `Instance` per line.  If the cache file for a given `file_path` exists,
-        we read the `Instances` from the cache instead of re-processing the data (using
-        :func:`_instances_from_cache_file`).  If the cache file does _not_ exist, we will _create_
-        it on our first pass through the data (using :func:`_instances_to_cache_file`).
-    max_instances : `int`, optional (default=None)
+    max_instances : `int`, optional (default=`None`)
         If given, will stop reading after this many instances. This is a useful setting for debugging.
+        Setting this disables caching.
 
-        IMPORTANT CAVEAT: It is the _caller's_ responsibility to make sure that this directory is
-        unique for any combination of code and parameters that you use.  That is, if you pass a
-        directory here, we will use any existing cache files in that directory _regardless of the
-        parameters you set for this DatasetReader!_
+    manual_distributed_sharding: `bool`, optional (default=`False`)
+        By default, when used in a distributed setting, `DatasetReader` makes sure that each
+        trainer process only receives a subset of the data. It does this by reading the whole
+        dataset in each worker, but filtering out the instances that are not needed.
+
+        While this ensures that each worker will recieve unique instances, it's not a very efficient
+        way to do so since each worker still needs to process every single instance.
+
+        A better way to handle this is to manually handle the filtering within your `_read()`
+        method, in which case you should set `manual_distributed_sharding` to `True` so that
+        the base class knows that you handling the filtering.
+
+        See the section below about how to do this.
+
+    manual_multiprocess_sharding : `bool`, optional (default=`False`)
+        This is similar to the `manual_distributed_sharding` parameter, but applies to
+        multi-process data loading. By default, when this reader is used by a multi-process
+        data loader (i.e. a `DataLoader` with `num_workers > 1`), each worker will
+        filter out all but a subset of the instances that are needed so that you
+        don't end up with duplicates.
+
+        However, there is really no benefit to using multiple workers in your `DataLoader`
+        unless you implement the sharding within your `_read()` method, in which
+        case you should set `manual_multiprocess_sharding` to `True`, just as with
+        `manual_distributed_sharding`.
+
+        See the section below about how to do this.
+
+    serialization_dir: `str`, optional (default=`None`)
+        The directory in which the training output is saved to, or the directory the model is loaded from.
+
+        !!! Note
+            This is typically not given an entry in a configuration file. It will be set automatically
+            when using the built-in `allennp` commands.
+
+    # Using your reader with multi-process or distributed data loading
+
+    There are two things you may need to update in your `DatasetReader` in order for
+    it to be efficient in the multi-process or distributed data loading context.
+
+    1. The `_read()` method should handle filtering out all but the instances that
+        each particular worker should generate.
+
+        This is important because the default mechanism for filtering out `Instance`s in
+        the distributed or multi-process `DataLoader` setting is not very efficient, since every
+        worker would still need to process every single `Instance` in your dataset.
+
+        But by manually handling the filtering / sharding within your `_read()` method, each
+        worker only needs to perform a subset of the work required to create instances.
+
+        For example, if you were training using 2 GPUs and your `_read()` method reads a file
+        line-by-line, creating one `Instance` for each line, you could just check the node
+        rank within `_read()` and then throw away every other line starting at the line number
+        corresponding to the node rank.
+
+        The helper method [`shard_iterable()`](#shard_iterable) is there to make this easy for you.
+        You can wrap this around any iterable object in your `_read()` method, and it will
+        return an iterator that skips the right items based on the distributed training
+        or multi-process loading context. This method can always be called regardless
+        of whether or not you're actually using distributed training or multi-process loading.
+
+        Remember though that when you handle the sharding manually within `_read()`, you need
+        to let the `DatasetReader` know about this so that it doesn't do any additional
+        filtering. Therefore you need to ensure that both `self.manual_distributed_sharding` and
+        `self.manual_multiprocess_sharding` are set to `True`.
+
+        If you call the helper method `shard_iterable()` without setting these to `True`,
+        you'll get an exception.
+
+    2. If the instances generated by `_read()` contain `TextField`s, those `TextField`s
+        should not have any token indexers assigned. The token indexers need to be applied
+        in the [`apply_token_indexers()`](#apply_token_indexers) method instead.
+
+        This is highly recommended because if the instances generated by your `_read()` method
+        have token indexers attached, those indexers will be duplicated when they are sent across
+        processes. If your token indexers contain large objects (such as `PretrainedTransformerTokenIndexer`s)
+        this could take up a massive amount of memory.
+
     """
 
     def __init__(
         self,
-        lazy: bool = False,
-        cache_directory: Optional[str] = None,
         max_instances: Optional[int] = None,
+        manual_distributed_sharding: bool = False,
+        manual_multiprocess_sharding: bool = False,
+        serialization_dir: Optional[str] = None,
     ) -> None:
-        self.lazy = lazy
+        # Do some validation.
+        if max_instances is not None and max_instances < 0:
+            raise ValueError("If specified, max_instances should be a positive int")
+
         self.max_instances = max_instances
-        if cache_directory:
-            self._cache_directory = pathlib.Path(cache_directory)
-            os.makedirs(self._cache_directory, exist_ok=True)
-        else:
-            self._cache_directory = None
+        self.manual_distributed_sharding = manual_distributed_sharding
+        self.manual_multiprocess_sharding = manual_multiprocess_sharding
+        self.serialization_dir = serialization_dir
+        self._worker_info: Optional[WorkerInfo] = None
+        self._distributed_info: Optional[DistributedInfo] = None
+        # If we're actually in the main process, we can find the info using torch utils.
+        if util.is_distributed():
+            self._distributed_info = DistributedInfo(dist.get_world_size(), dist.get_rank())
 
-    def read(self, file_path: str) -> Dataset:
+    def read(self, file_path: DatasetReaderInput) -> Iterator[Instance]:
         """
-        Returns an `Iterable` containing all the instances
-        in the specified dataset.
-
-        If `self.lazy` is False, this calls `self._read()`,
-        ensures that the result is a list, then returns the resulting list.
-
-        If `self.lazy` is True, this returns an object whose
-        `__iter__` method calls `self._read()` each iteration.
-        In this case your implementation of `_read()` must also be lazy
-        (that is, not load all instances into memory at once), otherwise
-        you will get a `ConfigurationError`.
-
-        In either case, the returned `Iterable` can be iterated
-        over multiple times. It's unlikely you want to override this function,
-        but if you do your result should likewise be repeatedly iterable.
+        Returns an iterator of instances that can be read from the file path.
         """
-        lazy = getattr(self, "lazy", None)
+        for instance in self._multi_worker_islice(self._read(file_path)):  # type: ignore
+            if self._worker_info is None:
+                # If not running in a subprocess, it's safe to apply the token_indexers right away.
+                self.apply_token_indexers(instance)
+            yield instance
 
-        if lazy is None:
-            logger.warning(
-                "DatasetReader.lazy is not set, "
-                "did you forget to call the superclass constructor?"
-            )
-
-        if self._cache_directory:
-            cache_file = self._get_cache_location_for_file_path(file_path)
-        else:
-            cache_file = None
-
-        if lazy:
-            instances: Iterable[Instance] = _LazyInstances(
-                self._read,
-                file_path,
-                cache_file,
-                self.deserialize_instance,
-                self.serialize_instance,
-            )
-            if self.max_instances is not None:
-                instances = itertools.islice(instances, 0, self.max_instances)
-        else:
-            # First we read the instances, either from a cache or from the original file.
-            if cache_file and os.path.exists(cache_file):
-                instances = self._instances_from_cache_file(cache_file)
-            else:
-                instances = self._read(file_path)
-
-            if self.max_instances is not None:
-                if isinstance(instances, list):
-                    instances = instances[: self.max_instances]
-                else:
-                    instances = itertools.islice(instances, 0, self.max_instances)
-
-            # Then some validation.
-            if not isinstance(instances, list):
-                instances = [instance for instance in Tqdm.tqdm(instances)]
-            if not instances:
-                raise ConfigurationError(
-                    "No instances were read from the given filepath {}. "
-                    "Is the path correct?".format(file_path)
-                )
-
-            # And finally we write to the cache if we need to.
-            if cache_file and not os.path.exists(cache_file):
-                logger.info(f"Caching instances to {cache_file}")
-                self._instances_to_cache_file(cache_file, instances)
-
-            instances = AllennlpDataset(instances)
-
-        return instances
-
-    def _get_cache_location_for_file_path(self, file_path: str) -> str:
-        return str(self._cache_directory / util.flatten_filename(str(file_path)))
-
-    def _read(self, file_path: str) -> Iterable[Instance]:
+    def _read(self, file_path) -> Iterable[Instance]:
         """
-        Reads the instances from the given file_path and returns them as an
-        `Iterable` (which could be a list or could be a generator).
-        You are strongly encouraged to use a generator, so that users can
+        Reads the instances from the given `file_path` and returns them as an
+        `Iterable`.
+
+        You are strongly encouraged to use a generator so that users can
         read a dataset in a lazy way, if they so choose.
         """
+        # NOTE: `file_path` is left untyped here on purpose.
+        # Technically the type should be `DatasetReaderInput`, but many subclass
+        # implementations of `DatasetReader` define their `_read()` method to take a more
+        # specific type, such as just `str`. But that would be a type error
+        # according to mypy: https://mypy.readthedocs.io/en/stable/common_issues.html#incompatible-overrides
         raise NotImplementedError
-
-    def _instances_from_cache_file(self, cache_filename: str) -> Iterable[Instance]:
-        with open(cache_filename, "r") as cache_file:
-            for line in cache_file:
-                yield self.deserialize_instance(line.strip())
-
-    def _instances_to_cache_file(self, cache_filename, instances) -> None:
-        with open(cache_filename, "w") as cache:
-            for instance in Tqdm.tqdm(instances):
-                cache.write(self.serialize_instance(instance) + "\n")
 
     def text_to_instance(self, *inputs) -> Instance:
         """
@@ -258,23 +229,164 @@ class DatasetReader(Registrable):
         """
         raise NotImplementedError
 
-    def serialize_instance(self, instance: Instance) -> str:
+    def apply_token_indexers(self, instance: Instance) -> None:
         """
-        Serializes an `Instance` to a string.  We use this for caching the processed data.
+        If `Instance`s created by this reader contain `TextField`s without `token_indexers`,
+        this method can be overriden to set the `token_indexers` of those fields.
 
-        The default implementation is to use `jsonpickle`.  If you would like some other format
-        for your pre-processed data, override this method.
+        E.g. if you have you have `"source"` `TextField`, you could implement this method like this:
+
+        ```python
+        def apply_token_indexers(self, instance: Instance) -> None:
+            instance["source"].token_indexers = self._token_indexers
+        ```
+
+        If your `TextField`s are wrapped in a `ListField`, you can access them via `field_list`.
+        E.g. if you had a `"source"` field of `ListField[TextField]` objects, you could:
+
+        ```python
+        for text_field in instance["source"].field_list:
+            text_field.token_indexers = self._token_indexers
+        ```
         """
+        pass
 
-        return jsonpickle.dumps(instance)
-
-    def deserialize_instance(self, string: str) -> Instance:
+    def get_worker_info(self) -> Optional[WorkerInfo]:
         """
-        Deserializes an `Instance` from a string.  We use this when reading processed data from a
-        cache.
+        Provides a [`WorkerInfo`](#WorkerInfo) object when the reader is being used within a
+        worker of a multi-process `DataLoader`.
 
-        The default implementation is to use `jsonpickle`.  If you would like some other format
-        for your pre-processed data, override this method.
+        If the reader is in the main process, this is just `None`.
+
+        !!! NOTE
+            This is different than distributed training. If the `DatasetReader`
+            is being used within distributed training, `get_worker_info()` will only
+            provide information on the `DataLoader` worker within its node.
+
+            Use [`get_distributed_info`](#get_distributed_info) to get information on distributed
+            training context.
+
         """
+        return self._worker_info
 
-        return jsonpickle.loads(string)  # type: ignore
+    def get_distributed_info(self) -> Optional[DistributedInfo]:
+        """
+        Provides a [`DistributedInfo`](#DistributedInfo) object when the reader is being
+        used within distributed training.
+
+        If not in distributed training, this is just `None`.
+        """
+        return self._distributed_info
+
+    def _set_worker_info(self, info: Optional[WorkerInfo]) -> None:
+        """
+        Should only be used internally.
+        """
+        self._worker_info = info
+
+    def _set_distributed_info(self, info: Optional[DistributedInfo]) -> None:
+        """
+        Should only be used internally.
+        """
+        self._distributed_info = info
+
+    def shard_iterable(self, iterable: Iterable[_T]) -> Iterator[_T]:
+        """
+        Helper method that determines which items in an iterable object to skip based
+        on the current node rank (for distributed training) and worker ID (for multi-process data loading).
+        """
+        if not self.manual_distributed_sharding or not self.manual_multiprocess_sharding:
+            raise ValueError(
+                "self.shard_iterable() was called but self.manual_distributed_sharding and "
+                "self.manual_multiprocess_sharding was not set to True. Did you forget to call "
+                "super().__init__(manual_distributed_sharding=True, manual_multiprocess_sharding=True) "
+                "in your constructor?"
+            )
+
+        sharded_slice: Iterator[_T] = iter(iterable)
+
+        if util.is_distributed():
+            sharded_slice = itertools.islice(
+                sharded_slice, dist.get_rank(), None, dist.get_world_size()
+            )
+
+        if self._worker_info is not None:
+            sharded_slice = itertools.islice(
+                sharded_slice, self._worker_info.id, None, self._worker_info.num_workers
+            )
+
+        # We don't know for sure how many instances we have to produce.
+        # _multi_worker_islice() figures that out. But we know for sure
+        # it won't be more than max_instances.
+        if self.max_instances is not None:
+            sharded_slice = itertools.islice(sharded_slice, self.max_instances)
+
+        return sharded_slice
+
+    def _multi_worker_islice(
+        self,
+        iterable: Iterable[_T],
+    ) -> Iterator[_T]:
+        """
+        This is just like `shard_iterable` but is for internal use only.
+
+        It has some additional logic to handle `max_instances` based on the distributed
+        or multi-process context, and whether or not sharding is handled manually
+        in the `_read()` method.
+        """
+        # This has some complicated logic because any given reader may or may not
+        # implement manual multi-process and manual distributed sharding itself.
+        # We have to handle all possibilities.
+
+        sharded_slice: Iterator[_T] = iter(iterable)
+
+        # We'll adjust max_instances as we go, depending on what sort of sharding is done.
+        # At the end, we want to ensure the total number of instances collected across
+        # all workers processes is equal to self.max_instances.
+        max_instances = self.max_instances
+
+        if self._distributed_info is not None:
+            if max_instances is not None:
+                # Need to scale down max_instances because otherwise each node would read self.max_instances,
+                # but we really want self.max_instances total across all nodes.
+                if self._distributed_info.global_rank < (
+                    max_instances % self._distributed_info.world_size
+                ):
+                    max_instances = max_instances // self._distributed_info.world_size + 1
+                else:
+                    max_instances = max_instances // self._distributed_info.world_size
+
+            if not self.manual_distributed_sharding:
+                sharded_slice = itertools.islice(
+                    sharded_slice,
+                    self._distributed_info.global_rank,
+                    None,
+                    self._distributed_info.world_size,
+                )
+
+        if self._worker_info is not None:
+            if max_instances is not None:
+                # Like in the distributed case above, we need to adjust max_instances.
+                if self._worker_info.id < (max_instances % self._worker_info.num_workers):
+                    max_instances = max_instances // self._worker_info.num_workers + 1
+                else:
+                    max_instances = max_instances // self._worker_info.num_workers
+
+            if not self.manual_multiprocess_sharding:
+                warnings.warn(
+                    "Using multi-process data loading without setting "
+                    "DatasetReader.manual_multiprocess_sharding to True.\n"
+                    "Did you forget to set this?\n"
+                    "If you're not handling the multi-process sharding logic within your "
+                    "_read() method, there is probably no benefit to using more than one "
+                    "worker.",
+                    UserWarning,
+                )
+                sharded_slice = itertools.islice(
+                    sharded_slice, self._worker_info.id, None, self._worker_info.num_workers
+                )
+
+        if max_instances is not None:
+            sharded_slice = itertools.islice(sharded_slice, max_instances)
+
+        return sharded_slice
