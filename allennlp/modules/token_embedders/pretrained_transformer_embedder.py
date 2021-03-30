@@ -39,7 +39,7 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         want to use the encoder.
     train_parameters: `bool`, optional (default = `True`)
         If this is `True`, the transformer weights get updated during training. If this is `False`, the
-        transformer weights are not updated during training and its dropout and batch normalization layers
+        transformer weights are not updated during training and the dropout and batch normalization layers
         are set to evaluation mode.
     last_layer_only: `bool`, optional (default = `True`)
         When `True` (the default), only the final layer of the pretrained transformer is taken
