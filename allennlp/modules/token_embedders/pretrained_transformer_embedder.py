@@ -1,6 +1,7 @@
 import logging
 import math
 from typing import Optional, Tuple, Dict, Any
+import types
 
 from overrides import overrides
 
@@ -124,7 +125,18 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         self._num_added_tokens = self._num_added_start_tokens + self._num_added_end_tokens
 
         if not train_parameters:
-            self.transformer_model.eval()
+            # Calling transformer_model.eval() won't change anything now,
+            # so we have to explicitly set training = False
+            self.transformer_model.training = False
+
+            # Override train in transformer_model to prevent it from changing modes
+            def _train(self, mode):
+                return self
+
+            setattr(
+                self.transformer_model, "train", types.MethodType(_train, self.transformer_model)
+            )
+
             for param in self.transformer_model.parameters():
                 param.requires_grad = False
 
