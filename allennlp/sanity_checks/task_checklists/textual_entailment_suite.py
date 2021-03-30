@@ -3,6 +3,7 @@ from allennlp.sanity_checks.task_checklists.task_suite import TaskSuite
 from checklist.test_suite import TestSuite
 import numpy as np
 
+
 @TaskSuite.register("textual-entailment")
 class TextualEntailmentSuite(TaskSuite):
     def __init__(

@@ -47,7 +47,7 @@ class TestCheckList(AllenNlpTestCase):
             str(self.archive_file),
             str(self.task),
             "--task-suite-args",
-            '{"positive": 1, "negative": 0, "neutral": null}',
+            '{"positive": 1, "negative": 0}',
         ]
 
         main()
