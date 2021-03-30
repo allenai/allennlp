@@ -6,8 +6,9 @@ class SoftmaxLoss(torch.nn.Module):
     """
     Given some embeddings and some targets, applies a linear layer
     to create logits over possible words and then returns the
-    negative log likelihood. Does not add a padding ID, and
-    input `targets` to `forward` should not include a padding ID.
+    negative log likelihood. Does not add a padding ID into the
+    vocabulary, and input `targets` to `forward` should not include
+    a padding ID.
     """
 
     def __init__(self, num_words: int, embedding_dim: int) -> None:
