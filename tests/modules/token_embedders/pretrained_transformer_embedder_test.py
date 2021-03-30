@@ -332,7 +332,7 @@ class TestPretrainedTransformerEmbedder(AllenNlpTestCase):
         )
 
     def test_eval_mode(self):
-        token_embedder = PretrainedTransformerEmbedder("bert-base-uncased", train_parameters=False)
+        token_embedder = PretrainedTransformerEmbedder("epwalsh/bert-xsmall-dummy", train_parameters=False)
         assert token_embedder.training and not token_embedder.transformer_model.training
 
         class TrainableModule(torch.nn.Module):
