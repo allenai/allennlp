@@ -129,7 +129,7 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
             def _train(self, mode):
                 self.training = False
                 for module in self.children():
-                    module.train(mode)
+                    module.train(False)
                 return self
 
             setattr(
