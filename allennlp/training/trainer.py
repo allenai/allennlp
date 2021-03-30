@@ -745,13 +745,6 @@ class GradientDescentTrainer(Trainer):
             epoch_start_time = time.time()
             train_metrics = self._train_epoch(epoch)
 
-            if self._primary and self._checkpointer is not None:
-                self._checkpointer.save_checkpoint(epoch, self, save_model_only=True)
-
-            # Wait for the primary process to finish saving the model checkpoint
-            if self._distributed:
-                dist.barrier()
-
             # get peak of memory usage
             for key, value in train_metrics.items():
                 if key.startswith("gpu_") and key.endswith("_memory_MB"):
@@ -788,6 +781,13 @@ class GradientDescentTrainer(Trainer):
                     if self._metric_tracker.should_stop_early():
                         logger.info("Ran out of patience.  Stopping training.")
                         break
+
+            if self._primary and self._checkpointer is not None:
+                self._checkpointer.save_checkpoint(epoch, self, save_model_only=True)
+
+            # Wait for the primary process to finish saving the model checkpoint
+            if self._distributed:
+                dist.barrier()
 
             # Create overall metrics dict
             training_elapsed_time = time.time() - training_start_time
