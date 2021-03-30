@@ -22,19 +22,19 @@ class SoftmaxLoss(torch.nn.Module):
         self.softmax_b = torch.nn.Parameter(torch.zeros(num_words))
 
     def forward(self, embeddings: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
-        
+
         """
         # Parameters
 
-        embeddings : `torch.Tensor` :
+        embeddings : `torch.Tensor`
             A tensor of shape `(sequence_length, embedding_dim)`
-        targets : `torch.Tensor` :
+        targets : `torch.Tensor`
             A tensor of shape `(batch_size, )`
 
         # Returns
 
-        `loss` : `torch.FloatTensor` :
-                A scalar loss to be optimized.
+        loss : `torch.FloatTensor`
+            A scalar loss to be optimized.
         """
 
         # embeddings is size (n, embedding_dim)
