@@ -534,7 +534,7 @@ class TestTrain(AllenNlpTestCase):
             def on_batch(
                 self,
                 trainer: GradientDescentTrainer,
-                batch_inputs: List[List[TensorDict]],
+                batch_inputs: List[TensorDict],
                 batch_outputs: List[Dict[str, Any]],
                 batch_metrics: Dict[str, Any],
                 epoch: int,

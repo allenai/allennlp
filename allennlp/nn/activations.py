@@ -5,7 +5,7 @@ For the most part we just use
 [PyTorch activations](https://pytorch.org/docs/master/nn.html#non-linear-activations).
 Here we provide a thin wrapper to allow registering them and instantiating them `from_params`.
 
-The available activation functions are
+The available activation functions include
 
 * "linear"
 * ["mish"](https://arxiv.org/abs/1908.08681)
@@ -26,11 +26,10 @@ The available activation functions are
 * ["tanhshrink"](https://pytorch.org/docs/master/nn.html#torch.nn.Tanhshrink)
 * ["selu"](https://pytorch.org/docs/master/nn.html#torch.nn.SELU)
 """
+
 import math
-from typing import Callable
 
 import torch
-from overrides import overrides
 
 from allennlp.common import Registrable
 
@@ -46,55 +45,18 @@ class Activation(torch.nn.Module, Registrable):
     requires a different API.
     """
 
-    def __call__(self, tensor: torch.Tensor) -> torch.Tensor:
-        """
-        This function is here just to make mypy happy.  We expect activation functions to follow
-        this API; the builtin pytorch activation functions follow this just fine, even though they
-        don't subclass `Activation`.  We're just making it explicit here, so mypy knows that
-        activations are callable like this.
-        """
-        raise NotImplementedError
-
-
-class _ActivationLambda(torch.nn.Module):
-    """Wrapper around non PyTorch, lambda based activations to display them as modules whenever printing model."""
-
-    def __init__(self, func: Callable[[torch.Tensor], torch.Tensor], name: str):
-        super().__init__()
-        self._name = name
-        self._func = func
-
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return self._func(x)
-
-    @overrides
-    def _get_name(self):
-        return self._name
+        raise NotImplementedError
 
 
 # There are no classes to decorate, so we hack these into Registrable._registry.
 # If you want to instantiate it, you can do like this:
 # Activation.by_name('relu')()
 Registrable._registry[Activation] = {
-    "linear": (lambda: _ActivationLambda(lambda x: x, "Linear"), None),  # type: ignore
-    "mish": (  # type: ignore
-        lambda: _ActivationLambda(
-            lambda x: x * torch.tanh(torch.nn.functional.softplus(x)), "Mish"
-        ),
-        None,
-    ),
-    "swish": (lambda: _ActivationLambda(lambda x: x * torch.sigmoid(x), "Swish"), None),  # type: ignore
     "relu": (torch.nn.ReLU, None),
     "relu6": (torch.nn.ReLU6, None),
     "elu": (torch.nn.ELU, None),
     "gelu": (torch.nn.GELU, None),
-    "gelu_fast": (  # type: ignore
-        lambda: _ActivationLambda(
-            lambda x: 0.5 * x * (1.0 + torch.tanh(x * 0.7978845608 * (1.0 + 0.044715 * x * x))),
-            "GeluFast",
-        ),
-        None,
-    ),
     "prelu": (torch.nn.PReLU, None),
     "leaky_relu": (torch.nn.LeakyReLU, None),
     "threshold": (torch.nn.Threshold, None),
@@ -110,6 +72,24 @@ Registrable._registry[Activation] = {
 }
 
 
+@Activation.register("linear")
+class LinearActivation(Activation):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return x
+
+
+@Activation.register("mish")
+class MishActivation(Activation):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return x * torch.tanh(torch.nn.functional.softplus(x))
+
+
+@Activation.register("swish")
+class SwishActivation(Activation):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return x * torch.sigmoid(x)
+
+
 @Activation.register("gelu_new")
 class GeluNew(Activation):
     """
@@ -117,14 +97,15 @@ class GeluNew(Activation):
     see the Gaussian Error Linear Units paper: https://arxiv.org/abs/1606.08415
     """
 
-    def __call__(self, tensor: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         return (
             0.5
-            * tensor
-            * (
-                1.0
-                + torch.tanh(
-                    math.sqrt(2.0 / math.pi) * (tensor + 0.044715 * torch.pow(tensor, 3.0))
-                )
-            )
+            * x
+            * (1.0 + torch.tanh(math.sqrt(2.0 / math.pi) * (x + 0.044715 * torch.pow(x, 3.0))))
         )
+
+
+@Activation.register("gelu_fast")
+class GeluFast(Activation):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return 0.5 * x * (1.0 + torch.tanh(x * 0.7978845608 * (1.0 + 0.044715 * x * x)))
