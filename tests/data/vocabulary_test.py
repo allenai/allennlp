@@ -839,6 +839,22 @@ class TestVocabulary(AllenNlpTestCase):
         assert vocab1.get_token_to_index_vocabulary("2") == {"d": 0, "e": 1, "f": 2}
         assert vocab1.get_token_to_index_vocabulary("3") == {"g": 0, "h": 1, "i": 2}
 
+    def test_extend_helper(self):
+        vocab = Vocabulary()
+        counter = {"a": {}, "b": {"test": 0}, "c": {"test": 1}}
+        min_count = {"c": -1, "d": 0}
+
+        with pytest.raises(ConfigurationError):
+            vocab._extend(counter, min_count)
+        with pytest.raises(ConfigurationError):
+            vocab._extend(None, min_count)
+
+        counter["d"] = {}
+        try:
+            vocab._extend(counter, min_count)
+        except ConfigurationError:
+            pytest.fail("Unexpected ConfigurationError")
+
 
 class TestVocabularyFromFilesWithArchive(AllenNlpTestCase):
     def setup_method(self):
