@@ -14,7 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Print the first batch to the console by default.
 
 ### Added
-
+- Added `HuggingfaceDatasetReader` for using huggingface datasets in AllenNLP
 - Added `TaskSuite` base class and command line functionality for running [`checklist`](https://github.com/marcotcr/checklist) test suites, along with implementations for `SentimentAnalysisSuite`, `QuestionAnsweringSuite`, and `TextualEntailmentSuite`. These can be found in the `allennlp.sanity_checks.task_checklists` module.
 - Added `allennlp diff` command to compute a diff on model checkpoints, analogous to what `git diff` does on two files.
 - Added `allennlp.nn.util.load_state_dict` helper function.
