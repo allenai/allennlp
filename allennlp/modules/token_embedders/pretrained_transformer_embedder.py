@@ -124,20 +124,21 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         self._num_added_end_tokens = len(tokenizer.single_sequence_end_tokens)
         self._num_added_tokens = self._num_added_start_tokens + self._num_added_end_tokens
 
+        self.train_parameters = train_parameters
         if not train_parameters:
-            # Override train in transformer_model to prevent it from changing modes
-            def _train(self, mode):
-                self.training = False
-                for module in self.children():
-                    module.train(False)
-                return self
-
-            setattr(
-                self.transformer_model, "train", types.MethodType(_train, self.transformer_model)
-            )
-
+            self.transformer_model.eval()
             for param in self.transformer_model.parameters():
                 param.requires_grad = False
+
+    @overrides
+    def train(self, mode: bool = True):
+        self.training = mode
+        for name, module in self.named_children():
+            if not self.train_parameters and name == "transformer_model":
+                module.eval()
+            else:
+                module.train(mode)
+        return self
 
     @overrides
     def get_output_dim(self):
