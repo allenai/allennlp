@@ -7,18 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-### Fixed
+### Added
 
-- Fixed a bug where some `Activation` implementations could not be pickled due to involving a lambda function.
+- Ported the following Huggingface `LambdaLR`-based schedulers: `ConstantLearningRateScheduler`, `ConstantWithWarmupLearningRateScheduler`, `CosineWithWarmupLearningRateScheduler`, `CosineHardRestartsWithWarmupLearningRateScheduler`.
 
 ### Changed
 
 - Allow the order of examples in the task cards to be specified explicitly
 - `histogram_interval` parameter is now deprecated in `TensorboardWriter`, please use `distribution_interval` instead.
 - Memory usage is not logged in tensorboard during training now. `ConsoleLoggerCallback` should be used instead.
+- If `train_parameters` in PretrainedTransformerEmbedder is `False`, the transformer's dropout and batch normalization layers are now set to evaluation mode.
 - If you use the `min_count` parameter of the Vocabulary, but you specify a namespace that does not exist, the vocabulary creation will raise a `ConfigurationError`.
 - Documentation updates made to SoftmaxLoss regarding padding and the expected shapes of the input and output tensors of `forward`.
 - Moved the data preparation script for coref into allennlp-models.
+
+### Fixed
+
+- Fixed a bug where some `Activation` implementations could not be pickled due to involving a lambda function.
 
 
 ## [v2.2.0](https://github.com/allenai/allennlp/releases/tag/v2.2.0) - 2021-03-26

@@ -330,3 +330,24 @@ class TestPretrainedTransformerEmbedder(AllenNlpTestCase):
             enhanced_token_embedder.transformer_model.embeddings.word_embeddings.num_embeddings
             == 28997
         )
+
+    def test_eval_mode(self):
+        token_embedder = PretrainedTransformerEmbedder(
+            "epwalsh/bert-xsmall-dummy", train_parameters=False
+        )
+        assert token_embedder.training and not token_embedder.transformer_model.training
+
+        class TrainableModule(torch.nn.Module):
+            def __init__(self, fixed_module):
+                super().__init__()
+                self.fixed_module = fixed_module
+
+        trainable = TrainableModule(token_embedder)
+        assert (
+            trainable.training
+            and trainable.fixed_module.training
+            and not trainable.fixed_module.transformer_model.training
+        )
+
+        trainable.train()
+        assert not trainable.fixed_module.transformer_model.training
