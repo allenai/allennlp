@@ -43,7 +43,8 @@ class Activation(torch.nn.Module, Registrable):
     requires a different API.
     """
 
-    pass
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        raise NotImplementedError
 
 
 # There are no classes to decorate, so we hack these into Registrable._registry.
@@ -71,17 +72,17 @@ Registrable._registry[Activation] = {
 
 @Activation.register("linear")
 class LinearActivation(Activation):
-    def foward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         return x
 
 
 @Activation.register("mish")
 class MishActivation(Activation):
-    def foward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         return x * torch.tanh(torch.nn.functional.softplus(x))
 
 
 @Activation.register("swish")
 class SwishActivation(Activation):
-    def foward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         return x * torch.sigmoid(x)
