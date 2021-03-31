@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Fixed
+
+- Fixed a bug where some `Activation` implementations could not be pickled due to involving a lambda function.
+
 ### Changed
 
 - Allow the order of examples in the task cards to be specified explicitly
