@@ -16,7 +16,9 @@ class TestCachedTransformers(AllenNlpTestCase):
                 local_files_only=True,
             )
             assert os.path.isfile(self.TEST_DIR + "/" + "bert-base-uncased.bin")
+            assert os.path.isfile(self.TEST_DIR + "/" + "config.json")
             os.remove(self.TEST_DIR + "/" + "bert-base-uncased.bin")
+            os.remove(self.TEST_DIR + "/" + "config.json")
 
             torch.save(transformer.module.state_dict(), self.TEST_DIR + "/" + "bert_weights.pth")
             cached_transformers.get(
@@ -27,6 +29,7 @@ class TestCachedTransformers(AllenNlpTestCase):
                 local_files_only=True,
             )
             assert not os.path.isfile(self.TEST_DIR + "/" + "bert-base-uncased.bin")
+            assert os.path.isfile(self.TEST_DIR + "/" + "config.json")
 
     def test_get_tokenizer_missing_from_cache_local_files_only(self):
         with pytest.raises((OSError, ValueError)):
