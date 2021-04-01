@@ -1,7 +1,7 @@
 import logging
 from typing import NamedTuple, Optional, Dict, Tuple
 import transformers
-from transformers import AutoModel
+from transformers import AutoModel, AutoConfig
 
 
 logger = logging.getLogger(__name__)
@@ -75,10 +75,12 @@ def get(
                     )
                 override_weights = {strip_prefix(k): override_weights[k] for k in valid_keys}
 
-            transformer = AutoModel.from_pretrained(
-                model_name,
-                state_dict=override_weights,
-                **kwargs,
+            transformer = AutoModel.from_config(
+                AutoConfig.from_pretrained(
+                    model_name,
+                    state_dict=override_weights,
+                    **kwargs,
+                )
             )
         else:
             transformer = AutoModel.from_pretrained(
