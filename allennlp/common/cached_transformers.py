@@ -78,10 +78,14 @@ def get(
             transformer = AutoModel.from_config(
                 AutoConfig.from_pretrained(
                     model_name,
-                    state_dict=override_weights,
                     **kwargs,
                 )
             )
+            # Only load the model itself if we are using distributed training
+            if hasattr(transformer, "module"):
+                transformer.module.load_state_dict(override_weights)
+            else:
+                transformer.load_state_dict(override_weights)
         else:
             transformer = AutoModel.from_pretrained(
                 model_name,
