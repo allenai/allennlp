@@ -294,7 +294,8 @@ class Predictor(Registrable):
     def predict_batch_instance(self, instances: List[Instance]) -> List[JsonDict]:
         for instance in instances:
             self._dataset_reader.apply_token_indexers(instance)
-        return [sanitize(o) for o in self._model.forward_on_instances(instances)]
+        outputs = self._model.forward_on_instances(instances)
+        return sanitize(outputs)
 
     def _batch_json_to_instances(self, json_dicts: List[JsonDict]) -> List[Instance]:
         """
