@@ -81,9 +81,9 @@ class TestFeedForward(AllenNlpTestCase):
             """
             FeedForward(
               (_activations): ModuleList(
-                (0): Linear()
+                (0): LinearActivation()
                 (1): ReLU()
-                (2): Swish()
+                (2): SwishActivation()
               )
               (_linear_layers): ModuleList(
                 (0): Linear(in_features=2, out_features=3, bias=True)

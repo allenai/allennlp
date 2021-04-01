@@ -138,3 +138,48 @@ class LearningRateSchedulersTest(AllenNlpTestCase):
         assert optimizer.param_groups[0]["lr"] == 0.5 ** 2
         scheduler.step()
         assert optimizer.param_groups[0]["lr"] == 0.5 ** 3
+
+    def test_huggingface_schedulers_work_properly(self):
+        def unwrap_schedule(scheduler, num_steps=10):
+            lrs = []
+            for _ in range(num_steps):
+                lrs.append(scheduler.lr_scheduler.optimizer.param_groups[0]["lr"])
+                scheduler.step()
+            return lrs
+
+        common_kwargs = {"num_warmup_steps": 2, "num_training_steps": 10}
+        # schedulers doct format
+        # function: (sched_args_dict, expected_learning_rates)
+        scheds = {
+            "constant": ({}, [10.0] * 10),
+            "constant_with_warmup": (
+                {"num_warmup_steps": 4},
+                [0.0, 2.5, 5.0, 7.5, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0],
+            ),
+            "cosine_with_warmup": (
+                {**common_kwargs},
+                [0.0, 5.0, 10.0, 9.61, 8.53, 6.91, 5.0, 3.08, 1.46, 0.38],
+            ),
+            "cosine_hard_restarts_with_warmup": (
+                {**common_kwargs, "num_cycles": 2},
+                [0.0, 5.0, 10.0, 8.53, 5.0, 1.46, 10.0, 8.53, 5.0, 1.46],
+            ),
+        }
+
+        for scheduler_func, data in scheds.items():
+            kwargs, expected_learning_rates = data
+
+            scheduler = LearningRateScheduler.from_params(
+                optimizer=Optimizer.from_params(
+                    model_parameters=self.model.named_parameters(),
+                    params=Params({"type": "adam", "lr": 10.0}),
+                ),
+                params=Params({"type": scheduler_func, **kwargs}),
+            )
+            optimizer = scheduler.lr_scheduler.optimizer
+            optimizer.step()  # to avoid a pytorch warning
+
+            lrs = unwrap_schedule(scheduler, 10)
+            assert lrs == pytest.approx(
+                expected_learning_rates, abs=1e-2
+            ), f"failed for {scheduler_func} in normal scheduler"
