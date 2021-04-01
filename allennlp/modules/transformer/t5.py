@@ -127,7 +127,7 @@ class T5Attention(TransformerModule, FromParams):
         self,
         is_decoder: bool = False,
         hidden_size: int = 512,
-        key_value_proj_dim: int = 64,  # d_kv
+        key_value_proj_dim: int = 64,
         num_heads: int = 8,
         has_relative_attention_bias: bool = False,
         relative_attention_num_buckets: int = 32,
