@@ -16,7 +16,7 @@ from allennlp.common import FromParams, Params, Lazy, Registrable
 from allennlp.common.checks import ConfigurationError
 from allennlp.modules.transformer import TransformerModule
 from allennlp.modules.transformer.util import (
-    invert_attention_mask,
+    apply_mask,
     get_extended_attention_mask,
 )
 from allennlp.nn.beam_search import BeamSearch
@@ -339,7 +339,7 @@ class T5Attention(TransformerModule, FromParams):
 
             if mask is not None:
                 # Shape: (batch_size, num_heads, seq_length, key_length)
-                position_bias = position_bias + mask
+                position_bias = apply_mask(position_bias, mask)
 
         scores += position_bias
         attn_weights = F.softmax(scores.float(), dim=-1).type_as(
@@ -723,13 +723,6 @@ class T5Stack(TransformerModule, FromParams):
             attention_mask, input_shape, inputs_embeds.dtype, is_decoder=self.is_decoder
         )
 
-        if self.is_decoder and encoder_attention_mask is not None:
-            encoder_extended_attention_mask = invert_attention_mask(
-                encoder_attention_mask, inputs_embeds.dtype
-            )
-        else:
-            encoder_extended_attention_mask = None
-
         # Prepare head mask if needed
         head_mask = self.get_head_mask(head_mask, self.num_blocks)
         encoder_head_mask = self.get_head_mask(encoder_head_mask, self.num_blocks)
@@ -757,7 +750,7 @@ class T5Stack(TransformerModule, FromParams):
                 attention_mask=extended_attention_mask,
                 position_bias=position_bias,
                 encoder_hidden_states=encoder_hidden_states,
-                encoder_attention_mask=encoder_extended_attention_mask,
+                encoder_attention_mask=encoder_attention_mask,
                 encoder_decoder_position_bias=encoder_decoder_position_bias,
                 layer_head_mask=layer_head_mask,
                 encoder_layer_head_mask=encoder_layer_head_mask,

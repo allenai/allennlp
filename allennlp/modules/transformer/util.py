@@ -15,40 +15,16 @@ def apply_mask(
     mask : `torch.BoolTensor`
         Shape `batch_size x target_seq_len` OR `batch_size x 1 x 1 x target_seq_len`
     """
-    if len(mask.shape) == 2:
-        # We create a 4D attention mask from a 2D tensor mask.
+    # We create a 4D attention mask from a 2D or 3D tensor mask.
+    if mask.dim() == 2:
         # The shape is `batch_size x 1 x 1 x target_seq_len` which is broadcast
         # to `batch_size x num_attention_heads x source_seq_len x target_seq_len`
-        mask = mask.unsqueeze(1).unsqueeze(2)
-    # `mask==1` to convert float tensors.
-    mask = (~(mask == 1)) * min_value_of_dtype(values.dtype)
+        mask = mask[:, None, None, :]
+    elif mask.dim() == 3:
+        mask = mask[:, None, :, :]
+    mask = mask.to(values.dtype)
+    mask = (1.0 - mask) * min_value_of_dtype(values.dtype)
     return values + mask
-
-
-def invert_attention_mask(encoder_attention_mask: torch.Tensor, dtype: torch.dtype) -> torch.Tensor:
-    """
-    Invert an attention mask (e.g., switches 0. and 1.).
-    """
-    # Adapted from https://github.com/huggingface/transformers/blob/
-    # 4c32f9f26e6a84f0d9843fec8757e6ce640bb44e/src/transformers/modeling_utils.py#L187.
-    if encoder_attention_mask.dim() == 3:
-        encoder_extended_attention_mask = encoder_attention_mask[:, None, :, :]
-    if encoder_attention_mask.dim() == 2:
-        encoder_extended_attention_mask = encoder_attention_mask[:, None, None, :]
-
-    encoder_extended_attention_mask = encoder_extended_attention_mask.to(dtype)
-
-    # T5 has a mask that can compare sequence ids, we can simulate this here with this transposition
-    # Cf. https://github.com/tensorflow/mesh/blob/8d2465e9bc93129b913b5ccc6a59aa97abd96ec6/mesh_tensorflow
-    # /transformer/transformer_layers.py#L270
-    # encoder_extended_attention_mask = (encoder_extended_attention_mask ==
-    # encoder_extended_attention_mask.transpose(-1, -2))
-
-    encoder_extended_attention_mask = (1.0 - encoder_extended_attention_mask) * min_value_of_dtype(
-        dtype
-    )
-
-    return encoder_extended_attention_mask
 
 
 def get_extended_attention_mask(
@@ -122,11 +98,4 @@ def get_extended_attention_mask(
             )
         )
 
-    # Since attention_mask is 1.0 for positions we want to attend and 0.0 for
-    # masked positions, this operation will create a tensor which is 0.0 for
-    # positions we want to attend and a very negative number for masked positions.
-    # Since we are adding it to the raw scores before the softmax, this is
-    # effectively the same as removing these entirely.
-    extended_attention_mask = extended_attention_mask.to(dtype=dtype)
-    extended_attention_mask = (1.0 - extended_attention_mask) * min_value_of_dtype(dtype)
     return extended_attention_mask
