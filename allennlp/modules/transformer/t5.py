@@ -55,10 +55,9 @@ class T5FeedForwardProjection(TransformerModule, Registrable):
 class T5DenseReluDense(TransformerModule, FromParams):
     def __init__(self, hidden_size: int = 512, ff_size: int = 2048, dropout: float = 0.1):
         super().__init__()
-        self.hidden_size = hidden_size
-        self.wi = nn.Linear(self.hidden_size, ff_size, bias=False)
-        self.wi.weight.data.normal_(mean=0.0, std=self.hidden_size ** -0.5)
-        self.wo = nn.Linear(ff_size, self.hidden_size, bias=False)
+        self.wi = nn.Linear(hidden_size, ff_size, bias=False)
+        self.wi.weight.data.normal_(mean=0.0, std=hidden_size ** -0.5)
+        self.wo = nn.Linear(ff_size, hidden_size, bias=False)
         self.wo.weight.data.normal_(mean=0.0, std=ff_size ** -0.5)
         self.dropout = nn.Dropout(dropout)
 
@@ -74,12 +73,11 @@ class T5DenseReluDense(TransformerModule, FromParams):
 class T5DenseGatedGeluDense(TransformerModule, FromParams):
     def __init__(self, hidden_size: int = 512, ff_size: int = 2048, dropout: float = 0.1):
         super().__init__()
-        self.hidden_size = hidden_size
-        self.wi_0 = nn.Linear(self.hidden_size, ff_size, bias=False)
-        self.wi_0.weight.data.normal_(mean=0.0, std=self.hidden_size ** -0.5)
-        self.wi_1 = nn.Linear(self.hidden_size, ff_size, bias=False)
-        self.wi_1.weight.data.normal_(mean=0.0, std=self.hidden_size ** -0.5)
-        self.wo = nn.Linear(ff_size, self.hidden_size, bias=False)
+        self.wi_0 = nn.Linear(hidden_size, ff_size, bias=False)
+        self.wi_0.weight.data.normal_(mean=0.0, std=hidden_size ** -0.5)
+        self.wi_1 = nn.Linear(hidden_size, ff_size, bias=False)
+        self.wi_1.weight.data.normal_(mean=0.0, std=hidden_size ** -0.5)
+        self.wo = nn.Linear(ff_size, hidden_size, bias=False)
         self.wo.weight.data.normal_(mean=0.0, std=ff_size ** -0.5)
         self.dropout = nn.Dropout(dropout)
         from allennlp.nn import Activation
