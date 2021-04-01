@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Fixed a bug where some `Activation` implementations could not be pickled due to involving a lambda function.
+- Fixed an issue where the trainer would leave a model checkpoint behind when it's not supposed to.
 
 
 ## [v2.2.0](https://github.com/allenai/allennlp/releases/tag/v2.2.0) - 2021-03-26
