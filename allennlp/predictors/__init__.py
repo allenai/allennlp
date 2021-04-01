@@ -10,4 +10,3 @@ from allennlp.predictors.predictor import Predictor
 from allennlp.predictors.sentence_tagger import SentenceTaggerPredictor
 from allennlp.predictors.text_classifier import TextClassifierPredictor
 from allennlp.predictors.multitask import MultiTaskPredictor
-from allennlp.predictors.t5 import T5Predictor
