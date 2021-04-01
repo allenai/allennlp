@@ -261,7 +261,7 @@ class Predictor(Registrable):
     def predict_instance(self, instance: Instance) -> JsonDict:
         self._dataset_reader.apply_token_indexers(instance)
         outputs = self._model.forward_on_instance(instance)
-        return sanitize(self._finalize_output(outputs))
+        return sanitize(outputs)
 
     def predictions_to_labeled_instances(
         self, instance: Instance, outputs: Dict[str, numpy.ndarray]
@@ -294,17 +294,7 @@ class Predictor(Registrable):
     def predict_batch_instance(self, instances: List[Instance]) -> List[JsonDict]:
         for instance in instances:
             self._dataset_reader.apply_token_indexers(instance)
-        return [
-            sanitize(self._finalize_output(o)) for o in self._model.forward_on_instances(instances)
-        ]
-
-    def _finalize_output(self, output: JsonDict) -> JsonDict:
-        """
-        This can be overridden to perform any post-processing on the outputs
-        from `Model.forward_on_instances()`. It will be called from all of the
-        `Predictor.predict*` methods.
-        """
-        return output
+        return [sanitize(o) for o in self._model.forward_on_instances(instances)]
 
     def _batch_json_to_instances(self, json_dicts: List[JsonDict]) -> List[Instance]:
         """
