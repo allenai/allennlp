@@ -38,7 +38,9 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         as embedders such as BERT. However, other models consist of encoder and decoder, in which case we just
         want to use the encoder.
     train_parameters: `bool`, optional (default = `True`)
-        If this is `True`, the transformer weights get updated during training.
+        If this is `True`, the transformer weights get updated during training. If this is `False`, the
+        transformer weights are not updated during training and the dropout and batch normalization layers
+        are set to evaluation mode.
     last_layer_only: `bool`, optional (default = `True`)
         When `True` (the default), only the final layer of the pretrained transformer is taken
         for the embeddings. But if set to `False`, a scalar mix of all of the layers
@@ -121,9 +123,21 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         self._num_added_end_tokens = len(tokenizer.single_sequence_end_tokens)
         self._num_added_tokens = self._num_added_start_tokens + self._num_added_end_tokens
 
+        self.train_parameters = train_parameters
         if not train_parameters:
+            self.transformer_model.eval()
             for param in self.transformer_model.parameters():
                 param.requires_grad = False
+
+    @overrides
+    def train(self, mode: bool = True):
+        self.training = mode
+        for name, module in self.named_children():
+            if not self.train_parameters and name == "transformer_model":
+                module.eval()
+            else:
+                module.train(mode)
+        return self
 
     @overrides
     def get_output_dim(self):
