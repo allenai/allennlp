@@ -248,6 +248,16 @@ class GradientDescentTrainer(Trainer):
     use_amp : `bool`, optional, (default = `False`)
         If `True`, we'll train using [Automatic Mixed Precision](https://pytorch.org/docs/stable/amp.html).
 
+    enable_default_callbacks : `bool`, optional (default = `True`)
+        When `True`, the [`DEFAULT_CALLBACKS`](#default_callbacks) will be used in
+        addition to any other callbacks listed in the `callbacks` parameter.
+        When set to `False`, `DEFAULT_CALLBACKS` are not used.
+
+    run_sanity_checks : `bool`, optional (default = `True`)
+        Determines whether model sanity checks, such as
+        [`NormalizationBiasVerification`](../../sanity_checks/normalization_bias_verification/),
+        are ran.
+
     """
 
     def __init__(
@@ -273,6 +283,8 @@ class GradientDescentTrainer(Trainer):
         world_size: int = 1,
         num_gradient_accumulation_steps: int = 1,
         use_amp: bool = False,
+        enable_default_callbacks: bool = True,
+        run_sanity_checks: bool = True,
     ) -> None:
         super().__init__(serialization_dir, cuda_device, distributed, local_rank, world_size)
 
@@ -316,6 +328,15 @@ class GradientDescentTrainer(Trainer):
         self._moving_average = moving_average
 
         self._callbacks = callbacks or []
+        default_callbacks = list(DEFAULT_CALLBACKS) if enable_default_callbacks else []
+        if run_sanity_checks:
+            default_callbacks.append(SanityChecksCallback)
+        for callback_cls in default_callbacks:
+            for callback in self._callbacks:
+                if callback.__class__ == callback_cls:
+                    break
+            else:
+                self._callbacks.append(callback_cls(serialization_dir))
 
         self._batch_num_total = 0
         self._last_log = 0.0  # time of last logging
@@ -969,8 +990,6 @@ class GradientDescentTrainer(Trainer):
         moving_average: Lazy[MovingAverage] = None,
         checkpointer: Lazy[Checkpointer] = Lazy(Checkpointer),
         callbacks: List[Lazy[TrainerCallback]] = None,
-        enable_default_callbacks: bool = True,
-        run_sanity_checks: bool = True,
     ) -> "Trainer":
         """
         This method exists so that we can have a documented method to construct this class using
@@ -986,22 +1005,6 @@ class GradientDescentTrainer(Trainer):
 
         If you're not using `FromParams`, you can just construct these arguments in the right order
         yourself in your code and call the constructor directly.
-
-        Most of the parameters to this method are the same as they are in `__init__`, but we list
-        the ones the ones that are unique to this method below.
-
-        # Parameters
-
-        enable_default_callbacks : `bool`, optional (default = `True`)
-            When `True`, the [`DEFAULT_CALLBACKS`](#DEFAULT_CALLBACKS) will be used in
-            addition to any other callbacks listed in the `callbacks` parameter.
-            When set to `False`, `DEFAULT_CALLBACKS` are not used.
-
-        run_sanity_checks : `bool`, optional (default = `True`)
-            Determines whether model sanity checks, such as
-            [`NormalizationBiasVerification`](../../sanity_checks/normalization_bias_verification/),
-            are ran.
-
         """
         if cuda_device is None:
             from torch import cuda
@@ -1054,15 +1057,6 @@ class GradientDescentTrainer(Trainer):
         callbacks_: List[TrainerCallback] = []
         for callback_ in callbacks or []:
             callbacks_.append(callback_.construct(serialization_dir=serialization_dir))
-        default_callbacks = list(DEFAULT_CALLBACKS) if enable_default_callbacks else []
-        if run_sanity_checks:
-            default_callbacks.append(SanityChecksCallback)
-        for callback_cls in default_callbacks:
-            for callback in callbacks_:
-                if callback.__class__ == callback_cls:
-                    break
-            else:
-                callbacks_.append(callback_cls(serialization_dir))
 
         return cls(
             model,
