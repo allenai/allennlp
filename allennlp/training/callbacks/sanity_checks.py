@@ -53,6 +53,19 @@ class SanityChecksCallback(TrainerCallback):
         if epoch == 0 and batch_number == 1 and is_training:
             self._verification.destroy_hooks()
             detected_pairs = self._verification.collect_detections()
-            assert (
-                len(detected_pairs) == 0
-            ), "The NormalizationBiasVerification check failed. See logs for more details."
+            if len(detected_pairs) > 0:
+                raise SanityCheckError(
+                    "The NormalizationBiasVerification check failed. See logs for more details."
+                )
+
+
+class SanityCheckError(Exception):
+    """
+    The error type raised when a sanity check fails.
+    """
+
+    def __init__(self, message) -> None:
+        super().__init__(
+            message
+            + "\nYou can disable these checks by setting the trainer parameter `run_sanity_checks` to `False`."
+        )
