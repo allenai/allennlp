@@ -990,6 +990,8 @@ class GradientDescentTrainer(Trainer):
         moving_average: Lazy[MovingAverage] = None,
         checkpointer: Lazy[Checkpointer] = Lazy(Checkpointer),
         callbacks: List[Lazy[TrainerCallback]] = None,
+        enable_default_callbacks: bool = True,
+        run_sanity_checks: bool = True,
     ) -> "Trainer":
         """
         This method exists so that we can have a documented method to construct this class using
@@ -1080,6 +1082,8 @@ class GradientDescentTrainer(Trainer):
             world_size=world_size,
             num_gradient_accumulation_steps=num_gradient_accumulation_steps,
             use_amp=use_amp,
+            enable_default_callbacks=enable_default_callbacks,
+            run_sanity_checks=run_sanity_checks,
         )
 
 
