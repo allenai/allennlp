@@ -18,11 +18,11 @@ If you have a question rather than a bug, please ask on [Stack Overflow](https:/
 
 <!-- To check an item on the list replace [ ] with [x]. -->
 
-- [ ] I have verified that the issue exists against the `master` branch of AllenNLP.
-- [ ] I have read the relevant section in the [contribution guide](https://github.com/allenai/allennlp/blob/master/CONTRIBUTING.md#bug-fixes-and-new-features) on reporting bugs.
+- [ ] I have verified that the issue exists against the `main` branch of AllenNLP.
+- [ ] I have read the relevant section in the [contribution guide](https://github.com/allenai/allennlp/blob/main/CONTRIBUTING.md#bug-fixes-and-new-features) on reporting bugs.
 - [ ] I have checked the [issues list](https://github.com/allenai/allennlp/issues) for similar or identical bug reports.
 - [ ] I have checked the [pull requests list](https://github.com/allenai/allennlp/pulls) for existing proposed fixes.
-- [ ] I have checked the [CHANGELOG](https://github.com/allenai/allennlp/blob/master/CHANGELOG.md) and the [commit log](https://github.com/allenai/allennlp/commits/master) to find out if the bug was already fixed in the master branch.
+- [ ] I have checked the [CHANGELOG](https://github.com/allenai/allennlp/blob/main/CHANGELOG.md) and the [commit log](https://github.com/allenai/allennlp/commits/main) to find out if the bug was already fixed in the main branch.
 - [ ] I have included in the "Description" section below a traceback from any exceptions related to this bug.
 - [ ] I have included in the "Related issues or possible duplicates" section beloew all related issues and possible duplicate issues (If there are none, check this box anyway).
 - [ ] I have included in the "Environment" section below the name of the operating system and Python version that I was using when I discovered this bug.
