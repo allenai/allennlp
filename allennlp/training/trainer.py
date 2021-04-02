@@ -118,10 +118,10 @@ class GradientDescentTrainer(Trainer):
     stopping. There are many other bells and whistles as well.
 
     Registered as a `Trainer` with the name "gradient_descent" (and is also the default `Trainer`).
-    The constructor that is registered is `from_partial_objects` - see the arguments to that
-    function for the exact keys that should be used, if you are using a configuration file.  They
-    largely match the arguments to `__init__`, and we don't repeat their docstrings in
-    `from_partial_objects`.
+    The constructor that is registered is [`from_partial_objects`](#from_partial_objects) -
+    see the arguments to that function for the exact keys that should be used, if you are using
+    a configuration file. They largely match the arguments to `__init__`, and we don't repeat their
+    docstrings in `from_partial_objects`.
 
     [0]: https://tinyurl.com/y5mv44fw
 
@@ -970,6 +970,7 @@ class GradientDescentTrainer(Trainer):
         checkpointer: Lazy[Checkpointer] = Lazy(Checkpointer),
         callbacks: List[Lazy[TrainerCallback]] = None,
         enable_default_callbacks: bool = True,
+        run_sanity_checks: bool = True,
     ) -> "Trainer":
         """
         This method exists so that we can have a documented method to construct this class using
@@ -985,6 +986,22 @@ class GradientDescentTrainer(Trainer):
 
         If you're not using `FromParams`, you can just construct these arguments in the right order
         yourself in your code and call the constructor directly.
+
+        Most of the parameters to this method are the same as they are in `__init__`, but we list
+        the ones the ones that are unique to this method below.
+
+        # Parameters
+
+        enable_default_callbacks : `bool`, optional (default = `True`)
+            When `True`, the [`DEFAULT_CALLBACKS`](#DEFAULT_CALLBACKS) will be used in
+            addition to any other callbacks listed in the `callbacks` parameter.
+            When set to `False`, `DEFAULT_CALLBACKS` are not used.
+
+        run_sanity_checks : `bool`, optional (default = `True`)
+            Determines whether model sanity checks, such as
+            [`NormalizationBiasVerification`](../../sanity_checks/normalization_bias_verification/),
+            are ran.
+
         """
         if cuda_device is None:
             from torch import cuda
@@ -1037,13 +1054,15 @@ class GradientDescentTrainer(Trainer):
         callbacks_: List[TrainerCallback] = []
         for callback_ in callbacks or []:
             callbacks_.append(callback_.construct(serialization_dir=serialization_dir))
-        if enable_default_callbacks:
-            for callback_cls in DEFAULT_CALLBACKS:
-                for callback in callbacks_:
-                    if callback.__class__ == callback_cls:
-                        break
-                else:
-                    callbacks_.append(callback_cls(serialization_dir))
+        default_callbacks = list(DEFAULT_CALLBACKS) if enable_default_callbacks else []
+        if run_sanity_checks:
+            default_callbacks.append(SanityChecksCallback)
+        for callback_cls in default_callbacks:
+            for callback in callbacks_:
+                if callback.__class__ == callback_cls:
+                    break
+            else:
+                callbacks_.append(callback_cls(serialization_dir))
 
         return cls(
             model,
@@ -1070,10 +1089,7 @@ class GradientDescentTrainer(Trainer):
         )
 
 
-DEFAULT_CALLBACKS = (
-    SanityChecksCallback,
-    ConsoleLoggerCallback,
-)
+DEFAULT_CALLBACKS = (ConsoleLoggerCallback,)
 """
 The default callbacks used by `GradientDescentTrainer`.
 """
