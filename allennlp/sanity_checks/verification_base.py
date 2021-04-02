@@ -66,9 +66,3 @@ class VerificationBase:
         if isinstance(inputs, dict):
             return self.model(**inputs)
         return self.model(inputs)
-
-
-class VerificationError(Exception):
-    """
-    The error type raised when a sanity check fails.
-    """
