@@ -1,0 +1,83 @@
+import string
+from typing import Dict, Callable
+import numpy as np
+
+
+def spacy_wrap(fn: Callable, language: str = "en_core_web_sm", **kwargs):
+    """
+    Wrap the function so that it runs the input text data
+    through a spacy model before the function call.
+    """
+    from allennlp.common.util import get_spacy_model
+    import spacy
+
+    def new_fn(data):
+        if not isinstance(data, spacy.tokens.doc.Doc):
+            model = get_spacy_model(language, **kwargs)
+            if isinstance(data, Dict):
+                for key, val in data.items():
+                    if isinstance(val, str):
+                        data[key] = model(val)
+            elif isinstance(data, str):
+                data = model(data)
+            else:
+                pass
+        return fn(data)
+
+    return new_fn
+
+
+def strip_punctuation(data: str):
+    """
+    Removes all punctuation from the string `data`.
+    """
+    while len(data) and data[-1] in string.punctuation:
+        data = data[:-1]
+    return str(data)
+
+
+def toggle_punctuation(data: str):
+    """
+    If `data` contains any punctuation, it is removed.
+    Otherwise, a `.` is added to the string.
+    Returns a list of strings.
+    """
+    s = strip_punctuation(data)
+    ret = []
+    if s != data:
+        ret.append(s)
+    if s + "." != data:
+        ret.append(s + ".")
+    return ret
+
+
+def random_string(n: int):
+    """
+    Returns a random alphanumeric string of length `n`.
+    """
+    return "".join(np.random.choice([x for x in string.ascii_letters + string.digits], n))
+
+
+def random_url(n: int = 6):
+    """
+    Returns a random url of length `n`.
+    """
+    return "https://t.co/%s" % random_string(n)
+
+
+def random_handle(n: int = 6):
+    """
+    Returns a random handle of length `n`. Eg. "@randomstr23`
+    """
+    return "@%s" % random_string(n)
+
+
+def add_random_strings(data: str):
+    """
+    Adds random strings to the start and end of the string `data`.
+    Returns a list of strings.
+    """
+    urls_and_handles = [random_url(n=6) for _ in range(5)] + [random_handle() for _ in range(5)]
+    rets = ["%s %s" % (x, data) for x in urls_and_handles]
+    rets += ["%s %s" % (data, x) for x in urls_and_handles]
+    return rets

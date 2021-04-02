@@ -45,3 +45,18 @@ class TestTaskSuite(AllenNlpTestCase):
 
         with pytest.raises(NotImplementedError):
             task_suite.run(self.predictor)
+
+    def test_add_default_tests(self):
+
+        # We include "isn't" so that the contractions test is also added.
+        data = ["This isn't real data"]
+        task_suite = TaskSuite(add_default_tests=True, data=data)
+        assert "Typos" in task_suite.suite.tests
+        assert "2 Typos" in task_suite.suite.tests
+        assert "Contractions" in task_suite.suite.tests
+
+        data = ["This is data with no contractions."]
+        task_suite = TaskSuite(add_default_tests=True, data=data)
+        assert "Typos" in task_suite.suite.tests
+        assert "2 Typos" in task_suite.suite.tests
+        assert "Contractions" not in task_suite.suite.tests
