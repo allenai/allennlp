@@ -6,7 +6,7 @@ import re
 import time
 import traceback
 from contextlib import contextmanager
-from typing import Any, Dict, Iterator, List, Optional, Tuple, Union
+from typing import Any, Dict, Iterator, List, Optional, Tuple, Union, Type
 
 from allennlp.common.util import int_to_device
 
@@ -336,7 +336,7 @@ class GradientDescentTrainer(Trainer):
                 if callback.__class__ == callback_cls:
                     break
             else:
-                self._callbacks.append(callback_cls(serialization_dir))
+                self._callbacks.append(callback_cls(self._serialization_dir))
 
         self._batch_num_total = 0
         self._last_log = 0.0  # time of last logging
@@ -1087,7 +1087,7 @@ class GradientDescentTrainer(Trainer):
         )
 
 
-DEFAULT_CALLBACKS = (ConsoleLoggerCallback,)
+DEFAULT_CALLBACKS: Tuple[Type[TrainerCallback]] = (ConsoleLoggerCallback,)
 """
 The default callbacks used by `GradientDescentTrainer`.
 """
