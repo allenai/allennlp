@@ -1,4 +1,5 @@
 # build artifacts
+.env
 
 .eggs/
 .mypy_cache

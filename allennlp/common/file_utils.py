@@ -50,10 +50,12 @@ import numpy as np
 from overrides import overrides
 import requests
 from requests.adapters import HTTPAdapter
-from requests.exceptions import ConnectionError
+from requests.exceptions import ConnectionError, HTTPError
 from requests.packages.urllib3.util.retry import Retry
 import lmdb
 from torch import Tensor
+from huggingface_hub import hf_hub_url, cached_download, snapshot_download
+from allennlp.version import VERSION
 
 from allennlp.common.tqdm import Tqdm
 
@@ -233,8 +235,44 @@ def cached_path(
     cache_dir = os.path.expanduser(cache_dir)
     os.makedirs(cache_dir, exist_ok=True)
 
+    extraction_path: Optional[str] = None
+
     if not isinstance(url_or_filename, str):
         url_or_filename = str(url_or_filename)
+
+    if not os.path.isfile(url_or_filename) and not urlparse(url_or_filename).scheme in ("http", "https", "s3"):
+        # If can't be resolved to a path or a URL,
+        # let's try to find it on Hugging Face model hub
+        # e.g. lysandre/pair-classification-roberta-mnli is a valid model id
+        # and  lysandre/pair-classification-roberta-mnli@main supports specifying a commit/branch/tag.
+        if len(url_or_filename.split("/")) > 2:
+            filename = url_or_filename.split("/")[2]
+            url_or_filename = "/".join(url_or_filename.split("/")[:2])
+        else:
+            filename = None
+
+        if "@" in url_or_filename:
+            repo_id = url_or_filename.split("@")[0]
+            revision = url_or_filename.split("@")[1]
+        else:
+            repo_id = url_or_filename
+            revision = None
+
+        if filename is not None:
+            url = hf_hub_url(
+                repo_id=repo_id, filename=filename, revision=revision
+            )
+            url_or_filename = cached_download(
+                url=url,
+                library_name="allennlp",
+                library_version=VERSION,
+                cache_dir=CACHE_DIRECTORY,
+            )
+        else:
+            try:
+                extraction_path = Path(snapshot_download(repo_id, revision=revision, cache_dir=CACHE_DIRECTORY))
+            except HTTPError as e:
+                logger.warning(f"Tried to download from Hugging Face Hub but failed with {e}")
 
     file_path: str
 
@@ -261,9 +299,7 @@ def cached_path(
 
     parsed = urlparse(url_or_filename)
 
-    extraction_path: Optional[str] = None
-
-    if parsed.scheme in ("http", "https", "s3"):
+    if parsed.scheme in ("http", "https", "s3") and extraction_path is None:
         # URL, so get it from the cache (downloading if necessary)
         file_path = get_from_cache(url_or_filename, cache_dir)
 
@@ -272,7 +308,7 @@ def cached_path(
             # For example ~/.allennlp/cache/234234.21341 -> ~/.allennlp/cache/234234.21341-extracted
             extraction_path = file_path + "-extracted"
 
-    else:
+    elif extraction_path is None:
         url_or_filename = os.path.expanduser(url_or_filename)
 
         if os.path.exists(url_or_filename):
