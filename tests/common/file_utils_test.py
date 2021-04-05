@@ -28,7 +28,10 @@ from allennlp.common.file_utils import (
     LocalCacheResource,
     TensorCache,
 )
+from allennlp.common import Params
+from allennlp.modules.token_embedders import ElmoTokenEmbedder
 from allennlp.common.testing import AllenNlpTestCase
+from allennlp.predictors import Predictor
 
 
 def set_up_glove(url: str, byt: bytes, change_etag_every: int = 1000):
@@ -563,3 +566,21 @@ class TestTensorCace(AllenNlpTestCase):
         with pytest.warns(UserWarning, match="cache will be read-only"):
             cache = TensorCache(self.TEST_DIR / "cache")
             assert cache.read_only
+
+
+class TestHFHubDownload(AllenNlpTestCase):
+    def test_cached_download(self):
+        params = Params(
+            {
+                "options_file":  "lysandre/test-elmo-tiny/options.json",
+                "weight_file": "lysandre/test-elmo-tiny/lm_weights.hdf5",
+            }
+        )
+        embedding_layer = ElmoTokenEmbedder.from_params(vocab=None, params=params)
+
+        assert isinstance(embedding_layer, ElmoTokenEmbedder), "Embedding layer badly instantiated from HF Hub."
+        assert embedding_layer.get_output_dim() == 32, "Embedding layer badly instantiated from HF Hub."
+
+    def test_snapshot_download(self):
+        predictor = Predictor.from_path("lysandre/test-simple-tagger-tiny")
+        assert predictor._dataset_reader._token_indexers["tokens"].namespace == "test_tokens"

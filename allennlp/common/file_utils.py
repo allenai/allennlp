@@ -258,21 +258,21 @@ def cached_path(
             repo_id = url_or_filename
             revision = None
 
-        if filename is not None:
-            url = hf_hub_url(
-                repo_id=repo_id, filename=filename, revision=revision
-            )
-            url_or_filename = cached_download(
-                url=url,
-                library_name="allennlp",
-                library_version=VERSION,
-                cache_dir=CACHE_DIRECTORY,
-            )
-        else:
-            try:
+        try:
+            if filename is not None:
+                url = hf_hub_url(
+                    repo_id=repo_id, filename=filename, revision=revision
+                )
+                url_or_filename = cached_download(
+                    url=url,
+                    library_name="allennlp",
+                    library_version=VERSION,
+                    cache_dir=CACHE_DIRECTORY,
+                )
+            else:
                 extraction_path = Path(snapshot_download(repo_id, revision=revision, cache_dir=CACHE_DIRECTORY))
-            except HTTPError as e:
-                logger.warning(f"Tried to download from Hugging Face Hub but failed with {e}")
+        except HTTPError as e:
+            logger.warning(f"Tried to download from Hugging Face Hub but failed with {e}")
 
     file_path: str
 
