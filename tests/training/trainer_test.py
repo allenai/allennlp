@@ -32,6 +32,7 @@ from allennlp.training.callbacks import (
     SanityChecksCallback,
     ConsoleLoggerCallback,
 )
+from allennlp.training.callbacks.sanity_checks import SanityCheckError
 from allennlp.training.learning_rate_schedulers import CosineWithRestarts
 from allennlp.training.learning_rate_schedulers import ExponentialLearningRateScheduler
 from allennlp.training.momentum_schedulers import MomentumScheduler
@@ -826,7 +827,7 @@ class TestTrainer(TrainerTestBase):
             serialization_dir=self.TEST_DIR,
             callbacks=[SanityChecksCallback(serialization_dir=self.TEST_DIR)],
         )
-        with pytest.raises(AssertionError):
+        with pytest.raises(SanityCheckError):
             trainer.train()
 
     def test_sanity_check_default(self):
@@ -839,7 +840,7 @@ class TestTrainer(TrainerTestBase):
             data_loader=data_loader,
             num_epochs=1,
         )
-        with pytest.raises(AssertionError):
+        with pytest.raises(SanityCheckError):
             trainer.train()
 
         trainer = GradientDescentTrainer.from_partial_objects(
@@ -847,7 +848,7 @@ class TestTrainer(TrainerTestBase):
             serialization_dir=self.TEST_DIR,
             data_loader=data_loader,
             num_epochs=1,
-            enable_default_callbacks=False,
+            run_sanity_checks=False,
         )
 
         # Check is not run, so no failure.

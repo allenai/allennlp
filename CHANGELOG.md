@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Sanity checks in the `GradientDescentTrainer` can now be turned off by setting the `run_sanity_checks` parameter to `False`.
 - Allow the order of examples in the task cards to be specified explicitly
 - `histogram_interval` parameter is now deprecated in `TensorboardWriter`, please use `distribution_interval` instead.
 - Memory usage is not logged in tensorboard during training now. `ConsoleLoggerCallback` should be used instead.
@@ -21,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Documentation updates made to SoftmaxLoss regarding padding and the expected shapes of the input and output tensors of `forward`.
 - Moved the data preparation script for coref into allennlp-models.
 - If a transformer is not in cache but has override weights, the transformer's pretrained weights are no longer downloaded, that is, only its `config.json` file is downloaded.
+- `SanityChecksCallback` now raises `SanityCheckError` instead of `AssertionError` when a check fails.
 
 ### Fixed
 
