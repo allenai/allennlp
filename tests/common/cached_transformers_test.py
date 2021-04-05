@@ -22,7 +22,7 @@ class TestCachedTransformers(AllenNlpTestCase):
     def test_from_pretrained_avoids_weights_download_if_override_weights(self):
         # only download config because downloading pretrained weights in addition takes too long
         transformer = AutoModel.from_config(
-            AutoConfig.from_pretrained("bert-base-uncased", cache_dir=self.TEST_DIR)
+            AutoConfig.from_pretrained("epwalsh/bert-xsmall-dummy", cache_dir=self.TEST_DIR)
         )
         # clear cache directory
         for f in os.listdir(str(self.TEST_DIR)):
