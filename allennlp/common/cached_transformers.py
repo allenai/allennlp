@@ -1,7 +1,7 @@
 import logging
 from typing import NamedTuple, Optional, Dict, Tuple
 import transformers
-from transformers import AutoModel
+from transformers import AutoModel, AutoConfig
 
 
 logger = logging.getLogger(__name__)
@@ -75,11 +75,21 @@ def get(
                     )
                 override_weights = {strip_prefix(k): override_weights[k] for k in valid_keys}
 
-            transformer = AutoModel.from_pretrained(
-                model_name,
-                state_dict=override_weights,
-                **kwargs,
+            transformer = AutoModel.from_config(
+                AutoConfig.from_pretrained(
+                    model_name,
+                    **kwargs,
+                )
             )
+            # When DistributedDataParallel or DataParallel is used, the state dict of the
+            # DistributedDataParallel/DataParallel wrapper prepends "module." to all parameters
+            # of the actual model, since the actual model is stored within the module field.
+            # This accounts for if a pretained model was saved without removing the
+            # DistributedDataParallel/DataParallel wrapper.
+            if hasattr(transformer, "module"):
+                transformer.module.load_state_dict(override_weights)
+            else:
+                transformer.load_state_dict(override_weights)
         else:
             transformer = AutoModel.from_pretrained(
                 model_name,
