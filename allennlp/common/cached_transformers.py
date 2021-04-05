@@ -81,7 +81,10 @@ def get(
                     **kwargs,
                 )
             )
-            # Only load the model itself if we are using distributed training
+            # When DistributedDataParallel or DataParallel is used, the state dict of the
+            # DistributedDataParallel/DataParallel wrapper prepends "module." to all parameters of the actual model,
+            # since the actual model is stored within the module field.
+            # This accounts for if a pretained model was saved without removing the DistributedDataParallel/DataParallel wrapper.
             if hasattr(transformer, "module"):
                 transformer.module.load_state_dict(override_weights)
             else:

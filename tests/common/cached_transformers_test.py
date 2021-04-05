@@ -33,7 +33,7 @@ class TestCachedTransformers(AllenNlpTestCase):
         torch.save(transformer.state_dict(), save_weights_path)
 
         override_transformer = cached_transformers.get(
-            "bert-base-uncased",
+            "epwalsh/bert-xsmall-dummy",
             False,
             override_weights_file=save_weights_path,
             cache_dir=self.TEST_DIR,
@@ -46,7 +46,8 @@ class TestCachedTransformers(AllenNlpTestCase):
         assert len(json_fnames) == 1
         json_data = json.load(open(str(self.TEST_DIR) + "/" + json_fnames[0]))
         assert (
-            json_data["url"] == "https://huggingface.co/bert-base-uncased/resolve/main/config.json"
+            json_data["url"]
+            == "https://huggingface.co/epwalsh/bert-xsmall-dummy/resolve/main/config.json"
         )
         resource_id = os.path.splitext(json_fnames[0])[0]
         assert set(os.listdir(str(self.TEST_DIR))) == set(
