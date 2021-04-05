@@ -2,6 +2,7 @@ import pytest
 import torch
 
 from allennlp.common import Params
+from allennlp.common.checks import ConfigurationError
 from allennlp.data import Token, Vocabulary
 from allennlp.data.batch import Batch
 from allennlp.data.fields import TextField
@@ -264,5 +265,5 @@ class TestPretrainedTransformerMismatchedEmbedder(AllenNlpTestCase):
         tensor_dict = batch.as_tensor_dict(padding_lengths)
         tokens = tensor_dict["tokens"]
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ConfigurationError):
             token_embedder(tokens)

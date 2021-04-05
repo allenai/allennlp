@@ -3,6 +3,7 @@ from typing import Optional, Dict, Any
 from overrides import overrides
 import torch
 
+from allennlp.common.checks import ConfigurationError
 from allennlp.modules.token_embedders import PretrainedTransformerEmbedder, TokenEmbedder
 from allennlp.nn import util
 
@@ -45,7 +46,7 @@ class PretrainedTransformerMismatchedEmbedder(TokenEmbedder):
         If `sub_token_mode` is set to `first`, return first sub-token representation as word-level representation
         If `sub_token_mode` is set to `avg`, return average of all the sub-tokens representation as word-level representation
         If `sub_token_mode` is not specified it defaults to `avg`
-        If invalid `sub_token_mode` is provided, throw `ValueError`
+        If invalid `sub_token_mode` is provided, throw `ConfigurationError`
 
     """  # noqa: E501
 
@@ -120,36 +121,19 @@ class PretrainedTransformerMismatchedEmbedder(TokenEmbedder):
         # span_mask: (batch_size, num_orig_tokens, max_span_length)
         span_embeddings, span_mask = util.batched_span_select(embeddings.contiguous(), offsets)
 
-        # int: maximum number of sub-tokens a batch has
-        max_span_length = span_mask.shape[-1]
+        span_mask = span_mask.unsqueeze(-1)
+
+        # Shape: (batch_size, num_orig_tokens, max_span_length, embedding_size)
+        span_embeddings *= span_mask  # zero out paddings
 
         # If "sub_token_mode" is set to "first", return the first sub-token embedding
         if self.sub_token_mode == "first":
-            # Shape: (batch_size, num_orig_tokens, max_span_length)
-            span_mask_bool = torch.zeros(span_mask.shape, dtype=torch.bool)
-
-            # Shape: 1-dimensional tensor
-            max_span_range_indices = torch.arange(max_span_length, dtype=torch.long).view(1, 1, -1)
-
-            # Shape (batch_size, num_orig_tokens, max_span_length)
-            span_mask = max_span_range_indices <= span_mask_bool
-            span_mask = span_mask.unsqueeze(-1)
-
-            # Shape: (batch_size, num_orig_tokens, max_span_length, embedding_size)
-            span_embeddings *= span_mask
-
-            # Sum over embeddings of all sub-tokens of a word where except first sub-token,
-            # rest all sub-token's embeddings is zero padded
+            # Select first sub-token embeddings from span embeddings
             # Shape: (batch_size, num_orig_tokens, embedding_size)
-            orig_embeddings = span_embeddings.sum(2)
+            orig_embeddings = span_embeddings[:, :, 0, :]
 
         # If "sub_token_mode" is set to "avg", return the average of embeddings of all sub-tokens of a word
         elif self.sub_token_mode == "avg":
-            span_mask = span_mask.unsqueeze(-1)
-
-            # Shape: (batch_size, num_orig_tokens, max_span_length, embedding_size)
-            span_embeddings *= span_mask  # zero out paddings
-
             # Sum over embeddings of all sub-tokens of a word
             # Shape: (batch_size, num_orig_tokens, embedding_size)
             span_embeddings_sum = span_embeddings.sum(2)
@@ -166,6 +150,6 @@ class PretrainedTransformerMismatchedEmbedder(TokenEmbedder):
 
         # If invalid "sub_token_mode" is provided, throw error
         else:
-            raise ValueError("Do not recognise 'sub_token_mode' {}".format(self.sub_token_mode))
+            raise ConfigurationError(f"Do not recognise 'sub_token_mode' {self.sub_token_mode}")
 
         return orig_embeddings
