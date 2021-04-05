@@ -1,9 +1,42 @@
-from typing import Optional
+from typing import Optional, Iterable, Tuple
+import itertools
+import sys
 from allennlp.sanity_checks.task_checklists.task_suite import TaskSuite
 from allennlp.sanity_checks.task_checklists import utils
-from checklist.perturb import Perturb
 from checklist.test_suite import TestSuite
+from checklist.test_types import MFT
+from checklist.perturb import Perturb
 import numpy as np
+from overrides import overrides
+
+
+def _format_squad_with_context(x, pred, conf, label=None, *args, **kwargs):
+    """
+    Formatting function for printing failed test examples.
+    """
+    c, q = x
+    ret = "C: %s\nQ: %s\n" % (c, q)
+    if label is not None:
+        ret += "A: %s\n" % label
+    ret += "P: %s\n" % pred
+    return ret
+
+
+def _crossproduct(template):
+    """
+    Takes the output of editor.template and does the cross product of contexts and qas
+    """
+    ret = []
+    ret_labels = []
+    for x in template.data:
+        cs = x["contexts"]
+        qas = x["qas"]
+        d = list(itertools.product(cs, qas))
+        ret.append([(x[0], x[1][0]) for x in d])
+        ret_labels.append([x[1][1] for x in d])
+    template.data = ret
+    template.labels = ret_labels
+    return template
 
 
 @TaskSuite.register("question-answering")
@@ -41,14 +74,134 @@ class QuestionAnsweringSuite(TaskSuite):
 
     @classmethod
     def typos(cls):
-        def question_typo(x):
-            return (x[0], Perturb.add_typos(x[1]))
+        def question_typo(x, **kwargs):
+            return (x[0], Perturb.add_typos(x[1], **kwargs))
 
         return question_typo
 
     @classmethod
     def punctuation(cls):
         def context_punctuation(x):
-            return (utils.toggle_punctuation(x[0]), x[1])
+            return (utils.strip_punctuation(x[0]), x[1])
 
         return context_punctuation
+
+    @overrides
+    def summary(self, capabilities=None, file=sys.stdout, **kwargs):
+        if "format_example_fn" not in kwargs:
+            kwargs["format_example_fn"] = _format_squad_with_context
+        super().summary(capabilities, file, **kwargs)
+
+    @overrides
+    def _setup_editor(self):
+        super()._setup_editor()
+
+        adj = [
+            "old",
+            "smart",
+            "tall",
+            "young",
+            "strong",
+            "short",
+            "tough",
+            "cool",
+            "fast",
+            "nice",
+            "small",
+            "dark",
+            "wise",
+            "rich",
+            "great",
+            "weak",
+            "high",
+            "slow",
+            "strange",
+            "clean",
+        ]
+        adj = [(x.rstrip("e"), x) for x in adj]
+
+        self.editor.add_lexicon("adjectives_to_compare", adj, overwrite=True)
+
+        comp_pairs = [
+            ("better", "worse"),
+            ("older", "younger"),
+            ("smarter", "dumber"),
+            ("taller", "shorter"),
+            ("bigger", "smaller"),
+            ("stronger", "weaker"),
+            ("faster", "slower"),
+            ("darker", "lighter"),
+            ("richer", "poorer"),
+            ("happier", "sadder"),
+            ("louder", "quieter"),
+            ("warmer", "colder"),
+        ]
+        comp_pairs = list(set(comp_pairs))
+
+        self.editor.add_lexicon("comp_pairs", comp_pairs, overwrite=True)
+
+    @overrides
+    def _default_tests(self, data: Optional[Iterable[Tuple]], num_test_cases=100):
+        super()._default_tests(data, num_test_cases)
+        self._setup_editor()
+        self._default_vocabulary_tests(data, num_test_cases)
+        self._default_taxonomy_tests(data, num_test_cases)
+
+    def _default_vocabulary_tests(self, data: Optional[Iterable[Tuple]], num_test_cases=100):
+
+        template = self.editor.template(
+            [
+                (
+                    "{first_name} is {adjectives_to_compare[0]}er than {first_name1}.",
+                    "Who is less {adjectives_to_compare[1]}?",
+                ),
+                (
+                    "{first_name} is {adjectives_to_compare[0]}er than {first_name1}.",
+                    "Who is {adjectives_to_compare[0]}er?",
+                ),
+            ],
+            labels=["{first_name1}", "{first_name}"],
+            remove_duplicates=True,
+            nsamples=num_test_cases,
+            save=True,
+        )
+        test = MFT(
+            **template,
+            name="A is COMP than B. Who is more / less COMP?",
+            description='Eg. Context: "A is taller than B" '
+            'Q: "Who is taller?" A: "A", Q: "Who is less tall?" A: "B"',
+            capability="Vocabulary",
+        )
+        self.add_test(test)
+
+    def _default_taxonomy_tests(self, data: Optional[Iterable[Tuple]], num_test_cases=100):
+        template = _crossproduct(
+            self.editor.template(
+                {
+                    "contexts": [
+                        "{first_name} is {comp_pairs[0]} than {first_name1}.",
+                        "{first_name1} is {comp_pairs[1]} than {first_name}.",
+                    ],
+                    "qas": [
+                        (
+                            "Who is {comp_pairs[1]}?",
+                            "{first_name1}",
+                        ),
+                        (
+                            "Who is {comp_pairs[0]}?",
+                            "{first_name}",
+                        ),
+                    ],
+                },
+                remove_duplicates=True,
+                nsamples=num_test_cases,
+                save=True,
+            )
+        )
+        test = MFT(
+            **template,
+            name="A is COMP than B. Who is antonym(COMP)? B",
+            description='Eg. Context: "A is taller than B", Q: "Who is shorter?", A: "B"',
+            capability="Taxonomy",
+        )
+        self.add_test(test)
