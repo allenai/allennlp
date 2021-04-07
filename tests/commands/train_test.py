@@ -400,7 +400,7 @@ class TestTrain(AllenNlpTestCase):
                     },
                     "encoder": {"type": "lstm", "input_size": 5, "hidden_size": 7, "num_layers": 2},
                 },
-                "dataset_reader": {"type": "sequence_tagging"},
+                "dataset_reader": {"type": "sequence_tagging", "max_instances": 4},
                 "train_data_path": SEQUENCE_TAGGING_DATA_PATH,
                 "validation_data_path": SEQUENCE_TAGGING_DATA_PATH,
                 "data_loader": {
@@ -790,7 +790,17 @@ class TestDryRun(AllenNlpTestCase):
             tokens = [line.strip() for line in f]
 
         tokens.sort()
-        assert tokens == [".", "@@UNKNOWN@@", "animals", "are", "birds", "cats", "dogs", "horses", "snakes"]
+        assert tokens == [
+            ".",
+            "@@UNKNOWN@@",
+            "animals",
+            "are",
+            "birds",
+            "cats",
+            "dogs",
+            "horses",
+            "snakes",
+        ]
 
         with open(vocab_path / "labels.txt") as f:
             labels = [line.strip() for line in f]
