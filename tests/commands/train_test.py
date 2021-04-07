@@ -241,7 +241,9 @@ class TestTrain(AllenNlpTestCase):
     @pytest.mark.parametrize("max_instances", [1, 2, 3, 4, None])
     @pytest.mark.parametrize("grad_acc", [None, 2])
     @pytest.mark.parametrize("batch_size", [1, 2, 3])
-    def test_train_model_distributed_with_gradient_accumulation(self, max_instances, grad_acc, batch_size):
+    def test_train_model_distributed_with_gradient_accumulation(
+        self, max_instances, grad_acc, batch_size
+    ):
         if torch.cuda.device_count() >= 2:
             devices = [0, 1]
         else:
@@ -256,14 +258,15 @@ class TestTrain(AllenNlpTestCase):
                     },
                     "encoder": {"type": "lstm", "input_size": 5, "hidden_size": 7, "num_layers": 2},
                 },
-                "dataset_reader": {
-                    "type": "sequence_tagging",
-                    "max_instances": max_instances
-                },
+                "dataset_reader": {"type": "sequence_tagging", "max_instances": max_instances},
                 "train_data_path": SEQUENCE_TAGGING_DATA_PATH,
                 "validation_data_path": SEQUENCE_TAGGING_DATA_PATH,
                 "data_loader": {"batch_size": batch_size},
-                "trainer": {"num_epochs": 2, "optimizer": "adam", "num_gradient_accumulation_steps": grad_acc},
+                "trainer": {
+                    "num_epochs": 2,
+                    "optimizer": "adam",
+                    "num_gradient_accumulation_steps": grad_acc,
+                },
                 "distributed": {"cuda_devices": devices},
             }
         )
@@ -439,7 +442,7 @@ class TestTrain(AllenNlpTestCase):
             "dogs",
             "snakes",
             "birds",
-            "horses"
+            "horses",
         }
 
         train_complete = "completed its entire epoch (training)."
@@ -468,7 +471,7 @@ class TestTrain(AllenNlpTestCase):
             "dogs": num_epochs,
             "snakes": num_epochs,
             "birds": num_epochs,
-            "horses": num_epochs
+            "horses": num_epochs,
         }
 
     def test_distributed_raises_error_with_no_gpus(self):
