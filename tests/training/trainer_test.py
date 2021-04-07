@@ -815,7 +815,6 @@ class TestTrainer(TrainerTestBase):
         trainer.train()
 
     def test_sanity_check_callback(self):
-
         model_with_bias = FakeModelForTestingNormalizationBiasVerification(use_bias=True)
         inst = Instance({"x": TensorField(torch.rand(3, 1, 4))})
         data_loader = SimpleDataLoader([inst, inst], 2)
@@ -1201,7 +1200,6 @@ class TestTrainer(TrainerTestBase):
         trainer.train()
 
     def test_console_log_callback(self):
-
         total_instances = 1000
         batch_size = 25
 
