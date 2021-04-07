@@ -521,6 +521,8 @@ class GradientDescentTrainer(Trainer):
                     self._scaler.scale(loss).backward()
                 else:
                     loss.backward()
+            if len(batch_group_outputs) <= 0:
+                continue
 
             train_loss += batch_loss
 
