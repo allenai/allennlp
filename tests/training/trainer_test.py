@@ -103,7 +103,7 @@ class TrainerTestBase(AllenNlpTestCase):
     def setup_method(self):
         super().setup_method()
         self.data_path = str(self.FIXTURES_ROOT / "data" / "sequence_tagging.tsv")
-        self.reader = SequenceTaggingDatasetReader()
+        self.reader = SequenceTaggingDatasetReader(max_instances=4)
         self.data_loader = MultiProcessDataLoader(self.reader, self.data_path, batch_size=2)
         self.data_loader_lazy = MultiProcessDataLoader(
             self.reader, self.data_path, batch_size=2, max_instances_in_memory=10
