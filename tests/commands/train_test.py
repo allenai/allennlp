@@ -790,7 +790,7 @@ class TestDryRun(AllenNlpTestCase):
             tokens = [line.strip() for line in f]
 
         tokens.sort()
-        assert tokens == [".", "@@UNKNOWN@@", "animals", "are", "birds", "cats", "dogs", "snakes"]
+        assert tokens == [".", "@@UNKNOWN@@", "animals", "are", "birds", "cats", "dogs", "horses", "snakes"]
 
         with open(vocab_path / "labels.txt") as f:
             labels = [line.strip() for line in f]
