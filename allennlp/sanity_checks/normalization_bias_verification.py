@@ -1,6 +1,7 @@
 """
-Code based almost entirely on
-https://github.com/awaelchli/pytorch-lightning-snippets/commit/7db53f774715d635c59ef56f21a17634d246b2c5
+Code based almost entirely from the [pytorch-lightning-snippets]
+(https://github.com/awaelchli/pytorch-lightning-snippets/commit/7db53f774715d635c59ef56f21a17634d246b2c5)
+repository.
 """
 
 import torch

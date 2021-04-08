@@ -6,7 +6,7 @@ import re
 import time
 import traceback
 from contextlib import contextmanager
-from typing import Any, Dict, Iterator, List, Optional, Tuple, Union
+from typing import Any, Dict, Iterator, List, Optional, Tuple, Union, Type
 
 from allennlp.common.util import int_to_device
 
@@ -118,10 +118,10 @@ class GradientDescentTrainer(Trainer):
     stopping. There are many other bells and whistles as well.
 
     Registered as a `Trainer` with the name "gradient_descent" (and is also the default `Trainer`).
-    The constructor that is registered is `from_partial_objects` - see the arguments to that
-    function for the exact keys that should be used, if you are using a configuration file.  They
-    largely match the arguments to `__init__`, and we don't repeat their docstrings in
-    `from_partial_objects`.
+    The constructor that is registered is [`from_partial_objects`](#from_partial_objects) -
+    see the arguments to that function for the exact keys that should be used, if you are using
+    a configuration file. They largely match the arguments to `__init__`, and we don't repeat their
+    docstrings in `from_partial_objects`.
 
     [0]: https://tinyurl.com/y5mv44fw
 
@@ -248,6 +248,16 @@ class GradientDescentTrainer(Trainer):
     use_amp : `bool`, optional, (default = `False`)
         If `True`, we'll train using [Automatic Mixed Precision](https://pytorch.org/docs/stable/amp.html).
 
+    enable_default_callbacks : `bool`, optional (default = `True`)
+        When `True`, the [`DEFAULT_CALLBACKS`](#default_callbacks) will be used in
+        addition to any other callbacks listed in the `callbacks` parameter.
+        When set to `False`, `DEFAULT_CALLBACKS` are not used.
+
+    run_sanity_checks : `bool`, optional (default = `True`)
+        Determines whether model sanity checks, such as
+        [`NormalizationBiasVerification`](../../sanity_checks/normalization_bias_verification/),
+        are ran.
+
     """
 
     def __init__(
@@ -273,6 +283,8 @@ class GradientDescentTrainer(Trainer):
         world_size: int = 1,
         num_gradient_accumulation_steps: int = 1,
         use_amp: bool = False,
+        enable_default_callbacks: bool = True,
+        run_sanity_checks: bool = True,
     ) -> None:
         super().__init__(serialization_dir, cuda_device, distributed, local_rank, world_size)
 
@@ -316,6 +328,15 @@ class GradientDescentTrainer(Trainer):
         self._moving_average = moving_average
 
         self._callbacks = callbacks or []
+        default_callbacks = list(DEFAULT_CALLBACKS) if enable_default_callbacks else []
+        if run_sanity_checks:
+            default_callbacks.append(SanityChecksCallback)
+        for callback_cls in default_callbacks:
+            for callback in self._callbacks:
+                if callback.__class__ == callback_cls:
+                    break
+            else:
+                self._callbacks.append(callback_cls(self._serialization_dir))
 
         self._batch_num_total = 0
         self._last_log = 0.0  # time of last logging
@@ -445,24 +466,8 @@ class GradientDescentTrainer(Trainer):
 
         done_early = False
         for batch_group in batch_group_generator_tqdm:
-            if self._distributed:
-                # Check whether the other workers have stopped already (due to differing amounts of
-                # data in each). If so, we can't proceed because we would hang when we hit the
-                # barrier implicit in Model.forward. We use a IntTensor instead a BoolTensor
-                # here because NCCL process groups apparently don't support BoolTensor.
-                done = torch.tensor(0, device=self.cuda_device)
-                torch.distributed.all_reduce(done, torch.distributed.ReduceOp.SUM)
-                if done.item() > 0:
-                    done_early = True
-                    logger.warning(
-                        f"Worker {torch.distributed.get_rank()} finishing training early! "
-                        "This implies that there is an imbalance in your training "
-                        "data across the workers and that some amount of it will be "
-                        "ignored. A small amount of this is fine, but a major imbalance "
-                        "should be avoided. Note: This warning will appear unless your "
-                        "data is perfectly balanced."
-                    )
-                    break
+            if done_early:
+                break
 
             batches_this_epoch += 1
             self._batch_num_total += 1
@@ -478,6 +483,25 @@ class GradientDescentTrainer(Trainer):
             batch_loss = 0.0
             batch_group_outputs = []
             for batch in batch_group:
+                if self._distributed:
+                    # Check whether the other workers have stopped already (due to differing amounts of
+                    # data in each). If so, we can't proceed because we would hang when we hit the
+                    # barrier implicit in Model.forward. We use a IntTensor instead a BoolTensor
+                    # here because NCCL process groups apparently don't support BoolTensor.
+                    done = torch.tensor(0, device=self.cuda_device)
+                    torch.distributed.all_reduce(done, torch.distributed.ReduceOp.SUM)
+                    if done.item() > 0:
+                        done_early = True
+                        logger.warning(
+                            f"Worker {torch.distributed.get_rank()} finishing training early! "
+                            "This implies that there is an imbalance in your training "
+                            "data across the workers and that some amount of it will be "
+                            "ignored. A small amount of this is fine, but a major imbalance "
+                            "should be avoided. Note: This warning will appear unless your "
+                            "data is perfectly balanced."
+                        )
+                        break
+
                 with amp.autocast(self._use_amp):
                     batch_outputs = self.batch_outputs(batch, for_training=True)
                     batch_group_outputs.append(batch_outputs)
@@ -497,6 +521,8 @@ class GradientDescentTrainer(Trainer):
                     self._scaler.scale(loss).backward()
                 else:
                     loss.backward()
+            if len(batch_group_outputs) <= 0:
+                continue
 
             train_loss += batch_loss
 
@@ -970,6 +996,7 @@ class GradientDescentTrainer(Trainer):
         checkpointer: Lazy[Checkpointer] = Lazy(Checkpointer),
         callbacks: List[Lazy[TrainerCallback]] = None,
         enable_default_callbacks: bool = True,
+        run_sanity_checks: bool = True,
     ) -> "Trainer":
         """
         This method exists so that we can have a documented method to construct this class using
@@ -1037,13 +1064,6 @@ class GradientDescentTrainer(Trainer):
         callbacks_: List[TrainerCallback] = []
         for callback_ in callbacks or []:
             callbacks_.append(callback_.construct(serialization_dir=serialization_dir))
-        if enable_default_callbacks:
-            for callback_cls in DEFAULT_CALLBACKS:
-                for callback in callbacks_:
-                    if callback.__class__ == callback_cls:
-                        break
-                else:
-                    callbacks_.append(callback_cls(serialization_dir))
 
         return cls(
             model,
@@ -1067,13 +1087,12 @@ class GradientDescentTrainer(Trainer):
             world_size=world_size,
             num_gradient_accumulation_steps=num_gradient_accumulation_steps,
             use_amp=use_amp,
+            enable_default_callbacks=enable_default_callbacks,
+            run_sanity_checks=run_sanity_checks,
         )
 
 
-DEFAULT_CALLBACKS = (
-    SanityChecksCallback,
-    ConsoleLoggerCallback,
-)
+DEFAULT_CALLBACKS: Tuple[Type[TrainerCallback]] = (ConsoleLoggerCallback,)
 """
 The default callbacks used by `GradientDescentTrainer`.
 """

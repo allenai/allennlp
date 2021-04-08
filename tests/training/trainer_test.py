@@ -32,6 +32,7 @@ from allennlp.training.callbacks import (
     SanityChecksCallback,
     ConsoleLoggerCallback,
 )
+from allennlp.training.callbacks.sanity_checks import SanityCheckError
 from allennlp.training.learning_rate_schedulers import CosineWithRestarts
 from allennlp.training.learning_rate_schedulers import ExponentialLearningRateScheduler
 from allennlp.training.momentum_schedulers import MomentumScheduler
@@ -102,7 +103,7 @@ class TrainerTestBase(AllenNlpTestCase):
     def setup_method(self):
         super().setup_method()
         self.data_path = str(self.FIXTURES_ROOT / "data" / "sequence_tagging.tsv")
-        self.reader = SequenceTaggingDatasetReader()
+        self.reader = SequenceTaggingDatasetReader(max_instances=4)
         self.data_loader = MultiProcessDataLoader(self.reader, self.data_path, batch_size=2)
         self.data_loader_lazy = MultiProcessDataLoader(
             self.reader, self.data_path, batch_size=2, max_instances_in_memory=10
@@ -814,7 +815,6 @@ class TestTrainer(TrainerTestBase):
         trainer.train()
 
     def test_sanity_check_callback(self):
-
         model_with_bias = FakeModelForTestingNormalizationBiasVerification(use_bias=True)
         inst = Instance({"x": TensorField(torch.rand(3, 1, 4))})
         data_loader = SimpleDataLoader([inst, inst], 2)
@@ -826,7 +826,7 @@ class TestTrainer(TrainerTestBase):
             serialization_dir=self.TEST_DIR,
             callbacks=[SanityChecksCallback(serialization_dir=self.TEST_DIR)],
         )
-        with pytest.raises(AssertionError):
+        with pytest.raises(SanityCheckError):
             trainer.train()
 
     def test_sanity_check_default(self):
@@ -839,7 +839,7 @@ class TestTrainer(TrainerTestBase):
             data_loader=data_loader,
             num_epochs=1,
         )
-        with pytest.raises(AssertionError):
+        with pytest.raises(SanityCheckError):
             trainer.train()
 
         trainer = GradientDescentTrainer.from_partial_objects(
@@ -847,7 +847,7 @@ class TestTrainer(TrainerTestBase):
             serialization_dir=self.TEST_DIR,
             data_loader=data_loader,
             num_epochs=1,
-            enable_default_callbacks=False,
+            run_sanity_checks=False,
         )
 
         # Check is not run, so no failure.
@@ -1200,7 +1200,6 @@ class TestTrainer(TrainerTestBase):
         trainer.train()
 
     def test_console_log_callback(self):
-
         total_instances = 1000
         batch_size = 25
 

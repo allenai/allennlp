@@ -48,7 +48,7 @@ class ModelCardInfo(FromParams):
         display = ""
         for key, val in self.to_dict().items():
             display += "\n" + key.replace("_", " ").capitalize() + ": "
-            display += "\n\t" + val.replace("\n", "\n\t") + "\n"
+            display += "\n\t" + str(val).replace("\n", "\n\t") + "\n"
         if not display:
             display = super(ModelCardInfo, self).__str__()
         return display.strip()
