@@ -27,17 +27,19 @@
 
 ## Quick Links
 
-- [Website](https://allennlp.org/)
-- [Guide](https://guide.allennlp.org/)
-- [Documentation](https://docs.allennlp.org/) ( [latest](https://docs.allennlp.org/latest/) | [stable](https://docs.allennlp.org/stable/) | [commit](https://docs.allennlp.org/main/) )
-- [Upgrade Guide from 1.x to 2.0](https://github.com/allenai/allennlp/discussions/4933)
-- [Stack Overflow](https://stackoverflow.com/questions/tagged/allennlp)
-- [Contributing Guidelines](CONTRIBUTING.md)
-- [Officially Supported Models](https://github.com/allenai/allennlp-models)
+- ↗️ [Website](https://allennlp.org/)
+- 🔦 [Guide](https://guide.allennlp.org/)
+- 🖼 [Gallery](https://gallery.allennlp.org)
+- 💻 [Demo](https://demo.allennlp.org)
+- 📓 [Documentation](https://docs.allennlp.org/) ( [latest](https://docs.allennlp.org/latest/) | [stable](https://docs.allennlp.org/stable/) | [commit](https://docs.allennlp.org/main/) )
+- ⬆️ [Upgrade Guide from 1.x to 2.0](https://github.com/allenai/allennlp/discussions/4933)
+- ❓ [Stack Overflow](https://stackoverflow.com/questions/tagged/allennlp)
+- ✋ [Contributing Guidelines](CONTRIBUTING.md)
+- 🤖 [Officially Supported Models](https://github.com/allenai/allennlp-models)
     - [Pretrained Models](https://github.com/allenai/allennlp-models/blob/main/allennlp_models/pretrained.py)
     - [Documentation](https://docs.allennlp.org/models/) ( [latest](https://docs.allennlp.org/models/latest/) | [stable](https://docs.allennlp.org/models/stable/) | [commit](https://docs.allennlp.org/models/main/) )
-- [Continuous Build](https://github.com/allenai/allennlp/actions)
-- [Nightly Releases](https://pypi.org/project/allennlp/#history)
+- ⚙️ [Continuous Build](https://github.com/allenai/allennlp/actions)
+- 🌙 [Nightly Releases](https://pypi.org/project/allennlp/#history)
 
 ## In this README
 
