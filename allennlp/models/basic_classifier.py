@@ -4,6 +4,7 @@ from overrides import overrides
 import torch
 
 from allennlp.data import TextFieldTensors, Vocabulary
+from allennlp.data.fields.field import DataArray, Field
 from allennlp.models.model import Model
 from allennlp.modules import FeedForward, Seq2SeqEncoder, Seq2VecEncoder, TextFieldEmbedder
 from allennlp.nn import InitializerApplicator, util
@@ -89,7 +90,7 @@ class BasicClassifier(Model):
         initializer(self)
 
     def forward(  # type: ignore
-        self, tokens: TextFieldTensors, label: torch.IntTensor = None
+        self, tokens: TextFieldTensors, label: torch.IntTensor = None, metadata: Field[DataArray]
     ) -> Dict[str, torch.Tensor]:
 
         """
