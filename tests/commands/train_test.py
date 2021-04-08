@@ -442,7 +442,6 @@ class TestTrain(AllenNlpTestCase):
             "dogs",
             "snakes",
             "birds",
-            "horses",
         }
 
         train_complete = "completed its entire epoch (training)."
@@ -471,7 +470,6 @@ class TestTrain(AllenNlpTestCase):
             "dogs": num_epochs,
             "snakes": num_epochs,
             "birds": num_epochs,
-            "horses": num_epochs,
         }
 
     def test_distributed_raises_error_with_no_gpus(self):
