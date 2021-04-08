@@ -237,7 +237,6 @@ class TestTrain(AllenNlpTestCase):
         # Check we can load the serialized model
         assert load_archive(out_dir).model
 
-    @cpu_or_gpu
     @pytest.mark.parametrize("max_instances", [1, 2, 3, 4, None])
     @pytest.mark.parametrize("grad_acc", [None, 2])
     @pytest.mark.parametrize("batch_size", [1, 2, 3])
