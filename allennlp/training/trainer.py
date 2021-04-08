@@ -466,24 +466,8 @@ class GradientDescentTrainer(Trainer):
 
         done_early = False
         for batch_group in batch_group_generator_tqdm:
-            if self._distributed:
-                # Check whether the other workers have stopped already (due to differing amounts of
-                # data in each). If so, we can't proceed because we would hang when we hit the
-                # barrier implicit in Model.forward. We use a IntTensor instead a BoolTensor
-                # here because NCCL process groups apparently don't support BoolTensor.
-                done = torch.tensor(0, device=self.cuda_device)
-                torch.distributed.all_reduce(done, torch.distributed.ReduceOp.SUM)
-                if done.item() > 0:
-                    done_early = True
-                    logger.warning(
-                        f"Worker {torch.distributed.get_rank()} finishing training early! "
-                        "This implies that there is an imbalance in your training "
-                        "data across the workers and that some amount of it will be "
-                        "ignored. A small amount of this is fine, but a major imbalance "
-                        "should be avoided. Note: This warning will appear unless your "
-                        "data is perfectly balanced."
-                    )
-                    break
+            if done_early:
+                break
 
             batches_this_epoch += 1
             self._batch_num_total += 1
@@ -499,6 +483,25 @@ class GradientDescentTrainer(Trainer):
             batch_loss = 0.0
             batch_group_outputs = []
             for batch in batch_group:
+                if self._distributed:
+                    # Check whether the other workers have stopped already (due to differing amounts of
+                    # data in each). If so, we can't proceed because we would hang when we hit the
+                    # barrier implicit in Model.forward. We use a IntTensor instead a BoolTensor
+                    # here because NCCL process groups apparently don't support BoolTensor.
+                    done = torch.tensor(0, device=self.cuda_device)
+                    torch.distributed.all_reduce(done, torch.distributed.ReduceOp.SUM)
+                    if done.item() > 0:
+                        done_early = True
+                        logger.warning(
+                            f"Worker {torch.distributed.get_rank()} finishing training early! "
+                            "This implies that there is an imbalance in your training "
+                            "data across the workers and that some amount of it will be "
+                            "ignored. A small amount of this is fine, but a major imbalance "
+                            "should be avoided. Note: This warning will appear unless your "
+                            "data is perfectly balanced."
+                        )
+                        break
+
                 with amp.autocast(self._use_amp):
                     batch_outputs = self.batch_outputs(batch, for_training=True)
                     batch_group_outputs.append(batch_outputs)
@@ -518,6 +521,8 @@ class GradientDescentTrainer(Trainer):
                     self._scaler.scale(loss).backward()
                 else:
                     loss.backward()
+            if len(batch_group_outputs) <= 0:
+                continue
 
             train_loss += batch_loss
 

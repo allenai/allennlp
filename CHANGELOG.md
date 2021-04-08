@@ -29,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Fixed a bug where some `Activation` implementations could not be pickled due to involving a lambda function.
 - Fixed `__str__()` method on `ModelCardInfo` class.
+- Fixed a stall when using distributed training and gradient accumulation at the same time
 - Fixed an issue where using the `from_pretrained_transformer` `Vocabulary` constructor in distributed training via the `allennlp train` command
   would result in the data being iterated through unnecessarily.
 
