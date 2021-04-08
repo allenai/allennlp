@@ -4,7 +4,7 @@ from overrides import overrides
 import torch
 
 from allennlp.data import TextFieldTensors, Vocabulary
-from allennlp.data.fields.field import Field, MetadataField
+from allennlp.data.fields import Field, MetadataField
 from allennlp.models.model import Model
 from allennlp.modules import FeedForward, Seq2SeqEncoder, Seq2VecEncoder, TextFieldEmbedder
 from allennlp.nn import InitializerApplicator, util
