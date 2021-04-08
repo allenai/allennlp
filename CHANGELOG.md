@@ -5,14 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+
 ## Unreleased
 
 ### Added
 
 - Ported the following Huggingface `LambdaLR`-based schedulers: `ConstantLearningRateScheduler`, `ConstantWithWarmupLearningRateScheduler`, `CosineWithWarmupLearningRateScheduler`, `CosineHardRestartsWithWarmupLearningRateScheduler`.
+- Added new `sub_token_mode` parameter to `pretrained_transformer_mismatched_embedder` class to support first sub-token embedding
 
 ### Changed
 
+- Sanity checks in the `GradientDescentTrainer` can now be turned off by setting the `run_sanity_checks` parameter to `False`.
 - Allow the order of examples in the task cards to be specified explicitly
 - `histogram_interval` parameter is now deprecated in `TensorboardWriter`, please use `distribution_interval` instead.
 - Memory usage is not logged in tensorboard during training now. `ConsoleLoggerCallback` should be used instead.
@@ -20,15 +23,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - If you use the `min_count` parameter of the Vocabulary, but you specify a namespace that does not exist, the vocabulary creation will raise a `ConfigurationError`.
 - Documentation updates made to SoftmaxLoss regarding padding and the expected shapes of the input and output tensors of `forward`.
 - Moved the data preparation script for coref into allennlp-models.
+- If a transformer is not in cache but has override weights, the transformer's pretrained weights are no longer downloaded, that is, only its `config.json` file is downloaded.
+- `SanityChecksCallback` now raises `SanityCheckError` instead of `AssertionError` when a check fails.
 
 ### Fixed
 
 - Fixed a bug where some `Activation` implementations could not be pickled due to involving a lambda function.
 - Fixed an issue where the trainer would leave a model checkpoint behind when it's not supposed to.
+- Fixed `__str__()` method on `ModelCardInfo` class.
+- Fixed an issue where using the `from_pretrained_transformer` `Vocabulary` constructor in distributed training via the `allennlp train` command
+  would result in the data being iterated through unnecessarily.
 
 
 ## [v2.2.0](https://github.com/allenai/allennlp/releases/tag/v2.2.0) - 2021-03-26
-
 
 ### Added
 
