@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Ported the following Huggingface `LambdaLR`-based schedulers: `ConstantLearningRateScheduler`, `ConstantWithWarmupLearningRateScheduler`, `CosineWithWarmupLearningRateScheduler`, `CosineHardRestartsWithWarmupLearningRateScheduler`.
+- Added new `sub_token_mode` parameter to `pretrained_transformer_mismatched_embedder` class to support first sub-token embedding
 
 ### Changed
 
@@ -21,10 +22,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - If you use the `min_count` parameter of the Vocabulary, but you specify a namespace that does not exist, the vocabulary creation will raise a `ConfigurationError`.
 - Documentation updates made to SoftmaxLoss regarding padding and the expected shapes of the input and output tensors of `forward`.
 - Moved the data preparation script for coref into allennlp-models.
+- If a transformer is not in cache but has override weights, the transformer's pretrained weights are no longer downloaded, that is, only its `config.json` file is downloaded.
+- `SanityChecksCallback` now raises `SanityCheckError` instead of `AssertionError` when a check fails.
 
 ### Fixed
 
 - Fixed a bug where some `Activation` implementations could not be pickled due to involving a lambda function.
+- Fixed `__str__()` method on `ModelCardInfo` class.
+- Fixed a stall when using distributed training and gradient accumulation at the same time
+- Fixed an issue where using the `from_pretrained_transformer` `Vocabulary` constructor in distributed training via the `allennlp train` command
+  would result in the data being iterated through unnecessarily.
 
 ### Added
 
@@ -230,6 +237,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Renamed module `allennlp.data.tokenizers.token` to `allennlp.data.tokenizers.token_class` to avoid
   [this bug](https://github.com/allenai/allennlp/issues/4819).
 - `transformers` dependency updated to version 4.0.1.
+- `BasicClassifier`'s forward method now takes a metadata field.
 
 ### Fixed
 
