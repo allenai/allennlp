@@ -231,6 +231,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Renamed module `allennlp.data.tokenizers.token` to `allennlp.data.tokenizers.token_class` to avoid
   [this bug](https://github.com/allenai/allennlp/issues/4819).
 - `transformers` dependency updated to version 4.0.1.
+- `BasicClassifier`'s forward method now takes a metadata field.
 
 ### Fixed
 
