@@ -21,7 +21,7 @@ class TestTrain(AllenNlpTestCase):
         params = lambda: Params(
             {
                 "model": {"type": "constant"},
-                "dataset_reader": {"type": "sequence_tagging"},
+                "dataset_reader": {"type": "sequence_tagging", "max_instances": 4},
                 "train_data_path": SEQUENCE_TAGGING_DATA_PATH,
                 "validation_data_path": SEQUENCE_TAGGING_DATA_PATH,
                 "data_loader": {"batch_size": 2},
