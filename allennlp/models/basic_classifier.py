@@ -90,7 +90,10 @@ class BasicClassifier(Model):
         initializer(self)
 
     def forward(  # type: ignore
-        self, tokens: TextFieldTensors, label: torch.IntTensor = None, metadata: Field[DataArray] = None
+        self,
+        tokens: TextFieldTensors,
+        label: torch.IntTensor = None,
+        metadata: Field[DataArray] = None,
     ) -> Dict[str, torch.Tensor]:
 
         """
