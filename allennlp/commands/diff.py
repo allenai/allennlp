@@ -9,12 +9,9 @@ allennlp diff \
     --strip-prefix-2 '_text_field_embedder.token_embedder_tokens.transformer_model.'
 ```
 """
-from collections import OrderedDict
 import argparse
 import logging
-from os import PathLike
-import re
-from typing import Union, Optional, Dict, List, Tuple, NamedTuple, cast
+from typing import Union, Dict, List, Tuple, NamedTuple, cast
 
 from overrides import overrides
 import termcolor
@@ -22,6 +19,7 @@ import torch
 
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common.file_utils import cached_path
+from allennlp.nn.util import load_state_dict
 
 
 logger = logging.getLogger(__name__)
@@ -61,91 +59,6 @@ class Diff(Subcommand):
             help="""A prefix to remove from all of the second checkpoint's keys.""",
         )
         return subparser
-
-
-def load_state_dict(
-    path: Union[PathLike, str],
-    strip_prefix: Optional[str] = None,
-    ignore: Optional[List[str]] = None,
-    strict: bool = True,
-) -> Dict[str, torch.Tensor]:
-    """
-    Load a PyTorch model state dictionary from a checkpoint at the given `path`.
-
-    # Parameters
-
-    path : `Union[PathLike, str]`, required
-
-    strip_prefix : `Optional[str]`, optional (default = `None`)
-        A prefix to remove from all of the state dict keys.
-
-    ignore : `Optional[List[str]]`, optional (default = `None`)
-        Optional list of regular expressions. Keys that match any of these will be removed
-        from the state dict.
-
-        !!! Note
-            If `strip_prefix` is given, the regular expressions in `ignore` are matched
-            before the prefix is stripped.
-
-    strict : `bool`, optional (default = `True`)
-        If `True` (the default) and `strip_prefix` was never used or any of the regular expressions
-        in `ignore` never matched, a `ValueError` will be raised.
-
-    # Returns
-
-    `Dict[str, torch.Tensor]`
-        An ordered dictionary of the state.
-    """
-    state = torch.load(path, map_location="cpu")
-    out: Dict[str, torch.Tensor] = OrderedDict()
-
-    if ignore is not None and not isinstance(ignore, list):
-        # If user accidentally passed in something that is not a list - like a string,
-        # which is easy to do - the user would be confused why the resulting state dict
-        # is empty.
-        raise ValueError("'ignore' parameter should be a list")
-
-    # In 'strict' mode, we need to keep track of whether we've used `strip_prefix`
-    # and which regular expressions in `ignore` we've used.
-    strip_prefix_used: Optional[bool] = None
-    ignore_used: Optional[List[bool]] = None
-    if strict and strip_prefix is not None:
-        strip_prefix_used = False
-    if strict and ignore:
-        ignore_used = [False] * len(ignore)
-
-    for key in state.keys():
-        ignore_key = False
-        if ignore:
-            for i, pattern in enumerate(ignore):
-                if re.match(pattern, key):
-                    if ignore_used:
-                        ignore_used[i] = True
-                    logger.warning("ignoring %s from state dict", key)
-                    ignore_key = True
-                    break
-
-        if ignore_key:
-            continue
-
-        new_key = key
-
-        if strip_prefix and key.startswith(strip_prefix):
-            strip_prefix_used = True
-            new_key = key[len(strip_prefix) :]
-            if not new_key:
-                raise ValueError("'strip_prefix' resulted in an empty string for a key")
-
-        out[new_key] = state[key]
-
-    if strip_prefix_used is False:
-        raise ValueError(f"'strip_prefix' of '{strip_prefix}' was never used")
-    if ignore is not None and ignore_used is not None:
-        for pattern, used in zip(ignore, ignore_used):
-            if not used:
-                raise ValueError(f"'ignore' pattern '{pattern}' didn't have any matches")
-
-    return out
 
 
 class Keep(NamedTuple):
