@@ -103,7 +103,7 @@ def load_state_dict(
         # If user accidentally passed in something that is not a list - like a string,
         # which is easy to do - the user would be confused why the resulting state dict
         # is empty.
-        raise ValueError("'ignore' parameter should be a list, you silly goose!")
+        raise ValueError("'ignore' parameter should be a list")
 
     # In 'strict' mode, we need to keep track of whether we've used `strip_prefix`
     # and which regular expressions in `ignore` we've used.
