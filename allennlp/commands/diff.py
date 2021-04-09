@@ -1,5 +1,5 @@
 """
-Example
+# Examples
 
 ```bash
 allennlp diff \
@@ -74,12 +74,12 @@ def load_state_dict(
 
     # Parameters
 
-    path : Union[PathLike, str], required
+    path : `Union[PathLike, str]`, required
 
-    strip_prefix : Optional[str], optional (default = `None`)
+    strip_prefix : `Optional[str]`, optional (default = `None`)
         A prefix to remove from all of the state dict keys.
 
-    ignore : Optional[List[str]], optional (default = `None`)
+    ignore : `Optional[List[str]]`, optional (default = `None`)
         Optional list of regular expressions. Keys that match any of these will be removed
         from the state dict.
 
@@ -207,7 +207,7 @@ def checkpoint_diff(
 ) -> List[Union[Keep, Insert, Remove, Modify]]:
     """
     Uses a modified version of the Myers diff algorithm to compute a representation
-    of the diff between two model state dict.
+    of the diff between two model state dictionaries.
 
     The only difference is that in addition to the `Keep`, `Insert`, and `Remove`
     operations, we add `Modify`. This corresponds to keeping a parameter
