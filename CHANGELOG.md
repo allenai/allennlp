@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Moved the data preparation script for coref into allennlp-models.
 - If a transformer is not in cache but has override weights, the transformer's pretrained weights are no longer downloaded, that is, only its `config.json` file is downloaded.
 - `SanityChecksCallback` now raises `SanityCheckError` instead of `AssertionError` when a check fails.
+- Weights & Biases callback can now work without the `WANDB_API_KEY` environment variable.
 
 ### Fixed
 
