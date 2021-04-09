@@ -39,8 +39,12 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         want to use the encoder.
     train_parameters: `bool`, optional (default = `True`)
         If this is `True`, the transformer weights get updated during training. If this is `False`, the
-        transformer weights are not updated during training and the dropout and batch normalization layers
-        are set to evaluation mode.
+        transformer weights are not updated during training.
+    eval_mode: `bool`, optional (default = `False`)
+        If this is True, the model is always set to evaluation mode (e.g., the dropout is disabled and the
+        batch normalization layer statistics are not updated). If this is False, the dropout and batch
+        normalization layers are only set to evaluation model when when the model is evaluating on development
+        or train data.
     last_layer_only: `bool`, optional (default = `True`)
         When `True` (the default), only the final layer of the pretrained transformer is taken
         for the embeddings. But if set to `False`, a scalar mix of all of the layers
@@ -66,6 +70,7 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         max_length: int = None,
         sub_module: str = None,
         train_parameters: bool = True,
+        eval_mode: bool = False,
         last_layer_only: bool = True,
         override_weights_file: Optional[str] = None,
         override_weights_strip_prefix: Optional[str] = None,
@@ -125,15 +130,18 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
 
         self.train_parameters = train_parameters
         if not train_parameters:
-            self.transformer_model.eval()
             for param in self.transformer_model.parameters():
                 param.requires_grad = False
+
+        self.eval_mode = eval_mode
+        if eval_mode:
+            self.transformer_model.eval()
 
     @overrides
     def train(self, mode: bool = True):
         self.training = mode
         for name, module in self.named_children():
-            if not self.train_parameters and name == "transformer_model":
+            if self.eval_mode and name == "transformer_model":
                 module.eval()
             else:
                 module.train(mode)
