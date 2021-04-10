@@ -109,7 +109,8 @@ def _finalize(
         if isinstance(step, Keep):
             a_tensor = state_dict_a[step.key]
             b_tensor = state_dict_b[step.key]
-            dist = a_tensor.dist(b_tensor).item()
+            with torch.no_grad():
+                dist = torch.nn.functional.mse_loss(a_tensor, b_tensor).sqrt()
             if dist != 0.0:
                 out[i] = Modify(step.key, step.shape, dist)
     return out
