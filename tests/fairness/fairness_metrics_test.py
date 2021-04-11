@@ -14,39 +14,24 @@ from allennlp.fairness.fairness_metrics import (
 
 
 class IndependenceTest(AllenNlpTestCase):
-    def setup_method(self):
-        super().setup_method()
-        self.independence = Independence()
-
     def test_invalid_dimensions(self):
+        independence = Independence(2, 2)
         C = torch.eye(3).long()
         A = torch.eye(4).long()
         with pytest.raises(ConfigurationError):
-            self.independence(C, A)
+            independence(C, A)
 
     def test_invalid_num_classes(self):
+        independence = Independence(1, 1)
         C = torch.eye(3).long()
         A = torch.eye(3).long()
         with pytest.raises(ConfigurationError):
-            self.independence(C, A, 1)
-
-    def test_independence_num_classes_inferred(self):
-        A = torch.eye(3).long()
-        C = 2 * A
-
-        # P(C) = [0.667, 0.0, 0.333]
-        # P(C | A = 0) = [1.0, 0.0, 0.0]
-        # P(C | A = 1) = [0.0, 0.0, 1.0]
-        # KL(P(C | A = 0) || P(C)) = 0.4055
-        # KL(P(C | A = 1) || P(C)) = 1.0986
-        expected_kl_divs = {0: 0.4055, 1: 1.0986}
-        test_kl_divs = {k: v.item() for k, v in self.independence(C, A).items()}
-        assert expected_kl_divs == pytest.approx(test_kl_divs, abs=1e-3)
+            independence(C, A)
 
     def test_independence_num_classes_supplied(self):
+        independence = Independence(4, 2)
         A = torch.eye(3).long()
         C = 2 * A
-        num_classes = 4
 
         # P(C) = [0.667, 0.0, 0.333, 0.0]
         # P(C | A = 0) = [1.0, 0.0, 0.0, 0.0]
@@ -54,30 +39,41 @@ class IndependenceTest(AllenNlpTestCase):
         # KL(P(C | A = 0) || P(C)) = 0.4055
         # KL(P(C | A = 1) || P(C)) = 1.0986
         expected_kl_divs = {0: 0.4055, 1: 1.0986}
-        test_kl_divs = {k: v.item() for k, v in self.independence(C, A, num_classes).items()}
+
+        independence(C, A)
+        test_kl_divs = {k: v.item() for k, v in independence.get_metric().items()}
         assert expected_kl_divs == pytest.approx(test_kl_divs, abs=1e-3)
+
+        independence(C, A)
+        test_kl_divs = {k: v.item() for k, v in independence.get_metric(reset=True).items()}
+        assert expected_kl_divs == pytest.approx(test_kl_divs, abs=1e-3)
+
+        test_kl_divs = {
+            k: (v.item() if not math.isnan(v.item()) else np.nan)
+            for k, v in independence.get_metric().items()
+        }
+        assert test_kl_divs == {0: np.nan, 1: np.nan}
 
 
 class SeparationTest(AllenNlpTestCase):
-    def setup_method(self):
-        super().setup_method()
-        self.separation = Separation()
-
     def test_invalid_dimensions(self):
+        separation = Separation(2, 2)
         C = torch.eye(3).long()
         Y = torch.eye(4).long()
         A = torch.eye(3).long()
         with pytest.raises(ConfigurationError):
-            self.separation(C, Y, A)
+            separation(C, Y, A)
 
     def test_invalid_num_classes(self):
+        separation = Separation(2, 2)
         C = 2 * torch.eye(3).long()
         Y = torch.eye(3).long()
         A = torch.eye(3).long()
         with pytest.raises(ConfigurationError):
-            self.separation(C, Y, A)
+            separation(C, Y, A)
 
     def test_separation(self):
+        separation = Separation(2, 2)
         C = torch.eye(3).long()
         Y = C
         A = C
@@ -96,33 +92,48 @@ class SeparationTest(AllenNlpTestCase):
 
         # KL divergence cannot be negative
         expected_kl_divs = {0: {0: 0.0, 1: np.nan}, 1: {0: np.nan, 1: 0.0}}
+
+        separation(C, Y, A)
         test_kl_divs = {
             k1: {k2: (v2.item() if not math.isnan(v2.item()) else np.nan) for k2, v2 in v1.items()}
-            for k1, v1 in self.separation(C, Y, A).items()
+            for k1, v1 in separation.get_metric().items()
         }
         assert expected_kl_divs == test_kl_divs
 
+        separation(C, Y, A)
+        test_kl_divs = {
+            k1: {k2: (v2.item() if not math.isnan(v2.item()) else np.nan) for k2, v2 in v1.items()}
+            for k1, v1 in separation.get_metric(reset=True).items()
+        }
+        assert expected_kl_divs == test_kl_divs
+
+        test_kl_divs = {
+            k1: {k2: (v2.item() if not math.isnan(v2.item()) else np.nan) for k2, v2 in v1.items()}
+            for k1, v1 in separation.get_metric().items()
+        }
+        assert test_kl_divs == {0: {0: np.nan, 1: np.nan}, 1: {0: np.nan, 1: np.nan}}
+
 
 class SufficiencyTest(AllenNlpTestCase):
-    def setup_method(self):
-        super().setup_method()
-        self.sufficiency = Sufficiency()
-
     def test_invalid_dimensions(self):
+        sufficiency = Sufficiency(2, 2)
         C = torch.eye(3).long()
         Y = torch.eye(4).long()
         A = torch.eye(3).long()
         with pytest.raises(ConfigurationError):
-            self.sufficiency(C, Y, A)
+            sufficiency(C, Y, A)
 
     def test_invalid_num_classes(self):
+        sufficiency = Sufficiency(2, 2)
         C = 2 * torch.eye(3).long()
         Y = torch.eye(3).long()
         A = torch.eye(3).long()
         with pytest.raises(ConfigurationError):
-            self.sufficiency(C, Y, A)
+            sufficiency(C, Y, A)
 
     def test_sufficiency(self):
+        sufficiency = Sufficiency(2, 2)
+
         # Tests when C = 1 is not predicted
         C = torch.zeros(3, 3).long()
         Y = torch.eye(3).long()
@@ -142,13 +153,31 @@ class SufficiencyTest(AllenNlpTestCase):
 
         # KL divergence cannot be negative
         expected_kl_divs = {0: {0: 0.4055, 1: 1.0986}, 1: {0: np.nan, 1: np.nan}}
+
+        sufficiency(C, Y, A)
         test_kl_divs = {
             k1: {k2: (v2.item() if not math.isnan(v2.item()) else np.nan) for k2, v2 in v1.items()}
-            for k1, v1 in self.sufficiency(C, Y, A).items()
+            for k1, v1 in sufficiency.get_metric().items()
         }
         assert len(expected_kl_divs) == len(test_kl_divs)
         assert expected_kl_divs[0] == pytest.approx(test_kl_divs[0], abs=1e-3)
         assert expected_kl_divs[1] == test_kl_divs[1]
+
+        sufficiency(C, Y, A)
+        test_kl_divs = {
+            k1: {k2: (v2.item() if not math.isnan(v2.item()) else np.nan) for k2, v2 in v1.items()}
+            for k1, v1 in sufficiency.get_metric(reset=True).items()
+        }
+        assert len(expected_kl_divs) == len(test_kl_divs)
+        assert expected_kl_divs[0] == pytest.approx(test_kl_divs[0], abs=1e-3)
+        assert expected_kl_divs[1] == test_kl_divs[1]
+
+        test_kl_divs = {
+            k1: {k2: (v2.item() if not math.isnan(v2.item()) else np.nan) for k2, v2 in v1.items()}
+            for k1, v1 in sufficiency.get_metric().items()
+        }
+        assert len(expected_kl_divs) == len(test_kl_divs)
+        assert test_kl_divs == {0: {0: np.nan, 1: np.nan}, 1: {0: np.nan, 1: np.nan}}
 
 
 class DemographicParityWithoutGroundTruthTest(AllenNlpTestCase):
