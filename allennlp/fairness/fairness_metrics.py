@@ -27,6 +27,7 @@ from typing import Optional, Dict, Union
 
 from overrides import overrides
 import torch
+import torch.distributed as dist
 from torch.distributions.categorical import Categorical
 from torch.distributions.kl import kl_divergence
 
@@ -53,15 +54,17 @@ class Independence(Metric):
         """
         self._num_classes = num_classes
         self._num_protected_variable_labels = num_protected_variable_labels
-        self._total_predicted_label_counts = torch.zeros(num_classes)
-        self._total_predictions = 0
+        self._predicted_label_counts = torch.zeros(num_classes)
+        self._total_predictions = torch.tensor(0)
         self._predicted_label_counts_by_protected_variable_label = {
             a: torch.zeros(num_classes) for a in range(num_protected_variable_labels)
         }
 
-    @overrides
     def __call__(
-        self, predicted_labels: torch.Tensor, protected_variable_labels: torch.Tensor
+        self,
+        predicted_labels: torch.Tensor,
+        protected_variable_labels: torch.Tensor,
+        mask: Optional[torch.BoolTensor] = None,
     ) -> None:
         """
         # Parameters
@@ -71,9 +74,11 @@ class Independence(Metric):
         protected_variable_labels : `torch.Tensor`, required.
             A tensor of integer protected variable labels of shape (batch_size, ...). It must be the same
             shape as the `predicted_labels` tensor. Represented as A.
+        mask : `torch.BoolTensor`, optional (default = `None`).
+            A tensor of the same shape as `predicted_labels`.
         """
-        predicted_labels, protected_variable_labels = self.detach_tensors(
-            predicted_labels, protected_variable_labels
+        predicted_labels, protected_variable_labels, mask = self.detach_tensors(
+            predicted_labels, protected_variable_labels, mask
         )
 
         # Some sanity checks.
@@ -81,6 +86,11 @@ class Independence(Metric):
             raise ConfigurationError(
                 "protected_variable_labels must be of same size as predicted_labels but "
                 "found tensor of shape: {}".format(protected_variable_labels.size())
+            )
+        if mask is not None and predicted_labels.size() != mask.size():
+            raise ConfigurationError(
+                "mask must be of same size as predicted_labels but "
+                "found tensor of shape: {}".format(mask.size())
             )
         if (predicted_labels >= self._num_classes).any():
             raise ConfigurationError(
@@ -95,16 +105,49 @@ class Independence(Metric):
                 )
             )
 
-        self._total_predicted_label_counts += predicted_labels.float().histc(
+        if mask is not None:
+            predicted_labels = predicted_labels[mask]
+            protected_variable_labels = protected_variable_labels[mask]
+        else:
+            predicted_labels = predicted_labels.flatten()
+            protected_variable_labels = protected_variable_labels.flatten()
+
+        _predicted_label_counts = predicted_labels.float().histc(
             bins=self._num_classes, min=0, max=self._num_classes - 1
         )
-        self._total_predictions += predicted_labels.nelement()
+        _total_predictions = torch.tensor(predicted_labels.nelement())
+
+        _predicted_label_counts_by_protected_variable_label = {}
         for a in range(self._num_protected_variable_labels):
-            self._predicted_label_counts_by_protected_variable_label[a] += (
+            _predicted_label_counts_by_protected_variable_label[a] = (
                 predicted_labels[protected_variable_labels == a]
                 .float()
                 .histc(bins=self._num_classes, min=0, max=self._num_classes - 1)
             )
+
+        if is_distributed():
+            device = torch.device("cuda" if dist.get_backend() == "nccl" else "cpu")
+
+            _predicted_label_counts = _predicted_label_counts.to(device)
+            dist.all_reduce(_predicted_label_counts, op=dist.ReduceOp.SUM)
+
+            _total_predictions = _total_predictions.to(device)
+            dist.all_reduce(_total_predictions, op=dist.ReduceOp.SUM)
+
+            for a in range(self._num_protected_variable_labels):
+                _predicted_label_counts_by_protected_variable_label[
+                    a
+                ] = _predicted_label_counts_by_protected_variable_label[a].to(device)
+                dist.all_reduce(
+                    _predicted_label_counts_by_protected_variable_label[a], op=dist.ReduceOp.SUM
+                )
+
+        self._predicted_label_counts += _predicted_label_counts
+        self._total_predictions += _total_predictions
+        for a in range(self._num_protected_variable_labels):
+            self._predicted_label_counts_by_protected_variable_label[
+                a
+            ] += _predicted_label_counts_by_protected_variable_label[a]
 
     @overrides
     def get_metric(self, reset: bool = False) -> Dict[int, torch.FloatTensor]:
@@ -113,12 +156,8 @@ class Independence(Metric):
 
         kl_divs : `Dict[int, torch.FloatTensor]`
             A dictionary mapping each protected variable label a to the KL divergence of P(C | A = a) from P(C).
+            A KL divergence of nearly 0 implies fairness on the basis of Independence.
         """
-        if is_distributed():
-            raise RuntimeError(
-                "Distributed aggregation for Independence is currently not supported."
-            )
-
         kl_divs: Dict[int, torch.FloatTensor] = {}
         if self._total_predictions == 0:
             kl_divs = {
@@ -126,7 +165,7 @@ class Independence(Metric):
             }
             return kl_divs
 
-        C_dist = Categorical(self._total_predicted_label_counts / self._total_predictions)
+        C_dist = Categorical(self._predicted_label_counts / self._total_predictions)
         for a in range(self._num_protected_variable_labels):
             C_given_a_dist = Categorical(
                 self._predicted_label_counts_by_protected_variable_label[a]
@@ -139,8 +178,8 @@ class Independence(Metric):
 
     @overrides
     def reset(self) -> None:
-        self._total_predicted_label_counts = torch.zeros(self._num_classes)
-        self._total_predictions = 0
+        self._predicted_label_counts = torch.zeros(self._num_classes)
+        self._total_predictions = torch.tensor(0)
         self._predicted_label_counts_by_protected_variable_label = {
             a: torch.zeros(self._num_classes) for a in range(self._num_protected_variable_labels)
         }
@@ -167,17 +206,19 @@ class Separation(Metric):
         self._predicted_label_counts_by_gold_label = {
             y: torch.zeros(num_classes) for y in range(num_classes)
         }
-        self._total_predictions = 0
+        self._total_predictions = torch.tensor(0)
         self._predicted_label_counts_by_gold_label_and_protected_variable_label = {
             y: {a: torch.zeros(num_classes) for a in range(num_protected_variable_labels)}
             for y in range(num_classes)
         }
 
+    @overrides
     def __call__(
         self,
         predicted_labels: torch.Tensor,
         gold_labels: torch.Tensor,
         protected_variable_labels: torch.Tensor,
+        mask: Optional[torch.BoolTensor] = None,
     ) -> None:
         """
         # Parameters
@@ -190,9 +231,11 @@ class Separation(Metric):
         protected_variable_labels : `torch.Tensor`, required.
             A tensor of integer protected variable labels of shape (batch_size, ...). It must be the same
             shape as the `predicted_labels` tensor. Represented as A.
+        mask : `torch.BoolTensor`, optional (default = `None`).
+            A tensor of the same shape as `predicted_labels`.
         """
-        predicted_labels, gold_labels, protected_variable_labels = self.detach_tensors(
-            predicted_labels, gold_labels, protected_variable_labels
+        predicted_labels, gold_labels, protected_variable_labels, mask = self.detach_tensors(
+            predicted_labels, gold_labels, protected_variable_labels, mask
         )
 
         # Some sanity checks.
@@ -205,6 +248,11 @@ class Separation(Metric):
             raise ConfigurationError(
                 "gold_labels must be of same size as predicted_labels but "
                 "found tensor of shape: {}".format(gold_labels.size())
+            )
+        if mask is not None and predicted_labels.size() != mask.size():
+            raise ConfigurationError(
+                "mask must be of same size as predicted_labels but "
+                "found tensor of shape: {}".format(mask.size())
             )
         if (predicted_labels >= self._num_classes).any():
             raise ConfigurationError(
@@ -224,19 +272,66 @@ class Separation(Metric):
                 )
             )
 
-        self._total_predictions += predicted_labels.nelement()
+        if mask is not None:
+            predicted_labels = predicted_labels[mask]
+            gold_labels = gold_labels[mask]
+            protected_variable_labels = protected_variable_labels[mask]
+        else:
+            predicted_labels = predicted_labels.flatten()
+            gold_labels = gold_labels.flatten()
+            protected_variable_labels = protected_variable_labels.flatten()
+
+        _total_predictions = torch.tensor(predicted_labels.nelement())
+        _predicted_label_counts_by_gold_label = {}
+        _predicted_label_counts_by_gold_label_and_protected_variable_label: Dict[
+            int, Dict[int, torch.FloatTensor]
+        ] = {}
         for y in range(self._num_classes):
-            self._predicted_label_counts_by_gold_label[y] += (
+            _predicted_label_counts_by_gold_label[y] = (
                 predicted_labels[gold_labels == y]
                 .float()
                 .histc(bins=self._num_classes, min=0, max=self._num_classes - 1)
             )
+            _predicted_label_counts_by_gold_label_and_protected_variable_label[y] = {}
             for a in range(self._num_protected_variable_labels):
-                self._predicted_label_counts_by_gold_label_and_protected_variable_label[y][a] += (
+                _predicted_label_counts_by_gold_label_and_protected_variable_label[y][a] = (
                     predicted_labels[(gold_labels == y) & (protected_variable_labels == a)]
                     .float()
                     .histc(bins=self._num_classes, min=0, max=self._num_classes - 1)
                 )
+
+        if is_distributed():
+            device = torch.device("cuda" if dist.get_backend() == "nccl" else "cpu")
+
+            _total_predictions = _total_predictions.to(device)
+            dist.all_reduce(_total_predictions, op=dist.ReduceOp.SUM)
+
+            for y in range(self._num_classes):
+                _predicted_label_counts_by_gold_label[y] = _predicted_label_counts_by_gold_label[
+                    y
+                ].to(device)
+                dist.all_reduce(_predicted_label_counts_by_gold_label[y], op=dist.ReduceOp.SUM)
+
+                for a in range(self._num_protected_variable_labels):
+                    _predicted_label_counts_by_gold_label_and_protected_variable_label[y][
+                        a
+                    ] = _predicted_label_counts_by_gold_label_and_protected_variable_label[y][a].to(
+                        device
+                    )
+                    dist.all_reduce(
+                        _predicted_label_counts_by_gold_label_and_protected_variable_label[y][a],
+                        op=dist.ReduceOp.SUM,
+                    )
+
+        self._total_predictions += _total_predictions
+        for y in range(self._num_classes):
+            self._predicted_label_counts_by_gold_label[y] += _predicted_label_counts_by_gold_label[
+                y
+            ]
+            for a in range(self._num_protected_variable_labels):
+                self._predicted_label_counts_by_gold_label_and_protected_variable_label[y][
+                    a
+                ] += _predicted_label_counts_by_gold_label_and_protected_variable_label[y][a]
 
     @overrides
     def get_metric(self, reset: bool = False) -> Dict[int, Dict[int, torch.FloatTensor]]:
@@ -246,14 +341,12 @@ class Separation(Metric):
         kl_divs : `Dict[int, Dict[int, torch.FloatTensor]]`
             A dictionary mapping each class label y to a dictionary mapping each protected
             variable label a to the KL divergence of P(C | A = a, Y = y) from P(C | Y = y).
+            A KL divergence of nearly 0 implies fairness on the basis of Separation.
 
             Note: If a class label is not present in Y conditioned on a protected variable label,
             the expected behavior is that the divergence corresponding to this (class label, protected variable
             label) pair is NaN.
         """
-        if is_distributed():
-            raise RuntimeError("Distributed aggregation for Separation is currently not supported.")
-
         kl_divs: Dict[int, Dict[int, torch.FloatTensor]] = {}
         if self._total_predictions == 0:
             kl_divs = {
@@ -289,7 +382,7 @@ class Separation(Metric):
         self._predicted_label_counts_by_gold_label = {
             y: torch.zeros(self._num_classes) for y in range(self._num_classes)
         }
-        self._total_predictions = 0
+        self._total_predictions = torch.tensor(0)
         self._predicted_label_counts_by_gold_label_and_protected_variable_label = {
             y: {
                 a: torch.zeros(self._num_classes)
@@ -320,7 +413,7 @@ class Sufficiency(Metric):
         self._gold_label_counts_by_predicted_label = {
             c: torch.zeros(num_classes) for c in range(num_classes)
         }
-        self._total_predictions = 0
+        self._total_predictions = torch.tensor(0)
         self._gold_label_counts_by_predicted_label_and_protected_variable_label = {
             c: {a: torch.zeros(num_classes) for a in range(num_protected_variable_labels)}
             for c in range(num_classes)
@@ -332,6 +425,7 @@ class Sufficiency(Metric):
         predicted_labels: torch.Tensor,
         gold_labels: torch.Tensor,
         protected_variable_labels: torch.Tensor,
+        mask: Optional[torch.BoolTensor] = None,
     ) -> None:
         """
         # Parameters
@@ -344,9 +438,11 @@ class Sufficiency(Metric):
         protected_variable_labels : `torch.Tensor`, required.
             A tensor of integer protected variable labels of shape (batch_size, ...). It must be the same
             shape as the `predicted_labels` tensor. Represented as A.
+        mask : `torch.BoolTensor`, optional (default = `None`).
+            A tensor of the same shape as `predicted_labels`.
         """
-        predicted_labels, gold_labels, protected_variable_labels = self.detach_tensors(
-            predicted_labels, gold_labels, protected_variable_labels
+        predicted_labels, gold_labels, protected_variable_labels, mask = self.detach_tensors(
+            predicted_labels, gold_labels, protected_variable_labels, mask
         )
 
         # Some sanity checks.
@@ -359,6 +455,11 @@ class Sufficiency(Metric):
             raise ConfigurationError(
                 "gold_labels must be of same size as predicted_labels but "
                 "found tensor of shape: {}".format(gold_labels.size())
+            )
+        if mask is not None and predicted_labels.size() != mask.size():
+            raise ConfigurationError(
+                "mask must be of same size as predicted_labels but "
+                "found tensor of shape: {}".format(mask.size())
             )
         if (predicted_labels >= self._num_classes).any():
             raise ConfigurationError(
@@ -378,19 +479,66 @@ class Sufficiency(Metric):
                 )
             )
 
-        self._total_predictions += predicted_labels.nelement()
+        if mask is not None:
+            predicted_labels = predicted_labels[mask]
+            gold_labels = gold_labels[mask]
+            protected_variable_labels = protected_variable_labels[mask]
+        else:
+            predicted_labels = predicted_labels.flatten()
+            gold_labels = gold_labels.flatten()
+            protected_variable_labels = protected_variable_labels.flatten()
+
+        _total_predictions = torch.tensor(predicted_labels.nelement())
+        _gold_label_counts_by_predicted_label = {}
+        _gold_label_counts_by_predicted_label_and_protected_variable_label: Dict[
+            int, Dict[int, torch.FloatTensor]
+        ] = {}
         for c in range(self._num_classes):
-            self._gold_label_counts_by_predicted_label[c] += (
+            _gold_label_counts_by_predicted_label[c] = (
                 gold_labels[predicted_labels == c]
                 .float()
                 .histc(bins=self._num_classes, min=0, max=self._num_classes - 1)
             )
+            _gold_label_counts_by_predicted_label_and_protected_variable_label[c] = {}
             for a in range(self._num_protected_variable_labels):
-                self._gold_label_counts_by_predicted_label_and_protected_variable_label[c][a] += (
+                _gold_label_counts_by_predicted_label_and_protected_variable_label[c][a] = (
                     gold_labels[(predicted_labels == c) & (protected_variable_labels == a)]
                     .float()
                     .histc(bins=self._num_classes, min=0, max=self._num_classes - 1)
                 )
+
+        if is_distributed():
+            device = torch.device("cuda" if dist.get_backend() == "nccl" else "cpu")
+
+            _total_predictions = _total_predictions.to(device)
+            dist.all_reduce(_total_predictions, op=dist.ReduceOp.SUM)
+
+            for c in range(self._num_classes):
+                _gold_label_counts_by_predicted_label[c] = _gold_label_counts_by_predicted_label[
+                    c
+                ].to(device)
+                dist.all_reduce(_gold_label_counts_by_predicted_label[c], op=dist.ReduceOp.SUM)
+
+                for a in range(self._num_protected_variable_labels):
+                    _gold_label_counts_by_predicted_label_and_protected_variable_label[c][
+                        a
+                    ] = _gold_label_counts_by_predicted_label_and_protected_variable_label[c][a].to(
+                        device
+                    )
+                    dist.all_reduce(
+                        _gold_label_counts_by_predicted_label_and_protected_variable_label[c][a],
+                        op=dist.ReduceOp.SUM,
+                    )
+
+        self._total_predictions += _total_predictions
+        for c in range(self._num_classes):
+            self._gold_label_counts_by_predicted_label[c] += _gold_label_counts_by_predicted_label[
+                c
+            ]
+            for a in range(self._num_protected_variable_labels):
+                self._gold_label_counts_by_predicted_label_and_protected_variable_label[c][
+                    a
+                ] += _gold_label_counts_by_predicted_label_and_protected_variable_label[c][a]
 
     @overrides
     def get_metric(self, reset: bool = False) -> Dict[int, Dict[int, torch.FloatTensor]]:
@@ -400,17 +548,13 @@ class Sufficiency(Metric):
         kl_divs : `Dict[int, Dict[int, torch.FloatTensor]]`
             A dictionary mapping each class label c to a dictionary mapping each protected
             variable label a to the KL divergence of P(Y | A = a, C = c) from P(Y | C = c).
+            A KL divergence of nearly 0 implies fairness on the basis of Sufficiency.
 
             Note: If a possible class label is not present in C, the expected behavior is that
             the divergences corresponding to this class label are NaN. If a possible class label is
             not present in C conditioned on a protected variable label, the expected behavior is that
             the divergence corresponding to this (class label, protected variable label) pair is NaN.
         """
-        if is_distributed():
-            raise RuntimeError(
-                "Distributed aggregation for Sufficiency is currently not supported."
-            )
-
         kl_divs: Dict[int, Dict[int, torch.FloatTensor]] = {}
         if self._total_predictions == 0:
             kl_divs = {
@@ -454,7 +598,7 @@ class Sufficiency(Metric):
         self._gold_label_counts_by_predicted_label = {
             c: torch.zeros(self._num_classes) for c in range(self._num_classes)
         }
-        self._total_predictions = 0
+        self._total_predictions = torch.tensor(0)
         self._gold_label_counts_by_predicted_label_and_protected_variable_label = {
             c: {
                 a: torch.zeros(self._num_classes)

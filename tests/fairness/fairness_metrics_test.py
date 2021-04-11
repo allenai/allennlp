@@ -4,7 +4,12 @@ import math
 import numpy as np
 
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.testing import AllenNlpTestCase
+from allennlp.common.testing import (
+    AllenNlpTestCase,
+    multi_device,
+    global_distributed_metric,
+    run_distributed_test,
+)
 from allennlp.fairness.fairness_metrics import (
     Independence,
     Separation,
@@ -28,9 +33,10 @@ class IndependenceTest(AllenNlpTestCase):
         with pytest.raises(ConfigurationError):
             independence(C, A)
 
-    def test_independence_num_classes_supplied(self):
+    @multi_device
+    def test_independence_unmasked_computation(self, device: str):
         independence = Independence(4, 2)
-        A = torch.eye(3).long()
+        A = torch.eye(3, device=device).long()
         C = 2 * A
 
         # P(C) = [0.667, 0.0, 0.333, 0.0]
@@ -54,6 +60,22 @@ class IndependenceTest(AllenNlpTestCase):
         }
         assert test_kl_divs == {0: np.nan, 1: np.nan}
 
+    def test_distributed_independence_masked_computation(self):
+        A = torch.eye(3).long()
+        C = 2 * A
+        mask = torch.ones_like(C).bool()
+
+        expected_kl_divs = {0: 0.4055, 1: 1.0986}
+        metric_kwargs = {"predicted_labels": C, "protected_variable_labels": A, "mask": mask}
+        run_distributed_test(
+            [-1, -1],
+            global_distributed_metric,
+            Independence(4, 2),
+            metric_kwargs,
+            expected_kl_divs,
+            exact=False,
+        )
+
 
 class SeparationTest(AllenNlpTestCase):
     def test_invalid_dimensions(self):
@@ -72,9 +94,10 @@ class SeparationTest(AllenNlpTestCase):
         with pytest.raises(ConfigurationError):
             separation(C, Y, A)
 
-    def test_separation(self):
+    @multi_device
+    def test_separation_unmasked_computation(self, device: str):
         separation = Separation(2, 2)
-        C = torch.eye(3).long()
+        C = torch.eye(3, device=device).long()
         Y = C
         A = C
 
@@ -113,6 +136,32 @@ class SeparationTest(AllenNlpTestCase):
         }
         assert test_kl_divs == {0: {0: np.nan, 1: np.nan}, 1: {0: np.nan, 1: np.nan}}
 
+    def test_distributed_separation_masked_computation(self):
+        C = torch.eye(3).long()
+        Y = C
+        A = C
+        mask = torch.ones_like(C)
+
+        # KL divergence cannot be negative
+        expected_kl_divs = {
+            0: {0: 0.0, 1: np.nan},
+            1: {0: np.nan, 1: 0.0},
+        }
+        metric_kwargs = {
+            "predicted_labels": C,
+            "gold_labels": Y,
+            "protected_variable_labels": A,
+            "mask": mask,
+        }
+        run_distributed_test(
+            [-1, -1],
+            global_distributed_metric,
+            Separation(2, 2),
+            metric_kwargs,
+            expected_kl_divs,
+            exact=True,
+        )
+
 
 class SufficiencyTest(AllenNlpTestCase):
     def test_invalid_dimensions(self):
@@ -131,12 +180,13 @@ class SufficiencyTest(AllenNlpTestCase):
         with pytest.raises(ConfigurationError):
             sufficiency(C, Y, A)
 
-    def test_sufficiency(self):
+    @multi_device
+    def test_sufficiency_unmasked_computation(self, device: str):
         sufficiency = Sufficiency(2, 2)
 
         # Tests when C = 1 is not predicted
-        C = torch.zeros(3, 3).long()
-        Y = torch.eye(3).long()
+        C = torch.zeros(3, 3, device=device).long()
+        Y = torch.eye(3, device=device).long()
         A = Y
 
         # P(Y | C = 0) = [0.667, 0.333]
@@ -178,6 +228,31 @@ class SufficiencyTest(AllenNlpTestCase):
         }
         assert len(expected_kl_divs) == len(test_kl_divs)
         assert test_kl_divs == {0: {0: np.nan, 1: np.nan}, 1: {0: np.nan, 1: np.nan}}
+
+    def test_distributed_sufficiency_masked_computation(self):
+        C = torch.zeros(3, 3).long()
+        Y = torch.eye(3).long()
+        A = Y
+        mask = torch.ones_like(C)
+
+        expected_kl_divs = {
+            0: {0: 0.0, 1: np.nan},
+            1: {0: np.nan, 1: 0.0},
+        }
+        metric_kwargs = {
+            "predicted_labels": C,
+            "gold_labels": Y,
+            "protected_variable_labels": A,
+            "mask": mask,
+        }
+        run_distributed_test(
+            [-1, -1],
+            global_distributed_metric,
+            Sufficiency(2, 2),
+            metric_kwargs,
+            expected_kl_divs,
+            exact=True,
+        )
 
 
 class DemographicParityWithoutGroundTruthTest(AllenNlpTestCase):
