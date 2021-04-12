@@ -33,12 +33,12 @@ class MultiTaskDatasetReader(DatasetReader):
             task: _MultitaskDatasetReaderShim(reader, task) for task, reader in readers.items()
         }
 
-    def read(
+    def read(  # type: ignore
         self,
         file_paths: Union[PathLike, str, Dict[str, Union[PathLike, str]]],
         *,
         force_task: Optional[str] = None
-    ) -> Union[Iterator[Instance], Dict[str, Iterator[Instance]]]:  # type: ignore
+    ) -> Union[Iterator[Instance], Dict[str, Iterator[Instance]]]:
         if force_task is None:
             raise RuntimeError("This class is not designed to be called like this.")
         return self.readers[force_task].read(file_paths)
