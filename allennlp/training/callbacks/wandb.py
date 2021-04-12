@@ -64,7 +64,7 @@ class WandBCallback(LogWriterCallback):
         tags: Optional[List[str]] = None,
         watch_model: bool = True,
         files_to_save: Tuple[str, ...] = ("config.json", "out.log"),
-        wandb_kwargs: Optional[Dict[str, An]] = None,
+        wandb_kwargs: Optional[Dict[str, Any]] = None,
     ) -> None:
         if "WANDB_API_KEY" not in os.environ:
             raise ValueError("Missing environment variable 'WANDB_API_KEY'")
