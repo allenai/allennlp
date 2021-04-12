@@ -73,8 +73,7 @@ class CheckList(Subcommand):
 
         subparser.add_argument("--output-file", type=str, help="path to output file")
 
-        cuda_device = subparser.add_mutually_exclusive_group(required=False)
-        cuda_device.add_argument(
+        subparser.add_argument(
             "--cuda-device", type=int, default=-1, help="id of GPU to use (if any)"
         )
 
@@ -162,9 +161,11 @@ class _CheckListManager:
             self._predictor, capabilities=self._capabilities, max_examples=self._max_examples
         )
 
+        # We pass in an IO object.
         output_file = self._output_file or sys.stdout
         self._task_suite.summary(file=output_file, **self._print_summary_args)
 
+        # If `_output_file` was None, there would be nothing to close.
         if self._output_file is not None:
             self._output_file.close()
 

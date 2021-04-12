@@ -1,15 +1,15 @@
-from typing import Optional, Tuple, Iterable
-from allennlp.sanity_checks.task_checklists.task_suite import TaskSuite
+from typing import Optional, Tuple, Iterable, Callable
+import itertools
+import numpy as np
+from overrides import overrides
 from checklist.test_suite import TestSuite
 from checklist.test_types import MFT
 from checklist.perturb import Perturb
-import itertools
-import numpy as np
+from allennlp.sanity_checks.task_checklists.task_suite import TaskSuite
 from allennlp.sanity_checks.task_checklists import utils
-from overrides import overrides
 
 
-def wrap_apply_to_each(fn, both=False, *args, **kwargs):
+def _wrap_apply_to_each(perturb_fn: Callable, both: bool = False, *args, **kwargs):
     """
     Wraps the perturb function so that it is applied to
     both elements in the (premise, hypothesis) tuple.
@@ -18,8 +18,8 @@ def wrap_apply_to_each(fn, both=False, *args, **kwargs):
     def new_fn(pair, *args, **kwargs):
         premise, hypothesis = pair
         ret = []
-        fn_premise = fn(premise, *args, **kwargs)
-        fn_hypothesis = fn(hypothesis, *args, **kwargs)
+        fn_premise = perturb_fn(premise, *args, **kwargs)
+        fn_hypothesis = perturb_fn(hypothesis, *args, **kwargs)
         if type(fn_premise) != list:
             fn_premise = [fn_premise]
         if type(fn_hypothesis) != list:
@@ -28,6 +28,10 @@ def wrap_apply_to_each(fn, both=False, *args, **kwargs):
         ret.extend([(str(premise), x) for x in fn_hypothesis])
         if both:
             ret.extend([(x, x2) for x, x2 in itertools.product(fn_premise, fn_hypothesis)])
+
+        # The perturb function can return empty strings, if no relevant perturbations
+        # can be applied. Eg. if the sentence is "This is a good movie", a perturbation
+        # which toggles contractions will have no effect.
         return [x for x in ret if x[0] and x[1]]
 
     return new_fn
@@ -75,15 +79,15 @@ class TextualEntailmentSuite(TaskSuite):
 
     @classmethod
     def contractions(cls):
-        return wrap_apply_to_each(Perturb.contractions, both=True)
+        return _wrap_apply_to_each(Perturb.contractions, both=True)
 
     @classmethod
     def typos(cls):
-        return wrap_apply_to_each(Perturb.add_typos, both=False)
+        return _wrap_apply_to_each(Perturb.add_typos, both=False)
 
     @classmethod
     def punctuation(cls):
-        return wrap_apply_to_each(utils.toggle_punctuation, both=False)
+        return _wrap_apply_to_each(utils.toggle_punctuation, both=False)
 
     @overrides
     def _setup_editor(self):
@@ -187,8 +191,8 @@ class TextualEntailmentSuite(TaskSuite):
         ]
         self.editor.add_lexicon("nouns", nouns, overwrite=True)
 
-        professions = self.editor.suggest("{first_name} works as {a:mask}.")[:30]
-        professions += self.editor.suggest("{first_name} {last_name} works as {a:mask}.")[:30]
+        professions = self.editor.suggest("{first_name} works as {a:mask}.")
+        professions += self.editor.suggest("{first_name} {last_name} works as {a:mask}.")
         self.editor.add_lexicon("professions", professions, overwrite=True)
 
     @overrides

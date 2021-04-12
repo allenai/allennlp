@@ -1,24 +1,27 @@
-from typing import Optional, Iterable
-from allennlp.sanity_checks.task_checklists.task_suite import TaskSuite
-from allennlp.sanity_checks.task_checklists import utils
-from allennlp.data.instance import Instance
+from typing import Optional, Iterable, List, Union
+import string
+import numpy as np
+from overrides import overrides
 from checklist.test_suite import TestSuite
 from checklist.test_types import MFT, INV, DIR, Expect
 from checklist.editor import Editor
 from checklist.perturb import Perturb
-import string
-import numpy as np
-from overrides import overrides
+from allennlp.sanity_checks.task_checklists.task_suite import TaskSuite
+from allennlp.sanity_checks.task_checklists import utils
+from allennlp.data.instance import Instance
 
 
-def add_phrase_function(phrases):
-    def perturb_fn(d):
-        while d[-1] in string.punctuation:
-            d = d[:-1]
-        d = str(d)
-        ret = [d + ". " + x for x in phrases]
-        idx = np.random.choice(len(ret), 10, replace=False)
-        ret = [ret[i] for i in idx]
+def _add_phrase_function(phrases: List[str], num_samples: int = 10):
+    """
+    Returns a function which adds each str in `phrases`
+    at the end of the input string and returns that list.
+    """
+
+    def perturb_fn(inp):
+        input_str = utils.strip_punctuation(inp)
+        total = len(phrases)
+        idx = np.random.choice(total, min(num_samples, total), replace=False)
+        ret = [input_str + ". " + phrases[i] for i in idx]
         return ret
 
     return perturb_fn
@@ -91,7 +94,6 @@ class SentimentAnalysisSuite(TaskSuite):
                 "awesome",
                 "perfect",
                 "fun",
-                "happy",
                 "adorable",
                 "brilliant",
                 "exciting",
@@ -154,22 +156,20 @@ class SentimentAnalysisSuite(TaskSuite):
             self.editor.add_lexicon("pos_verb", pos_verb_present + pos_verb_past, overwrite=True)
             self.editor.add_lexicon("neg_verb", neg_verb_present + neg_verb_past, overwrite=True)
 
-            air_noun = [
-                "flight",
-                "seat",
-                "pilot",
-                "staff",
-                "service",
-                "customer service",
-                "aircraft",
-                "plane",
-                "food",
-                "cabin crew",
-                "company",
+            noun = [
                 "airline",
+                "movie",
+                "product",
+                "customer service",
+                "restaurant",
+                "hotel",
+                "food",
+                "staff",
+                "company",
                 "crew",
+                "service",
             ]
-            self.editor.add_lexicon("air_noun", air_noun, overwrite=True)
+            self.editor.add_lexicon("noun", noun, overwrite=True)
 
             intens_adj = [
                 "very",
@@ -263,42 +263,42 @@ class SentimentAnalysisSuite(TaskSuite):
         self.add_test(test)
 
         template = self.editor.template(
-            "{it} {air_noun} {be} {pos_adj}.",
+            "{it} {noun} {be} {pos_adj}.",
             it=["The", "This", "That"],
             be=["is", "was"],
             labels=self._positive,
             save=True,
         )
         template += self.editor.template(
-            "{it} {be} {a:pos_adj} {air_noun}.",
+            "{it} {be} {a:pos_adj} {noun}.",
             it=["It", "This", "That"],
             be=["is", "was"],
             labels=self._positive,
             save=True,
         )
         template += self.editor.template(
-            "{i} {pos_verb} {the} {air_noun}.",
+            "{i} {pos_verb} {the} {noun}.",
             i=["I", "We"],
             the=["this", "that", "the"],
             labels=self._positive,
             save=True,
         )
         template += self.editor.template(
-            "{it} {air_noun} {be} {neg_adj}.",
+            "{it} {noun} {be} {neg_adj}.",
             it=["That", "This", "The"],
             be=["is", "was"],
             labels=self._negative,
             save=True,
         )
         template += self.editor.template(
-            "{it} {be} {a:neg_adj} {air_noun}.",
+            "{it} {be} {a:neg_adj} {noun}.",
             it=["It", "This", "That"],
             be=["is", "was"],
             labels=self._negative,
             save=True,
         )
         template += self.editor.template(
-            "{i} {neg_verb} {the} {air_noun}.",
+            "{i} {neg_verb} {the} {noun}.",
             i=["I", "We"],
             the=["this", "that", "the"],
             labels=self._negative,
@@ -310,35 +310,35 @@ class SentimentAnalysisSuite(TaskSuite):
             name="Sentiment-laden words in context",
             capability="Vocabulary",
             description="Use positive and negative verbs and adjectives "
-            "with airline nouns such as seats, pilot, flight, etc. "
-            'E.g. "This was a bad flight"',
+            "with nouns such as product, movie, airline, etc. "
+            'E.g. "This was a bad movie"',
         )
 
         self.add_test(test)
 
         template = self.editor.template(
-            ["{it} {be} {a:pos_adj} {air_noun}.", "{it} {be} {a:intens_adj} {pos_adj} {air_noun}."],
+            ["{it} {be} {a:pos_adj} {noun}.", "{it} {be} {a:intens_adj} {pos_adj} {noun}."],
             it=["It", "This", "That"],
             be=["is", "was"],
             nsamples=num_test_cases,
             save=True,
         )
         template += self.editor.template(
-            ["{i} {pos_verb} {the} {air_noun}.", "{i} {intens_verb} {pos_verb} {the} {air_noun}."],
+            ["{i} {pos_verb} {the} {noun}.", "{i} {intens_verb} {pos_verb} {the} {noun}."],
             i=["I", "We"],
             the=["this", "that", "the"],
             nsamples=num_test_cases,
             save=True,
         )
         template += self.editor.template(
-            ["{it} {be} {a:neg_adj} {air_noun}.", "{it} {be} {a:intens_adj} {neg_adj} {air_noun}."],
+            ["{it} {be} {a:neg_adj} {noun}.", "{it} {be} {a:intens_adj} {neg_adj} {noun}."],
             it=["It", "This", "That"],
             be=["is", "was"],
             nsamples=num_test_cases,
             save=True,
         )
         template += self.editor.template(
-            ["{i} {neg_verb} {the} {air_noun}.", "{i} {intens_verb} {neg_verb} {the} {air_noun}."],
+            ["{i} {neg_verb} {the} {noun}.", "{i} {intens_verb} {neg_verb} {the} {noun}."],
             i=["I", "We"],
             the=["this", "that", "the"],
             nsamples=num_test_cases,
@@ -354,21 +354,21 @@ class SentimentAnalysisSuite(TaskSuite):
             description="Test is composed of pairs of sentences (x1, x2), where we add an intensifier"
             "such as 'really',or 'very' to x2 and expect the confidence to NOT go down "
             "(with tolerance=0.1). e.g.:"
-            "x1 = 'That was a good flight'"
-            "x2 = 'That was a very good flight'",
+            "x1 = 'That was a good movie'"
+            "x2 = 'That was a very good movie'",
         )
 
         self.add_test(test)
 
         template = self.editor.template(
-            ["{it} {air_noun} {be} {pos_adj}.", "{it} {air_noun} {be} {reducer_adj} {pos_adj}."],
+            ["{it} {noun} {be} {pos_adj}.", "{it} {noun} {be} {reducer_adj} {pos_adj}."],
             it=["The", "This", "That"],
             be=["is", "was"],
             nsamples=num_test_cases,
             save=True,
         )
         template += self.editor.template(
-            ["{it} {air_noun} {be} {neg_adj}.", "{it} {air_noun} {be} {reducer_adj} {neg_adj}."],
+            ["{it} {noun} {be} {neg_adj}.", "{it} {noun} {be} {reducer_adj} {neg_adj}."],
             it=["The", "This", "That"],
             be=["is", "was"],
             nsamples=num_test_cases,
@@ -383,8 +383,8 @@ class SentimentAnalysisSuite(TaskSuite):
             description="Test is composed of pairs of sentences (x1, x2), where we add a reducer"
             "such as 'somewhat', or 'kinda' to x2 and expect the confidence to NOT go up "
             " (with tolerance=0.1). e.g.:"
-            "x1 = 'The cabin crew was good.'"
-            "x2 = 'The cabin crew was somewhat good.'",
+            "x1 = 'The staff was good.'"
+            "x2 = 'The staff was somewhat good.'",
         )
 
         self.add_test(test)
@@ -393,12 +393,13 @@ class SentimentAnalysisSuite(TaskSuite):
 
             positive = self.editor.template("I {pos_verb_present} you.").data
             positive += self.editor.template("You are {pos_adj}.").data
-            positive.remove("You are happy.")
 
             negative = self.editor.template("I {neg_verb_present} you.").data
             negative += self.editor.template("You are {neg_adj}.").data
 
-            template = Perturb.perturb(data, add_phrase_function(positive), nsamples=num_test_cases)
+            template = Perturb.perturb(
+                data, _add_phrase_function(positive), nsamples=num_test_cases
+            )
             test = DIR(
                 template.data,
                 Expect.pairwise(self._diff_up),
@@ -410,7 +411,9 @@ class SentimentAnalysisSuite(TaskSuite):
 
             self.add_test(test)
 
-            template = Perturb.perturb(data, add_phrase_function(negative), nsamples=num_test_cases)
+            template = Perturb.perturb(
+                data, _add_phrase_function(negative), nsamples=num_test_cases
+            )
             test = DIR(
                 template.data,
                 Expect.pairwise(self._diff_down),
@@ -475,10 +478,10 @@ class SentimentAnalysisSuite(TaskSuite):
         change = ["but", "even though", "although", ""]
         template = self.editor.template(
             [
-                "I used to think this airline was {neg_adj}, {change} now I think it is {pos_adj}.",
-                "I think this airline is {pos_adj}, {change} I used to think it was {neg_adj}.",
-                "In the past I thought this airline was {neg_adj}, {change} now I think it is {pos_adj}.",
-                "I think this airline is {pos_adj}, {change} in the past I thought it was {neg_adj}.",
+                "I used to think this {noun} was {neg_adj}, {change} now I think it is {pos_adj}.",
+                "I think this {noun} is {pos_adj}, {change} I used to think it was {neg_adj}.",
+                "In the past I thought this {noun} was {neg_adj}, {change} now I think it is {pos_adj}.",
+                "I think this {noun} is {pos_adj}, {change} in the past I thought it was {neg_adj}.",
             ],
             change=change,
             unroll=True,
@@ -488,10 +491,10 @@ class SentimentAnalysisSuite(TaskSuite):
         )
         template += self.editor.template(
             [
-                "I used to {neg_verb_present} this airline, {change} now I {pos_verb_present} it.",
-                "I {pos_verb_present} this airline, {change} I used to {neg_verb_present} it.",
-                "In the past I would {neg_verb_present} this airline, {change} now I {pos_verb} it.",
-                "I {pos_verb_present} this airline, {change} in the past I would {neg_verb_present} it.",
+                "I used to {neg_verb_present} this {noun}, {change} now I {pos_verb_present} it.",
+                "I {pos_verb_present} this {noun}, {change} I used to {neg_verb_present} it.",
+                "In the past I would {neg_verb_present} this {noun}, {change} now I {pos_verb} it.",
+                "I {pos_verb_present} this {noun}, {change} in the past I would {neg_verb_present} it.",
             ],
             change=change,
             unroll=True,
@@ -502,10 +505,10 @@ class SentimentAnalysisSuite(TaskSuite):
 
         template += self.editor.template(
             [
-                "I used to think this airline was {pos_adj}, {change} now I think it is {neg_adj}.",
-                "I think this airline is {neg_adj}, {change} I used to think it was {pos_adj}.",
-                "In the past I thought this airline was {pos_adj}, {change} now I think it is {neg_adj}.",
-                "I think this airline is {neg_adj}, {change} in the past I thought it was {pos_adj}.",
+                "I used to think this {noun} was {pos_adj}, {change} now I think it is {neg_adj}.",
+                "I think this {noun} is {neg_adj}, {change} I used to think it was {pos_adj}.",
+                "In the past I thought this {noun} was {pos_adj}, {change} now I think it is {neg_adj}.",
+                "I think this {noun} is {neg_adj}, {change} in the past I thought it was {pos_adj}.",
             ],
             change=change,
             unroll=True,
@@ -515,10 +518,10 @@ class SentimentAnalysisSuite(TaskSuite):
         )
         template += self.editor.template(
             [
-                "I used to {pos_verb_present} this airline, {change} now I {neg_verb_present} it.",
-                "I {neg_verb_present} this airline, {change} I used to {pos_verb_present} it.",
-                "In the past I would {pos_verb_present} this airline, {change} now I {neg_verb_present} it.",
-                "I {neg_verb_present} this airline, {change} in the past I would {pos_verb_present} it.",
+                "I used to {pos_verb_present} this {noun}, {change} now I {neg_verb_present} it.",
+                "I {neg_verb_present} this {noun}, {change} I used to {pos_verb_present} it.",
+                "In the past I would {pos_verb_present} this {noun}, {change} now I {neg_verb_present} it.",
+                "I {neg_verb_present} this {noun}, {change} in the past I would {pos_verb_present} it.",
             ],
             change=change,
             unroll=True,
@@ -543,7 +546,7 @@ class SentimentAnalysisSuite(TaskSuite):
         verbs = self.editor.lexicons["pos_verb_present"] + self.editor.lexicons["neg_verb_present"]
 
         template = self.editor.template(
-            ["{it} {be} {a:adj} {air_noun}.", "I used to think {it} {be} {a:adj} {air_noun}."],
+            ["{it} {be} {a:adj} {noun}.", "I used to think {it} {be} {a:adj} {noun}."],
             it=["it", "this", "that"],
             be=["is", "was"],
             adj=adjectives,
@@ -551,7 +554,7 @@ class SentimentAnalysisSuite(TaskSuite):
             nsamples=num_test_cases,
         )
         template += self.editor.template(
-            ["{i} {verb} {the} {air_noun}.", "{i} used to {verb} {the} {air_noun}."],
+            ["{i} {verb} {the} {noun}.", "{i} used to {verb} {the} {noun}."],
             i=["I", "We"],
             the=["this", "that", "the"],
             verb=verbs,
@@ -565,8 +568,8 @@ class SentimentAnalysisSuite(TaskSuite):
             name="'Used to' should reduce",
             capability="Temporal",
             description="A model should not be more confident on 'I used to think X' "
-            "when compared to 'X', e.g. 'I used to love this airline' "
-            "should have less confidence than 'I love this airline'",
+            "when compared to 'X', e.g. 'I used to love this restaurant' "
+            "should have less confidence than 'I love this restaurant'",
         )
 
         self.add_test(test)
@@ -576,7 +579,7 @@ class SentimentAnalysisSuite(TaskSuite):
             "race": ["a black", "a hispanic", "a white", "an asian"],  # add more here.
             "sexuality": self.editor.template("{a:sexual_adj}").data,
             "religion": self.editor.template("{a:religion_adj}").data,
-            "nationality": self.editor.template("{a:nationality}").data[:20],
+            "nationality": self.editor.template("{a:nationality}").data,
         }
 
         for p, vals in protected.items():
@@ -605,14 +608,14 @@ class SentimentAnalysisSuite(TaskSuite):
 
     def _default_negation_tests(self, data: Optional[Iterable[str]], num_test_cases=100):
         template = self.editor.template(
-            "{it} {air_noun} {nt} {pos_adj}.",
+            "{it} {noun} {nt} {pos_adj}.",
             it=["This", "That", "The"],
             nt=["is not", "isn't"],
             save=True,
             nsamples=num_test_cases,
         )
         template += self.editor.template(
-            "{it} {benot} {a:pos_adj} {air_noun}.",
+            "{it} {benot} {a:pos_adj} {noun}.",
             it=["It", "This", "That"],
             benot=["is not", "isn't", "was not", "wasn't"],
             save=True,
@@ -620,14 +623,14 @@ class SentimentAnalysisSuite(TaskSuite):
         )
         neg = ["I can't say I", "I don't", "I would never say I", "I don't think I", "I didn't"]
         template += self.editor.template(
-            "{neg} {pos_verb_present} {the} {air_noun}.",
+            "{neg} {pos_verb_present} {the} {noun}.",
             neg=neg,
             the=["this", "that", "the"],
             save=True,
             nsamples=num_test_cases,
         )
         template += self.editor.template(
-            "No one {pos_verb_present}s {the} {air_noun}.",
+            "No one {pos_verb_present}s {the} {noun}.",
             neg=neg,
             the=["this", "that", "the"],
             save=True,
@@ -644,10 +647,8 @@ class SentimentAnalysisSuite(TaskSuite):
 
         self.add_test(test)
 
-        air_noun_it = [x for x in self.editor.lexicons["air_noun"] if x != "pilot"]
         template = self.editor.template(
-            "I thought {it} {air_noun} would be {pos_adj}, but it {neg}.",
-            air_noun=air_noun_it,
+            "I thought {it} {noun} would be {pos_adj}, but it {neg}.",
             neg=["was not", "wasn't"],
             it=["this", "that", "the"],
             nt=["is not", "isn't"],
@@ -655,7 +656,7 @@ class SentimentAnalysisSuite(TaskSuite):
             nsamples=num_test_cases,
         )
         template += self.editor.template(
-            "I thought I would {pos_verb_present} {the} {air_noun}, but I {neg}.",
+            "I thought I would {pos_verb_present} {the} {noun}, but I {neg}.",
             neg=["did not", "didn't"],
             the=["this", "that", "the"],
             save=True,
@@ -671,7 +672,10 @@ class SentimentAnalysisSuite(TaskSuite):
         )
         self.add_test(test)
 
-    def _positive_change(self, orig_conf, conf):
+    def _positive_change(self, orig_conf: np.ndarray, conf: np.ndarray):
+        """
+        Returns the change in the confidence scores.
+        """
         return (
             orig_conf[self._negative]
             - conf[self._negative]
@@ -679,7 +683,19 @@ class SentimentAnalysisSuite(TaskSuite):
             - orig_conf[self._positive]
         )
 
-    def _diff_up(self, orig_pred, pred, orig_conf, conf, labels=None, meta=None):
+    def _diff_up(
+        self, orig_pred, pred, orig_conf, conf, labels=None, meta=None
+    ) -> Union[bool, float]:
+        """
+        These arguments are expected by `checklist.expect.Expect.pairwise` function.
+        orig_pred and orig_conf are the prediction and the confidence scores of
+        the first example in an invariance test's input data.
+
+        A `bool` output indicates whether the test passed the expectation (always
+        `True` in this function's case).
+
+        A `float` output indicates the magnitude of the failure.
+        """
         tolerance = 0.1
         change = self._positive_change(orig_conf, conf)
         if change + tolerance >= 0:
@@ -687,7 +703,19 @@ class SentimentAnalysisSuite(TaskSuite):
         else:
             return change + tolerance
 
-    def _diff_down(self, orig_pred, pred, orig_conf, conf, labels=None, meta=None):
+    def _diff_down(
+        self, orig_pred, pred, orig_conf, conf, labels=None, meta=None
+    ) -> Union[bool, float]:
+        """
+        These arguments are expected by `checklist.expect.Expect.pairwise` function.
+        orig_pred and orig_conf are the prediction and the confidence scores of
+        the first example in an invariance test's input data.
+
+        A `bool` output indicates whether the test passed the expectation (always
+        `True` in this function's case).
+
+        A `float` output indicates the magnitude of the failure.
+        """
         tolerance = 0.1
         change = self._positive_change(orig_conf, conf)
         if change - tolerance <= 0:

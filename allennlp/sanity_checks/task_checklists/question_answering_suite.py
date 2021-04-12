@@ -1,36 +1,44 @@
 from typing import Optional, Iterable, Tuple
 import itertools
 import sys
-from allennlp.sanity_checks.task_checklists.task_suite import TaskSuite
-from allennlp.sanity_checks.task_checklists import utils
+import numpy as np
+from overrides import overrides
+from checklist.editor import MunchWithAdd as CheckListTemplate
 from checklist.test_suite import TestSuite
 from checklist.test_types import MFT
 from checklist.perturb import Perturb
-import numpy as np
-from overrides import overrides
+from allennlp.sanity_checks.task_checklists.task_suite import TaskSuite
+from allennlp.sanity_checks.task_checklists import utils
 
 
-def _format_squad_with_context(x, pred, conf, label=None, *args, **kwargs):
+def _format_squad_with_context(
+    context_and_question: Tuple,
+    pred: str,
+    conf: float,
+    label: Optional[str] = None,
+    *args,
+    **kwargs,
+):
     """
     Formatting function for printing failed test examples.
     """
-    c, q = x
-    ret = "C: %s\nQ: %s\n" % (c, q)
+    context, question = context_and_question
+    ret = "Context: %s\nQuestion: %s\n" % (context, question)
     if label is not None:
-        ret += "A: %s\n" % label
-    ret += "P: %s\n" % pred
+        ret += "Original answer: %s\n" % label
+    ret += "Predicted answer: %s\n" % pred
     return ret
 
 
-def _crossproduct(template):
+def _crossproduct(template: CheckListTemplate):
     """
     Takes the output of editor.template and does the cross product of contexts and qas
     """
     ret = []
     ret_labels = []
-    for x in template.data:
-        cs = x["contexts"]
-        qas = x["qas"]
+    for instance in template.data:
+        cs = instance["contexts"]
+        qas = instance["qas"]
         d = list(itertools.product(cs, qas))
         ret.append([(x[0], x[1][0]) for x in d])
         ret_labels.append([x[1][1] for x in d])
@@ -136,7 +144,6 @@ class QuestionAnsweringSuite(TaskSuite):
             ("louder", "quieter"),
             ("warmer", "colder"),
         ]
-        comp_pairs = list(set(comp_pairs))
 
         self.editor.add_lexicon("comp_pairs", comp_pairs, overwrite=True)
 

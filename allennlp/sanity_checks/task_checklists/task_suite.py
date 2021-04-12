@@ -1,6 +1,6 @@
 import sys
 import logging
-from typing import Type, Optional, Dict, Any, Callable, List, Iterable, Union
+from typing import Type, Optional, Dict, Any, Callable, List, Iterable, Union, TextIO
 from checklist.test_suite import TestSuite
 from checklist.editor import Editor
 from checklist.test_types import MFT, INV, DIR
@@ -61,7 +61,7 @@ class TaskSuite(Registrable):
         a model's robustness to typos, etc.
     """
 
-    _capabilities = [
+    _capabilities: List[str] = [
         "Vocabulary",
         "Taxonomy",
         "Robustness",
@@ -97,9 +97,14 @@ class TaskSuite(Registrable):
 
     def describe(self):
         """
-        Gives a description of the test suite.
+        Gives a description of the test suite. This is intended as a utility for
+        examining the test suite.
         """
 
+        # The capabilities are sorted such that if the capability does not exist
+        # in the list of pre-defined `_capabilities`, then it is put at the end.
+        # `100` is selected as an arbitrary large number; we do not expect the
+        # number of capabilities to be higher.
         def cap_order(x):
             return self._capabilities.index(x) if x in self._capabilities else 100
 
@@ -126,7 +131,9 @@ class TaskSuite(Registrable):
                         about_test += " : {}".format(description)
                     print(about_test)
 
-    def summary(self, capabilities=None, file=sys.stdout, **kwargs):
+    def summary(
+        self, capabilities: Optional[List[str]] = None, file: TextIO = sys.stdout, **kwargs
+    ):
         """
         Prints a summary of the test results.
 
@@ -199,7 +206,7 @@ class TaskSuite(Registrable):
         """
         self.suite.save(suite_file)
 
-    def _default_tests(self, data: Optional[Iterable], num_test_cases=100):
+    def _default_tests(self, data: Optional[Iterable], num_test_cases: int = 100):
         """
         Derived TaskSuite classes can add any task-specific tests here.
         """
@@ -212,23 +219,69 @@ class TaskSuite(Registrable):
             self._contraction_test(data, num_test_cases)
 
     @classmethod
-    def contractions(cls):
+    def contractions(cls) -> Callable:
+        """
+        This returns a function which adds/removes contractions in relevant
+        `str` inputs of a task's inputs. For instance, "isn't" will be
+        changed to "is not", and "will not" will be changed to "won't".
+
+        Expected arguments for this function: `(example, **args, **kwargs)`
+        where the `example` is an instance of some task. It can be of any
+        type.
+
+        For example, for a sentiment analysis task, it will be a
+        a `str` (the sentence for which we want to predict the sentiment).
+        For a textual entailment task, it can be a tuple or a Dict, etc.
+
+        Expected output of this function is a list of instances for the task,
+        of the same type as `example`.
+        """
         return Perturb.contractions
 
     @classmethod
-    def typos(cls):
+    def typos(cls) -> Callable:
+        """
+        This returns a function which adds simple typos in relevant
+        `str` inputs of a task's inputs.
+
+        Expected arguments for this function: `(example, **args, **kwargs)`
+        where the `example` is an instance of some task. It can be of any
+        type.
+
+        For example, for a sentiment analysis task, it will be a
+        a `str` (the sentence for which we want to predict the sentiment).
+        For a textual entailment task, it can be a tuple or a Dict, etc.
+
+        Expected output of this function is a list of instances for the task,
+        of the same type as `example`.
+        """
         return Perturb.add_typos
 
     @classmethod
-    def punctuation(cls):
+    def punctuation(cls) -> Callable:
+        """
+        This returns a function which adds/removes punctuations in relevant
+        `str` inputs of a task's inputs. For instance, "isn't" will be
+        changed to "is not", and "will not" will be changed to "won't".
+
+        Expected arguments for this function: `(example, **args, **kwargs)`
+        where the `example` is an instance of some task. It can be of any
+        type.
+
+        For example, for a sentiment analysis task, it will be a
+        a `str` (the sentence for which we want to predict the sentiment).
+        For a textual entailment task, it can be a tuple or a Dict, etc.
+
+        Expected output of this function is a list of instances for the task,
+        of the same type as `example`.
+        """
         return utils.toggle_punctuation
 
-    def _punctuation_test(self, data, num_test_cases):
+    def _punctuation_test(self, data: Iterable, num_test_cases: int):
         """
         Checks if the model is invariant to presence/absence of punctuation.
         """
         template = Perturb.perturb(data, self.punctuation(), nsamples=num_test_cases)
-        # TODO: specify the format_test_case function here.
         test = INV(
             template.data,
             name="Punctuation",
@@ -237,7 +290,7 @@ class TaskSuite(Registrable):
         )
         self.add_test(test)
 
-    def _typo_test(self, data, num_test_cases):
+    def _typo_test(self, data: Iterable, num_test_cases: int):
         """
         Checks if the model is robust enough to be invariant to simple typos.
         """
@@ -260,10 +313,10 @@ class TaskSuite(Registrable):
         )
         self.add_test(test)
 
-    def _contraction_test(self, data, num_test_cases):
+    def _contraction_test(self, data: Iterable, num_test_cases: int):
         """
         Checks if the model is invariant to contractions and expansions
-        (eg. What is <-> What's) similarly.
+        (eg. What is <-> What's).
         """
         template = Perturb.perturb(data, self.contractions(), nsamples=num_test_cases)
         test = INV(
@@ -275,11 +328,42 @@ class TaskSuite(Registrable):
         self.add_test(test)
 
     def _setup_editor(self):
+        """
+        Sets up a `checklist.editor.Editor` object, to be used for adding
+        default tests to the suite.
+        """
         if not hasattr(self, "editor"):
             self.editor = Editor()
 
     def add_test(self, test: Union[MFT, INV, DIR]):
         """
+        Adds a fully specified checklist test to the suite.
+        The tests can be of the following types:
+
+        * MFT: A minimum functionality test. It checks if the predicted output
+               matches the expected output.
+               For example, for a sentiment analysis task, a simple MFT can check
+               if the model always predicts a positive sentiment for very
+               positive words.
+               The test's data contains the input and the expected output.
+
+        * INV: An invariance test. It checks if the predicted output is invariant
+               to some change in the input.
+               For example, for a sentiment analysis task, an INV test can check
+               if the prediction stays consistent if simple typos are added.
+               The test's data contains the pairs (input, modified input).
+
+        * DIR: A directional expectation test. It checks if the predicted output
+               changes in some specific way in response to the change in input.
+               For example, for a sentiment analysis task, a DIR test can check if
+               adding a reducer (eg. "good" -> "somewhat good") causes the
+               prediction's positive confidence score to decrease (or at least not
+               increase).
+               The test's data contains the pairs (input, modified input).
+
+        Please refer to [the paper](https://api.semanticscholar.org/CorpusID:218551201)
+        for more details and examples.
+
         Note: `test` needs to be fully specified; with name, capability and description.
         """
         if test.data:  # test data should contain at least one example.

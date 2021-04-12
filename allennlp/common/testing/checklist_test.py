@@ -1,6 +1,6 @@
 from typing import Optional
 from checklist.test_suite import TestSuite
-from checklist.test_types import MFT
+from checklist.test_types import MFT as MinimumFunctionalityTest
 from allennlp.sanity_checks.task_checklists.task_suite import TaskSuite
 
 
@@ -22,7 +22,8 @@ class FakeTaskSuite(TaskSuite):
         if not suite:
             suite = TestSuite()
 
-        test = MFT(
+        # Adding a simple checklist test.
+        test = MinimumFunctionalityTest(
             ["sentence 1", "sentence 2"],
             labels=0,
             name="fake test 1",
