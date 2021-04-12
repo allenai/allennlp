@@ -44,6 +44,8 @@ class WandBCallback(LogWriterCallback):
         Whether or not W&B should watch the `Model`.
     files_to_save : `Tuple[str, ...]`, optional (default = `("config.json", "out.log")`)
         Extra files in the serialization directory to save to the W&B training run.
+    wandb_kwargs : Optional[Dict[str, Any]], optional (defualt = `None`)
+        Additional key word arguments to pass to [`wandb.init()`](https://docs.wandb.ai/ref/python/init).
     """
 
     def __init__(
@@ -62,6 +64,7 @@ class WandBCallback(LogWriterCallback):
         tags: Optional[List[str]] = None,
         watch_model: bool = True,
         files_to_save: Tuple[str, ...] = ("config.json", "out.log"),
+        wandb_kwargs: Optional[Dict[str, An]] = None,
     ) -> None:
         if "WANDB_API_KEY" not in os.environ:
             raise ValueError("Missing environment variable 'WANDB_API_KEY'")
@@ -90,6 +93,7 @@ class WandBCallback(LogWriterCallback):
             notes=notes,
             config=Params.from_file(os.path.join(serialization_dir, "config.json")).as_dict(),
             tags=tags,
+            **(wandb_kwargs or {}),
         )
 
         for fpath in self._files_to_save:
