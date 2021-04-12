@@ -858,8 +858,8 @@ class DemographicParityWithoutGroundTruth(Metric):
         self._total_predictions = torch.tensor(0)
 
     def _ova_gap(self, x: int):
+        device = self._y_counts.device
         pmi_terms = self._all_pmi_terms()
-
         pmi_not_x = 0.0
         for not_x in range(self._num_protected_variable_labels):
             if not_x == x:
@@ -871,14 +871,17 @@ class DemographicParityWithoutGroundTruth(Metric):
         # Will contain NaN if not all possible (class label,
         # protected variable label) pairs are predicted
         gap = pmi_terms[x] - pmi_not_x
-        return torch.where(~gap.isinf(), gap, torch.tensor(float("nan")))
+        return torch.where(~gap.isinf(), gap, torch.tensor(float("nan")).to(device))
 
     def _pairwise_gaps(self, x: int):
+        device = self._y_counts.device
         pmi_terms = self._all_pmi_terms()
         pairwise_gaps = {}
         for not_x in range(self._num_protected_variable_labels):
             gap = pmi_terms[x] - pmi_terms[not_x]
-            pairwise_gaps[not_x] = torch.where(~gap.isinf(), gap, torch.tensor(float("nan")))
+            pairwise_gaps[not_x] = torch.where(
+                ~gap.isinf(), gap, torch.tensor(float("nan")).to(device)
+            )
         return pairwise_gaps
 
     def _all_pmi_terms(self) -> Dict[int, torch.Tensor]:
