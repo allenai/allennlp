@@ -107,11 +107,13 @@ class Independence(Metric):
                 )
             )
 
-        self._predicted_label_counts = self._predicted_label_counts.to(predicted_labels.device)
+        device = predicted_labels.device
+        self._predicted_label_counts = self._predicted_label_counts.to(device)
         self._predicted_label_counts_by_protected_variable_label = {
-            k: v.to(predicted_labels.device)
+            k: v.to(device)
             for k, v in self._predicted_label_counts_by_protected_variable_label.items()
         }
+        self._total_predictions = self._total_predictions.to(device)
 
         if mask is not None:
             predicted_labels = predicted_labels[mask]
@@ -123,7 +125,7 @@ class Independence(Metric):
         _predicted_label_counts = predicted_labels.float().histc(
             bins=self._num_classes, min=0, max=self._num_classes - 1
         )
-        _total_predictions = torch.tensor(predicted_labels.nelement())
+        _total_predictions = torch.tensor(predicted_labels.nelement()).to(device)
 
         _predicted_label_counts_by_protected_variable_label = {}
         for a in range(self._num_protected_variable_labels):
@@ -134,8 +136,6 @@ class Independence(Metric):
             )
 
         if is_distributed():
-            device = torch.device("cuda" if dist.get_backend() == "nccl" else "cpu")
-
             _predicted_label_counts = _predicted_label_counts.to(device)
             dist.all_reduce(_predicted_label_counts, op=dist.ReduceOp.SUM)
 
@@ -282,19 +282,20 @@ class Separation(Metric):
                 )
             )
 
+        device = predicted_labels.device
         self._predicted_label_counts_by_gold_label = {
-            k: v.to(predicted_labels.device)
-            for k, v in self._predicted_label_counts_by_gold_label.items()
+            k: v.to(device) for k, v in self._predicted_label_counts_by_gold_label.items()
         }
         self._predicted_label_counts_by_gold_label_and_protected_variable_label = {
             k1: {
-                k2: v2.to(predicted_labels.device)
+                k2: v2.to(device)
                 for k2, v2 in self._predicted_label_counts_by_gold_label_and_protected_variable_label[
                     k1
                 ].items()
             }
             for k1, v1 in self._predicted_label_counts_by_gold_label_and_protected_variable_label.items()
         }
+        self._total_predictions = self._total_predictions.to(device)
 
         if mask is not None:
             predicted_labels = predicted_labels[mask]
@@ -305,7 +306,7 @@ class Separation(Metric):
             gold_labels = gold_labels.flatten()
             protected_variable_labels = protected_variable_labels.flatten()
 
-        _total_predictions = torch.tensor(predicted_labels.nelement())
+        _total_predictions = torch.tensor(predicted_labels.nelement()).to(device)
         _predicted_label_counts_by_gold_label = {}
         _predicted_label_counts_by_gold_label_and_protected_variable_label: Dict[
             int, Dict[int, torch.FloatTensor]
@@ -325,8 +326,6 @@ class Separation(Metric):
                 )
 
         if is_distributed():
-            device = torch.device("cuda" if dist.get_backend() == "nccl" else "cpu")
-
             _total_predictions = _total_predictions.to(device)
             dist.all_reduce(_total_predictions, op=dist.ReduceOp.SUM)
 
@@ -505,19 +504,20 @@ class Sufficiency(Metric):
                 )
             )
 
+        device = predicted_labels.device
         self._gold_label_counts_by_predicted_label = {
-            k: v.to(predicted_labels.device)
-            for k, v in self._gold_label_counts_by_predicted_label.items()
+            k: v.to(device) for k, v in self._gold_label_counts_by_predicted_label.items()
         }
         self._gold_label_counts_by_predicted_label_and_protected_variable_label = {
             k1: {
-                k2: v2.to(predicted_labels.device)
+                k2: v2.to(device)
                 for k2, v2 in self._gold_label_counts_by_predicted_label_and_protected_variable_label[
                     k1
                 ].items()
             }
             for k1, v1 in self._gold_label_counts_by_predicted_label_and_protected_variable_label.items()
         }
+        self._total_predictions = self._total_predictions.to(device)
 
         if mask is not None:
             predicted_labels = predicted_labels[mask]
@@ -528,7 +528,7 @@ class Sufficiency(Metric):
             gold_labels = gold_labels.flatten()
             protected_variable_labels = protected_variable_labels.flatten()
 
-        _total_predictions = torch.tensor(predicted_labels.nelement())
+        _total_predictions = torch.tensor(predicted_labels.nelement()).to(device)
         _gold_label_counts_by_predicted_label = {}
         _gold_label_counts_by_predicted_label_and_protected_variable_label: Dict[
             int, Dict[int, torch.FloatTensor]
@@ -548,8 +548,6 @@ class Sufficiency(Metric):
                 )
 
         if is_distributed():
-            device = torch.device("cuda" if dist.get_backend() == "nccl" else "cpu")
-
             _total_predictions = _total_predictions.to(device)
             dist.all_reduce(_total_predictions, op=dist.ReduceOp.SUM)
 
@@ -755,15 +753,15 @@ class DemographicParityWithoutGroundTruth(Metric):
                 )
             )
 
+        device = predicted_labels.device
         self._joint_counts_by_protected_variable_label = {
-            k: v.to(predicted_labels.device)
-            for k, v in self._joint_counts_by_protected_variable_label.items()
+            k: v.to(device) for k, v in self._joint_counts_by_protected_variable_label.items()
         }
         self._protected_variable_label_counts = {
-            k: v.to(predicted_labels.device)
-            for k, v in self._protected_variable_label_counts.items()
+            k: v.to(device) for k, v in self._protected_variable_label_counts.items()
         }
-        self._y_counts = self._y_counts.to(predicted_labels.device)
+        self._y_counts = self._y_counts.to(device)
+        self._total_predictions = self._total_predictions.to(device)
 
         if mask is not None:
             predicted_labels = predicted_labels[mask]
@@ -772,8 +770,8 @@ class DemographicParityWithoutGroundTruth(Metric):
             predicted_labels = predicted_labels.flatten()
             protected_variable_labels = protected_variable_labels.flatten()
 
-        _total_predictions = torch.tensor(predicted_labels.nelement()).to(predicted_labels.device)
-        _y_counts = torch.zeros(self._num_classes).to(predicted_labels.device)
+        _total_predictions = torch.tensor(predicted_labels.nelement()).to(device)
+        _y_counts = torch.zeros(self._num_classes).to(device)
         _y_counts = torch.zeros_like(_y_counts, dtype=predicted_labels.dtype).scatter_add_(
             0, predicted_labels, torch.ones_like(predicted_labels)
         )
@@ -795,8 +793,6 @@ class DemographicParityWithoutGroundTruth(Metric):
             )
 
         if is_distributed():
-            device = torch.device("cuda" if dist.get_backend() == "nccl" else "cpu")
-
             _total_predictions = _total_predictions.to(device)
             dist.all_reduce(_total_predictions, op=dist.ReduceOp.SUM)
 
@@ -892,13 +888,12 @@ class DemographicParityWithoutGroundTruth(Metric):
                 for x in range(self._num_protected_variable_labels)
             }
 
+        device = self._y_counts.device
         pmi_terms = {}
-        prob_y = torch.zeros(self._num_classes).to(self._y_counts.device)
+        prob_y = torch.zeros(self._num_classes).to(device)
         torch.div(self._y_counts, self._total_predictions, out=prob_y)
         for x in range(self._num_protected_variable_labels):
-            joint = torch.zeros(self._num_classes).to(
-                self._joint_counts_by_protected_variable_label[x].device
-            )
+            joint = torch.zeros(self._num_classes).to(device)
             torch.div(
                 self._joint_counts_by_protected_variable_label[x],
                 self._total_predictions,
