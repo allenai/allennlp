@@ -44,7 +44,7 @@ class WandBCallback(LogWriterCallback):
         Whether or not W&B should watch the `Model`.
     files_to_save : `Tuple[str, ...]`, optional (default = `("config.json", "out.log")`)
         Extra files in the serialization directory to save to the W&B training run.
-    wandb_kwargs : Optional[Dict[str, Any]], optional (defualt = `None`)
+    wandb_kwargs : `Optional[Dict[str, Any]]`, optional (default = `None`)
         Additional key word arguments to pass to [`wandb.init()`](https://docs.wandb.ai/ref/python/init).
     """
 
