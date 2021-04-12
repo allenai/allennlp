@@ -140,9 +140,8 @@ class SeparationTest(AllenNlpTestCase):
         C = torch.eye(3).long()
         Y = C
         A = C
-        mask = torch.ones_like(C)
+        mask = torch.ones_like(C).bool()
 
-        # KL divergence cannot be negative
         expected_kl_divs = {
             0: {0: 0.0, 1: np.nan},
             1: {0: np.nan, 1: 0.0},
@@ -233,12 +232,9 @@ class SufficiencyTest(AllenNlpTestCase):
         C = torch.zeros(3, 3).long()
         Y = torch.eye(3).long()
         A = Y
-        mask = torch.ones_like(C)
+        mask = torch.ones_like(C).bool()
 
-        expected_kl_divs = {
-            0: {0: 0.0, 1: np.nan},
-            1: {0: np.nan, 1: 0.0},
-        }
+        expected_kl_divs = {0: {0: 0.4055, 1: 1.0986}, 1: {0: np.nan, 1: np.nan}}
         metric_kwargs = {
             "predicted_labels": C,
             "gold_labels": Y,
@@ -251,30 +247,31 @@ class SufficiencyTest(AllenNlpTestCase):
             Sufficiency(2, 2),
             metric_kwargs,
             expected_kl_divs,
-            exact=True,
+            exact=False,
         )
 
 
 class DemographicParityWithoutGroundTruthTest(AllenNlpTestCase):
     def test_invalid_dimensions(self):
-        ova_npmixy = DemographicParityWithoutGroundTruth()
+        ova_npmixy = DemographicParityWithoutGroundTruth(2, 2)
         Y = torch.eye(3).long()
         X = torch.eye(4).long()
         with pytest.raises(ConfigurationError):
             ova_npmixy(Y, X)
 
     def test_invalid_num_classes(self):
-        ova_npmixy = DemographicParityWithoutGroundTruth()
+        ova_npmixy = DemographicParityWithoutGroundTruth(1, 1)
         Y = torch.eye(3).long()
         X = torch.eye(3).long()
         with pytest.raises(ConfigurationError):
-            ova_npmixy(Y, X, 1)
+            ova_npmixy(Y, X)
 
-    def test_pmi(self):
-        ova_pmi = DemographicParityWithoutGroundTruth("pmi", "ova")
-        pairwise_pmi = DemographicParityWithoutGroundTruth("pmi", "pairwise")
-        Y = torch.ones(3, 3).long()
-        X = torch.eye(3).long()
+    @multi_device
+    def test_pmi_unmasked_computation(self, device: str):
+        ova_pmi = DemographicParityWithoutGroundTruth(2, 2, "pmi", "ova")
+        pairwise_pmi = DemographicParityWithoutGroundTruth(2, 2, "pmi", "pairwise")
+        Y = torch.ones(3, 3, device=device).long()
+        X = torch.eye(3, device=device).long()
 
         # P(X = 0, Y = 0) = 0
         # P(X = 0, Y = 1) = 2/3
@@ -292,38 +289,80 @@ class DemographicParityWithoutGroundTruthTest(AllenNlpTestCase):
             0: [np.nan, 0.0],
             1: [np.nan, 0.0],
         }
+
+        ova_pmi(Y, X)
         test_ova_pmi_gaps = {
             k: [(e if not math.isnan(e) else np.nan) for e in v.tolist()]
-            for k, v in ova_pmi(Y, X).items()
+            for k, v in ova_pmi.get_metric().items()
         }
         assert expected_ova_pmi_gaps == test_ova_pmi_gaps
+
+        ova_pmi(Y, X)
+        test_ova_pmi_gaps = {
+            k: [(e if not math.isnan(e) else np.nan) for e in v.tolist()]
+            for k, v in ova_pmi.get_metric(reset=True).items()
+        }
+        assert expected_ova_pmi_gaps == test_ova_pmi_gaps
+
+        test_ova_pmi_gaps = {
+            k: [(e if not math.isnan(e) else np.nan) for e in v.tolist()]
+            for k, v in ova_pmi.get_metric(reset=True).items()
+        }
+        assert test_ova_pmi_gaps == {0: [np.nan, np.nan], 1: [np.nan, np.nan]}
 
         expected_pairwise_pmi_gaps = {
             0: {0: [np.nan, 0.0], 1: [np.nan, 0.0]},
             1: {0: [np.nan, 0.0], 1: [np.nan, 0.0]},
         }
+
+        pairwise_pmi(Y, X)
         test_pairwise_pmi_gaps = {
             k1: {
                 k2: [(e if not math.isnan(e) else np.nan) for e in v2.tolist()]
                 for k2, v2 in v1.items()
             }
-            for k1, v1 in pairwise_pmi(Y, X).items()
+            for k1, v1 in pairwise_pmi.get_metric().items()
         }
         assert expected_pairwise_pmi_gaps == test_pairwise_pmi_gaps
 
-    def test_pmisq(self):
-        ova_pmisq = DemographicParityWithoutGroundTruth("pmisq", "ova")
-        pairwise_pmisq = DemographicParityWithoutGroundTruth("pmisq", "pairwise")
-        Y = torch.ones(3, 3).long()
-        X = torch.eye(3).long()
+        pairwise_pmi(Y, X)
+        test_pairwise_pmi_gaps = {
+            k1: {
+                k2: [(e if not math.isnan(e) else np.nan) for e in v2.tolist()]
+                for k2, v2 in v1.items()
+            }
+            for k1, v1 in pairwise_pmi.get_metric(reset=True).items()
+        }
+        assert expected_pairwise_pmi_gaps == test_pairwise_pmi_gaps
+
+        test_pairwise_pmi_gaps = {
+            k1: {
+                k2: [(e if not math.isnan(e) else np.nan) for e in v2.tolist()]
+                for k2, v2 in v1.items()
+            }
+            for k1, v1 in pairwise_pmi.get_metric(reset=True).items()
+        }
+        assert test_pairwise_pmi_gaps == {
+            0: {0: [np.nan, np.nan], 1: [np.nan, np.nan]},
+            1: {0: [np.nan, np.nan], 1: [np.nan, np.nan]},
+        }
+
+    @multi_device
+    def test_pmisq_masked_computation(self, device: str):
+        ova_pmisq = DemographicParityWithoutGroundTruth(2, 2, "pmisq", "ova")
+        pairwise_pmisq = DemographicParityWithoutGroundTruth(2, 2, "pmisq", "pairwise")
+        Y = torch.ones(3, 3, device=device).long()
+        X = torch.eye(3, device=device).long()
+        mask = torch.ones_like(Y).bool()
 
         expected_ova_pmisq_gaps = {
             0: [np.nan, round(math.log(2), 3)],
             1: [np.nan, round(math.log(0.5), 3)],
         }
+        ova_pmisq(Y, X, mask)
         test_ova_pmisq_gaps = {
             k: [(round(e, 3) if not math.isnan(e) else np.nan) for e in v.tolist()]
-            for k, v in ova_pmisq(Y, X).items()
+            for k, v in ova_pmisq.get_metric().items()
         }
         assert expected_ova_pmisq_gaps == test_ova_pmisq_gaps
 
@@ -331,18 +370,17 @@ class DemographicParityWithoutGroundTruthTest(AllenNlpTestCase):
             0: {0: [np.nan, 0.0], 1: [np.nan, round(math.log(2), 3)]},
             1: {0: [np.nan, round(math.log(0.5), 3)], 1: [np.nan, 0.0]},
         }
+        pairwise_pmisq(Y, X, mask)
         test_pairwise_pmisq_gaps = {
             k1: {
                 k2: [(round(e, 3) if not math.isnan(e) else np.nan) for e in v2.tolist()]
                 for k2, v2 in v1.items()
             }
-            for k1, v1 in pairwise_pmisq(Y, X).items()
+            for k1, v1 in pairwise_pmisq.get_metric().items()
         }
         assert expected_pairwise_pmisq_gaps == test_pairwise_pmisq_gaps
 
-    def test_npmiy(self):
-        ova_npmiy = DemographicParityWithoutGroundTruth("npmiy", "ova")
-        pairwise_npmiy = DemographicParityWithoutGroundTruth("npmiy", "pairwise")
+    def test_distributed_npmiy_unmasked_computation(self):
         Y = torch.ones(3, 3).long()
         X = torch.eye(3).long()
 
@@ -350,50 +388,58 @@ class DemographicParityWithoutGroundTruthTest(AllenNlpTestCase):
             0: [np.nan, np.nan],
             1: [np.nan, np.nan],
         }
-        test_ova_npmiy_gaps = {
-            k: [(e if not math.isnan(e) else np.nan) for e in v.tolist()]
-            for k, v in ova_npmiy(Y, X).items()
-        }
-        assert expected_ova_npmiy_gaps == test_ova_npmiy_gaps
+        metric_kwargs = {"predicted_labels": Y, "protected_variable_labels": X}
+        run_distributed_test(
+            [-1, -1],
+            global_distributed_metric,
+            DemographicParityWithoutGroundTruth(2, 2, "npmiy", "ova"),
+            metric_kwargs,
+            expected_ova_npmiy_gaps,
+            exact=True,
+        )
 
         expected_pairwise_npmiy_gaps = {
             0: {0: [np.nan, np.nan], 1: [np.nan, np.nan]},
             1: {0: [np.nan, np.nan], 1: [np.nan, np.nan]},
         }
-        test_pairwise_npmiy_gaps = {
-            k1: {
-                k2: [(e if not math.isnan(e) else np.nan) for e in v2.tolist()]
-                for k2, v2 in v1.items()
-            }
-            for k1, v1 in pairwise_npmiy(Y, X).items()
-        }
-        assert expected_pairwise_npmiy_gaps == test_pairwise_npmiy_gaps
+        run_distributed_test(
+            [-1, -1],
+            global_distributed_metric,
+            DemographicParityWithoutGroundTruth(2, 2, "npmiy", "pairwise"),
+            metric_kwargs,
+            expected_pairwise_npmiy_gaps,
+            exact=True,
+        )
 
-    def test_npmixy(self):
-        ova_npmixy = DemographicParityWithoutGroundTruth("npmixy", "ova")
-        pairwise_npmixy = DemographicParityWithoutGroundTruth("npmixy", "pairwise")
+    def test_distributed_npmixy_masked_computation(self):
         Y = torch.ones(3, 3).long()
         X = torch.eye(3).long()
+        mask = torch.ones_like(Y).bool()
 
         expected_ova_npmixy_gaps = {
             0: [np.nan, 0.0],
             1: [np.nan, 0.0],
         }
-        test_ova_npmixy_gaps = {
-            k: [(e if not math.isnan(e) else np.nan) for e in v.tolist()]
-            for k, v in ova_npmixy(Y, X).items()
-        }
-        assert expected_ova_npmixy_gaps == test_ova_npmixy_gaps
+        metric_kwargs = {"predicted_labels": Y, "protected_variable_labels": X, "mask": mask}
+        run_distributed_test(
+            [-1, -1],
+            global_distributed_metric,
+            DemographicParityWithoutGroundTruth(2, 2, "npmixy", "ova"),
+            metric_kwargs,
+            expected_ova_npmixy_gaps,
+            exact=True,
+        )
 
         expected_pairwise_npmixy_gaps = {
             0: {0: [np.nan, 0.0], 1: [np.nan, 0.0]},
             1: {0: [np.nan, 0.0], 1: [np.nan, 0.0]},
         }
-        test_pairwise_npmixy_gaps = {
-            k1: {
-                k2: [(e if not math.isnan(e) else np.nan) for e in v2.tolist()]
-                for k2, v2 in v1.items()
-            }
-            for k1, v1 in pairwise_npmixy(Y, X).items()
-        }
-        assert expected_pairwise_npmixy_gaps == test_pairwise_npmixy_gaps
+        metric_kwargs = {"predicted_labels": Y, "protected_variable_labels": X, "mask": mask}
+        run_distributed_test(
+            [-1, -1],
+            global_distributed_metric,
+            DemographicParityWithoutGroundTruth(2, 2, "npmixy", "pairwise"),
+            metric_kwargs,
+            expected_pairwise_npmixy_gaps,
+            exact=True,
+        )

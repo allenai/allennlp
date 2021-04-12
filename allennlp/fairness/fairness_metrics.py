@@ -617,10 +617,20 @@ class DemographicParityWithoutGroundTruth(Metric):
     Measuring model biases in the absence of ground truth. arXiv preprint arXiv:2103.03417.
     """
 
-    def __init__(self, association_metric: str = "npmixy", gap_type: str = "ova") -> None:
+    def __init__(
+        self,
+        num_classes: int,
+        num_protected_variable_labels: int,
+        association_metric: str = "npmixy",
+        gap_type: str = "ova",
+    ) -> None:
         """
         # Parameters
 
+         num_classes : `int`.
+            Number of classes.
+        num_protected_variable_labels : `int`.
+            Number of protected variable labels.
         association_metric : `str`, optional (default = `npmixy`).
             A generic association metric A(x, y), where x is an identity label and y is any other label.
             Examples include: nPMIxy (`npmixy`), nPMIy (`npmiy`), PMI^2 (`pmisq`), PMI (`pmi`)
@@ -632,6 +642,17 @@ class DemographicParityWithoutGroundTruth(Metric):
             Pairwise gaps are A(x, y) - A(x', y), for all x' in the set of all protected variable labels
             setminus {x}.
         """
+        self._num_classes = num_classes
+        self._num_protected_variable_labels = num_protected_variable_labels
+        self._joint_counts_by_protected_variable_label = {
+            x: torch.zeros(num_classes) for x in range(num_protected_variable_labels)
+        }
+        self._protected_variable_label_counts = {
+            x: torch.tensor(0) for x in range(num_protected_variable_labels)
+        }
+        self._y_counts = torch.zeros(num_classes)
+        self._total_predictions = torch.tensor(0)
+
         self.IMPLEMENTED_ASSOCIATION_METRICS = set(["npmixy", "npmiy", "pmisq", "pmi"])
         if association_metric in self.IMPLEMENTED_ASSOCIATION_METRICS:
             self.association_metric = association_metric
@@ -651,8 +672,8 @@ class DemographicParityWithoutGroundTruth(Metric):
         self,
         predicted_labels: torch.Tensor,
         protected_variable_labels: torch.Tensor,
-        num_classes: Optional[int] = None,
-    ) -> Dict[int, Union[torch.FloatTensor, Dict[int, torch.FloatTensor]]]:
+        mask: Optional[torch.BoolTensor] = None,
+    ) -> None:
         """
         # Parameters
 
@@ -661,26 +682,11 @@ class DemographicParityWithoutGroundTruth(Metric):
         protected_variable_labels : `torch.Tensor`, required.
             A tensor of integer protected variable labels of shape (batch_size, ...). It must be the same
             shape as the `predicted_labels` tensor. Represented as X.
-        num_classes : `int`, optional (default = `None`).
-            Number of classes. If not supplied, `num_classes` is inferred from `predicted_labels`.
-
-        # Returns
-
-        gaps : `Dict[int, Union[torch.FloatTensor, Dict[int, torch.FloatTensor]]]`
-            A dictionary mapping each protected variable label x to either:
-            1) a tensor of the one-vs-all gaps (where the gap corresponding to prediction
-            label i is at index i),
-            2) another dictionary mapping protected variable labels x' to a tensor
-            of the pairwise gaps (where the gap corresponding to prediction label i is at index i).
-
-            Note: If a possible class label is not present in Y, the expected behavior is that
-            the gaps corresponding to this class label are NaN. If a possible (class label,
-            protected variable label) pair is not present in the joint of Y and X, the expected
-            behavior is that the gap corresponding to this (class label, protected variable label)
-            pair is NaN.
+        mask : `torch.BoolTensor`, optional (default = `None`).
+            A tensor of the same shape as `predicted_labels`.
         """
-        predicted_labels, protected_variable_labels = self.detach_tensors(
-            predicted_labels, protected_variable_labels
+        predicted_labels, protected_variable_labels, mask = self.detach_tensors(
+            predicted_labels, protected_variable_labels, mask
         )
 
         # Some sanity checks.
@@ -689,111 +695,169 @@ class DemographicParityWithoutGroundTruth(Metric):
                 "protected_variable_labels must be of same size as predicted_labels but "
                 "found tensor of shape: {}".format(protected_variable_labels.size())
             )
-        if num_classes is not None and (predicted_labels >= num_classes).any():
+        if mask is not None and predicted_labels.size() != mask.size():
             raise ConfigurationError(
-                "A predicted label contains an id >= {}, "
-                "the number of classes.".format(num_classes)
+                "mask must be of same size as predicted_labels but "
+                "found tensor of shape: {}".format(mask.size())
+            )
+        if (predicted_labels >= self._num_classes).any():
+            raise ConfigurationError(
+                "predicted_labels contains an id >= {}, "
+                "the number of classes.".format(self._num_classes)
+            )
+        if (protected_variable_labels >= self._num_protected_variable_labels).any():
+            raise ConfigurationError(
+                "protected_variable_labels contains an id >= {}, "
+                "the number of protected variable labels.".format(
+                    self._num_protected_variable_labels
+                )
             )
 
-        if num_classes is None:
-            num_classes = predicted_labels.max() + 1
-        num_protected_variables = protected_variable_labels.max() + 1
+        if mask is not None:
+            predicted_labels = predicted_labels[mask]
+            protected_variable_labels = protected_variable_labels[mask]
+        else:
+            predicted_labels = predicted_labels.flatten()
+            protected_variable_labels = protected_variable_labels.flatten()
+
+        _total_predictions = torch.tensor(predicted_labels.nelement())
+        _y_counts = torch.zeros(self._num_classes)
+        _y_counts = torch.zeros_like(_y_counts, dtype=predicted_labels.dtype).scatter_add_(
+            0, predicted_labels, torch.ones_like(predicted_labels)
+        )
+
+        _joint_counts_by_protected_variable_label = {}
+        _protected_variable_label_counts = {}
+        for x in range(self._num_protected_variable_labels):
+            x_mask = (protected_variable_labels == x).long()
+
+            _joint_counts_by_protected_variable_label[x] = torch.zeros(self._num_classes)
+            _joint_counts_by_protected_variable_label[x] = torch.zeros_like(
+                _joint_counts_by_protected_variable_label[x], dtype=x_mask.dtype
+            ).scatter_add_(0, predicted_labels, x_mask)
+
+            _protected_variable_label_counts[x] = torch.tensor(x_mask.sum())
+
+        if is_distributed():
+            device = torch.device("cuda" if dist.get_backend() == "nccl" else "cpu")
+
+            _total_predictions = _total_predictions.to(device)
+            dist.all_reduce(_total_predictions, op=dist.ReduceOp.SUM)
+
+            _y_counts = _y_counts.to(device)
+            dist.all_reduce(_y_counts, op=dist.ReduceOp.SUM)
+
+            for x in range(self._num_protected_variable_labels):
+                _joint_counts_by_protected_variable_label[
+                    x
+                ] = _joint_counts_by_protected_variable_label[x].to(device)
+                dist.all_reduce(_joint_counts_by_protected_variable_label[x], op=dist.ReduceOp.SUM)
+
+                _protected_variable_label_counts[x] = _protected_variable_label_counts[x].to(device)
+                dist.all_reduce(_protected_variable_label_counts[x], op=dist.ReduceOp.SUM)
+
+        self._total_predictions += _total_predictions
+        self._y_counts += _y_counts
+        for x in range(self._num_protected_variable_labels):
+            self._joint_counts_by_protected_variable_label[
+                x
+            ] += _joint_counts_by_protected_variable_label[x]
+            self._protected_variable_label_counts[x] += _protected_variable_label_counts[x]
+
+    @overrides
+    def get_metric(
+        self, reset: bool = False
+    ) -> Dict[int, Union[torch.FloatTensor, Dict[int, torch.FloatTensor]]]:
+        """
+        # Returns
+
+        gaps : `Dict[int, Union[torch.FloatTensor, Dict[int, torch.FloatTensor]]]`
+            A dictionary mapping each protected variable label x to either:
+            1) a tensor of the one-vs-all gaps (where the gap corresponding to prediction
+            label i is at index i),
+            2) another dictionary mapping protected variable labels x' to a tensor
+            of the pairwise gaps (where the gap corresponding to prediction label i is at index i).
+            A gap of nearly 0 implies fairness on the basis of Demographic Parity in the Absence of Ground Truth.
+
+            Note: If a possible class label is not present in Y, the expected behavior is that
+            the gaps corresponding to this class label are NaN. If a possible (class label,
+            protected variable label) pair is not present in the joint of Y and X, the expected
+            behavior is that the gap corresponding to this (class label, protected variable label)
+            pair is NaN.
+        """
         gaps = {}
-        # Assumes num_protected_variables is small
-        for x in range(num_protected_variables):
-            gaps[x] = self.gap_func(
-                x,
-                protected_variable_labels.flatten(),
-                predicted_labels.flatten(),
-                num_classes,
-                num_protected_variables,
-            )
+        for x in range(self._num_protected_variable_labels):
+            gaps[x] = self.gap_func(x)
+        if reset:
+            self.reset()
         return gaps
 
-    def _ova_gap(
-        self,
-        x: torch.Tensor,
-        X: torch.Tensor,
-        Y: torch.Tensor,
-        num_classes,
-        num_protected_variables: int,
-    ):
-        x_mask = X == x
-        joint = torch.zeros(num_classes)
-        self._joint(x_mask.long(), Y, out=joint)
-        if self.association_metric == "pmisq":
-            torch.square_(joint)
-        prob_y = torch.zeros(num_classes)
-        self._prob_y(Y, out=prob_y)
-        pmi_x = torch.log(torch.div(joint, self._prob_x(x_mask) * prob_y))
-        if self.association_metric == "npmixy":
-            pmi_x.div_(torch.log(joint))
-        elif self.association_metric == "npmiy":
-            pmi_x.div_(torch.log(prob_y))
+    @overrides
+    def reset(self) -> None:
+        self._joint_counts_by_protected_variable_label = {
+            x: torch.zeros(self._num_classes) for x in range(self._num_protected_variable_labels)
+        }
+        self._protected_variable_label_counts = {
+            x: torch.tensor(0) for x in range(self._num_protected_variable_labels)
+        }
+        self._y_counts = torch.zeros(self._num_classes)
+        self._total_predictions = torch.tensor(0)
 
-        joint = torch.zeros(num_classes)
-        self._joint((~x_mask).long(), Y, out=joint)
-        if self.association_metric == "pmisq":
-            torch.square_(joint)
-        pmi_not_x = torch.log(torch.div(joint, self._prob_x(~x_mask) * prob_y)) / (
-            num_protected_variables - 1
-        )
-        if self.association_metric == "npmixy":
-            pmi_not_x.div_(torch.log(joint))
-        elif self.association_metric == "npmiy":
-            pmi_not_x.div_(torch.log(prob_y))
+    def _ova_gap(self, x: int):
+        pmi_terms = self._all_pmi_terms()
+
+        pmi_not_x = 0.0
+        for not_x in range(self._num_protected_variable_labels):
+            if not_x == x:
+                continue
+            pmi_not_x += pmi_terms[not_x]
+        pmi_not_x /= self._num_protected_variable_labels - 1
 
         # Will contain NaN if not all possible class labels are predicted
         # Will contain NaN if not all possible (class label,
         # protected variable label) pairs are predicted
-        gap = pmi_x - pmi_not_x
+        gap = pmi_terms[x] - pmi_not_x
         return torch.where(~gap.isinf(), gap, torch.tensor(float("nan")))
 
-    def _pairwise_gaps(
-        self,
-        x: torch.Tensor,
-        X: torch.Tensor,
-        Y: torch.Tensor,
-        num_classes,
-        num_protected_variables: int,
-    ):
-        x_mask = X == x
-        joint = torch.zeros(num_classes)
-        self._joint(x_mask.long(), Y, out=joint)
-        if self.association_metric == "pmisq":
-            torch.square_(joint)
-        prob_y = torch.zeros(num_classes)
-        self._prob_y(Y, out=prob_y)
-        pmi_x = torch.log(torch.div(joint, self._prob_x(x_mask) * prob_y))
-        if self.association_metric == "npmixy":
-            pmi_x.div_(torch.log(joint))
-        elif self.association_metric == "npmiy":
-            pmi_x.div_(torch.log(prob_y))
-
+    def _pairwise_gaps(self, x: int):
+        pmi_terms = self._all_pmi_terms()
         pairwise_gaps = {}
-        for not_x in range(num_protected_variables):
-            not_x_mask = X == not_x
-            joint = torch.zeros(num_classes)
-            self._joint(not_x_mask.long(), Y, out=joint)
-            if self.association_metric == "pmisq":
-                torch.square_(joint)
-            pmi_not_x = torch.log(torch.div(joint, self._prob_x(not_x_mask) * prob_y))
-            if self.association_metric == "npmixy":
-                pmi_not_x.div_(torch.log(joint))
-            elif self.association_metric == "npmiy":
-                pmi_not_x.div_(torch.log(prob_y))
-
-            gap = pmi_x - pmi_not_x
+        for not_x in range(self._num_protected_variable_labels):
+            gap = pmi_terms[x] - pmi_terms[not_x]
             pairwise_gaps[not_x] = torch.where(~gap.isinf(), gap, torch.tensor(float("nan")))
         return pairwise_gaps
 
-    def _joint(self, x_mask: torch.Tensor, Y: torch.Tensor, out: torch.Tensor):
-        counts = torch.zeros_like(out, dtype=x_mask.dtype).scatter_add_(0, Y, x_mask)
-        torch.div(counts, Y.nelement(), out=out)
+    def _all_pmi_terms(self) -> Dict[int, torch.Tensor]:
+        if self._total_predictions == 0:
+            return {
+                x: torch.full((self._num_classes,), float("nan"))
+                for x in range(self._num_protected_variable_labels)
+            }
 
-    def _prob_x(self, x_mask: torch.Tensor):
-        return x_mask.sum() / x_mask.nelement()
+        pmi_terms = {}
+        prob_y = torch.zeros(self._num_classes)
+        torch.div(self._y_counts, self._total_predictions, out=prob_y)
+        for x in range(self._num_protected_variable_labels):
+            joint = torch.zeros(self._num_classes)
+            torch.div(
+                self._joint_counts_by_protected_variable_label[x],
+                self._total_predictions,
+                out=joint,
+            )
+            if self.association_metric == "pmisq":
+                torch.square_(joint)
 
-    def _prob_y(self, Y: torch.Tensor, out: torch.Tensor):
-        counts = torch.zeros_like(out, dtype=Y.dtype).scatter_add_(0, Y, torch.ones_like(Y))
-        torch.div(counts, Y.nelement(), out=out)
+            pmi_x = torch.log(
+                torch.div(
+                    joint,
+                    self._protected_variable_label_counts[x] / self._total_predictions * prob_y,
+                )
+            )
+            if self.association_metric == "npmixy":
+                pmi_x.div_(torch.log(joint))
+            elif self.association_metric == "npmiy":
+                pmi_x.div_(torch.log(prob_y))
+
+            pmi_terms[x] = pmi_x
+
+        return pmi_terms
