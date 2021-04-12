@@ -772,8 +772,8 @@ class DemographicParityWithoutGroundTruth(Metric):
             predicted_labels = predicted_labels.flatten()
             protected_variable_labels = protected_variable_labels.flatten()
 
-        _total_predictions = torch.tensor(predicted_labels.nelement())
-        _y_counts = torch.zeros(self._num_classes)
+        _total_predictions = torch.tensor(predicted_labels.nelement()).to(predicted_labels.device)
+        _y_counts = torch.zeros(self._num_classes).to(predicted_labels.device)
         _y_counts = torch.zeros_like(_y_counts, dtype=predicted_labels.dtype).scatter_add_(
             0, predicted_labels, torch.ones_like(predicted_labels)
         )
@@ -783,12 +783,16 @@ class DemographicParityWithoutGroundTruth(Metric):
         for x in range(self._num_protected_variable_labels):
             x_mask = (protected_variable_labels == x).long()
 
-            _joint_counts_by_protected_variable_label[x] = torch.zeros(self._num_classes)
+            _joint_counts_by_protected_variable_label[x] = torch.zeros(self._num_classes).to(
+                predicted_labels.device
+            )
             _joint_counts_by_protected_variable_label[x] = torch.zeros_like(
                 _joint_counts_by_protected_variable_label[x], dtype=x_mask.dtype
             ).scatter_add_(0, predicted_labels, x_mask)
 
-            _protected_variable_label_counts[x] = torch.tensor(x_mask.sum())
+            _protected_variable_label_counts[x] = torch.tensor(x_mask.sum()).to(
+                predicted_labels.device
+            )
 
         if is_distributed():
             device = torch.device("cuda" if dist.get_backend() == "nccl" else "cpu")
