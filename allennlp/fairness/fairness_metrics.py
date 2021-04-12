@@ -889,10 +889,12 @@ class DemographicParityWithoutGroundTruth(Metric):
             }
 
         pmi_terms = {}
-        prob_y = torch.zeros(self._num_classes)
+        prob_y = torch.zeros(self._num_classes).to(self._y_counts.device)
         torch.div(self._y_counts, self._total_predictions, out=prob_y)
         for x in range(self._num_protected_variable_labels):
-            joint = torch.zeros(self._num_classes)
+            joint = torch.zeros(self._num_classes).to(
+                self._joint_counts_by_protected_variable_label[x].device
+            )
             torch.div(
                 self._joint_counts_by_protected_variable_label[x],
                 self._total_predictions,
