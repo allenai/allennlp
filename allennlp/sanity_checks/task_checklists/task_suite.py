@@ -122,7 +122,7 @@ class TaskSuite(Registrable):
                 name for name, test in self.suite.info.items() if test["capability"] == capability
             ]
             if len(tests) > 0:
-                print("\n\t{} ({} tests)\n".format(capability, len(tests)))
+                print(f"\n\t{capability} ({len(tests)} tests)\n")
                 for test in tests:
                     description = self.suite.info[test]["description"]
                     num_test_cases = len(self.suite.tests[test].data)
@@ -359,7 +359,7 @@ class TaskSuite(Registrable):
                adding a reducer (eg. "good" -> "somewhat good") causes the
                prediction's positive confidence score to decrease (or at least not
                increase).
-               The test's data contains the pairs (input, modified input).
+               The test's data contains single inputs or pairs (input, modified input).
 
         Please refer to [the paper](https://api.semanticscholar.org/CorpusID:218551201)
         for more details and examples.

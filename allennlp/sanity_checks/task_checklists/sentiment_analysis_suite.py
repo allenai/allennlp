@@ -1,5 +1,4 @@
 from typing import Optional, Iterable, List, Union
-import string
 import numpy as np
 from overrides import overrides
 from checklist.test_suite import TestSuite
@@ -672,7 +671,7 @@ class SentimentAnalysisSuite(TaskSuite):
         )
         self.add_test(test)
 
-    def _positive_change(self, orig_conf: np.ndarray, conf: np.ndarray):
+    def _positive_change(self, orig_conf: np.ndarray, conf: np.ndarray) -> float:
         """
         Returns the change in the confidence scores.
         """
@@ -684,12 +683,19 @@ class SentimentAnalysisSuite(TaskSuite):
         )
 
     def _diff_up(
-        self, orig_pred, pred, orig_conf, conf, labels=None, meta=None
+        self,
+        orig_pred: int,
+        pred: int,
+        orig_conf: np.ndarray,
+        conf: np.ndarray,
+        labels: Optional[int] = None,
+        meta: Optional[List] = None,
     ) -> Union[bool, float]:
         """
         These arguments are expected by `checklist.expect.Expect.pairwise` function.
-        orig_pred and orig_conf are the prediction and the confidence scores of
-        the first example in an invariance test's input data.
+        We only use `orig_conf` and `conf` in this case.
+
+        `orig_conf` is the confidence score of the first example in a test's input data pair.
 
         A `bool` output indicates whether the test passed the expectation (always
         `True` in this function's case).
@@ -704,12 +710,19 @@ class SentimentAnalysisSuite(TaskSuite):
             return change + tolerance
 
     def _diff_down(
-        self, orig_pred, pred, orig_conf, conf, labels=None, meta=None
+        self,
+        orig_pred: int,
+        pred: int,
+        orig_conf: np.ndarray,
+        conf: np.ndarray,
+        labels: Optional[int] = None,
+        meta: Optional[List] = None,
     ) -> Union[bool, float]:
         """
         These arguments are expected by `checklist.expect.Expect.pairwise` function.
-        orig_pred and orig_conf are the prediction and the confidence scores of
-        the first example in an invariance test's input data.
+        We only use `orig_conf` and `conf` in this case.
+
+        `orig_conf` is the confidence score of the first example in a test's input data pair.
 
         A `bool` output indicates whether the test passed the expectation (always
         `True` in this function's case).

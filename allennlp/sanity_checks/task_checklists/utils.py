@@ -1,5 +1,5 @@
 import string
-from typing import Dict, Callable, List, Tuple, Union
+from typing import Dict, Callable, List, Union
 import numpy as np
 import spacy
 
