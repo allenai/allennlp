@@ -47,9 +47,9 @@ class Independence(Metric):
         """
         # Parameters
 
-        num_classes : `int`.
+        num_classes : `int`
             Number of classes.
-        num_protected_variable_labels : `int`.
+        num_protected_variable_labels : `int`
             Number of protected variable labels.
         """
         self._num_classes = num_classes
@@ -76,6 +76,8 @@ class Independence(Metric):
             shape as the `predicted_labels` tensor. Represented as A.
         mask : `torch.BoolTensor`, optional (default = `None`).
             A tensor of the same shape as `predicted_labels`.
+
+            Note: all tensors are expected to be on the same device.
         """
         predicted_labels, protected_variable_labels, mask = self.detach_tensors(
             predicted_labels, protected_variable_labels, mask
@@ -104,6 +106,12 @@ class Independence(Metric):
                     self._num_protected_variable_labels
                 )
             )
+
+        self._predicted_label_counts = self._predicted_label_counts.to(predicted_labels.device)
+        self._predicted_label_counts_by_protected_variable_label = {
+            k: v.to(predicted_labels.device)
+            for k, v in self._predicted_label_counts_by_protected_variable_label.items()
+        }
 
         if mask is not None:
             predicted_labels = predicted_labels[mask]
@@ -196,9 +204,9 @@ class Separation(Metric):
         """
         # Parameters
 
-        num_classes : `int`.
+        num_classes : `int`
             Number of classes.
-        num_protected_variable_labels : `int`.
+        num_protected_variable_labels : `int`
             Number of protected variable labels.
         """
         self._num_classes = num_classes
@@ -233,6 +241,8 @@ class Separation(Metric):
             shape as the `predicted_labels` tensor. Represented as A.
         mask : `torch.BoolTensor`, optional (default = `None`).
             A tensor of the same shape as `predicted_labels`.
+
+            Note: all tensors are expected to be on the same device.
         """
         predicted_labels, gold_labels, protected_variable_labels, mask = self.detach_tensors(
             predicted_labels, gold_labels, protected_variable_labels, mask
@@ -271,6 +281,20 @@ class Separation(Metric):
                     self._num_protected_variable_labels
                 )
             )
+
+        self._predicted_label_counts_by_gold_label = {
+            k: v.to(predicted_labels.device)
+            for k, v in self._predicted_label_counts_by_gold_label.items()
+        }
+        self._predicted_label_counts_by_gold_label_and_protected_variable_label = {
+            k1: {
+                k2: v2.to(predicted_labels.device)
+                for k2, v2 in self._predicted_label_counts_by_gold_label_and_protected_variable_label[
+                    k1
+                ].items()
+            }
+            for k1, v1 in self._predicted_label_counts_by_gold_label_and_protected_variable_label.items()
+        }
 
         if mask is not None:
             predicted_labels = predicted_labels[mask]
@@ -403,9 +427,9 @@ class Sufficiency(Metric):
         """
         # Parameters
 
-        num_classes : `int`.
+        num_classes : `int`
             Number of classes.
-        num_protected_variable_labels : `int`.
+        num_protected_variable_labels : `int`
             Number of protected variable labels.
         """
         self._num_classes = num_classes
@@ -440,6 +464,8 @@ class Sufficiency(Metric):
             shape as the `predicted_labels` tensor. Represented as A.
         mask : `torch.BoolTensor`, optional (default = `None`).
             A tensor of the same shape as `predicted_labels`.
+
+            Note: all tensors are expected to be on the same device.
         """
         predicted_labels, gold_labels, protected_variable_labels, mask = self.detach_tensors(
             predicted_labels, gold_labels, protected_variable_labels, mask
@@ -478,6 +504,20 @@ class Sufficiency(Metric):
                     self._num_protected_variable_labels
                 )
             )
+
+        self._gold_label_counts_by_predicted_label = {
+            k: v.to(predicted_labels.device)
+            for k, v in self._gold_label_counts_by_predicted_label.items()
+        }
+        self._gold_label_counts_by_predicted_label_and_protected_variable_label = {
+            k1: {
+                k2: v2.to(predicted_labels.device)
+                for k2, v2 in self._gold_label_counts_by_predicted_label_and_protected_variable_label[
+                    k1
+                ].items()
+            }
+            for k1, v1 in self._gold_label_counts_by_predicted_label_and_protected_variable_label.items()
+        }
 
         if mask is not None:
             predicted_labels = predicted_labels[mask]
@@ -627,9 +667,9 @@ class DemographicParityWithoutGroundTruth(Metric):
         """
         # Parameters
 
-         num_classes : `int`.
+         num_classes : `int`
             Number of classes.
-        num_protected_variable_labels : `int`.
+        num_protected_variable_labels : `int`
             Number of protected variable labels.
         association_metric : `str`, optional (default = `npmixy`).
             A generic association metric A(x, y), where x is an identity label and y is any other label.
@@ -684,6 +724,8 @@ class DemographicParityWithoutGroundTruth(Metric):
             shape as the `predicted_labels` tensor. Represented as X.
         mask : `torch.BoolTensor`, optional (default = `None`).
             A tensor of the same shape as `predicted_labels`.
+
+            Note: all tensors are expected to be on the same device.
         """
         predicted_labels, protected_variable_labels, mask = self.detach_tensors(
             predicted_labels, protected_variable_labels, mask
@@ -712,6 +754,16 @@ class DemographicParityWithoutGroundTruth(Metric):
                     self._num_protected_variable_labels
                 )
             )
+
+        self._joint_counts_by_protected_variable_label = {
+            k: v.to(predicted_labels.device)
+            for k, v in self._joint_counts_by_protected_variable_label.items()
+        }
+        self._protected_variable_label_counts = {
+            k: v.to(predicted_labels.device)
+            for k, v in self._protected_variable_label_counts.items()
+        }
+        self._y_counts = self._y_counts.to(predicted_labels.device)
 
         if mask is not None:
             predicted_labels = predicted_labels[mask]
@@ -773,9 +825,11 @@ class DemographicParityWithoutGroundTruth(Metric):
 
         gaps : `Dict[int, Union[torch.FloatTensor, Dict[int, torch.FloatTensor]]]`
             A dictionary mapping each protected variable label x to either:
-            1) a tensor of the one-vs-all gaps (where the gap corresponding to prediction
+
+            1. a tensor of the one-vs-all gaps (where the gap corresponding to prediction
             label i is at index i),
-            2) another dictionary mapping protected variable labels x' to a tensor
+
+            2. another dictionary mapping protected variable labels x' to a tensor
             of the pairwise gaps (where the gap corresponding to prediction label i is at index i).
             A gap of nearly 0 implies fairness on the basis of Demographic Parity in the Absence of Ground Truth.
 
