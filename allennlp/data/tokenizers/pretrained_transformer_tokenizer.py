@@ -40,9 +40,6 @@ class PretrainedTransformerTokenizer(Tokenizer):
         to their model.
     max_length : `int`, optional (default=`None`)
         If set to a number, will limit the total sequence returned so that it has a maximum length.
-    stride : `int`, optional (default=`0`)
-        If set to a number along with max_length, the overflowing tokens returned will contain some tokens
-        from the main sequence returned. The value of this argument defines the number of additional tokens.
     tokenizer_kwargs: `Dict[str, Any]`, optional (default = `None`)
         Dictionary with
         [additional arguments](https://github.com/huggingface/transformers/blob/155c782a2ccd103cf63ad48a2becd7c76a7d2115/transformers/tokenization_utils.py#L691)
@@ -54,7 +51,6 @@ class PretrainedTransformerTokenizer(Tokenizer):
         model_name: str,
         add_special_tokens: bool = True,
         max_length: Optional[int] = None,
-        stride: int = 0,
         tokenizer_kwargs: Optional[Dict[str, Any]] = None,
     ) -> None:
         if tokenizer_kwargs is None:
@@ -72,7 +68,6 @@ class PretrainedTransformerTokenizer(Tokenizer):
 
         self._add_special_tokens = add_special_tokens
         self._max_length = max_length
-        self._stride = stride
 
         self._tokenizer_lowercases = self.tokenizer_lowercases(self.tokenizer)
 
@@ -240,7 +235,6 @@ class PretrainedTransformerTokenizer(Tokenizer):
             add_special_tokens=True,
             max_length=max_length,
             truncation=True if max_length is not None else False,
-            stride=self._stride,
             return_tensors=None,
             return_offsets_mapping=self.tokenizer.is_fast,
             return_attention_mask=False,
