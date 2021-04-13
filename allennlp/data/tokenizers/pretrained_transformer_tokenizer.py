@@ -40,7 +40,6 @@ class PretrainedTransformerTokenizer(Tokenizer):
         to their model.
     max_length : `int`, optional (default=`None`)
         If set to a number, will limit the total sequence returned so that it has a maximum length.
-        If there are overflowing tokens, those will be added to the returned dictionary
     stride : `int`, optional (default=`0`)
         If set to a number along with max_length, the overflowing tokens returned will contain some tokens
         from the main sequence returned. The value of this argument defines the number of additional tokens.
