@@ -23,12 +23,12 @@ class SimpleInfluence(InfluenceInterpreter):
     the LiSSA algorithm (essentially a first-order Talyor approxmation) to approximate the inverse
     of the Hessian used for influence score calculation.
 
-    # Parameter
+    # Parameters
 
     lissa_data_loader : `Lazy[DataLoader]`, optional (default = `Lazy(MultiProcessDataLoader)`)
         The data loader used in LiSSA algorithm.
-        According to [https://arxiv.org/pdf/1703.04730.pdf], it is better to use batched samples for approximation
-        for better stability.
+        According to [https://arxiv.org/pdf/1703.04730.pdf](https://arxiv.org/pdf/1703.04730.pdf),
+        it is better to use batched samples for approximation for better stability.
 
     damping : `float`, optional (default = `3e-3`)
         This is a hyperparameter for LiSSA algorithm.
