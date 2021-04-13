@@ -8,7 +8,7 @@ from allennlp.data.vocabulary import Vocabulary
 class TestSpacyTokenIndexer(AllenNlpTestCase):
     def test_as_array_produces_token_array(self):
         indexer = SpacyTokenIndexer()
-        nlp = get_spacy_model("en_core_web_sm", pos_tags=True, parse=False, ner=False)
+        nlp = get_spacy_model("en_core_web_sm", parse=False, ner=False)
         tokens = [t for t in nlp("This is a sentence.")]
         field = TextField(tokens, token_indexers={"spacy": indexer})
 

@@ -237,6 +237,62 @@ class TestTrain(AllenNlpTestCase):
         # Check we can load the serialized model
         assert load_archive(out_dir).model
 
+    @pytest.mark.parametrize("max_instances", [1, 2, 3, 4, None])
+    @pytest.mark.parametrize("grad_acc", [None, 2])
+    @pytest.mark.parametrize("batch_size", [1, 2, 3])
+    def test_train_model_distributed_with_gradient_accumulation(
+        self, max_instances, grad_acc, batch_size
+    ):
+        if torch.cuda.device_count() >= 2:
+            devices = [0, 1]
+        else:
+            devices = [-1, -1]
+
+        params = lambda: Params(
+            {
+                "model": {
+                    "type": "simple_tagger",
+                    "text_field_embedder": {
+                        "token_embedders": {"tokens": {"type": "embedding", "embedding_dim": 5}}
+                    },
+                    "encoder": {"type": "lstm", "input_size": 5, "hidden_size": 7, "num_layers": 2},
+                },
+                "dataset_reader": {"type": "sequence_tagging", "max_instances": max_instances},
+                "train_data_path": SEQUENCE_TAGGING_DATA_PATH,
+                "validation_data_path": SEQUENCE_TAGGING_DATA_PATH,
+                "data_loader": {"batch_size": batch_size},
+                "trainer": {
+                    "num_epochs": 2,
+                    "optimizer": "adam",
+                    "num_gradient_accumulation_steps": grad_acc,
+                },
+                "distributed": {"cuda_devices": devices},
+            }
+        )
+
+        out_dir = os.path.join(self.TEST_DIR, "test_distributed_train_with_grad_acc")
+        train_model(params(), serialization_dir=out_dir)
+
+        # Check that some logs specific to distributed
+        # training are where we expect.
+        serialized_files = os.listdir(out_dir)
+        assert "out_worker0.log" in serialized_files
+        assert "out_worker1.log" in serialized_files
+        assert "model.tar.gz" in serialized_files
+        assert "metrics.json" in serialized_files
+
+        # Make sure the metrics look right.
+        with open(os.path.join(out_dir, "metrics.json")) as f:
+            metrics = json.load(f)
+            assert metrics["peak_worker_0_memory_MB"] > 0
+            assert metrics["peak_worker_1_memory_MB"] > 0
+            if torch.cuda.device_count() >= 2:
+                assert metrics["peak_gpu_0_memory_MB"] > 0
+                assert metrics["peak_gpu_1_memory_MB"] > 0
+
+        # Check we can load the serialized model
+        assert load_archive(out_dir).model
+
     @cpu_or_gpu
     @pytest.mark.parametrize("max_instances_in_memory", [None, 10])
     def test_train_model_distributed_with_sharded_reader(self, max_instances_in_memory):
@@ -343,7 +399,7 @@ class TestTrain(AllenNlpTestCase):
                     },
                     "encoder": {"type": "lstm", "input_size": 5, "hidden_size": 7, "num_layers": 2},
                 },
-                "dataset_reader": {"type": "sequence_tagging"},
+                "dataset_reader": {"type": "sequence_tagging", "max_instances": 4},
                 "train_data_path": SEQUENCE_TAGGING_DATA_PATH,
                 "validation_data_path": SEQUENCE_TAGGING_DATA_PATH,
                 "data_loader": {
@@ -534,7 +590,7 @@ class TestTrain(AllenNlpTestCase):
             def on_batch(
                 self,
                 trainer: GradientDescentTrainer,
-                batch_inputs: List[List[TensorDict]],
+                batch_inputs: List[TensorDict],
                 batch_outputs: List[Dict[str, Any]],
                 batch_metrics: Dict[str, Any],
                 epoch: int,
@@ -731,7 +787,17 @@ class TestDryRun(AllenNlpTestCase):
             tokens = [line.strip() for line in f]
 
         tokens.sort()
-        assert tokens == [".", "@@UNKNOWN@@", "animals", "are", "birds", "cats", "dogs", "snakes"]
+        assert tokens == [
+            ".",
+            "@@UNKNOWN@@",
+            "animals",
+            "are",
+            "birds",
+            "cats",
+            "dogs",
+            "horses",
+            "snakes",
+        ]
 
         with open(vocab_path / "labels.txt") as f:
             labels = [line.strip() for line in f]

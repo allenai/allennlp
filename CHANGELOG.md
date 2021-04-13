@@ -7,28 +7,67 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+
+- Ported the following Huggingface `LambdaLR`-based schedulers: `ConstantLearningRateScheduler`, `ConstantWithWarmupLearningRateScheduler`, `CosineWithWarmupLearningRateScheduler`, `CosineHardRestartsWithWarmupLearningRateScheduler`.
+- Added new `sub_token_mode` parameter to `pretrained_transformer_mismatched_embedder` class to support first sub-token embedding
+- Added new `eval_mode` in `PretrainedTransformerEmbedder`. If it is set to `True`, the transformer is _always_ run in evaluation mode, which, e.g., disables dropout and does not update batch normalization statistics.
+- Added additional parameters to the W&B callback: `entity`, `group`, `name`, `notes`, and `wandb_kwargs`.
+
 ### Changed
 
+- Sanity checks in the `GradientDescentTrainer` can now be turned off by setting the `run_sanity_checks` parameter to `False`.
+- Allow the order of examples in the task cards to be specified explicitly
 - `histogram_interval` parameter is now deprecated in `TensorboardWriter`, please use `distribution_interval` instead.
 - Memory usage is not logged in tensorboard during training now. `ConsoleLoggerCallback` should be used instead.
-- Use attributes of `ModelOutputs` object in `PretrainedTransformerEmbedder` instead of indexing.
-- Added support for PyTorch version 1.8 and `torchvision` version 0.9 .
+- If you use the `min_count` parameter of the Vocabulary, but you specify a namespace that does not exist, the vocabulary creation will raise a `ConfigurationError`.
+- Documentation updates made to SoftmaxLoss regarding padding and the expected shapes of the input and output tensors of `forward`.
+- Moved the data preparation script for coref into allennlp-models.
+- If a transformer is not in cache but has override weights, the transformer's pretrained weights are no longer downloaded, that is, only its `config.json` file is downloaded.
+- `SanityChecksCallback` now raises `SanityCheckError` instead of `AssertionError` when a check fails.
+
+### Fixed
+
+- Fixed a bug where some `Activation` implementations could not be pickled due to involving a lambda function.
+- Fixed `__str__()` method on `ModelCardInfo` class.
+- Fixed a stall when using distributed training and gradient accumulation at the same time
+- Fixed an issue where using the `from_pretrained_transformer` `Vocabulary` constructor in distributed training via the `allennlp train` command
+  would result in the data being iterated through unnecessarily.
+
+
+## [v2.2.0](https://github.com/allenai/allennlp/releases/tag/v2.2.0) - 2021-03-26
+
 
 ### Added
 
 - Add new function for example-based interpretation methods --- `SimpleInfluence`
 - Add new method on `Field` class: `.human_readable_repr() -> Any`
 - Add new method on `Instance` class: `.human_readable_dict() -> JsonDict`.
-- Added `LogWriter` class. `TensorBoardWriter` now inherits from `LogWriter`.
-- Added `LogCallback` and `ConsoleLoggerCallback` classes. `TensorBoardCallback` inherits from `LogCallback`. 
-- Added `NormalizationBiasVerification` and `SanityCheckCallback` for model sanity checks.
-- `SanityCheckCallback` runs by default. It can be turned off by setting `run_sanity_check`=`False` in trainer parameters.
+- Added `WandBCallback` class for [Weights & Biases](https://wandb.ai) integration, registered as a callback under
+  the name "wandb".
+- Added `TensorBoardCallback` to replace the `TensorBoardWriter`. Registered as a callback
+  under the name "tensorboard".
+- Added `NormalizationBiasVerification` and `SanityChecksCallback` for model sanity checks.
+- `SanityChecksCallback` runs by default from the `allennlp train` command.
+  It can be turned off by setting `trainer.enable_default_callbacks` to `false` in your config.
+
+### Changed
+
+- Use attributes of `ModelOutputs` object in `PretrainedTransformerEmbedder` instead of indexing.
+- Added support for PyTorch version 1.8 and `torchvision` version 0.9 .
+- `Model.get_parameters_for_histogram_tensorboard_logging` is deprecated in favor of
+  `Model.get_parameters_for_histogram_logging`.
 
 ### Fixed
 
 - Makes sure tensors that are stored in `TensorCache` always live on CPUs
 - Fixed a bug where `FromParams` objects wrapped in `Lazy()` couldn't be pickled.
 - Fixed a bug where the `ROUGE` metric couldn't be picked.
+- Fixed a bug reported by https://github.com/allenai/allennlp/issues/5036. We keeps our spacy POS tagger on.
+
+### Removed
+
+- Removed `TensorBoardWriter`. Please use the `TensorBoardCallback` instead.
 
 
 ## [v2.1.0](https://github.com/allenai/allennlp/releases/tag/v2.1.0) - 2021-02-24
@@ -195,6 +234,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Renamed module `allennlp.data.tokenizers.token` to `allennlp.data.tokenizers.token_class` to avoid
   [this bug](https://github.com/allenai/allennlp/issues/4819).
 - `transformers` dependency updated to version 4.0.1.
+- `BasicClassifier`'s forward method now takes a metadata field.
 
 ### Fixed
 
