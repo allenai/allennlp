@@ -33,6 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed a stall when using distributed training and gradient accumulation at the same time
 - Fixed an issue where using the `from_pretrained_transformer` `Vocabulary` constructor in distributed training via the `allennlp train` command
   would result in the data being iterated through unnecessarily.
+- Fixed a bug regarding token indexers with the `InterleavingDatasetReader` when used with multi-process data loading.
 
 
 ## [v2.2.0](https://github.com/allenai/allennlp/releases/tag/v2.2.0) - 2021-03-26

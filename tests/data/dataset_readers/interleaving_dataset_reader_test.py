@@ -2,6 +2,7 @@ from typing import Iterable
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.dataset_readers import DatasetReader, InterleavingDatasetReader
+from allennlp.data.data_loaders import MultiProcessDataLoader
 from allennlp.data.fields import TextField
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import SingleIdTokenIndexer
@@ -20,9 +21,11 @@ class PlainTextReader(DatasetReader):
                 yield self.text_to_instance(line)
 
     def text_to_instance(self, line: str) -> Instance:  # type: ignore
-
         tokens = self._tokenizer.tokenize(line)
-        return Instance({"line": TextField(tokens, self._token_indexers)})
+        return Instance({"line": TextField(tokens)})
+
+    def apply_token_indexers(self, instance):
+        instance.fields["line"].token_indexers = self._token_indexers
 
 
 class TestInterleavingDatasetReader(AllenNlpTestCase):
@@ -72,3 +75,15 @@ class TestInterleavingDatasetReader(AllenNlpTestCase):
 
         # should be in 3 buckets
         assert len(buckets) == 3
+
+    def test_with_multi_process_loading(self):
+        readers = {"a": PlainTextReader(), "b": PlainTextReader(), "c": PlainTextReader()}
+        reader = InterleavingDatasetReader(readers)
+        data_dir = self.FIXTURES_ROOT / "data"
+        file_path = {
+            "a": data_dir / "babi.txt",
+            "b": data_dir / "conll2003.txt",
+            "c": data_dir / "conll2003.txt",
+        }
+        loader = MultiProcessDataLoader(reader, file_path, num_workers=1, batch_size=1)
+        list(loader.iter_instances())
