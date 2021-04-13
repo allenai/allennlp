@@ -42,9 +42,9 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         transformer weights are not updated during training.
     eval_mode: `bool`, optional (default = `False`)
         If this is `True`, the model is always set to evaluation mode (e.g., the dropout is disabled and the
-        batch normalization layer statistics are not updated). If this is `False`, the dropout and batch
-        normalization layers are only set to evaluation model when when the model is evaluating on development
-        or train data.
+        batch normalization layer statistics are not updated). If this is `False`, such dropout and batch
+        normalization layers are only set to evaluation mode when when the model is evaluating on development
+        or test data.
     last_layer_only: `bool`, optional (default = `True`)
         When `True` (the default), only the final layer of the pretrained transformer is taken
         for the embeddings. But if set to `False`, a scalar mix of all of the layers
