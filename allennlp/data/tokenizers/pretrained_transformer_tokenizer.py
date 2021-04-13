@@ -240,6 +240,7 @@ class PretrainedTransformerTokenizer(Tokenizer):
             text=text,
             add_special_tokens=True,
             max_length=max_length,
+            truncation=True if max_length is not None else False,
             stride=self._stride,
             return_tensors=None,
             return_offsets_mapping=self.tokenizer.is_fast,
