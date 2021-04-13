@@ -1,13 +1,58 @@
-from typing import List, Optional
+import re
+from typing import List, Optional, NamedTuple, Sequence
 
 import torch
+from torch import autograd
 
-from allennlp.common import Registrable
+from allennlp.common import Registrable, Lazy
+from allennlp.common.tqdm import Tqdm
+from allennlp.common.util import int_to_device
+from allennlp.data import Instance, DatasetReader, DatasetReaderInput, Batch
+from allennlp.data.data_loaders import DataLoader, SimpleDataLoader
 from allennlp.models.model import Model
-from allennlp.predictors import Predictor
-from allennlp.data import Instance
-from allennlp.data.dataset_readers import DatasetReader
-from allennlp.data.data_loaders import SimpleDataLoader
+from allennlp.nn.util import move_to_device
+
+
+class TrainInstanceInfluence(NamedTuple):
+    instance: Instance
+
+    loss: float
+
+    score: float
+    """
+    The influence score associated with this training instance.
+    """
+
+
+class InterpretOutput(NamedTuple):
+    test_instance: Instance
+
+    loss: float
+    """
+    The loss corresponding to the `test_instance`.
+    """
+
+    top_k: List[TrainInstanceInfluence]
+    """
+    The top `k` most influential training instances along with their influence score.
+    """
+
+    bottom_k: List[TrainInstanceInfluence]
+    """
+    The bottom `k` least influential training instances along with their influence score.
+    """
+
+
+class TrainInstance(NamedTuple):
+    """
+    Wraps a training `Instance` along with its associated loss and gradients.
+
+    `InfluenceInterpreter.train_instances` is a list of these objects.
+    """
+
+    instance: Instance
+    loss: float
+    grads: Sequence[torch.Tensor]
 
 
 class InfluenceInterpreter(Registrable):
@@ -15,125 +60,208 @@ class InfluenceInterpreter(Registrable):
     A `SaliencyInterpreter` interprets an AllenNLP Predictor's outputs by assigning an influence
     score to each training instance with respect to each test input.
 
-    # Parameter
-    predictor: `Predictor`
-        Required. This is a wrapper around the model to be tested. We only assume only `Model` is not None.
-    train_filepath: `str`
-        Required. This is the file path to the train data
-    train_dataset_reader: `DatasetReader`
-        Required. This is the dataset reader to read the train set file
-    test_dataset_reader: `Optional[DatasetReader]` = None,
-        Optional. This is the dataset reader to read the test set file. If not provided, we would uses the
-        `train_dataset_reader`
-    params_to_freeze: Optional[List[str]] = None
-        Optional. This is a provided list of string that for freezeing the parameters. Expectedly, each string
-        is a substring within the paramter name you intend to freeze.
-    k: int = 20
-        Optional. To demonstrate each test data, we found it most informative to just provide `k` examples with the
-        highest and lowest influence score. If not provided, we set to 20.
-    device: int = -1,
-        Optional. The index of GPU device we want to calculate scores on. If not provided, we uses -1
+    Subclasses are required to implement the `calculate_influence_scores()` method.
+
+    # Parameters
+
+    model : `Model`, required
+
+    train_data_path : `DatasetReaderInput`, required
+
+    train_dataset_reader : `DatasetReader`, required
+
+    test_dataset_reader : `Optional[DatasetReader]`, optional (default = `None`)
+        This is the dataset reader to read the test set file. If not provided, the
+        `train_dataset_reader` is used.
+
+    train_data_loader : `Lazy[DataLoader]`, optional (default = `Lazy(SimpleDataLoader)`)
+        The data loader used to load training instances.
+
+        !!! Note
+            This data loader is only used to call `DataLoader.iter_instances()`, so certain
+            `DataLoader` settings like `batch_size` will have no effect.
+
+    test_data_loader : `Lazy[DataLoader]`, optional (default = `Lazy(SimpleDataLoader)`)
+        The data loader used to load test instances when `interpret_from_file()` is called.
+
+        !!! Note
+            Like `train_data_loader`, this data loader is only used to call `DataLoader.iter_instances()`,
+            so certain `DataLoader` settings like `batch_size` will have no effect.
+
+    params_to_freeze : `Optional[List[str]]`, optional (default = `None`)
+        An optional list of strings, each of which should be a regular expression that matches
+        some parameter keys of the model. Any matching parameters will be have `requires_grad`
+        set to `False`.
+
+    device : `int`, optional (default = `-1`)
+        The index of GPU device we want to calculate scores on. If not provided, we uses `-1`
         which correspond to using CPU.
     """
 
     def __init__(
         self,
-        predictor: Predictor,
-        train_data_path: str,
+        model: Model,
+        train_data_path: DatasetReaderInput,
         train_dataset_reader: DatasetReader,
         test_dataset_reader: Optional[DatasetReader] = None,
+        train_data_loader: Lazy[DataLoader] = Lazy(SimpleDataLoader),
+        test_data_loader: Lazy[DataLoader] = Lazy(SimpleDataLoader),
         params_to_freeze: List[str] = None,
-        k: int = 20,
         device: int = -1,
     ) -> None:
+        self._model = model
+        self._vocab = model.vocab
+        self._test_dataset_reader = test_dataset_reader or train_dataset_reader
+        self._device = int_to_device(device)
 
-        self.predictor = predictor
-        self.model: Model = self.predictor._model
-        self.vocab = self.model.vocab
-        self.train_dataset_reader = train_dataset_reader
-        self.test_dataset_reader = test_dataset_reader or train_dataset_reader
-
-        self._device = torch.device(
-            f"cuda:{int(device)}" if torch.cuda.is_available() and not device >= 0 else "cpu"
-        )
-        # Dataloaders for going through train/test set (1 by 1)
-        self._train_loader = SimpleDataLoader(
-            list(self.train_dataset_reader.read(train_data_path)), batch_size=1, shuffle=False
+        self._train_loader = train_data_loader.construct(
+            reader=train_dataset_reader, data_path=train_data_path
         )
         self._train_loader.set_target_device(self._device)
-        self._train_loader.index_with(self.vocab)
-        self.train_instances = self._train_loader.instances
+        self._train_loader.index_with(self._vocab)
 
-        # Number of supporting training instances has to be less than the size of train set
-        self._k = min(k, len(self.train_instances))
+        self._lazy_test_data_loader = test_data_loader
 
-        self.model.to(self._device)
-
-        # so far, we assume all parameters are tuned during training
-        # we use freeze, because when model is loaded from archive, the requires_grad
-        # flag will be re-initialized to be true
+        self._model.to(self._device)
         if params_to_freeze is not None:
-            self.freeze_model(self.model, params_to_freeze, verbose=True)
-        # this is not set until we actually run the calculation, because some parameters might not be used.
-        self._used_params: List = []
-        self._used_params_name: List = []
+            for name, param in self._model.named_parameters():
+                if any([re.match(pattern, name) for pattern in params_to_freeze]):
+                    param.requires_grad = False
 
-    @staticmethod
-    def freeze_model(model, params_to_freeze: List[str], verbose: bool = True):
-        """
-        This method intends to freeze parts (or all) of the model.
+        # This is not set until we actually run the calculation since some parameters might not be used.
+        self._used_params: List[torch.Tensor] = []
+        self._used_param_names: List[str] = []
 
-        params_to_freeze:
-            list of substrings of model's parameter names (i.e. string)
-            TODO: instead use regular expression?
-        verbose:
-            whether we print the trainable parameters
-        """
-        for n, p in model.named_parameters():
-            if any(pfreeze in n for pfreeze in params_to_freeze):
-                p.requires_grad = False
+        # Load training instances, compute loss and gradients.
+        self.train_instances: List[TrainInstance] = []
+        self._model.train()
+        for instance in Tqdm.tqdm(
+            self._train_loader.iter_instances(), desc="calculating training gradients"
+        ):
+            batch = Batch([instance])
+            batch.index_instances(self._vocab)
+            tensor_dict = move_to_device(batch.as_tensor_dict(), self._device)
 
-        if verbose:
-            num_trainable_params = sum(
-                [p.numel() for n, p in model.named_parameters() if p.requires_grad]
+            self._model.zero_grad()
+
+            # Compute loss with respect to the test instance.
+            output_dict = self._model(**tensor_dict)
+            loss = output_dict["loss"]
+
+            if not self._used_params:
+                # we only know what parameters in the models requires gradient after
+                # we do the first .backward() and we store those used parameters
+                loss.backward(retain_graph=True)
+                for name, param in self._model.named_parameters():
+                    if param.requires_grad and param.grad is not None:
+                        self._used_params.append(param)
+                        self._used_param_names.append(name)
+
+            # Get gradients.
+            grads = autograd.grad(loss, self._used_params)
+            # Sanity check.
+            assert len(grads) == len(self._used_params)
+
+            self.train_instances.append(
+                TrainInstance(instance=instance, loss=loss.detach().item(), grads=grads)
             )
-            trainable_param_names = [n for n, p in model.named_parameters() if p.requires_grad]
-            print(
-                f"Params Trainable: {num_trainable_params}\n\t" + "\n\t".join(trainable_param_names)
+
+    def interpret(self, test_instance: Instance, k: int = 20) -> InterpretOutput:
+        """
+        Run the influence function scorer on the given instance, returning the top `k`
+        most influential train instances and the bottom `k` least influential train instances.
+
+        !!! Note
+            Test instances should have `targets` so that a loss can be computed.
+        """
+        return self.interpret_instances([test_instance], k=k)[0]
+
+    def interpret_from_file(
+        self, test_data_path: DatasetReaderInput, k: int = 20
+    ) -> List[InterpretOutput]:
+        """
+        Runs `interpret_instances` over the instances read from `test_data_path`.
+
+        !!! Note
+            Test instances should have `targets` so that a loss can be computed.
+        """
+        test_data_loader = self._lazy_test_data_loader.construct(
+            reader=self._test_dataset_reader, data_path=test_data_path
+        )
+        test_data_loader.index_with(self._vocab)
+        instances = list(test_data_loader.iter_instances())
+        return self.interpret_instances(instances, k=k)
+
+    def interpret_instances(
+        self, test_instances: List[Instance], k: int = 20
+    ) -> List[InterpretOutput]:
+        """
+        Run the influence function scorer on the given instances, returning the top `k`
+        most influential train instances and the bottom `k` least influential train instances
+        for each test instance.
+
+        !!! Note
+            Test instances should have `targets` so that a loss can be computed.
+        """
+        outputs: List[InterpretOutput] = []
+        for test_idx, test_instance in enumerate(Tqdm.tqdm(test_instances)):
+            test_batch = Batch([test_instance])
+            test_batch.index_instances(self._vocab)
+            test_tensor_dict = move_to_device(test_batch.as_tensor_dict(), self._device)
+
+            # Prepare model for loss and gradient calculations.
+            self._model.eval()
+            self._model.zero_grad()
+
+            # Compute loss with respect to the test instance.
+            test_output_dict = self._model(**test_tensor_dict)
+            test_loss = test_output_dict["loss"]
+            test_loss_float = test_loss.detach().item()
+
+            # Get the (parameter) gradients with respect to the test loss.
+            test_grads = autograd.grad(test_loss, self._used_params)
+            # Sanity check.
+            assert len(test_grads) == len(self._used_params)
+
+            # Get influence scores.
+            influence_scores = torch.zeros(len(self.train_instances))
+            for idx, score in enumerate(
+                self.calculate_influence_scores(test_instance, test_loss_float, test_grads)
+            ):
+                influence_scores[idx] = score
+
+            # Gather top k and bottom k.
+            top_k_scores, top_k_indices = torch.topk(influence_scores, k)
+            bottom_k_scores, bottom_k_indices = torch.topk(-influence_scores, k)
+            top_k = self._gather_instances(top_k_scores, top_k_indices)
+            bottom_k = self._gather_instances(bottom_k_scores, bottom_k_indices)
+
+            outputs.append(
+                InterpretOutput(
+                    test_instance=test_instance,
+                    loss=test_loss_float,
+                    top_k=top_k,
+                    bottom_k=bottom_k,
+                )
             )
+        return outputs
 
-    def interpret(self, test_instance: Instance, k: Optional[int] = None):
+    def _gather_instances(
+        self, scores: torch.Tensor, indices: torch.Tensor
+    ) -> List[TrainInstanceInfluence]:
+        outputs: List[TrainInstanceInfluence] = []
+        for score, idx in zip(scores, indices):
+            instance, loss, _ = self.train_instances[idx]
+            outputs.append(TrainInstanceInfluence(instance=instance, loss=loss, score=score))
+        return outputs
+
+    def calculate_influence_scores(
+        self, test_instance: Instance, test_loss: float, test_grads: Sequence[torch.Tensor]
+    ) -> List[float]:
         """
-        Run the current influence function scorer on the given instance
+        Required to be implemented by subclasses.
 
-        # Parameters
-        test_instance: `Instance`
-            Required. This is the interested test instance to interpret for
-        """
-        raise NotImplementedError
-
-    def interpret_instances(self, test_instances: List[Instance], k: Optional[int] = None):
-        """
-        Run the current influence function scorer on the given instances
-
-        # Parameters
-        test_instances: `List[Instance]`
-            Required. This is the interested test instance to interpret for
-
-        k: `int`
-            Optional. Allow user to overwrite the intially set k value.
-        """
-        raise NotImplementedError
-
-    def interpret_from_file(self, test_data_path: str, k: Optional[int] = None):
-        """
-        Read the given file and run the current influence function scorer on it
-
-        # Parameters
-        test_data_path: `str`
-            Required. This is the path to the interested test file.
-
-        k: `int`
-            Optional. Allow user to overwrite the intially set k value.
+        Calculates the influence scores of `self.train_instances` with respect to
+        the given `test_instance`.
         """
         raise NotImplementedError

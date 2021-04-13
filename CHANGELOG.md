@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Add new dimension to the `interpret` module: `InfluenceInterpreter`s, along with an implementation: `SimpleInfluence`.
 - Ported the following Huggingface `LambdaLR`-based schedulers: `ConstantLearningRateScheduler`, `ConstantWithWarmupLearningRateScheduler`, `CosineWithWarmupLearningRateScheduler`, `CosineHardRestartsWithWarmupLearningRateScheduler`.
 - Added new `sub_token_mode` parameter to `pretrained_transformer_mismatched_embedder` class to support first sub-token embedding
 - Added new `eval_mode` in `PretrainedTransformerEmbedder`. If it is set to `True`, the transformer is _always_ run in evaluation mode, which, e.g., disables dropout and does not update batch normalization statistics.
@@ -40,7 +41,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Add new function for example-based interpretation methods --- `SimpleInfluence`
 - Add new method on `Field` class: `.human_readable_repr() -> Any`
 - Add new method on `Instance` class: `.human_readable_dict() -> JsonDict`.
 - Added `WandBCallback` class for [Weights & Biases](https://wandb.ai) integration, registered as a callback under
@@ -71,7 +71,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ## [v2.1.0](https://github.com/allenai/allennlp/releases/tag/v2.1.0) - 2021-02-24
-
 
 ### Changed
 
