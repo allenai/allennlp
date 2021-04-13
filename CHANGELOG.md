@@ -35,6 +35,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   would result in the data being iterated through unnecessarily.
 - Fixed a warning from `transformers` when using `max_length` in the `PretrainedTransformerTokenizer`.
 
+### Removed
+
+- Removed the `stride` parameter to `PretrainedTransformerTokenizer`. This parameter had no effect.
+
 
 ## [v2.2.0](https://github.com/allenai/allennlp/releases/tag/v2.2.0) - 2021-03-26
 
