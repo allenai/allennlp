@@ -7,7 +7,7 @@ This module contains tools to:
 """
 
 from allennlp.fairness.fairness_metrics import (
-    Indepedence,
+    Independence,
     Separation,
     Sufficiency,
     DemographicParityWithoutGroundTruth,
