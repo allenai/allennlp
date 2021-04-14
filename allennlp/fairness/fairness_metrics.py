@@ -669,13 +669,13 @@ class DemographicParityWithoutGroundTruth(Metric):
             Number of classes.
         num_protected_variable_labels : `int`
             Number of protected variable labels.
-        association_metric : `str`, optional (default = `npmixy`).
+        association_metric : `str`, optional (default = `"npmixy"`).
             A generic association metric A(x, y), where x is an identity label and y is any other label.
-            Examples include: nPMIxy (`npmixy`), nPMIy (`npmiy`), PMI^2 (`pmisq`), PMI (`pmi`)
+            Examples include: nPMIxy (`"npmixy"`), nPMIy (`"npmiy"`), PMI^2 (`"pmisq"`), PMI (`"pmi"`)
             Empirically, nPMIxy and nPMIy are more capable of capturing labels across a range of
             marginal frequencies.
-        gap_type : `str`, optional (default = `ova`).
-            Either one-vs-all (`ova`) or pairwise (`pairwise`). One-vs-all gap is equivalent to
+        gap_type : `str`, optional (default = `"ova"`).
+            Either one-vs-all (`"ova"`) or pairwise (`"pairwise"`). One-vs-all gap is equivalent to
             A(x, y) - E[A(x', y)], where x' is in the set of all protected variable labels setminus {x}.
             Pairwise gaps are A(x, y) - A(x', y), for all x' in the set of all protected variable labels
             setminus {x}.
