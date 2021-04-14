@@ -67,9 +67,6 @@ class InterleavingDatasetReader(DatasetReader):
 
     @overrides
     def _set_distributed_info(self, info: Optional[DistributedInfo]) -> None:
-        """
-        Should only be used internally.
-        """
         super()._set_distributed_info(info)
         for reader in self._readers.values():
             reader._set_distributed_info(info)
