@@ -21,9 +21,10 @@ class BiasDirection(torch.nn.Module):
 
         # Parameters
 
-        bias_direction_method : `str`, optional (default=`pca`)
+        bias_direction_method : `str`, optional (default=`"pca"`)
             Method by which to compute a one-dimensional subspace that is the span
-            of a specific concept (e.g. gender).
+            of a specific concept (e.g. gender). Currently-implemented bias direction
+            methods: pca, paired-pca, 2-means, classification normal, svd.
         requires_grad : `bool`, optional (default=`False`)
             Option to enable gradient calculation.
         """
@@ -36,17 +37,19 @@ class BiasDirection(torch.nn.Module):
             )
         self.requires_grad = requires_grad
 
-    def forward(self, embeddings1: torch.Tensor, embeddings2: torch.Tensor):
+    def forward(self, embeddings1: torch.Tensor, embeddings2: torch.Tensor = None):
         """
 
         # Parameters
 
         embeddings1 : `torch.Tensor`
             A tensor of size (batch_size, ..., dim) containing a set of embeddings
-            for the first words from pairs of seed words related to a concept (e.g. gender).
-        embeddings2: `torch.Tensor`
+            for the first-words from pairs of seed words related to a concept (e.g. gender).
+        embeddings2: `torch.Tensor`, optional (default=`None`)
             A tensor of size (batch_size, ..., dim) containing a set of embeddings
-            for the second words from pairs of seed words related to a concept (e.g. gender).
+            for the second-words from pairs of seed words related to a concept (e.g. gender).
+            embeddings2 is required for every bias direction method except vanilla PCA;
+            vanilla PCA disregards embeddings2.
 
             Note: The embeddings at the same position in each of embeddings1 and embeddings2
             are expected to form seed word pairs from which the bias direction can be
@@ -59,6 +62,9 @@ class BiasDirection(torch.nn.Module):
             self.bias_direction_method(embeddings1, embeddings2)
 
     def _pca(self, embeddings1, embeddings2):
+
+
+    def _paired_pca(self, embeddings1, embeddings2):
         paired_embeddings = embeddings1 - embeddings2
         _, _, V = torch.pca_lowrank(paired_embeddings, q=2)
         bias_direction = V[0]
