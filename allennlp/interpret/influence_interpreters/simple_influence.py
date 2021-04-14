@@ -58,7 +58,7 @@ class SimpleInfluence(InfluenceInterpreter):
         train_data_loader: Lazy[DataLoader] = Lazy(SimpleDataLoader),
         test_data_loader: Lazy[DataLoader] = Lazy(SimpleDataLoader),
         params_to_freeze: List[str] = None,
-        device: int = -1,
+        cuda_device: int = -1,
         lissa_data_loader: Lazy[DataLoader] = Lazy(
             MultiProcessDataLoader, contructor_extras={"batch_size": 8}
         ),
@@ -75,7 +75,7 @@ class SimpleInfluence(InfluenceInterpreter):
             train_data_loader=train_data_loader,
             test_data_loader=test_data_loader,
             params_to_freeze=params_to_freeze,
-            device=device,
+            cuda_device=cuda_device,
         )
 
         self._lissa_dataloader = lissa_data_loader.construct(

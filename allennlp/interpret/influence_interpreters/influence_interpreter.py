@@ -1,15 +1,16 @@
+from os import PathLike
 import re
-from typing import List, Optional, NamedTuple, Sequence
+from typing import List, Optional, NamedTuple, Sequence, Union, Dict, Any
 
 import torch
 from torch import autograd
 
-from allennlp.common import Registrable, Lazy
+from allennlp.common import Registrable, Lazy, plugins
 from allennlp.common.tqdm import Tqdm
 from allennlp.common.util import int_to_device
 from allennlp.data import Instance, DatasetReader, DatasetReaderInput, Batch
 from allennlp.data.data_loaders import DataLoader, SimpleDataLoader
-from allennlp.models.model import Model
+from allennlp.models import Model, Archive, load_archive
 from allennlp.nn.util import move_to_device
 
 
@@ -93,10 +94,12 @@ class InfluenceInterpreter(Registrable):
         some parameter keys of the model. Any matching parameters will be have `requires_grad`
         set to `False`.
 
-    device : `int`, optional (default = `-1`)
+    cuda_device : `int`, optional (default = `-1`)
         The index of GPU device we want to calculate scores on. If not provided, we uses `-1`
         which correspond to using CPU.
     """
+
+    default_implementation = "simple-influence"
 
     def __init__(
         self,
@@ -106,13 +109,13 @@ class InfluenceInterpreter(Registrable):
         test_dataset_reader: Optional[DatasetReader] = None,
         train_data_loader: Lazy[DataLoader] = Lazy(SimpleDataLoader),
         test_data_loader: Lazy[DataLoader] = Lazy(SimpleDataLoader),
-        params_to_freeze: List[str] = None,
-        device: int = -1,
+        params_to_freeze: Optional[List[str]] = None,
+        cuda_device: int = -1,
     ) -> None:
         self._model = model
         self._vocab = model.vocab
         self._test_dataset_reader = test_dataset_reader or train_dataset_reader
-        self._device = int_to_device(device)
+        self._device = int_to_device(cuda_device)
 
         self._train_loader = train_data_loader.construct(
             reader=train_dataset_reader, data_path=train_data_path
@@ -165,6 +168,90 @@ class InfluenceInterpreter(Registrable):
             self.train_instances.append(
                 TrainInstance(instance=instance, loss=loss.detach().item(), grads=grads)
             )
+
+    @classmethod
+    def from_path(
+        cls,
+        archive_path: Union[str, PathLike],
+        interpreter_name: Optional[str] = None,
+        train_data_path: Optional[DatasetReaderInput] = None,
+        train_data_loader: Lazy[DataLoader] = Lazy(SimpleDataLoader),
+        test_data_loader: Lazy[DataLoader] = Lazy(SimpleDataLoader),
+        params_to_freeze: Optional[List[str]] = None,
+        cuda_device: int = -1,
+        import_plugins: bool = True,
+        overrides: Union[str, Dict[str, Any]] = "",
+        **extras,
+    ) -> "InfluenceInterpreter":
+        """
+        Load an `InfluenceInterpreter` from an archive path.
+
+        # Parameters
+
+        archive_path : `Union[str, PathLike]`, required
+            The path to the archive file.
+        interpreter_name : `Optional[str]`, optional (default = `None`)
+            The registered name of the an interpreter class. If not specified,
+            the default implementation (`SimpleInfluence`) will be used.
+        train_data_path : `Optional[DatasetReaderInput]`, optional (default = `None`)
+            If not specified, `train_data_path` will be taken from the archive's config.
+        train_data_loader : `Lazy[DataLoader]` = Lazy(SimpleDataLoader),
+        test_data_loader : `Lazy[DataLoader]` = Lazy(SimpleDataLoader),
+        params_to_freeze : `Optional[List[str]]` = None,
+        cuda_device : `int` = -1,
+        import_plugins : bool = True,
+            If `True`, we attempt to import plugins before loading the `InfluenceInterpreter`.
+            This comes with additional overhead, but means you don't need to explicitly
+            import the modules that your implementation depends on as long as those modules
+            can be found by `allennlp.common.plugins.import_plugins()`.
+        overrides : Union[str, Dict[str, Any]] = "",
+            JSON overrides to apply to the unarchived `Params` object.
+        **extras : `Any`
+            Extra parameters to pass to the interpreter's `__init__()` method.
+
+        """
+        if import_plugins:
+            plugins.import_plugins()
+        return cls.from_archive(
+            load_archive(archive_path, cuda_device=cuda_device, overrides=overrides),
+            interpreter_name=interpreter_name,
+            train_data_path=train_data_path,
+            train_data_loader=train_data_loader,
+            test_data_loader=test_data_loader,
+            params_to_freeze=params_to_freeze,
+            cuda_device=cuda_device,
+            **extras,
+        )
+
+    @classmethod
+    def from_archive(
+        cls,
+        archive: Archive,
+        interpreter_name: Optional[str] = None,
+        train_data_path: Optional[DatasetReaderInput] = None,
+        train_data_loader: Lazy[DataLoader] = Lazy(SimpleDataLoader),
+        test_data_loader: Lazy[DataLoader] = Lazy(SimpleDataLoader),
+        params_to_freeze: Optional[List[str]] = None,
+        cuda_device: int = -1,
+        **extras,
+    ) -> "InfluenceInterpreter":
+        """
+        Load an `InfluenceInterpreter` from an `Archive`.
+
+        The other parameters are the same as `.from_path()`.
+        """
+        interpreter_cls = cls.by_name(interpreter_name or cls.default_implementation)
+        return interpreter_cls(
+            model=archive.model,
+            train_data_path=train_data_path or archive.config["train_data_path"],
+            train_dataset_reader=archive.dataset_reader,
+            test_dataset_reader=archive.validation_dataset_reader,
+            train_data_loader=train_data_loader,
+            test_data_loader=test_data_loader,
+            params_to_freeze=params_to_freeze,
+            cuda_device=cuda_device,
+            **extras,
+        )
 
     def interpret(self, test_instance: Instance, k: int = 20) -> InterpretOutput:
         """
