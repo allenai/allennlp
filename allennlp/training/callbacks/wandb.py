@@ -28,12 +28,24 @@ class WandBCallback(LogWriterCallback):
 
     project : `Optional[str]`, optional (default = `None`)
         The name of the W&B project to save the training run to.
+    entity : `Optional[str]`, optional (default = `None`)
+        The username or team name to send the run to. If not specified, the default
+        will be used.
+    group : `Optional[str]`, optional (default = `None`)
+        Specify a group to organize individual runs into a larger experiment.
+    name : `Optional[str]`, optional (default = `None`)
+        A short display name for this run, which is how you'll identify this run in the W&B UI.
+        By default a random name is generated.
+    notes : `Optional[str]`, optional (default = `None`)
+        A description of the run.
     tags : `Optional[List[str]]`, optional (default = `None`)
         Tags to assign to the training run in W&B.
     watch_model : `bool`, optional (default = `True`)
         Whether or not W&B should watch the `Model`.
     files_to_save : `Tuple[str, ...]`, optional (default = `("config.json", "out.log")`)
         Extra files in the serialization directory to save to the W&B training run.
+    wandb_kwargs : `Optional[Dict[str, Any]]`, optional (default = `None`)
+        Additional key word arguments to pass to [`wandb.init()`](https://docs.wandb.ai/ref/python/init).
     """
 
     def __init__(
@@ -45,9 +57,14 @@ class WandBCallback(LogWriterCallback):
         should_log_parameter_statistics: bool = True,
         should_log_learning_rate: bool = False,
         project: Optional[str] = None,
+        entity: Optional[str] = None,
+        group: Optional[str] = None,
+        name: Optional[str] = None,
+        notes: Optional[str] = None,
         tags: Optional[List[str]] = None,
         watch_model: bool = True,
         files_to_save: Tuple[str, ...] = ("config.json", "out.log"),
+        wandb_kwargs: Optional[Dict[str, Any]] = None,
     ) -> None:
         if "WANDB_API_KEY" not in os.environ:
             raise ValueError("Missing environment variable 'WANDB_API_KEY'")
@@ -70,8 +87,13 @@ class WandBCallback(LogWriterCallback):
         self.wandb.init(
             dir=os.path.abspath(serialization_dir),
             project=project,
+            entity=entity,
+            group=group,
+            name=name,
+            notes=notes,
             config=Params.from_file(os.path.join(serialization_dir, "config.json")).as_dict(),
             tags=tags,
+            **(wandb_kwargs or {}),
         )
 
         for fpath in self._files_to_save:

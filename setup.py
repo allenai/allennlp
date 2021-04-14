@@ -67,7 +67,6 @@ setup(
         "pytest",
         "transformers>=4.1,<4.6",
         "sentencepiece",
-        "jsonpickle",
         "dataclasses;python_version<'3.7'",
         "filelock>=3.0,<3.1",
         "lmdb",

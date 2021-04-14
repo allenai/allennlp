@@ -52,7 +52,7 @@ class MultiTaskPredictor(Predictor):
             predictor_class: Type[Predictor] = (
                 Predictor.by_name(predictor_name) if predictor_name is not None else Predictor  # type: ignore
             )
-            self.predictors[name] = predictor_class(model, dataset_reader.readers[name])
+            self.predictors[name] = predictor_class(model, dataset_reader.readers[name].inner)
 
     @overrides
     def predict_instance(self, instance: Instance) -> JsonDict:
