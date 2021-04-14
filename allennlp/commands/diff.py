@@ -231,8 +231,10 @@ def _get_checkpoint_path(checkpoint: str, checkpoint_type: str) -> str:
     if checkpoint_type == "file":
         if checkpoint.endswith(".tar.gz"):
             return cached_path(checkpoint + "!weights.th", extract_archive=True)
-        else:
+        elif ".tar.gz!" in checkpoint:
             return cached_path(checkpoint, extract_archive=True)
+        else:
+            return cached_path(checkpoint)
     elif checkpoint_type == "huggingface":
         from transformers.file_utils import (
             hf_bucket_url,
