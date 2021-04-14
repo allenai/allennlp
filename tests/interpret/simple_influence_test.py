@@ -1,12 +1,13 @@
 import torch
+from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.data.fields import TensorField
 from allennlp.data import Instance
 from allennlp.models.model import Model
 from allennlp.data.data_loaders import SimpleDataLoader
 
+from allennlp.interpret import InfluenceInterpreter
 from allennlp.interpret.influence_interpreters.simple_influence import (
-    #  SimpleInfluence,
     flatten_tensors,
     get_hessian_vector_product,
     get_inverse_hvp_lissa,
@@ -73,3 +74,25 @@ def test_get_inverse_hvp_lissa():
     # on this toy example
     ans = torch.tensor([-1.5, -4.5])
     assert torch.equal(inverse_hvp, ans)
+
+
+class TestSimpleInfluence(AllenNlpTestCase):
+    def setup_method(self):
+        super().setup_method()
+        self.archive_path = (
+            self.FIXTURES_ROOT / "basic_classifier" / "serialization" / "model.tar.gz"
+        )
+        self.data_path = (
+            self.FIXTURES_ROOT / "data" / "text_classification_json" / "imdb_corpus.jsonl"
+        )
+
+    def test_simple_influence(self):
+        # NOTE: We use the same data here for test and train, which is pointless in
+        # real life but convenient here.
+        si = InfluenceInterpreter.from_path(
+            self.archive_path, train_data_path=self.data_path, recursion_depth=3
+        )
+        results = si.interpret_from_file(self.data_path, k=1)
+        assert len(results) == 3
+        for result in results:
+            assert len(result.top_k) == len(result.bottom_k) == 1

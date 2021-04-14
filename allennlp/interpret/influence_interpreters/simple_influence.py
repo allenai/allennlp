@@ -59,6 +59,7 @@ class SimpleInfluence(InfluenceInterpreter):
         model: Model,
         train_data_path: DatasetReaderInput,
         train_dataset_reader: DatasetReader,
+        *,
         test_dataset_reader: Optional[DatasetReader] = None,
         train_data_loader: Lazy[DataLoader] = Lazy(SimpleDataLoader.from_dataset_reader),
         test_data_loader: Lazy[DataLoader] = Lazy(SimpleDataLoader.from_dataset_reader),

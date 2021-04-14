@@ -106,6 +106,7 @@ class InfluenceInterpreter(Registrable):
         model: Model,
         train_data_path: DatasetReaderInput,
         train_dataset_reader: DatasetReader,
+        *,
         test_dataset_reader: Optional[DatasetReader] = None,
         train_data_loader: Lazy[DataLoader] = Lazy(SimpleDataLoader.from_dataset_reader),
         test_data_loader: Lazy[DataLoader] = Lazy(SimpleDataLoader.from_dataset_reader),
@@ -175,6 +176,7 @@ class InfluenceInterpreter(Registrable):
     def from_path(
         cls,
         archive_path: Union[str, PathLike],
+        *,
         interpreter_name: Optional[str] = None,
         train_data_path: Optional[DatasetReaderInput] = None,
         train_data_loader: Lazy[DataLoader] = Lazy(SimpleDataLoader.from_dataset_reader),
@@ -229,6 +231,7 @@ class InfluenceInterpreter(Registrable):
     def from_archive(
         cls,
         archive: Archive,
+        *,
         interpreter_name: Optional[str] = None,
         train_data_path: Optional[DatasetReaderInput] = None,
         train_data_loader: Lazy[DataLoader] = Lazy(SimpleDataLoader.from_dataset_reader),
