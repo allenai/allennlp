@@ -6,6 +6,7 @@ from overrides import overrides
 import torch
 
 from allennlp.common.util import lazy_groups_of
+from allennlp.common.tqdm import Tqdm
 from allennlp.data.data_loaders.data_loader import DataLoader, allennlp_collate, TensorDict
 from allennlp.data.dataset_readers import DatasetReader
 from allennlp.data.instance import Instance
@@ -87,6 +88,10 @@ class SimpleDataLoader(DataLoader):
         batch_size: int,
         shuffle: bool = False,
         batches_per_epoch: Optional[int] = None,
+        quiet: bool = False,
     ) -> "SimpleDataLoader":
-        instances = list(reader.read(data_path))
+        instance_iter = reader.read(data_path)
+        if not quiet:
+            instance_iter = Tqdm.tqdm(instance_iter, desc="loading instances")
+        instances = list(instance_iter)
         return cls(instances, batch_size, shuffle=shuffle, batches_per_epoch=batches_per_epoch)

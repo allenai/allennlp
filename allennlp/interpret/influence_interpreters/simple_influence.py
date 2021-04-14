@@ -1,3 +1,4 @@
+import logging
 from typing import List, Optional, Tuple, Union, Sequence
 
 import numpy as np
@@ -6,12 +7,16 @@ import torch
 import torch.autograd as autograd
 
 from allennlp.common import Lazy
+from allennlp.common.tqdm import Tqdm
 from allennlp.data import DatasetReader, DatasetReaderInput, Instance
 from allennlp.data.data_loaders import DataLoader, SimpleDataLoader, MultiProcessDataLoader
 from allennlp.interpret.influence_interpreters.influence_interpreter import (
     InfluenceInterpreter,
 )
 from allennlp.models.model import Model
+
+
+logger = logging.getLogger(__name__)
 
 
 @InfluenceInterpreter.register("simple-influence")
@@ -55,12 +60,18 @@ class SimpleInfluence(InfluenceInterpreter):
         train_data_path: DatasetReaderInput,
         train_dataset_reader: DatasetReader,
         test_dataset_reader: Optional[DatasetReader] = None,
-        train_data_loader: Lazy[DataLoader] = Lazy(SimpleDataLoader),
-        test_data_loader: Lazy[DataLoader] = Lazy(SimpleDataLoader),
+        train_data_loader: Lazy[DataLoader] = Lazy(SimpleDataLoader.from_dataset_reader),
+        test_data_loader: Lazy[DataLoader] = Lazy(SimpleDataLoader.from_dataset_reader),
         params_to_freeze: List[str] = None,
         cuda_device: int = -1,
         lissa_data_loader: Lazy[DataLoader] = Lazy(
-            MultiProcessDataLoader, contructor_extras={"batch_size": 8}
+            MultiProcessDataLoader,
+            contructor_extras={
+                "batch_size": 8,
+                "shuffle": True,
+                "max_instances_in_memory": 8,
+                "quiet": True,
+            },
         ),
         damping: float = 3e-3,
         num_samples: int = 1,
@@ -116,7 +127,7 @@ class SimpleInfluence(InfluenceInterpreter):
         return [
             # dL_test * d theta as in 2.2 of [https://arxiv.org/pdf/2005.06676.pdf]
             torch.dot(inv_hvp, flatten_tensors(x.grads)).item()
-            for x in self.train_instances
+            for x in Tqdm.tqdm(self.train_instances, desc="scoring train instances")
         ]
 
 
@@ -131,7 +142,7 @@ def get_inverse_hvp_lissa(
     scale: float,
 ) -> torch.Tensor:
     """
-    This function approximates the inverse of Hessian-Vector Product(HVP) w.r.t. the input.
+    This function approximates the inverse of Hessian-Vector Product (HVP) w.r.t. the input.
     """
     inverse_hvps = [torch.tensor(0) for _ in vs]
     for _ in range(num_samples):  # i.e. number of recursion
@@ -139,7 +150,10 @@ def get_inverse_hvp_lissa(
         # initialize \tilde{H}^{−1}_0 v = v
         cur_estimates = vs
         lissa_data_iterator = iter(lissa_data_loader)
-        for j in range(recursion_depth):
+        recursion_iter = Tqdm.tqdm(
+            range(recursion_depth), desc="calculating inverse HVP", total=recursion_depth
+        )
+        for j in recursion_iter:
             try:
                 training_batch = next(lissa_data_iterator)
             except StopIteration:
@@ -163,12 +177,9 @@ def get_inverse_hvp_lissa(
                 for v, cur_estimate, hvp in zip(vs, cur_estimates, hvps)
             ]
             # Manually checking if it converges
-            if (j % 200 == 0) or (j == recursion_depth - 1):
-                # I manually check, the norm does converge (though slowly)
-                print(
-                    f"Recursion at depth {j}: norm is "
-                    f"{np.linalg.norm(flatten_tensors(cur_estimates).cpu().numpy())}"
-                )
+            if (j % 50 == 0) or (j == recursion_depth - 1):
+                norm = np.linalg.norm(flatten_tensors(cur_estimates).cpu().numpy())
+                recursion_iter.set_description(desc=f"calculating inverse HVP, norm = {norm:.5f}")
 
         # accumulating X_{[i,S_2]}  (notation from the LiSSA (algo. 1) [https://arxiv.org/pdf/1602.03943.pdf]
         inverse_hvps = [

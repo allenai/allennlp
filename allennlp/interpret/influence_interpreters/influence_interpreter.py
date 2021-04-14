@@ -107,8 +107,8 @@ class InfluenceInterpreter(Registrable):
         train_data_path: DatasetReaderInput,
         train_dataset_reader: DatasetReader,
         test_dataset_reader: Optional[DatasetReader] = None,
-        train_data_loader: Lazy[DataLoader] = Lazy(SimpleDataLoader),
-        test_data_loader: Lazy[DataLoader] = Lazy(SimpleDataLoader),
+        train_data_loader: Lazy[DataLoader] = Lazy(SimpleDataLoader.from_dataset_reader),
+        test_data_loader: Lazy[DataLoader] = Lazy(SimpleDataLoader.from_dataset_reader),
         params_to_freeze: Optional[List[str]] = None,
         cuda_device: int = -1,
     ) -> None:
@@ -118,7 +118,9 @@ class InfluenceInterpreter(Registrable):
         self._device = int_to_device(cuda_device)
 
         self._train_loader = train_data_loader.construct(
-            reader=train_dataset_reader, data_path=train_data_path
+            reader=train_dataset_reader,
+            data_path=train_data_path,
+            batch_size=1,
         )
         self._train_loader.set_target_device(self._device)
         self._train_loader.index_with(self._vocab)
@@ -175,8 +177,8 @@ class InfluenceInterpreter(Registrable):
         archive_path: Union[str, PathLike],
         interpreter_name: Optional[str] = None,
         train_data_path: Optional[DatasetReaderInput] = None,
-        train_data_loader: Lazy[DataLoader] = Lazy(SimpleDataLoader),
-        test_data_loader: Lazy[DataLoader] = Lazy(SimpleDataLoader),
+        train_data_loader: Lazy[DataLoader] = Lazy(SimpleDataLoader.from_dataset_reader),
+        test_data_loader: Lazy[DataLoader] = Lazy(SimpleDataLoader.from_dataset_reader),
         params_to_freeze: Optional[List[str]] = None,
         cuda_device: int = -1,
         import_plugins: bool = True,
@@ -195,16 +197,16 @@ class InfluenceInterpreter(Registrable):
             the default implementation (`SimpleInfluence`) will be used.
         train_data_path : `Optional[DatasetReaderInput]`, optional (default = `None`)
             If not specified, `train_data_path` will be taken from the archive's config.
-        train_data_loader : `Lazy[DataLoader]` = Lazy(SimpleDataLoader),
-        test_data_loader : `Lazy[DataLoader]` = Lazy(SimpleDataLoader),
-        params_to_freeze : `Optional[List[str]]` = None,
-        cuda_device : `int` = -1,
-        import_plugins : bool = True,
+        train_data_loader : `Lazy[DataLoader]`, optional (default = `Lazy(SimpleDataLoader)`)
+        test_data_loader : `Lazy[DataLoader]`, optional (default = `Lazy(SimpleDataLoader)`)
+        params_to_freeze : `Optional[List[str]]`, optional (default = `None`)
+        cuda_device : `int`, optional (default = `-1`)
+        import_plugins : `bool`, optional (default = `True`)
             If `True`, we attempt to import plugins before loading the `InfluenceInterpreter`.
             This comes with additional overhead, but means you don't need to explicitly
             import the modules that your implementation depends on as long as those modules
             can be found by `allennlp.common.plugins.import_plugins()`.
-        overrides : Union[str, Dict[str, Any]] = "",
+        overrides : `Union[str, Dict[str, Any]]`, optional (default = `""`)
             JSON overrides to apply to the unarchived `Params` object.
         **extras : `Any`
             Extra parameters to pass to the interpreter's `__init__()` method.
@@ -229,8 +231,8 @@ class InfluenceInterpreter(Registrable):
         archive: Archive,
         interpreter_name: Optional[str] = None,
         train_data_path: Optional[DatasetReaderInput] = None,
-        train_data_loader: Lazy[DataLoader] = Lazy(SimpleDataLoader),
-        test_data_loader: Lazy[DataLoader] = Lazy(SimpleDataLoader),
+        train_data_loader: Lazy[DataLoader] = Lazy(SimpleDataLoader.from_dataset_reader),
+        test_data_loader: Lazy[DataLoader] = Lazy(SimpleDataLoader.from_dataset_reader),
         params_to_freeze: Optional[List[str]] = None,
         cuda_device: int = -1,
         **extras,
@@ -273,7 +275,9 @@ class InfluenceInterpreter(Registrable):
             Test instances should have `targets` so that a loss can be computed.
         """
         test_data_loader = self._lazy_test_data_loader.construct(
-            reader=self._test_dataset_reader, data_path=test_data_path
+            reader=self._test_dataset_reader,
+            data_path=test_data_path,
+            batch_size=1,
         )
         test_data_loader.index_with(self._vocab)
         instances = list(test_data_loader.iter_instances())
@@ -291,7 +295,7 @@ class InfluenceInterpreter(Registrable):
             Test instances should have `targets` so that a loss can be computed.
         """
         outputs: List[InterpretOutput] = []
-        for test_idx, test_instance in enumerate(Tqdm.tqdm(test_instances)):
+        for test_idx, test_instance in enumerate(Tqdm.tqdm(test_instances, desc="test instances")):
             test_batch = Batch([test_instance])
             test_batch.index_instances(self._vocab)
             test_tensor_dict = move_to_device(test_batch.as_tensor_dict(), self._device)
@@ -339,7 +343,7 @@ class InfluenceInterpreter(Registrable):
         outputs: List[TrainInstanceInfluence] = []
         for score, idx in zip(scores, indices):
             instance, loss, _ = self.train_instances[idx]
-            outputs.append(TrainInstanceInfluence(instance=instance, loss=loss, score=score))
+            outputs.append(TrainInstanceInfluence(instance=instance, loss=loss, score=score.item()))
         return outputs
 
     def calculate_influence_scores(
