@@ -27,6 +27,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - If a transformer is not in cache but has override weights, the transformer's pretrained weights are no longer downloaded, that is, only its `config.json` file is downloaded.
 - `SanityChecksCallback` now raises `SanityCheckError` instead of `AssertionError` when a check fails.
 - `jsonpickle` removed from dependencies.
+- Improved the error message from `Registrable.by_name()` when the name passed does not match any registered subclassess.
+  The error message will include a suggestion if there is a close match between the name passed and a registered name.
 
 ### Fixed
 
