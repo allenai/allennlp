@@ -61,9 +61,6 @@ class InterleavingDatasetReader(DatasetReader):
 
     @overrides
     def _set_worker_info(self, info: Optional[WorkerInfo]) -> None:
-        """
-        Should only be used internally.
-        """
         super()._set_worker_info(info)
         for reader in self._readers.values():
             reader._set_worker_info(info)
