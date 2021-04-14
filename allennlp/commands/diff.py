@@ -3,8 +3,9 @@
 
 ```bash
 allennlp diff \
-    https://huggingface.co/roberta-large/resolve/main/pytorch_model.bin \
-    https://storage.googleapis.com/allennlp-public-models/transformer-qa-2020-10-03.tar.gz!weights.th \
+    roberta-large \
+    https://storage.googleapis.com/allennlp-public-models/transformer-qa-2020-10-03.tar.gz \
+    --checkpoint-type-1 huggingface \
     --strip-prefix-1 'roberta.' \
     --strip-prefix-2 '_text_field_embedder.token_embedder_tokens.transformer_model.'
 ```
@@ -32,31 +33,54 @@ class Diff(Subcommand):
     @overrides
     def add_subparser(self, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
         description = """Display a diff between two model checkpoints."""
+        long_description = (
+            description
+            + """
+        In the output, lines start with either a "+", "-", "!", or empty space " ".
+        "+" means the corresponding parameter is present in the 2nd checkpoint but not the 1st.
+        "-" means the corresponding parameter is present in the 1st checkpoint but not the 2nd.
+        "!" means the corresponding parameter is present in both, but has different weights (same shape).
+        " " means the corresponding parameter is identical (in both shape and weights).
+        """
+        )
         subparser = parser.add_parser(
             self.name,
-            description=description,
+            description=long_description,
             help=description,
         )
         subparser.set_defaults(func=_diff)
         subparser.add_argument(
             "checkpoint1",
             type=str,
-            help="""The URL or path to the first PyTorch checkpoint file (e.g. '.pt' or '.bin').""",
+            help="""The URL, path, or other identifier (see '--checkpoint-type-1')
+            to the 1st PyTorch checkpoint file.""",
         )
         subparser.add_argument(
             "checkpoint2",
             type=str,
-            help="""The URL or path to the second PyTorch checkpoint file.""",
+            help="""The URL, path, or other identifier (see '--checkpoint-type-2')
+            to the 2nd PyTorch checkpoint file.""",
         )
+        for i in range(1, 3):
+            subparser.add_argument(
+                f"--checkpoint-type-{i}",
+                type=str,
+                choices=["file", "huggingface"],
+                default="file",
+                help=f"""The type of checkpoint corresponding to the 'checkpoint{i}' argument.
+                If 'file', 'checkpoint{i}' should point directly to a checkpoint file (e.g. '.pt', '.bin')
+                or an AllenNLP model archive ('.tar.gz').
+                If 'huggingface', 'checkpoint{i}' should be the name of a model on HuggingFace's model hub.""",
+            )
         subparser.add_argument(
             "--strip-prefix-1",
             type=str,
-            help="""A prefix to remove from all of the first checkpoint's keys.""",
+            help="""A prefix to remove from all of the 1st checkpoint's keys.""",
         )
         subparser.add_argument(
             "--strip-prefix-2",
             type=str,
-            help="""A prefix to remove from all of the second checkpoint's keys.""",
+            help="""A prefix to remove from all of the 2nd checkpoint's keys.""",
         )
         return subparser
 
@@ -91,7 +115,9 @@ class Modify(NamedTuple):
     distance: float
 
     def display(self):
-        termcolor.cprint(f"!{self.key}, shape = {self.shape}, △ = {self.distance:.4f}", "yellow")
+        termcolor.cprint(
+            f"!{self.key}, shape = {self.shape}, difference = {self.distance:.4f}", "yellow"
+        )
 
 
 class _Frontier(NamedTuple):
@@ -110,7 +136,7 @@ def _finalize(
             a_tensor = state_dict_a[step.key]
             b_tensor = state_dict_b[step.key]
             with torch.no_grad():
-                dist = torch.nn.functional.mse_loss(a_tensor, b_tensor).sqrt()
+                dist = torch.nn.functional.mse_loss(a_tensor, b_tensor).sqrt().item()
             if dist != 0.0:
                 out[i] = Modify(step.key, step.shape, dist)
     return out
@@ -201,9 +227,27 @@ def checkpoint_diff(
     assert False, "Could not find edit script"
 
 
+def _get_checkpoint_path(checkpoint: str, checkpoint_type: str) -> str:
+    if checkpoint_type == "file":
+        if checkpoint.endswith(".tar.gz"):
+            return cached_path(checkpoint + "!weights.th", extract_archive=True)
+        else:
+            return cached_path(checkpoint, extract_archive=True)
+    elif checkpoint_type == "huggingface":
+        from transformers.file_utils import (
+            hf_bucket_url,
+            WEIGHTS_NAME,
+            cached_path as hf_cached_path,
+        )
+
+        return hf_cached_path(hf_bucket_url(checkpoint, WEIGHTS_NAME))
+    else:
+        raise ValueError(f"bad checkpoint type '{checkpoint_type}'")
+
+
 def _diff(args: argparse.Namespace):
-    checkpoint_1_path = cached_path(args.checkpoint1, extract_archive=True)
-    checkpoint_2_path = cached_path(args.checkpoint2, extract_archive=True)
+    checkpoint_1_path = _get_checkpoint_path(args.checkpoint1, args.checkpoint_type_1)
+    checkpoint_2_path = _get_checkpoint_path(args.checkpoint2, args.checkpoint_type_2)
     checkpoint_1 = load_state_dict(
         checkpoint_1_path, strip_prefix=args.strip_prefix_1, strict=False
     )
