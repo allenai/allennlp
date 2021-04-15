@@ -42,6 +42,8 @@ class BasicClassifier(Model):
     num_labels : `int`, optional (default = `None`)
         Number of labels to project to in classification layer. By default, the classification layer will
         project to the size of the vocabulary namespace corresponding to labels.
+    namespace : `str`, optional (default = `"tokens"`)
+        Vocabulary namespace corresponding to the input text. By default, we use the "tokens" namespace.
     label_namespace : `str`, optional (default = `"labels"`)
         Vocabulary namespace corresponding to labels. By default, we use the "labels" namespace.
     initializer : `InitializerApplicator`, optional (default=`InitializerApplicator()`)

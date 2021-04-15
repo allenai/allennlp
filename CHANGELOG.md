@@ -11,6 +11,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Add new dimension to the `interpret` module: influence functions via the `InfluenceInterpreter` base class, along with a concrete implementation: `SimpleInfluence`.
 - Added a `quiet` parameter to the `MultiProcessDataLoading` that disables `Tqdm` progress bars.
+- The test for distributed metrics now takes a parameter specifying how often you want to run it.
+
+
+## [v2.3.0](https://github.com/allenai/allennlp/releases/tag/v2.3.0) - 2021-04-14
+
+### Added
+
 - Ported the following Huggingface `LambdaLR`-based schedulers: `ConstantLearningRateScheduler`, `ConstantWithWarmupLearningRateScheduler`, `CosineWithWarmupLearningRateScheduler`, `CosineHardRestartsWithWarmupLearningRateScheduler`.
 - Added new `sub_token_mode` parameter to `pretrained_transformer_mismatched_embedder` class to support first sub-token embedding
 - Added a way to run a multi task model with a dataset reader as part of `allennlp predict`.
@@ -29,6 +36,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - If a transformer is not in cache but has override weights, the transformer's pretrained weights are no longer downloaded, that is, only its `config.json` file is downloaded.
 - `SanityChecksCallback` now raises `SanityCheckError` instead of `AssertionError` when a check fails.
 - `jsonpickle` removed from dependencies.
+- Improved the error message from `Registrable.by_name()` when the name passed does not match any registered subclassess.
+  The error message will include a suggestion if there is a close match between the name passed and a registered name.
 
 ### Fixed
 

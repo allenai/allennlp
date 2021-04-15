@@ -130,3 +130,16 @@ class TestRegistrable(AllenNlpTestCase):
                 "testpackage.reader.TextClassificationJsonReader"
             )
             assert duplicate_reader.__name__ == "TextClassificationJsonReader"
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "sequence-tagging",  # using '-' instead of '_'
+        "sequence-taggign",  # transposition of 'ng'
+    ],
+)
+def test_suggestions_when_name_not_found(name):
+    with pytest.raises(ConfigurationError) as exc:
+        DatasetReader.by_name(name)
+        assert "did you mean 'sequence_tagging'?" in str(exc.value)
