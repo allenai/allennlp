@@ -39,19 +39,23 @@ from allennlp.training.metrics.metric import Metric
 @Metric.register("independence")
 class Independence(Metric):
     """
-    Independence. Assumes integer labels, with
-    each item to be classified having a single correct class.
+    [Independence](https://fairmlbook.org) (pg. 9) measures the statistical independence
+    of the protected variable from predictions. It has been explored through many equivalent
+    terms or variants, such as demographic parity, statistical parity, group fairness, and
+    disparate impact.
+
+    # Parameters
+
+    num_classes : `int`
+        Number of classes.
+    num_protected_variable_labels : `int`
+        Number of protected variable labels.
+
+    !!! Note
+        Assumes integer labels, with each item to be classified having a single correct class.
     """
 
     def __init__(self, num_classes: int, num_protected_variable_labels: int) -> None:
-        """
-        # Parameters
-
-        num_classes : `int`
-            Number of classes.
-        num_protected_variable_labels : `int`
-            Number of protected variable labels.
-        """
         self._num_classes = num_classes
         self._num_protected_variable_labels = num_protected_variable_labels
         self._predicted_label_counts = torch.zeros(num_classes)
@@ -197,19 +201,22 @@ class Independence(Metric):
 @Metric.register("separation")
 class Separation(Metric):
     """
-    Separation. Assumes integer labels, with
-    each item to be classified having a single correct class.
+    [Separation]((https://fairmlbook.org) (pg. 12) allows correlation between the
+    predictions and the protected variable to the extent that it is justified by
+    the gold labels.
+
+    # Parameters
+
+    num_classes : `int`
+        Number of classes.
+    num_protected_variable_labels : `int`
+        Number of protected variable labels.
+
+    !!! Note
+        Assumes integer labels, with each item to be classified having a single correct class.
     """
 
     def __init__(self, num_classes: int, num_protected_variable_labels: int) -> None:
-        """
-        # Parameters
-
-        num_classes : `int`
-            Number of classes.
-        num_protected_variable_labels : `int`
-            Number of protected variable labels.
-        """
         self._num_classes = num_classes
         self._num_protected_variable_labels = num_protected_variable_labels
         self._predicted_label_counts_by_gold_label = {
@@ -421,19 +428,22 @@ class Separation(Metric):
 @Metric.register("sufficiency")
 class Sufficiency(Metric):
     """
-    Sufficiency. Assumes integer labels, with
-    each item to be classified having a single correct class.
+    [Sufficiency](https://fairmlbook.org) (pg. 14) is satisfied by the predictions
+    when the protected variable and gold labels are clear from context.
+
+    # Parameters
+
+    num_classes : `int`
+        Number of classes.
+    num_protected_variable_labels : `int`
+        Number of protected variable labels.
+
+    !!! Note
+        Assumes integer labels, with each item to be classified having
+        a single correct class.
     """
 
     def __init__(self, num_classes: int, num_protected_variable_labels: int) -> None:
-        """
-        # Parameters
-
-        num_classes : `int`
-            Number of classes.
-        num_protected_variable_labels : `int`
-            Number of protected variable labels.
-        """
         self._num_classes = num_classes
         self._num_protected_variable_labels = num_protected_variable_labels
         self._gold_label_counts_by_predicted_label = {
@@ -654,10 +664,30 @@ class Sufficiency(Metric):
 @Metric.register("demographic_parity_without_ground_truth")
 class DemographicParityWithoutGroundTruth(Metric):
     """
-    Demographic parity without ground truth. Assumes integer predictions, with
-    each item to be classified having a single correct class.
-    From: Aka, O.; Burke, K.; Bäuerle, A.; Greer, C.; and Mitchell, M. 2021.
-    Measuring model biases in the absence of ground truth. arXiv preprint arXiv:2103.03417.
+    Demographic parity without ground truth, from: Aka, O.; Burke, K.; Bäuerle, A.;
+    Greer, C.; and Mitchell, M. 2021. Measuring model biases in the absence of ground
+    truth. arXiv preprint arXiv:2103.03417.
+
+    # Parameters
+
+    num_classes : `int`
+        Number of classes.
+    num_protected_variable_labels : `int`
+        Number of protected variable labels.
+    association_metric : `str`, optional (default = `"npmixy"`).
+        A generic association metric A(x, y), where x is an identity label and y is any other label.
+        Examples include: nPMIxy (`"npmixy"`), nPMIy (`"npmiy"`), PMI^2 (`"pmisq"`), PMI (`"pmi"`)
+        Empirically, nPMIxy and nPMIy are more capable of capturing labels across a range of
+        marginal frequencies.
+    gap_type : `str`, optional (default = `"ova"`).
+        Either one-vs-all (`"ova"`) or pairwise (`"pairwise"`). One-vs-all gap is equivalent to
+        A(x, y) - E[A(x', y)], where x' is in the set of all protected variable labels setminus {x}.
+        Pairwise gaps are A(x, y) - A(x', y), for all x' in the set of all protected variable labels
+        setminus {x}.
+
+    !!! Note
+        Assumes integer predictions, with each item to be classified
+        having a single correct class.
     """
 
     def __init__(
@@ -667,24 +697,6 @@ class DemographicParityWithoutGroundTruth(Metric):
         association_metric: str = "npmixy",
         gap_type: str = "ova",
     ) -> None:
-        """
-        # Parameters
-
-         num_classes : `int`
-            Number of classes.
-        num_protected_variable_labels : `int`
-            Number of protected variable labels.
-        association_metric : `str`, optional (default = `"npmixy"`).
-            A generic association metric A(x, y), where x is an identity label and y is any other label.
-            Examples include: nPMIxy (`"npmixy"`), nPMIy (`"npmiy"`), PMI^2 (`"pmisq"`), PMI (`"pmi"`)
-            Empirically, nPMIxy and nPMIy are more capable of capturing labels across a range of
-            marginal frequencies.
-        gap_type : `str`, optional (default = `"ova"`).
-            Either one-vs-all (`"ova"`) or pairwise (`"pairwise"`). One-vs-all gap is equivalent to
-            A(x, y) - E[A(x', y)], where x' is in the set of all protected variable labels setminus {x}.
-            Pairwise gaps are A(x, y) - A(x', y), for all x' in the set of all protected variable labels
-            setminus {x}.
-        """
         self._num_classes = num_classes
         self._num_protected_variable_labels = num_protected_variable_labels
         self._joint_counts_by_protected_variable_label = {
