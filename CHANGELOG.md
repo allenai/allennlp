@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Added support for the HuggingFace Hub as an alternative way to handle loading files.
+- Added support for the HuggingFace Hub as an alternative way to handle loading files. Hub downloads should be made through the `hf://` URL scheme.
 - The test for distributed metrics now takes a parameter specifying how often you want to run it.
 
 
