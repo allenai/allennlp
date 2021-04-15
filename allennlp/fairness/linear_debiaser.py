@@ -1,6 +1,6 @@
 import torch
 
-# TODO: bias_direction could have rank > 1
+
 class LinearDebiaser(torch.nn.Module):
     """
     Linear debiaser. Debiases embeddings by removing component
@@ -11,16 +11,14 @@ class LinearDebiaser(torch.nn.Module):
     [VERB: Visualizing and Interpreting Bias Mitigation Techniques for
     Word Representations](https://api.semanticscholar.org/CorpusID:233168618).
     ArXiv, abs/2104.02797.
+
+    # Parameters
+
+    requires_grad : `bool`, optional (default=`False`)
+        Option to enable gradient calculation.
     """
 
     def __init__(self, requires_grad: bool = False):
-        """
-
-        # Parameters
-
-        requires_grad : `bool`, optional (default=`False`)
-            Option to enable gradient calculation.
-        """
         self.requires_grad = requires_grad
 
     def forward(self, embeddings: torch.Tensor, bias_direction: torch.Tensor):
@@ -31,7 +29,7 @@ class LinearDebiaser(torch.nn.Module):
         embeddings : `torch.Tensor`
             A tensor of size (batch_size, ..., dim).
         bias_direction : `torch.Tensor`
-            A tensor of size (dim, ).
+            A unit tensor of size (dim, ) representing the concept subspace.
 
         # Returns
 
