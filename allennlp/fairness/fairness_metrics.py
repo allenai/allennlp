@@ -19,8 +19,8 @@ arXiv preprint arXiv:1707.00075.
 [Measuring model biases in the absence of ground truth](https://api.semanticscholar.org/CorpusID:232135043).
 arXiv preprint arXiv:2103.03417.
 
-It is provably impossible to satisfy any two of Independence, Separation, and Sufficiency simultaneously,
-except in degenerate cases.
+It is provably [impossible](https://fairmlbook.org/pdf/classification.pdf) (pg. 18) to satisfy any two of
+Independence, Separation, and Sufficiency simultaneously, except in degenerate cases.
 """
 
 from typing import Optional, Dict, Union
@@ -77,7 +77,8 @@ class Independence(Metric):
         mask : `torch.BoolTensor`, optional (default = `None`).
             A tensor of the same shape as `predicted_labels`.
 
-            Note: all tensors are expected to be on the same device.
+        !!! Note
+            All tensors are expected to be on the same device.
         """
         predicted_labels, protected_variable_labels, mask = self.detach_tensors(
             predicted_labels, protected_variable_labels, mask
@@ -242,7 +243,8 @@ class Separation(Metric):
         mask : `torch.BoolTensor`, optional (default = `None`).
             A tensor of the same shape as `predicted_labels`.
 
-            Note: all tensors are expected to be on the same device.
+        !!! Note
+            All tensors are expected to be on the same device.
         """
         predicted_labels, gold_labels, protected_variable_labels, mask = self.detach_tensors(
             predicted_labels, gold_labels, protected_variable_labels, mask
@@ -366,7 +368,8 @@ class Separation(Metric):
             variable label a to the KL divergence of P(C | A = a, Y = y) from P(C | Y = y).
             A KL divergence of nearly 0 implies fairness on the basis of Separation.
 
-            Note: If a class label is not present in Y conditioned on a protected variable label,
+        !!! Note
+            If a class label is not present in Y conditioned on a protected variable label,
             the expected behavior is that the divergence corresponding to this (class label, protected variable
             label) pair is NaN.
         """
@@ -464,7 +467,8 @@ class Sufficiency(Metric):
         mask : `torch.BoolTensor`, optional (default = `None`).
             A tensor of the same shape as `predicted_labels`.
 
-            Note: all tensors are expected to be on the same device.
+        !!! Note
+            All tensors are expected to be on the same device.
         """
         predicted_labels, gold_labels, protected_variable_labels, mask = self.detach_tensors(
             predicted_labels, gold_labels, protected_variable_labels, mask
@@ -588,7 +592,8 @@ class Sufficiency(Metric):
             variable label a to the KL divergence of P(Y | A = a, C = c) from P(Y | C = c).
             A KL divergence of nearly 0 implies fairness on the basis of Sufficiency.
 
-            Note: If a possible class label is not present in C, the expected behavior is that
+        !!! Note
+            If a possible class label is not present in C, the expected behavior is that
             the divergences corresponding to this class label are NaN. If a possible class label is
             not present in C conditioned on a protected variable label, the expected behavior is that
             the divergence corresponding to this (class label, protected variable label) pair is NaN.
@@ -723,7 +728,8 @@ class DemographicParityWithoutGroundTruth(Metric):
         mask : `torch.BoolTensor`, optional (default = `None`).
             A tensor of the same shape as `predicted_labels`.
 
-            Note: all tensors are expected to be on the same device.
+        !!! Note
+            All tensors are expected to be on the same device.
         """
         predicted_labels, protected_variable_labels, mask = self.detach_tensors(
             predicted_labels, protected_variable_labels, mask
@@ -833,7 +839,8 @@ class DemographicParityWithoutGroundTruth(Metric):
             of the pairwise gaps (where the gap corresponding to prediction label i is at index i).
             A gap of nearly 0 implies fairness on the basis of Demographic Parity in the Absence of Ground Truth.
 
-            Note: If a possible class label is not present in Y, the expected behavior is that
+        !!! Note
+            If a possible class label is not present in Y, the expected behavior is that
             the gaps corresponding to this class label are NaN. If a possible (class label,
             protected variable label) pair is not present in the joint of Y and X, the expected
             behavior is that the gap corresponding to this (class label, protected variable label)
