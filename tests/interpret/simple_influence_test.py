@@ -95,4 +95,4 @@ class TestSimpleInfluence(AllenNlpTestCase):
         results = si.interpret_from_file(self.data_path, k=1)
         assert len(results) == 3
         for result in results:
-            assert len(result.top_k) == len(result.bottom_k) == 1
+            assert len(result.top_k) == 1

@@ -93,8 +93,8 @@ class SimpleInfluence(InfluenceInterpreter):
         self._lissa_dataloader = lissa_data_loader.construct(
             reader=train_dataset_reader, data_path=train_data_path
         )
-        self._lissa_dataloader.set_target_device(self._device)
-        self._lissa_dataloader.index_with(self._vocab)
+        self._lissa_dataloader.set_target_device(self.device)
+        self._lissa_dataloader.index_with(self.vocab)
 
         self._damping = damping
         self._num_samples = num_samples
@@ -102,7 +102,7 @@ class SimpleInfluence(InfluenceInterpreter):
         self._scale = scale
 
     @overrides
-    def calculate_influence_scores(
+    def _calculate_influence_scores(
         self, test_instance: Instance, test_loss: float, test_grads: Sequence[torch.Tensor]
     ) -> List[float]:
         # Approximate the inverse of Hessian-Vector Product through LiSSA algorithm
@@ -117,8 +117,8 @@ class SimpleInfluence(InfluenceInterpreter):
 
         inv_hvp = get_inverse_hvp_lissa(
             test_grads,
-            self._model,
-            self._used_params,
+            self.model,
+            self.used_params,
             self._lissa_dataloader,
             self._damping,
             self._num_samples,

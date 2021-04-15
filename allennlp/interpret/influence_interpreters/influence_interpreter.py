@@ -1,3 +1,4 @@
+import logging
 from os import PathLike
 import re
 from typing import List, Optional, NamedTuple, Sequence, Union, Dict, Any
@@ -14,7 +15,10 @@ from allennlp.models import Model, Archive, load_archive
 from allennlp.nn.util import move_to_device
 
 
-class TrainInstanceInfluence(NamedTuple):
+logger = logging.getLogger(__name__)
+
+
+class InstanceInfluence(NamedTuple):
     instance: Instance
 
     loss: float
@@ -26,6 +30,10 @@ class TrainInstanceInfluence(NamedTuple):
 
 
 class InterpretOutput(NamedTuple):
+    """
+    The output associated with a single test instance.
+    """
+
     test_instance: Instance
 
     loss: float
@@ -33,18 +41,13 @@ class InterpretOutput(NamedTuple):
     The loss corresponding to the `test_instance`.
     """
 
-    top_k: List[TrainInstanceInfluence]
+    top_k: List[InstanceInfluence]
     """
     The top `k` most influential training instances along with their influence score.
     """
 
-    bottom_k: List[TrainInstanceInfluence]
-    """
-    The bottom `k` least influential training instances along with their influence score.
-    """
 
-
-class TrainInstance(NamedTuple):
+class InstanceWithGrads(NamedTuple):
     """
     Wraps a training `Instance` along with its associated loss and gradients.
 
@@ -58,10 +61,10 @@ class TrainInstance(NamedTuple):
 
 class InfluenceInterpreter(Registrable):
     """
-    A `SaliencyInterpreter` interprets an AllenNLP Predictor's outputs by assigning an influence
-    score to each training instance with respect to each test input.
+    An `InfluenceInterpreter` interprets an AllenNLP models's outputs by finding the
+    training instances that had the most influence on the prediction for each test input.
 
-    Subclasses are required to implement the `calculate_influence_scores()` method.
+    Subclasses are required to implement the `_calculate_influence_scores()` method.
 
     # Parameters
 
@@ -113,64 +116,78 @@ class InfluenceInterpreter(Registrable):
         params_to_freeze: Optional[List[str]] = None,
         cuda_device: int = -1,
     ) -> None:
-        self._model = model
-        self._vocab = model.vocab
-        self._test_dataset_reader = test_dataset_reader or train_dataset_reader
-        self._device = int_to_device(cuda_device)
+        self.model = model
+        self.vocab = model.vocab
+        self.device = int_to_device(cuda_device)
 
+        self._train_data_path = train_data_path
         self._train_loader = train_data_loader.construct(
             reader=train_dataset_reader,
             data_path=train_data_path,
             batch_size=1,
         )
-        self._train_loader.set_target_device(self._device)
-        self._train_loader.index_with(self._vocab)
+        self._train_loader.set_target_device(self.device)
+        self._train_loader.index_with(self.vocab)
 
+        self._test_dataset_reader = test_dataset_reader or train_dataset_reader
         self._lazy_test_data_loader = test_data_loader
 
-        self._model.to(self._device)
+        self.model.to(self.device)
         if params_to_freeze is not None:
-            for name, param in self._model.named_parameters():
+            for name, param in self.model.named_parameters():
                 if any([re.match(pattern, name) for pattern in params_to_freeze]):
                     param.requires_grad = False
 
+        # These variables are set when the corresponding public properties are accessed.
         # This is not set until we actually run the calculation since some parameters might not be used.
-        self._used_params: List[torch.Tensor] = []
-        self._used_param_names: List[str] = []
+        self._used_params: Optional[List[torch.nn.Parameter]] = None
+        self._used_param_names: Optional[List[str]] = None
+        self._train_instances: Optional[List[InstanceWithGrads]] = None
 
-        # Load training instances, compute loss and gradients.
-        self.train_instances: List[TrainInstance] = []
-        self._model.train()
-        for instance in Tqdm.tqdm(
-            self._train_loader.iter_instances(), desc="calculating training gradients"
-        ):
-            batch = Batch([instance])
-            batch.index_instances(self._vocab)
-            tensor_dict = move_to_device(batch.as_tensor_dict(), self._device)
+    @property
+    def used_params(self) -> List[torch.nn.Parameter]:
+        """
+        The parameters of the model that have non-zero gradients after a backwards pass.
 
-            self._model.zero_grad()
+        This can be used to gather the corresponding gradients with respect to a loss
+        via the `torch.autograd.grad` function.
 
-            # Compute loss with respect to the test instance.
-            output_dict = self._model(**tensor_dict)
-            loss = output_dict["loss"]
+        !!! Note
+            Accessing this property requires calling `self._gather_train_instances_and_compute_gradients()`
+            if it hasn't been called yet, which may take several minutes.
+        """
+        if self._used_params is None:
+            self._gather_train_instances_and_compute_gradients()
+        assert self._used_params is not None
+        return self._used_params
 
-            if not self._used_params:
-                # we only know what parameters in the models requires gradient after
-                # we do the first .backward() and we store those used parameters
-                loss.backward(retain_graph=True)
-                for name, param in self._model.named_parameters():
-                    if param.requires_grad and param.grad is not None:
-                        self._used_params.append(param)
-                        self._used_param_names.append(name)
+    @property
+    def used_param_names(self) -> List[str]:
+        """
+        The names of the corresponding parameters in `self.used_params`.
 
-            # Get gradients.
-            grads = autograd.grad(loss, self._used_params)
-            # Sanity check.
-            assert len(grads) == len(self._used_params)
+        !!! Note
+            Accessing this property requires calling `self._gather_train_instances_and_compute_gradients()`
+            if it hasn't been called yet, which may take several minutes.
+        """
+        if self._used_param_names is None:
+            self._gather_train_instances_and_compute_gradients()
+        assert self._used_param_names is not None
+        return self._used_param_names
 
-            self.train_instances.append(
-                TrainInstance(instance=instance, loss=loss.detach().item(), grads=grads)
-            )
+    @property
+    def train_instances(self) -> List[InstanceWithGrads]:
+        """
+        The training instances along with their corresponding loss and gradients.
+
+        !!! Note
+            Accessing this property requires calling `self._gather_train_instances_and_compute_gradients()`
+            if it hasn't been called yet, which may take several minutes.
+        """
+        if self._train_instances is None:
+            self._gather_train_instances_and_compute_gradients()
+        assert self._train_instances is not None
+        return self._train_instances
 
     @classmethod
     def from_path(
@@ -261,7 +278,7 @@ class InfluenceInterpreter(Registrable):
     def interpret(self, test_instance: Instance, k: int = 20) -> InterpretOutput:
         """
         Run the influence function scorer on the given instance, returning the top `k`
-        most influential train instances and the bottom `k` least influential train instances.
+        most influential train instances with their scores.
 
         !!! Note
             Test instances should have `targets` so that a loss can be computed.
@@ -282,7 +299,7 @@ class InfluenceInterpreter(Registrable):
             data_path=test_data_path,
             batch_size=1,
         )
-        test_data_loader.index_with(self._vocab)
+        test_data_loader.index_with(self.vocab)
         instances = list(test_data_loader.iter_instances())
         return self.interpret_instances(instances, k=k)
 
@@ -291,65 +308,111 @@ class InfluenceInterpreter(Registrable):
     ) -> List[InterpretOutput]:
         """
         Run the influence function scorer on the given instances, returning the top `k`
-        most influential train instances and the bottom `k` least influential train instances
-        for each test instance.
+        most influential train instances for each test instance.
 
         !!! Note
             Test instances should have `targets` so that a loss can be computed.
         """
+        # We have these checks here for two reasons:
+        #  1. as a sanity check to make sure we actually have a non-empty set of training
+        #     instances as well as parameters that get non-zero gradients,
+        #  2. and to ensure these attributes (self.used_params and self.training_instances)
+        #     have been collected before proceeding further.
+        if not self.train_instances:
+            raise ValueError(f"No training instances collected from {self._train_data_path}")
+        if not self.used_params:
+            raise ValueError("Model has no parameters with non-zero gradients")
+
         outputs: List[InterpretOutput] = []
         for test_idx, test_instance in enumerate(Tqdm.tqdm(test_instances, desc="test instances")):
             test_batch = Batch([test_instance])
-            test_batch.index_instances(self._vocab)
-            test_tensor_dict = move_to_device(test_batch.as_tensor_dict(), self._device)
+            test_batch.index_instances(self.vocab)
+            test_tensor_dict = move_to_device(test_batch.as_tensor_dict(), self.device)
 
             # Prepare model for loss and gradient calculations.
-            self._model.eval()
-            self._model.zero_grad()
+            self.model.eval()
+            self.model.zero_grad()
 
             # Compute loss with respect to the test instance.
-            test_output_dict = self._model(**test_tensor_dict)
+            test_output_dict = self.model(**test_tensor_dict)
             test_loss = test_output_dict["loss"]
             test_loss_float = test_loss.detach().item()
 
             # Get the (parameter) gradients with respect to the test loss.
-            test_grads = autograd.grad(test_loss, self._used_params)
+            test_grads = autograd.grad(test_loss, self.used_params)
             # Sanity check.
-            assert len(test_grads) == len(self._used_params)
+            assert len(test_grads) == len(self.used_params)
 
             # Get influence scores.
             influence_scores = torch.zeros(len(self.train_instances))
             for idx, score in enumerate(
-                self.calculate_influence_scores(test_instance, test_loss_float, test_grads)
+                self._calculate_influence_scores(test_instance, test_loss_float, test_grads)
             ):
                 influence_scores[idx] = score
 
-            # Gather top k and bottom k.
+            # Gather top k.
             top_k_scores, top_k_indices = torch.topk(influence_scores, k)
-            bottom_k_scores, bottom_k_indices = torch.topk(-influence_scores, k)
             top_k = self._gather_instances(top_k_scores, top_k_indices)
-            bottom_k = self._gather_instances(bottom_k_scores, bottom_k_indices)
 
             outputs.append(
                 InterpretOutput(
                     test_instance=test_instance,
                     loss=test_loss_float,
                     top_k=top_k,
-                    bottom_k=bottom_k,
                 )
             )
         return outputs
 
     def _gather_instances(
         self, scores: torch.Tensor, indices: torch.Tensor
-    ) -> List[TrainInstanceInfluence]:
-        outputs: List[TrainInstanceInfluence] = []
+    ) -> List[InstanceInfluence]:
+        outputs: List[InstanceInfluence] = []
         for score, idx in zip(scores, indices):
             instance, loss, _ = self.train_instances[idx]
-            outputs.append(TrainInstanceInfluence(instance=instance, loss=loss, score=score.item()))
+            outputs.append(InstanceInfluence(instance=instance, loss=loss, score=score.item()))
         return outputs
 
-    def calculate_influence_scores(
+    def _gather_train_instances_and_compute_gradients(self) -> None:
+        logger.info(
+            "Gathering training instances and computing gradients. "
+            "The result will be cached so this only needs to be done once."
+        )
+        self._train_instances = []
+        self.model.train()
+        for instance in Tqdm.tqdm(
+            self._train_loader.iter_instances(), desc="calculating training gradients"
+        ):
+            batch = Batch([instance])
+            batch.index_instances(self.vocab)
+            tensor_dict = move_to_device(batch.as_tensor_dict(), self.device)
+
+            self.model.zero_grad()
+
+            # Compute loss with respect to the test instance.
+            output_dict = self.model(**tensor_dict)
+            loss = output_dict["loss"]
+
+            if self._used_params is None or self._used_param_names is None:
+                self._used_params = []
+                self._used_param_names = []
+                # we only know what parameters in the models requires gradient after
+                # we do the first .backward() and we store those used parameters
+                loss.backward(retain_graph=True)
+                for name, param in self.model.named_parameters():
+                    if param.requires_grad and param.grad is not None:
+                        self._used_params.append(param)
+                        self._used_param_names.append(name)
+
+            # Get gradients.
+            grads = autograd.grad(loss, self._used_params)
+            # Sanity check.
+            assert len(grads) == len(self._used_params)
+
+            self._train_instances.append(
+                InstanceWithGrads(instance=instance, loss=loss.detach().item(), grads=grads)
+            )
+
+    def _calculate_influence_scores(
         self, test_instance: Instance, test_loss: float, test_grads: Sequence[torch.Tensor]
     ) -> List[float]:
         """
