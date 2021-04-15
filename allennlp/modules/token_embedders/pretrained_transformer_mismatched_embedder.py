@@ -3,6 +3,7 @@ from typing import Optional, Dict, Any
 from overrides import overrides
 import torch
 
+from allennlp.common.checks import ConfigurationError
 from allennlp.modules.token_embedders import PretrainedTransformerEmbedder, TokenEmbedder
 from allennlp.nn import util
 
@@ -11,7 +12,7 @@ from allennlp.nn import util
 class PretrainedTransformerMismatchedEmbedder(TokenEmbedder):
     """
     Use this embedder to embed wordpieces given by `PretrainedTransformerMismatchedIndexer`
-    and to pool the resulting vectors to get word-level representations.
+    and to get word-level representations.
 
     Registered as a `TokenEmbedder` with name "pretrained_transformer_mismatched".
 
@@ -41,6 +42,12 @@ class PretrainedTransformerMismatchedEmbedder(TokenEmbedder):
         Dictionary with
         [additional arguments](https://github.com/huggingface/transformers/blob/155c782a2ccd103cf63ad48a2becd7c76a7d2115/transformers/modeling_utils.py#L253)
         for `AutoModel.from_pretrained`.
+    sub_token_mode: `Optional[str]`, optional (default= `avg`)
+        If `sub_token_mode` is set to `first`, return first sub-token representation as word-level representation
+        If `sub_token_mode` is set to `avg`, return average of all the sub-tokens representation as word-level representation
+        If `sub_token_mode` is not specified it defaults to `avg`
+        If invalid `sub_token_mode` is provided, throw `ConfigurationError`
+
     """  # noqa: E501
 
     def __init__(
@@ -52,6 +59,7 @@ class PretrainedTransformerMismatchedEmbedder(TokenEmbedder):
         gradient_checkpointing: Optional[bool] = None,
         tokenizer_kwargs: Optional[Dict[str, Any]] = None,
         transformer_kwargs: Optional[Dict[str, Any]] = None,
+        sub_token_mode: Optional[str] = "avg",
     ) -> None:
         super().__init__()
         # The matched version v.s. mismatched
@@ -64,6 +72,7 @@ class PretrainedTransformerMismatchedEmbedder(TokenEmbedder):
             tokenizer_kwargs=tokenizer_kwargs,
             transformer_kwargs=transformer_kwargs,
         )
+        self.sub_token_mode = sub_token_mode
 
     @overrides
     def get_output_dim(self):
@@ -111,15 +120,36 @@ class PretrainedTransformerMismatchedEmbedder(TokenEmbedder):
         # span_embeddings: (batch_size, num_orig_tokens, max_span_length, embedding_size)
         # span_mask: (batch_size, num_orig_tokens, max_span_length)
         span_embeddings, span_mask = util.batched_span_select(embeddings.contiguous(), offsets)
+
         span_mask = span_mask.unsqueeze(-1)
+
+        # Shape: (batch_size, num_orig_tokens, max_span_length, embedding_size)
         span_embeddings *= span_mask  # zero out paddings
 
-        span_embeddings_sum = span_embeddings.sum(2)
-        span_embeddings_len = span_mask.sum(2)
-        # Shape: (batch_size, num_orig_tokens, embedding_size)
-        orig_embeddings = span_embeddings_sum / torch.clamp_min(span_embeddings_len, 1)
+        # If "sub_token_mode" is set to "first", return the first sub-token embedding
+        if self.sub_token_mode == "first":
+            # Select first sub-token embeddings from span embeddings
+            # Shape: (batch_size, num_orig_tokens, embedding_size)
+            orig_embeddings = span_embeddings[:, :, 0, :]
 
-        # All the places where the span length is zero, write in zeros.
-        orig_embeddings[(span_embeddings_len == 0).expand(orig_embeddings.shape)] = 0
+        # If "sub_token_mode" is set to "avg", return the average of embeddings of all sub-tokens of a word
+        elif self.sub_token_mode == "avg":
+            # Sum over embeddings of all sub-tokens of a word
+            # Shape: (batch_size, num_orig_tokens, embedding_size)
+            span_embeddings_sum = span_embeddings.sum(2)
+
+            # Shape (batch_size, num_orig_tokens)
+            span_embeddings_len = span_mask.sum(2)
+
+            # Find the average of sub-tokens embeddings by dividing `span_embedding_sum` by `span_embedding_len`
+            # Shape: (batch_size, num_orig_tokens, embedding_size)
+            orig_embeddings = span_embeddings_sum / torch.clamp_min(span_embeddings_len, 1)
+
+            # All the places where the span length is zero, write in zeros.
+            orig_embeddings[(span_embeddings_len == 0).expand(orig_embeddings.shape)] = 0
+
+        # If invalid "sub_token_mode" is provided, throw error
+        else:
+            raise ConfigurationError(f"Do not recognise 'sub_token_mode' {self.sub_token_mode}")
 
         return orig_embeddings

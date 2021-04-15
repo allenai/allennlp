@@ -4,7 +4,7 @@ from allennlp.common.testing import AllenNlpTestCase
 
 class TestSequenceTaggingDatasetReader:
     def test_default_format(self):
-        reader = SequenceTaggingDatasetReader()
+        reader = SequenceTaggingDatasetReader(max_instances=4)
         instances = list(
             reader.read(AllenNlpTestCase.FIXTURES_ROOT / "data" / "sequence_tagging.tsv")
         )

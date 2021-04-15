@@ -75,6 +75,7 @@ def global_distributed_metric(
     metric_kwargs: Dict[str, List[Any]],
     desired_values: Dict[str, Any],
     exact: Union[bool, Tuple[float, float]] = True,
+    number_of_runs: int = 1,
 ):
     kwargs = {}
 
@@ -82,7 +83,8 @@ def global_distributed_metric(
     for argname in metric_kwargs:
         kwargs[argname] = metric_kwargs[argname][global_rank]
 
-    metric(**kwargs)
+    for _ in range(number_of_runs):
+        metric(**kwargs)
 
     metrics = metric.get_metric(False)
     if not isinstance(metrics, Dict) and not isinstance(desired_values, Dict):
