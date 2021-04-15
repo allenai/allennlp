@@ -24,7 +24,7 @@ class BiasDirection(torch.nn.Module):
         bias_direction_method : `str`, optional (default=`"pca"`)
             Method by which to compute a one-dimensional subspace that is the span
             of a specific concept (e.g. gender). Currently-implemented bias direction
-            methods: pca, paired-pca, 2-means, classification normal, svd.
+            methods: `"pca"`, `"paired_pca"`, `"two_means"`, `"classification_normal"`, `"svd"`.
         requires_grad : `bool`, optional (default=`False`)
             Option to enable gradient calculation.
         """
@@ -51,8 +51,9 @@ class BiasDirection(torch.nn.Module):
             embeddings2 is required for every bias direction method except vanilla PCA;
             vanilla PCA disregards embeddings2.
 
-            Note: The embeddings at the same position in each of embeddings1 and embeddings2
-            are expected to form seed word pairs from which the bias direction can be
+        !!! Note
+            With the exception of for PCA, the embeddings at the same position in each of embeddings1
+            and embeddings2 are expected to form seed word pairs from which the bias direction can be
             extrapolated. For example, if the concept is gender, the embeddings for
             ("man", "woman") should be at the same positions in embeddings1 and embeddings2.
             Importantly, this is a binary treatment of gender identity and does not accurately
@@ -62,7 +63,11 @@ class BiasDirection(torch.nn.Module):
             self.bias_direction_method(embeddings1, embeddings2)
 
     def _pca(self, embeddings1, embeddings2):
-
+        # pca_lowrank centers the embeddings by default
+        _, _, V = torch.pca_lowrank(embeddings1, q=2)
+        # get top principal component
+        bias_direction = V[0]
+        return self._normalize_bias_direction(bias_direction)
 
     def _paired_pca(self, embeddings1, embeddings2):
         paired_embeddings = embeddings1 - embeddings2
