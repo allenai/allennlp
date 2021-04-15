@@ -39,8 +39,12 @@ class Diff(Subcommand):
         In the output, lines start with either a "+", "-", "!", or empty space " ".
         "+" means the corresponding parameter is present in the 2nd checkpoint but not the 1st.
         "-" means the corresponding parameter is present in the 1st checkpoint but not the 2nd.
-        "!" means the corresponding parameter is present in both, but has different weights (same shape).
-        " " means the corresponding parameter is identical (in both shape and weights).
+        "!" means the corresponding parameter is present in both, but has different weights (same shape)
+        according to the distance calculation and the '--threshold' value.
+        And " " means the corresponding parameter is considered identical in both, i.e.
+        the distance falls below the threshold.
+        The distance between two tensors is calculated as the root of the
+        mean squared difference, multiplied by the '--scale' parameter.
         """
         )
         subparser = parser.add_parser(
@@ -52,14 +56,14 @@ class Diff(Subcommand):
         subparser.add_argument(
             "checkpoint1",
             type=str,
-            help="""The URL, path, or other identifier (see '--checkpoint-type-1')
-            to the 1st PyTorch checkpoint file.""",
+            help="""the URL, path, or other identifier (see '--checkpoint-type-1')
+            to the 1st PyTorch checkpoint.""",
         )
         subparser.add_argument(
             "checkpoint2",
             type=str,
-            help="""The URL, path, or other identifier (see '--checkpoint-type-2')
-            to the 2nd PyTorch checkpoint file.""",
+            help="""the URL, path, or other identifier (see '--checkpoint-type-2')
+            to the 2nd PyTorch checkpoint.""",
         )
         for i in range(1, 3):
             subparser.add_argument(
@@ -67,7 +71,7 @@ class Diff(Subcommand):
                 type=str,
                 choices=["file", "huggingface"],
                 default="file",
-                help=f"""The type of checkpoint corresponding to the 'checkpoint{i}' argument.
+                help=f"""the type of checkpoint corresponding to the 'checkpoint{i}' argument.
                 If 'file', 'checkpoint{i}' should point directly to a checkpoint file (e.g. '.pt', '.bin')
                 or an AllenNLP model archive ('.tar.gz').
                 If 'huggingface', 'checkpoint{i}' should be the name of a model on HuggingFace's model hub.""",
@@ -75,12 +79,25 @@ class Diff(Subcommand):
         subparser.add_argument(
             "--strip-prefix-1",
             type=str,
-            help="""A prefix to remove from all of the 1st checkpoint's keys.""",
+            help="""a prefix to remove from all of the 1st checkpoint's keys.""",
         )
         subparser.add_argument(
             "--strip-prefix-2",
             type=str,
-            help="""A prefix to remove from all of the 2nd checkpoint's keys.""",
+            help="""a prefix to remove from all of the 2nd checkpoint's keys.""",
+        )
+        subparser.add_argument(
+            "--scale",
+            type=float,
+            default=1.0,
+            help="""controls the scale of the distance calculation.""",
+        )
+        subparser.add_argument(
+            "--threshold",
+            type=float,
+            default=1e-5,
+            help="""the threshold for the distance between two tensors,
+            under which the two tensors are considered identical.""",
         )
         return subparser
 
@@ -116,7 +133,7 @@ class Modify(NamedTuple):
 
     def display(self):
         termcolor.cprint(
-            f"!{self.key}, shape = {self.shape}, difference = {self.distance:.4f}", "yellow"
+            f"!{self.key}, shape = {self.shape}, distance = {self.distance:.4f}", "yellow"
         )
 
 
@@ -129,6 +146,8 @@ def _finalize(
     history: List[Union[Keep, Insert, Remove]],
     state_dict_a: Dict[str, torch.Tensor],
     state_dict_b: Dict[str, torch.Tensor],
+    scale: float,
+    threshold: float,
 ) -> List[Union[Keep, Insert, Remove, Modify]]:
     out = cast(List[Union[Keep, Insert, Remove, Modify]], history)
     for i, step in enumerate(out):
@@ -136,14 +155,17 @@ def _finalize(
             a_tensor = state_dict_a[step.key]
             b_tensor = state_dict_b[step.key]
             with torch.no_grad():
-                dist = torch.nn.functional.mse_loss(a_tensor, b_tensor).sqrt().item()
-            if dist != 0.0:
+                dist = (scale * torch.nn.functional.mse_loss(a_tensor, b_tensor).sqrt()).item()
+            if dist > threshold:
                 out[i] = Modify(step.key, step.shape, dist)
     return out
 
 
 def checkpoint_diff(
-    state_dict_a: Dict[str, torch.Tensor], state_dict_b: Dict[str, torch.Tensor]
+    state_dict_a: Dict[str, torch.Tensor],
+    state_dict_b: Dict[str, torch.Tensor],
+    scale: float,
+    threshold: float,
 ) -> List[Union[Keep, Insert, Remove, Modify]]:
     """
     Uses a modified version of the Myers diff algorithm to compute a representation
@@ -220,7 +242,7 @@ def checkpoint_diff(
             if x >= a_max and y >= b_max:
                 # If we're here, then we've traversed through the bottom-left corner,
                 # and are done.
-                return _finalize(history, state_dict_a, state_dict_b)
+                return _finalize(history, state_dict_a, state_dict_b, scale, threshold)
             else:
                 frontier[k] = _Frontier(x, history)
 
@@ -256,5 +278,5 @@ def _diff(args: argparse.Namespace):
     checkpoint_2 = load_state_dict(
         checkpoint_2_path, strip_prefix=args.strip_prefix_2, strict=False
     )
-    for step in checkpoint_diff(checkpoint_1, checkpoint_2):
+    for step in checkpoint_diff(checkpoint_1, checkpoint_2, args.scale, args.threshold):
         step.display()

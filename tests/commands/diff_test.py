@@ -122,6 +122,58 @@ class TestDiffCommand(AllenNlpTestCase):
 -c, shape = (3,)
 +b, shape = (4,)
 +d, shape = (3,)
-!e, shape = (3,), difference = 0.5774
+!e, shape = (3,), distance = 0.5774
+        """.strip()
+        )
+        # NOTE: the difference value here of for 'e' of 0.5774 is currently
+        # calculated at the square root of the mean squared difference between 'e'
+        # in 'model_a' and 'e' in 'model_b':
+        # sqrt( (0^2 + 0^2 + 1^2) / 3 ) = sqrt( 1/3 ) = 0.5774
+
+        # Now call again with a higher theshold.
+        sys.argv = [
+            "allennlp",
+            "diff",
+            str(self.TEST_DIR / "checkpoint_a.pt"),
+            str(self.TEST_DIR / "checkpoint_b.pt"),
+            "--threshold",
+            "0.6",
+        ]
+        main()
+        captured = capsys.readouterr()
+        assert (
+            _clean_output(captured.out)
+            == """
+ a, shape = (3,)
+-b, shape = (3,)
+-c, shape = (3,)
++b, shape = (4,)
++d, shape = (3,)
+ e, shape = (3,)
+        """.strip()
+        )
+
+        # And call a third time with the same threshold but a higher scale.
+        sys.argv = [
+            "allennlp",
+            "diff",
+            str(self.TEST_DIR / "checkpoint_a.pt"),
+            str(self.TEST_DIR / "checkpoint_b.pt"),
+            "--threshold",
+            "0.6",
+            "--scale",
+            "10.0",
+        ]
+        main()
+        captured = capsys.readouterr()
+        assert (
+            _clean_output(captured.out)
+            == """
+ a, shape = (3,)
+-b, shape = (3,)
+-c, shape = (3,)
++b, shape = (4,)
++d, shape = (3,)
+!e, shape = (3,), distance = 5.7735
         """.strip()
         )
