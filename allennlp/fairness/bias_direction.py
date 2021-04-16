@@ -7,7 +7,7 @@ from allennlp.common.checks import ConfigurationError
 
 class BiasDirection:
     """
-    Parent class for bias direction modules.
+    Parent class for bias direction classes.
 
     # Parameters
 
