@@ -60,9 +60,9 @@ class Independence(Metric):
         self._num_protected_variable_labels = num_protected_variable_labels
         self._predicted_label_counts = torch.zeros(num_classes)
         self._total_predictions = torch.tensor(0)
-        self._predicted_label_counts_by_protected_variable_label = {
-            a: torch.zeros(num_classes) for a in range(num_protected_variable_labels)
-        }
+        self._predicted_label_counts_by_protected_variable_label = torch.zeros(
+            (num_protected_variable_labels, num_classes)
+        )
 
     def __call__(
         self,
@@ -114,10 +114,9 @@ class Independence(Metric):
 
         device = predicted_labels.device
         self._predicted_label_counts = self._predicted_label_counts.to(device)
-        self._predicted_label_counts_by_protected_variable_label = {
-            k: v.to(device)
-            for k, v in self._predicted_label_counts_by_protected_variable_label.items()
-        }
+        self._predicted_label_counts_by_protected_variable_label = (
+            self._predicted_label_counts_by_protected_variable_label.to(device)
+        )
         self._total_predictions = self._total_predictions.to(device)
 
         if mask is not None:
@@ -132,7 +131,9 @@ class Independence(Metric):
         )
         _total_predictions = torch.tensor(predicted_labels.nelement()).to(device)
 
-        _predicted_label_counts_by_protected_variable_label = {}
+        _predicted_label_counts_by_protected_variable_label = torch.zeros(
+            (self._num_protected_variable_labels, self._num_classes)
+        ).to(device)
         for a in range(self._num_protected_variable_labels):
             _predicted_label_counts_by_protected_variable_label[a] = (
                 predicted_labels[protected_variable_labels == a]
@@ -147,20 +148,18 @@ class Independence(Metric):
             _total_predictions = _total_predictions.to(device)
             dist.all_reduce(_total_predictions, op=dist.ReduceOp.SUM)
 
-            for a in range(self._num_protected_variable_labels):
-                _predicted_label_counts_by_protected_variable_label[
-                    a
-                ] = _predicted_label_counts_by_protected_variable_label[a].to(device)
-                dist.all_reduce(
-                    _predicted_label_counts_by_protected_variable_label[a], op=dist.ReduceOp.SUM
-                )
+            _predicted_label_counts_by_protected_variable_label = (
+                _predicted_label_counts_by_protected_variable_label.to(device)
+            )
+            dist.all_reduce(
+                _predicted_label_counts_by_protected_variable_label, op=dist.ReduceOp.SUM
+            )
 
         self._predicted_label_counts += _predicted_label_counts
         self._total_predictions += _total_predictions
-        for a in range(self._num_protected_variable_labels):
-            self._predicted_label_counts_by_protected_variable_label[
-                a
-            ] += _predicted_label_counts_by_protected_variable_label[a]
+        self._predicted_label_counts_by_protected_variable_label += (
+            _predicted_label_counts_by_protected_variable_label
+        )
 
     @overrides
     def get_metric(self, reset: bool = False) -> Dict[int, torch.FloatTensor]:
@@ -193,9 +192,9 @@ class Independence(Metric):
     def reset(self) -> None:
         self._predicted_label_counts = torch.zeros(self._num_classes)
         self._total_predictions = torch.tensor(0)
-        self._predicted_label_counts_by_protected_variable_label = {
-            a: torch.zeros(self._num_classes) for a in range(self._num_protected_variable_labels)
-        }
+        self._predicted_label_counts_by_protected_variable_label = torch.zeros(
+            (self._num_protected_variable_labels, self._num_classes)
+        )
 
 
 @Metric.register("separation")
@@ -219,14 +218,11 @@ class Separation(Metric):
     def __init__(self, num_classes: int, num_protected_variable_labels: int) -> None:
         self._num_classes = num_classes
         self._num_protected_variable_labels = num_protected_variable_labels
-        self._predicted_label_counts_by_gold_label = {
-            y: torch.zeros(num_classes) for y in range(num_classes)
-        }
+        self._predicted_label_counts_by_gold_label = torch.zeros((num_classes, num_classes))
         self._total_predictions = torch.tensor(0)
-        self._predicted_label_counts_by_gold_label_and_protected_variable_label = {
-            y: {a: torch.zeros(num_classes) for a in range(num_protected_variable_labels)}
-            for y in range(num_classes)
-        }
+        self._predicted_label_counts_by_gold_label_and_protected_variable_label = torch.zeros(
+            (num_classes, num_protected_variable_labels, num_classes)
+        )
 
     @overrides
     def __call__(
@@ -292,18 +288,12 @@ class Separation(Metric):
             )
 
         device = predicted_labels.device
-        self._predicted_label_counts_by_gold_label = {
-            k: v.to(device) for k, v in self._predicted_label_counts_by_gold_label.items()
-        }
-        self._predicted_label_counts_by_gold_label_and_protected_variable_label = {
-            k1: {
-                k2: v2.to(device)
-                for k2, v2 in self._predicted_label_counts_by_gold_label_and_protected_variable_label[
-                    k1
-                ].items()
-            }
-            for k1, v1 in self._predicted_label_counts_by_gold_label_and_protected_variable_label.items()
-        }
+        self._predicted_label_counts_by_gold_label = self._predicted_label_counts_by_gold_label.to(
+            device
+        )
+        self._predicted_label_counts_by_gold_label_and_protected_variable_label = (
+            self._predicted_label_counts_by_gold_label_and_protected_variable_label.to(device)
+        )
         self._total_predictions = self._total_predictions.to(device)
 
         if mask is not None:
@@ -316,17 +306,18 @@ class Separation(Metric):
             protected_variable_labels = protected_variable_labels.flatten()
 
         _total_predictions = torch.tensor(predicted_labels.nelement()).to(device)
-        _predicted_label_counts_by_gold_label = {}
-        _predicted_label_counts_by_gold_label_and_protected_variable_label: Dict[
-            int, Dict[int, torch.FloatTensor]
-        ] = {}
+        _predicted_label_counts_by_gold_label = torch.zeros(
+            (self._num_classes, self._num_classes)
+        ).to(device)
+        _predicted_label_counts_by_gold_label_and_protected_variable_label = torch.zeros(
+            (self._num_classes, self._num_protected_variable_labels, self._num_classes)
+        ).to(device)
         for y in range(self._num_classes):
             _predicted_label_counts_by_gold_label[y] = (
                 predicted_labels[gold_labels == y]
                 .float()
                 .histc(bins=self._num_classes, min=0, max=self._num_classes - 1)
             )
-            _predicted_label_counts_by_gold_label_and_protected_variable_label[y] = {}
             for a in range(self._num_protected_variable_labels):
                 _predicted_label_counts_by_gold_label_and_protected_variable_label[y][a] = (
                     predicted_labels[(gold_labels == y) & (protected_variable_labels == a)]
@@ -338,32 +329,22 @@ class Separation(Metric):
             _total_predictions = _total_predictions.to(device)
             dist.all_reduce(_total_predictions, op=dist.ReduceOp.SUM)
 
-            for y in range(self._num_classes):
-                _predicted_label_counts_by_gold_label[y] = _predicted_label_counts_by_gold_label[
-                    y
-                ].to(device)
-                dist.all_reduce(_predicted_label_counts_by_gold_label[y], op=dist.ReduceOp.SUM)
+            _predicted_label_counts_by_gold_label = _predicted_label_counts_by_gold_label.to(device)
+            dist.all_reduce(_predicted_label_counts_by_gold_label[y], op=dist.ReduceOp.SUM)
 
-                for a in range(self._num_protected_variable_labels):
-                    _predicted_label_counts_by_gold_label_and_protected_variable_label[y][
-                        a
-                    ] = _predicted_label_counts_by_gold_label_and_protected_variable_label[y][a].to(
-                        device
-                    )
-                    dist.all_reduce(
-                        _predicted_label_counts_by_gold_label_and_protected_variable_label[y][a],
-                        op=dist.ReduceOp.SUM,
-                    )
+            _predicted_label_counts_by_gold_label_and_protected_variable_label = (
+                _predicted_label_counts_by_gold_label_and_protected_variable_label.to(device)
+            )
+            dist.all_reduce(
+                _predicted_label_counts_by_gold_label_and_protected_variable_label,
+                op=dist.ReduceOp.SUM,
+            )
 
         self._total_predictions += _total_predictions
-        for y in range(self._num_classes):
-            self._predicted_label_counts_by_gold_label[y] += _predicted_label_counts_by_gold_label[
-                y
-            ]
-            for a in range(self._num_protected_variable_labels):
-                self._predicted_label_counts_by_gold_label_and_protected_variable_label[y][
-                    a
-                ] += _predicted_label_counts_by_gold_label_and_protected_variable_label[y][a]
+        self._predicted_label_counts_by_gold_label += _predicted_label_counts_by_gold_label
+        self._predicted_label_counts_by_gold_label_and_protected_variable_label += (
+            _predicted_label_counts_by_gold_label_and_protected_variable_label
+        )
 
     @overrides
     def get_metric(self, reset: bool = False) -> Dict[int, Dict[int, torch.FloatTensor]]:
@@ -412,17 +393,13 @@ class Separation(Metric):
 
     @overrides
     def reset(self) -> None:
-        self._predicted_label_counts_by_gold_label = {
-            y: torch.zeros(self._num_classes) for y in range(self._num_classes)
-        }
+        self._predicted_label_counts_by_gold_label = torch.zeros(
+            (self._num_classes, self._num_classes)
+        )
         self._total_predictions = torch.tensor(0)
-        self._predicted_label_counts_by_gold_label_and_protected_variable_label = {
-            y: {
-                a: torch.zeros(self._num_classes)
-                for a in range(self._num_protected_variable_labels)
-            }
-            for y in range(self._num_classes)
-        }
+        self._predicted_label_counts_by_gold_label_and_protected_variable_label = torch.zeros(
+            (self._num_classes, self._num_protected_variable_labels, self._num_classes)
+        )
 
 
 @Metric.register("sufficiency")
@@ -446,14 +423,11 @@ class Sufficiency(Metric):
     def __init__(self, num_classes: int, num_protected_variable_labels: int) -> None:
         self._num_classes = num_classes
         self._num_protected_variable_labels = num_protected_variable_labels
-        self._gold_label_counts_by_predicted_label = {
-            c: torch.zeros(num_classes) for c in range(num_classes)
-        }
+        self._gold_label_counts_by_predicted_label = torch.zeros((num_classes, num_classes))
         self._total_predictions = torch.tensor(0)
-        self._gold_label_counts_by_predicted_label_and_protected_variable_label = {
-            c: {a: torch.zeros(num_classes) for a in range(num_protected_variable_labels)}
-            for c in range(num_classes)
-        }
+        self._gold_label_counts_by_predicted_label_and_protected_variable_label = torch.zeros(
+            (num_classes, num_protected_variable_labels, num_classes)
+        )
 
     @overrides
     def __call__(
@@ -519,18 +493,12 @@ class Sufficiency(Metric):
             )
 
         device = predicted_labels.device
-        self._gold_label_counts_by_predicted_label = {
-            k: v.to(device) for k, v in self._gold_label_counts_by_predicted_label.items()
-        }
-        self._gold_label_counts_by_predicted_label_and_protected_variable_label = {
-            k1: {
-                k2: v2.to(device)
-                for k2, v2 in self._gold_label_counts_by_predicted_label_and_protected_variable_label[
-                    k1
-                ].items()
-            }
-            for k1, v1 in self._gold_label_counts_by_predicted_label_and_protected_variable_label.items()
-        }
+        self._gold_label_counts_by_predicted_label = self._gold_label_counts_by_predicted_label.to(
+            device
+        )
+        self._gold_label_counts_by_predicted_label_and_protected_variable_label = (
+            self._gold_label_counts_by_predicted_label_and_protected_variable_label.to(device)
+        )
         self._total_predictions = self._total_predictions.to(device)
 
         if mask is not None:
@@ -543,17 +511,16 @@ class Sufficiency(Metric):
             protected_variable_labels = protected_variable_labels.flatten()
 
         _total_predictions = torch.tensor(predicted_labels.nelement()).to(device)
-        _gold_label_counts_by_predicted_label = {}
-        _gold_label_counts_by_predicted_label_and_protected_variable_label: Dict[
-            int, Dict[int, torch.FloatTensor]
-        ] = {}
+        _gold_label_counts_by_predicted_label = torch.zeros((self._num_classes, self._num_classes))
+        _gold_label_counts_by_predicted_label_and_protected_variable_label = torch.zeros(
+            (self._num_classes, self._num_protected_variable_labels, self._num_classes)
+        )
         for c in range(self._num_classes):
             _gold_label_counts_by_predicted_label[c] = (
                 gold_labels[predicted_labels == c]
                 .float()
                 .histc(bins=self._num_classes, min=0, max=self._num_classes - 1)
             )
-            _gold_label_counts_by_predicted_label_and_protected_variable_label[c] = {}
             for a in range(self._num_protected_variable_labels):
                 _gold_label_counts_by_predicted_label_and_protected_variable_label[c][a] = (
                     gold_labels[(predicted_labels == c) & (protected_variable_labels == a)]
@@ -565,32 +532,22 @@ class Sufficiency(Metric):
             _total_predictions = _total_predictions.to(device)
             dist.all_reduce(_total_predictions, op=dist.ReduceOp.SUM)
 
-            for c in range(self._num_classes):
-                _gold_label_counts_by_predicted_label[c] = _gold_label_counts_by_predicted_label[
-                    c
-                ].to(device)
-                dist.all_reduce(_gold_label_counts_by_predicted_label[c], op=dist.ReduceOp.SUM)
+            _gold_label_counts_by_predicted_label = _gold_label_counts_by_predicted_label.to(device)
+            dist.all_reduce(_gold_label_counts_by_predicted_label[c], op=dist.ReduceOp.SUM)
 
-                for a in range(self._num_protected_variable_labels):
-                    _gold_label_counts_by_predicted_label_and_protected_variable_label[c][
-                        a
-                    ] = _gold_label_counts_by_predicted_label_and_protected_variable_label[c][a].to(
-                        device
-                    )
-                    dist.all_reduce(
-                        _gold_label_counts_by_predicted_label_and_protected_variable_label[c][a],
-                        op=dist.ReduceOp.SUM,
-                    )
+            _gold_label_counts_by_predicted_label_and_protected_variable_label = (
+                _gold_label_counts_by_predicted_label_and_protected_variable_label.to(device)
+            )
+            dist.all_reduce(
+                _gold_label_counts_by_predicted_label_and_protected_variable_label,
+                op=dist.ReduceOp.SUM,
+            )
 
         self._total_predictions += _total_predictions
-        for c in range(self._num_classes):
-            self._gold_label_counts_by_predicted_label[c] += _gold_label_counts_by_predicted_label[
-                c
-            ]
-            for a in range(self._num_protected_variable_labels):
-                self._gold_label_counts_by_predicted_label_and_protected_variable_label[c][
-                    a
-                ] += _gold_label_counts_by_predicted_label_and_protected_variable_label[c][a]
+        self._gold_label_counts_by_predicted_label += _gold_label_counts_by_predicted_label
+        self._gold_label_counts_by_predicted_label_and_protected_variable_label += (
+            _gold_label_counts_by_predicted_label_and_protected_variable_label
+        )
 
     @overrides
     def get_metric(self, reset: bool = False) -> Dict[int, Dict[int, torch.FloatTensor]]:
@@ -648,17 +605,13 @@ class Sufficiency(Metric):
 
     @overrides
     def reset(self) -> None:
-        self._gold_label_counts_by_predicted_label = {
-            c: torch.zeros(self._num_classes) for c in range(self._num_classes)
-        }
+        self._gold_label_counts_by_predicted_label = torch.zeros(
+            (self._num_classes, self._num_classes)
+        )
         self._total_predictions = torch.tensor(0)
-        self._gold_label_counts_by_predicted_label_and_protected_variable_label = {
-            c: {
-                a: torch.zeros(self._num_classes)
-                for a in range(self._num_protected_variable_labels)
-            }
-            for c in range(self._num_classes)
-        }
+        self._gold_label_counts_by_predicted_label_and_protected_variable_label = torch.zeros(
+            (self._num_classes, self._num_protected_variable_labels, self._num_classes)
+        )
 
 
 @Metric.register("demographic_parity_without_ground_truth")
@@ -699,12 +652,10 @@ class DemographicParityWithoutGroundTruth(Metric):
     ) -> None:
         self._num_classes = num_classes
         self._num_protected_variable_labels = num_protected_variable_labels
-        self._joint_counts_by_protected_variable_label = {
-            x: torch.zeros(num_classes) for x in range(num_protected_variable_labels)
-        }
-        self._protected_variable_label_counts = {
-            x: torch.tensor(0) for x in range(num_protected_variable_labels)
-        }
+        self._joint_counts_by_protected_variable_label = torch.zeros(
+            (num_protected_variable_labels, num_classes)
+        )
+        self._protected_variable_label_counts = torch.zeros(num_protected_variable_labels)
         self._y_counts = torch.zeros(num_classes)
         self._total_predictions = torch.tensor(0)
 
@@ -772,12 +723,10 @@ class DemographicParityWithoutGroundTruth(Metric):
             )
 
         device = predicted_labels.device
-        self._joint_counts_by_protected_variable_label = {
-            k: v.to(device) for k, v in self._joint_counts_by_protected_variable_label.items()
-        }
-        self._protected_variable_label_counts = {
-            k: v.to(device) for k, v in self._protected_variable_label_counts.items()
-        }
+        self._joint_counts_by_protected_variable_label = (
+            self._joint_counts_by_protected_variable_label.to(device)
+        )
+        self._protected_variable_label_counts = self._protected_variable_label_counts.to(device)
         self._y_counts = self._y_counts.to(device)
         self._total_predictions = self._total_predictions.to(device)
 
@@ -794,21 +743,21 @@ class DemographicParityWithoutGroundTruth(Metric):
             0, predicted_labels, torch.ones_like(predicted_labels)
         )
 
-        _joint_counts_by_protected_variable_label = {}
-        _protected_variable_label_counts = {}
+        _joint_counts_by_protected_variable_label = torch.zeros(
+            (self._num_protected_variable_labels, self._num_classes)
+        ).to(device)
+        _protected_variable_label_counts = torch.zeros(self._num_protected_variable_labels).to(
+            device
+        )
         for x in range(self._num_protected_variable_labels):
             x_mask = (protected_variable_labels == x).long()
 
-            _joint_counts_by_protected_variable_label[x] = torch.zeros(self._num_classes).to(
-                predicted_labels.device
-            )
+            _joint_counts_by_protected_variable_label[x] = torch.zeros(self._num_classes).to(device)
             _joint_counts_by_protected_variable_label[x] = torch.zeros_like(
                 _joint_counts_by_protected_variable_label[x], dtype=x_mask.dtype
             ).scatter_add_(0, predicted_labels, x_mask)
 
-            _protected_variable_label_counts[x] = torch.tensor(x_mask.sum()).to(
-                predicted_labels.device
-            )
+            _protected_variable_label_counts[x] = torch.tensor(x_mask.sum()).to(device)
 
         if is_distributed():
             _total_predictions = _total_predictions.to(device)
@@ -817,22 +766,18 @@ class DemographicParityWithoutGroundTruth(Metric):
             _y_counts = _y_counts.to(device)
             dist.all_reduce(_y_counts, op=dist.ReduceOp.SUM)
 
-            for x in range(self._num_protected_variable_labels):
-                _joint_counts_by_protected_variable_label[
-                    x
-                ] = _joint_counts_by_protected_variable_label[x].to(device)
-                dist.all_reduce(_joint_counts_by_protected_variable_label[x], op=dist.ReduceOp.SUM)
+            _joint_counts_by_protected_variable_label = (
+                _joint_counts_by_protected_variable_label.to(device)
+            )
+            dist.all_reduce(_joint_counts_by_protected_variable_label, op=dist.ReduceOp.SUM)
 
-                _protected_variable_label_counts[x] = _protected_variable_label_counts[x].to(device)
-                dist.all_reduce(_protected_variable_label_counts[x], op=dist.ReduceOp.SUM)
+            _protected_variable_label_counts = _protected_variable_label_counts.to(device)
+            dist.all_reduce(_protected_variable_label_counts, op=dist.ReduceOp.SUM)
 
         self._total_predictions += _total_predictions
         self._y_counts += _y_counts
-        for x in range(self._num_protected_variable_labels):
-            self._joint_counts_by_protected_variable_label[
-                x
-            ] += _joint_counts_by_protected_variable_label[x]
-            self._protected_variable_label_counts[x] += _protected_variable_label_counts[x]
+        self._joint_counts_by_protected_variable_label += _joint_counts_by_protected_variable_label
+        self._protected_variable_label_counts += _protected_variable_label_counts
 
     @overrides
     def get_metric(
@@ -867,23 +812,19 @@ class DemographicParityWithoutGroundTruth(Metric):
 
     @overrides
     def reset(self) -> None:
-        self._joint_counts_by_protected_variable_label = {
-            x: torch.zeros(self._num_classes) for x in range(self._num_protected_variable_labels)
-        }
-        self._protected_variable_label_counts = {
-            x: torch.tensor(0) for x in range(self._num_protected_variable_labels)
-        }
+        self._joint_counts_by_protected_variable_label = torch.zeros(
+            (self._num_protected_variable_labels, self._num_classes)
+        )
+        self._protected_variable_label_counts = torch.zeros(self._num_protected_variable_labels)
         self._y_counts = torch.zeros(self._num_classes)
         self._total_predictions = torch.tensor(0)
 
     def _ova_gap(self, x: int):
         device = self._y_counts.device
         pmi_terms = self._all_pmi_terms()
-        pmi_not_x = 0.0
-        for not_x in range(self._num_protected_variable_labels):
-            if not_x == x:
-                continue
-            pmi_not_x += pmi_terms[not_x]
+        pmi_not_x = torch.sum(
+            pmi_terms[torch.arange(self._num_protected_variable_labels, device=device) != x], dim=0
+        )
         pmi_not_x /= self._num_protected_variable_labels - 1
 
         # Will contain NaN if not all possible class labels are predicted
@@ -905,36 +846,33 @@ class DemographicParityWithoutGroundTruth(Metric):
 
     def _all_pmi_terms(self) -> Dict[int, torch.Tensor]:
         if self._total_predictions == 0:
-            return {
-                x: torch.full((self._num_classes,), float("nan"))
-                for x in range(self._num_protected_variable_labels)
-            }
+            return torch.full(
+                (self._num_protected_variable_labels, self._num_classes), float("nan")
+            )
 
         device = self._y_counts.device
-        pmi_terms = {}
         prob_y = torch.zeros(self._num_classes).to(device)
         torch.div(self._y_counts, self._total_predictions, out=prob_y)
-        for x in range(self._num_protected_variable_labels):
-            joint = torch.zeros(self._num_classes).to(device)
+
+        joint = torch.zeros((self._num_protected_variable_labels, self._num_classes)).to(device)
+        torch.div(
+            self._joint_counts_by_protected_variable_label,
+            self._total_predictions,
+            out=joint,
+        )
+        if self.association_metric == "pmisq":
+            torch.square_(joint)
+
+        pmi_terms = torch.log(
             torch.div(
-                self._joint_counts_by_protected_variable_label[x],
-                self._total_predictions,
-                out=joint,
+                joint,
+                (self._protected_variable_label_counts / self._total_predictions).unsqueeze(-1)
+                * prob_y,
             )
-            if self.association_metric == "pmisq":
-                torch.square_(joint)
-
-            pmi_x = torch.log(
-                torch.div(
-                    joint,
-                    self._protected_variable_label_counts[x] / self._total_predictions * prob_y,
-                )
-            )
-            if self.association_metric == "npmixy":
-                pmi_x.div_(torch.log(joint))
-            elif self.association_metric == "npmiy":
-                pmi_x.div_(torch.log(prob_y))
-
-            pmi_terms[x] = pmi_x
+        )
+        if self.association_metric == "npmixy":
+            pmi_terms.div_(torch.log(joint))
+        elif self.association_metric == "npmiy":
+            pmi_terms.div_(torch.log(prob_y))
 
         return pmi_terms
