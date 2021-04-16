@@ -511,10 +511,12 @@ class Sufficiency(Metric):
             protected_variable_labels = protected_variable_labels.flatten()
 
         _total_predictions = torch.tensor(predicted_labels.nelement()).to(device)
-        _gold_label_counts_by_predicted_label = torch.zeros((self._num_classes, self._num_classes))
+        _gold_label_counts_by_predicted_label = torch.zeros(
+            (self._num_classes, self._num_classes)
+        ).to(device)
         _gold_label_counts_by_predicted_label_and_protected_variable_label = torch.zeros(
             (self._num_classes, self._num_protected_variable_labels, self._num_classes)
-        )
+        ).to(device)
         for c in range(self._num_classes):
             _gold_label_counts_by_predicted_label[c] = (
                 gold_labels[predicted_labels == c]
