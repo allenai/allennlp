@@ -1,5 +1,12 @@
+"""
+A suite of differentiable methods to mitigate
+bias in embeddings.
+"""
+
 import torch
 import numpy as np
+import scipy
+import sklearn
 from allennlp.common.checks import ConfigurationError
 
 
@@ -16,14 +23,14 @@ class BiasMitigator:
     def __init__(self, requires_grad: bool = False):
         self.requires_grad = requires_grad
 
-    def _proj(u: torch.Tensor, v: torch.Tensor, normalize: bool = False):
+    def _proj(self, u: torch.Tensor, v: torch.Tensor, normalize: bool = False):
         proj = torch.matmul(u, v.reshape(-1, 1)) * v
         if normalize:
             return proj / torch.dot(v, v)
         return proj
 
     def _remove_component(
-        embeddings: torch.Tensor, bias_direction: torch.Tensor, normalize: bool = False
+        self, embeddings: torch.Tensor, bias_direction: torch.Tensor, normalize: bool = False
     ):
         return embeddings - self._proj(embeddings, bias_direction, normalize)
 
@@ -197,6 +204,120 @@ class LinearBiasMitigator(BiasMitigator):
         with torch.set_grad_enabled(self.requires_grad):
             bias_direction /= torch.linalg.norm(bias_direction)
             return self._remove_component(evaluation_embeddings, bias_direction)
+
+
+class INLPBiasMitigator(BiasMitigator):
+    """
+    Iterative Nullspace Projection. It mitigates bias by repeatedly building
+    a linear classifier that separates concept groups and linearly
+    projecting all words along the classifier normal.
+
+    Implementation and terminology based on Rathore, A., Dev, S., Phillips, J.M., Srikumar,
+    V., Zheng, Y., Yeh, C.M., Wang, J., Zhang, W., & Wang, B. (2021).
+    [VERB: Visualizing and Interpreting Bias Mitigation Techniques for
+    Word Representations](https://api.semanticscholar.org/CorpusID:233168618).
+    ArXiv, abs/2104.02797.
+    """
+
+    def __init__(self):
+        super().__init__()
+
+    def __call__(
+        self,
+        evaluation_embeddings: torch.Tensor,
+        seed_embeddings1: torch.Tensor,
+        seed_embeddings2: torch.Tensor,
+        num_iters: int = 35,
+    ):
+        """
+
+        # Parameters
+
+        !!! Note
+            In the examples below, we treat gender identity as binary, which does not accurately
+            characterize gender in real life.
+
+        evaluation_embeddings : `torch.Tensor`
+            A tensor of size (evaluation_batch_size, ..., dim) of embeddings for which to mitigate bias.
+        seed_embeddings1 : `torch.Tensor`
+            A tensor of size (embeddings1_batch_size, ..., dim) containing seed word
+            embeddings related to a specific concept group. For example, if the concept is gender,
+            seed_embeddings1 could contain embeddings for linguistically masculine words, e.g.
+            "man", "king", "brother", etc.
+        seed_embeddings2: `torch.Tensor`
+            A tensor of size (embeddings2_batch_size, ..., dim) containing seed word
+            embeddings related to a different group for the same concept. For example,
+            seed_embeddings2 could contain embeddings for linguistically feminine words, , e.g.
+            "woman", "queen", "sister", etc.
+        num_iters: `torch.Tensor`
+            Number of times to build classifier and project embeddings along normal.
+
+        !!! Note
+            seed_embeddings1 and seed_embeddings2 need NOT be the same size. Furthermore,
+            the embeddings at the same positions in each of seed_embeddings1 and seed_embeddings2
+            are NOT expected to form seed word pairs.
+
+        !!! Note
+            All tensors are expected to be on the same device.
+
+        !!! Note
+            This bias mitigator is not differentiable.
+
+        # Returns
+
+        bias_mitigated_embeddings : `torch.Tensor`
+            A tensor of the same size as evaluation_embeddings.
+        """
+        # Some sanity checks
+        if seed_embeddings1.ndim < 2 or seed_embeddings2.ndim < 2:
+            raise ConfigurationError(
+                "seed_embeddings1 and seed_embeddings2 must have at least two dimensions."
+            )
+        if seed_embeddings1.size(-1) != seed_embeddings2.size(-1):
+            raise ConfigurationError("All seed embeddings must have same dimensionality.")
+        if evaluation_embeddings.ndim < 2:
+            raise ConfigurationError("evaluation_embeddings must have at least two dimensions.")
+        if evaluation_embeddings.size(-1) != seed_embeddings1.size(
+            -1
+        ) or evaluation_embeddings.size(-1) != seed_embeddings2.size(-1):
+            raise ConfigurationError(
+                "evaluation_embeddings, seed_embeddings1, and seed_embeddings2 must have the same dimensionality."
+            )
+
+        device = seed_embeddings1.device
+        seed_embeddings1 = seed_embeddings1.flatten(end_dim=-2).detach().cpu().numpy()
+        seed_embeddings2 = seed_embeddings2.flatten(end_dim=-2).detach().cpu().numpy()
+        X = np.vstack([seed_embeddings1, seed_embeddings2])
+        Y = np.concatenate([[0] * seed_embeddings1.shape[0], [1] * seed_embeddings2.shape[0]])
+
+        rowspace_projs = []
+        for iter_idx in range(num_iters):
+            classifier = sklearn.svm.SVC(kernel="linear").fit(X, Y)
+            weights = np.expand_dims(classifier.coef_[0], 0)
+
+            if np.linalg.norm(weights) < 1e-10 or classifier.score(X, Y) < 0.55 and iter_idx > 1:
+                break
+
+            rowspace_projs.append(self._get_rowspace_proj(weights))
+            # Project embeddings to intersection of nullspaces
+            nullspace_proj = np.eye(seed_embeddings1.shape[1]) - self._get_rowspace_proj(
+                np.sum(rowspace_projs, axis=0)
+            )
+            evaluation_embeddings = torch.matmul(
+                torch.from_numpy(nullspace_proj).to(device), evaluation_embeddings
+            )
+            X = nullspace_proj.dot(X.T).T
+
+        return evaluation_embeddings
+
+    def _get_rowspace_proj(self, weights: np.ndarray):
+        # Compute orthogonal basis
+        if np.allclose(weights, 0):
+            weights_basis = np.zeros_like(weights.T)
+        else:
+            weights_basis = scipy.linalg.orth(weights.T)
+        # Get rowspace projection
+        return weights_basis.dot(weights_basis.T)
 
 
 class OSCaRBiasMitigator(BiasMitigator):

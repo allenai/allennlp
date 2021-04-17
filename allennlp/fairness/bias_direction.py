@@ -1,3 +1,8 @@
+"""
+A suite of differentiable methods to compute the bias direction
+or concept subspace representing protected variables.
+"""
+
 import torch
 import sklearn
 import numpy as np
@@ -250,6 +255,9 @@ class ClassificationNormalBiasDirection(BiasDirection):
 
         !!! Note
             All tensors are expected to be on the same device.
+
+        !!! Note
+            This bias direction method is NOT differentiable.
 
         # Returns
 
