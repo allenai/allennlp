@@ -113,6 +113,9 @@ class PairedPCABiasDirection(BiasDirection):
             is gender, the embeddings for ("man", "woman"), ("king", "queen"), ("brother", "sister"), etc.
             should be at the same positions in seed_embeddings1 and seed_embeddings2.
 
+        !!! Note
+            All tensors are expected to be on the same device.
+
         # Returns
 
         bias_direction : `torch.Tensor`
@@ -178,6 +181,9 @@ class TwoMeansBiasDirection(BiasDirection):
             the embeddings at the same positions in each of seed_embeddings1 and seed_embeddings2
             are NOT expected to form seed word pairs.
 
+        !!! Note
+            All tensors are expected to be on the same device.
+
         # Returns
 
         bias_direction : `torch.Tensor`
@@ -241,6 +247,9 @@ class ClassificationNormalBiasDirection(BiasDirection):
             seed_embeddings1 and seed_embeddings2 need NOT be the same size. Furthermore,
             the embeddings at the same positions in each of seed_embeddings1 and seed_embeddings2
             are NOT expected to form seed word pairs.
+
+        !!! Note
+            All tensors are expected to be on the same device.
 
         # Returns
 
