@@ -146,12 +146,14 @@ class HardBiasMitigator(BiasMitigator):
             mean_equalize_embeddings = (equalize_embeddings1 + equalize_embeddings2) / 2
             y = self._remove_component(mean_equalize_embeddings, bias_direction, normalize=True)
             z = torch.sqrt(1 - torch.square(torch.linalg.norm(y, dim=-1, keepdim=True)))
-            z[
+            z = torch.where(
                 torch.matmul(
                     equalize_embeddings1 - equalize_embeddings2, bias_direction.reshape(-1, 1)
                 )
-                < 0
-            ] *= -1
+                < 0,
+                -z,
+                z,
+            )
             return torch.cat(
                 [bias_mitigated_embeddings, z * bias_direction + y, -z * bias_direction + y]
             )
