@@ -78,6 +78,7 @@ When you're ready to contribute code to address an open issue, please follow the
 
     Once your virtual environment is activated, you can install your local clone in "editable mode" with
 
+        pip install -U pip setuptools wheel
         pip install -e . 
         pip install -r dev-requirements.txt
 
