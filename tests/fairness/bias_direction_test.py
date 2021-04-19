@@ -147,8 +147,3 @@ class ClassificationNormalBiasDirectionTest(AllenNlpTestCase):
         )
         assert seed_embeddings1.grad is None
         assert seed_embeddings2.grad is None
-
-    @multi_device
-    def test_classification_normal_with_grad(self, device: str):
-        with pytest.raises(Exception):
-            ClassificationNormalBiasDirection(requires_grad=True)

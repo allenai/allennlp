@@ -137,7 +137,7 @@ class HardBiasMitigator(BiasMitigator):
             )
 
         with torch.set_grad_enabled(self.requires_grad):
-            bias_direction /= torch.linalg.norm(bias_direction)
+            bias_direction = bias_direction / torch.linalg.norm(bias_direction)
 
             bias_mitigated_embeddings = self._remove_component(
                 evaluation_embeddings, bias_direction, normalize=True
@@ -204,7 +204,7 @@ class LinearBiasMitigator(BiasMitigator):
             )
 
         with torch.set_grad_enabled(self.requires_grad):
-            bias_direction /= torch.linalg.norm(bias_direction)
+            bias_direction = bias_direction / torch.linalg.norm(bias_direction)
             return self._remove_component(evaluation_embeddings, bias_direction)
 
 
@@ -297,7 +297,7 @@ class INLPBiasMitigator(BiasMitigator):
             classifier = sklearn.svm.SVC(kernel="linear").fit(X, Y)
             weights = np.expand_dims(classifier.coef_[0], 0)
 
-            if np.linalg.norm(weights) < 1e-10 or classifier.score(X, Y) < 0.55 and iter_idx > 1:
+            if (np.linalg.norm(weights) < 1e-10 or classifier.score(X, Y) < 0.55) and iter_idx > 1:
                 break
 
             rowspace_projs.append(self._get_rowspace_proj(weights))
@@ -306,7 +306,7 @@ class INLPBiasMitigator(BiasMitigator):
                 np.sum(rowspace_projs, axis=0)
             )
             evaluation_embeddings = torch.matmul(
-                torch.from_numpy(nullspace_proj).to(device), evaluation_embeddings
+                evaluation_embeddings, torch.from_numpy(nullspace_proj).float().t().to(device)
             )
             X = nullspace_proj.dot(X.T).T
 
@@ -380,37 +380,50 @@ class OSCaRBiasMitigator(BiasMitigator):
             )
 
         with torch.set_grad_enabled(self.requires_grad):
-            bias_direction1 /= torch.linalg.norm(bias_direction1)
-            bias_direction2 /= torch.linalg.norm(bias_direction2)
+            bias_direction1 = bias_direction1 / torch.linalg.norm(bias_direction1)
+            bias_direction2 = bias_direction2 / torch.linalg.norm(bias_direction2)
 
             bias_direction2_orth = self._remove_component(
                 bias_direction2.reshape(1, -1), bias_direction1
             )[0]
-            bias_direction2_orth /= torch.linalg.norm(bias_direction2_orth)
+            bias_direction2_orth = bias_direction2_orth / torch.linalg.norm(bias_direction2_orth)
 
             # Create rotation matrix as orthonormal basis
             # with v1 and v2'
             init_orth_matrix = torch.eye(
-                bias_direction1.size(0), device=evaluation_embeddings.device
+                bias_direction1.size(0),
+                device=evaluation_embeddings.device,
+                requires_grad=self.requires_grad,
             )
             rotation_matrix = torch.zeros(
-                bias_direction1.size(0), device=evaluation_embeddings.device
+                (bias_direction1.size(0), bias_direction1.size(0)),
+                device=evaluation_embeddings.device,
+                requires_grad=self.requires_grad,
             )
-            rotation_matrix[0] = bias_direction1
-            rotation_matrix[1] = bias_direction2_orth
+            rotation_matrix = torch.cat(
+                [
+                    bias_direction1.reshape(1, -1),
+                    bias_direction2_orth.reshape(1, -1),
+                    rotation_matrix[2:],
+                ]
+            )
             # Apply Gram-Schmidt
             for i in range(len(rotation_matrix) - 2):
                 subspace_proj = torch.sum(
-                    self._proj(rotation_matrix[: i + 2], init_orth_matrix[i], normalize=True), dim=0
+                    self._proj(
+                        rotation_matrix[: i + 2].clone(), init_orth_matrix[i], normalize=True
+                    ),
+                    dim=0,
                 )
-                rotation_matrix[i + 2] = init_orth_matrix[i] - subspace_proj
-                rotation_matrix[i + 2] /= torch.linalg.norm(rotation_matrix[i + 2])
+                rotation_matrix[i + 2] = (init_orth_matrix[i] - subspace_proj) / torch.linalg.norm(
+                    init_orth_matrix[i] - subspace_proj
+                )
 
             mask = torch.count_nonzero(evaluation_embeddings, dim=-1) != 0
             # Transform all evaluation embeddings
             # using orthonormal basis computed above
             rotated_evaluation_embeddings = torch.matmul(
-                rotation_matrix, evaluation_embeddings[mask]
+                evaluation_embeddings[mask], rotation_matrix.t()
             )
             # Want to adjust first 2 coordinates and leave d - 2
             # other orthogonal components fixed
@@ -437,48 +450,66 @@ class OSCaRBiasMitigator(BiasMitigator):
             restricted_bias_direction_inner_prod = torch.dot(
                 restricted_bias_direction1, restricted_bias_direction2
             )
-            theta = abs(torch.arccos(restricted_bias_direction_inner_prod).item())
+            theta = torch.abs(torch.arccos(restricted_bias_direction_inner_prod))
             theta_proj = np.pi / 2 - theta
             phi = torch.arccos(
                 torch.matmul(
                     restricted_rotated_evaluation_embeddings
-                    / torch.linalg.norm(restricted_rotated_evaluation_embeddings, dim=-1),
+                    / torch.linalg.norm(
+                        restricted_rotated_evaluation_embeddings, dim=-1, keepdim=True
+                    ),
                     restricted_bias_direction1,
                 )
             )
             d = torch.matmul(
                 restricted_rotated_evaluation_embeddings
-                / torch.linalg.norm(restricted_rotated_evaluation_embeddings, dim=-1),
+                / torch.linalg.norm(restricted_rotated_evaluation_embeddings, dim=-1, keepdim=True),
                 restricted_bias_direction2_orth,
             )
 
             # Add noise to avoid DivideByZero
-            theta_x = torch.zeros_like(phi)
-            theta_x[(d > 0) & (phi < theta_proj)] = theta * (
-                phi[(d > 0) & (phi < theta_proj)] / (theta_proj + 1e-10)
+            theta_x = torch.zeros_like(phi, requires_grad=self.requires_grad)
+            theta_x = torch.where(
+                (d > 0) & (phi < theta_proj),
+                theta * (phi / (theta_proj + 1e-10)),
+                theta_x,
             )
-            theta_x[(d > 0) & (phi > theta_proj)] = theta * (
-                (np.pi - phi[(d > 0) & (phi > theta_proj)]) / (np.pi - theta_proj + 1e-10)
+            theta_x = torch.where(
+                (d > 0) & (phi > theta_proj),
+                theta * ((np.pi - phi) / (np.pi - theta_proj + 1e-10)),
+                theta_x,
             )
-            theta_x[(d < 0) & (phi >= np.pi - theta_proj)] = theta * (
-                phi[(d < 0) & (phi >= np.pi - theta_proj)] / (theta_proj + 1e-10)
+            theta_x = torch.where(
+                (d < 0) & (phi >= np.pi - theta_proj),
+                theta * ((np.pi - phi) / (theta_proj + 1e-10)),
+                theta_x,
             )
-            theta_x[(d < 0) & (phi < np.pi - theta_proj)] = theta * (
-                phi[(d < 0) & (phi < np.pi - theta_proj)] / (np.pi - theta_proj + 1e-6)
+            theta_x = torch.where(
+                (d < 0) & (phi < np.pi - theta_proj),
+                theta * (phi / (np.pi - theta_proj + 1e-10)),
+                theta_x,
             )
 
-            f_matrix = torch.zeros(theta_x.size() + (4), device=theta_x.device)
-            f_matrix[..., 0] = torch.cos(theta_x)
-            f_matrix[..., 1] = -torch.sin(theta_x)
-            f_matrix[..., 2] = torch.sin(theta_x)
-            f_matrix[..., 3] = torch.cos(theta_x)
+            f_matrix = torch.cat(
+                [
+                    torch.cos(theta_x).unsqueeze(-1),
+                    -torch.sin(theta_x).unsqueeze(-1),
+                    torch.sin(theta_x).unsqueeze(-1),
+                    torch.cos(theta_x).unsqueeze(-1),
+                ],
+                dim=-1,
+            )
             f_matrix = f_matrix.reshape(f_matrix.size()[:-1] + (2, 2))
 
-            evaluation_embeddings[mask] = torch.cat(
+            evaluation_embeddings_clone = evaluation_embeddings.clone()
+            evaluation_embeddings_clone[mask] = torch.cat(
                 [
-                    torch.matmul(f_matrix, restricted_rotated_evaluation_embeddings),
+                    torch.bmm(
+                        f_matrix,
+                        restricted_rotated_evaluation_embeddings.unsqueeze(-1),
+                    ).squeeze(-1),
                     fixed_rotated_evaluation_embeddings,
                 ],
                 dim=-1,
             )
-            return torch.matmul(rotation_matrix.transpose(0, 1), evaluation_embeddings)
+            return torch.matmul(evaluation_embeddings_clone, rotation_matrix)

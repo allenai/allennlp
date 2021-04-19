@@ -9,11 +9,9 @@ from allennlp.fairness.bias_mitigators import (
     LinearBiasMitigator,
     HardBiasMitigator,
     INLPBiasMitigator,
-    # OSCaRBiasMitigator,
+    OSCaRBiasMitigator,
 )
-from allennlp.fairness.bias_direction import (
-    TwoMeansBiasDirection,
-)
+from allennlp.fairness.bias_direction import TwoMeansBiasDirection
 
 
 class LinearBiasMitigatorTest(AllenNlpTestCase):
@@ -76,13 +74,15 @@ class LinearBiasMitigatorTest(AllenNlpTestCase):
 
     @multi_device
     def test_lbm_with_grad(self, device: str):
-        self.bias_direction = self.bias_direction.to(device)
+        self.bias_direction = self.bias_direction.requires_grad_().to(device)
         self.evaluation_embeddings = self.evaluation_embeddings.requires_grad_().to(device)
+        assert self.bias_direction.grad is None
         assert self.evaluation_embeddings.grad is None
 
         lbm = LinearBiasMitigator(requires_grad=True)
         test_bias_mitigated_embeddings = lbm(self.evaluation_embeddings, self.bias_direction)
         test_bias_mitigated_embeddings.sum().backward()
+        assert self.bias_direction.grad is not None
         assert self.evaluation_embeddings.grad is not None
 
 
@@ -176,11 +176,11 @@ class HardBiasMitigatorTest(AllenNlpTestCase):
 
     @multi_device
     def test_hbm_with_grad(self, device: str):
-        self.bias_direction = self.bias_direction.to(device)
+        self.bias_direction = self.bias_direction.requires_grad_().to(device)
         self.evaluation_embeddings = self.evaluation_embeddings.requires_grad_().to(device)
         self.equalize_embeddings1 = self.equalize_embeddings1.requires_grad_().to(device)
         self.equalize_embeddings2 = self.equalize_embeddings2.requires_grad_().to(device)
-        self.expected_bias_mitigated_embeddings = self.expected_bias_mitigated_embeddings.to(device)
+        assert self.bias_direction.grad is None
         assert self.evaluation_embeddings.grad is None
         assert self.equalize_embeddings1.grad is None
         assert self.equalize_embeddings2.grad is None
@@ -193,6 +193,7 @@ class HardBiasMitigatorTest(AllenNlpTestCase):
             self.equalize_embeddings2,
         )
         test_bias_mitigated_embeddings.sum().backward()
+        assert self.bias_direction.grad is not None
         assert self.evaluation_embeddings.grad is not None
         assert self.equalize_embeddings1.grad is not None
         assert self.equalize_embeddings2.grad is not None
@@ -238,7 +239,87 @@ class INLPBiasMitigatorTest(AllenNlpTestCase):
             ibm(torch.zeros(2), torch.zeros((2, 2)), torch.zeros((2, 2)))
         with pytest.raises(ConfigurationError):
             ibm(torch.zeros((2, 3)), torch.zeros((2, 2)), torch.zeros((2, 2)))
-    
+
     @multi_device
     def test_inlp(self, device: str):
-        
+        self.seed_embeddings1 = self.seed_embeddings1.to(device)
+        self.seed_embeddings2 = self.seed_embeddings2.to(device)
+        self.evaluation_embeddings = self.evaluation_embeddings.to(device)
+        self.expected_bias_mitigated_embeddings = self.expected_bias_mitigated_embeddings.to(device)
+
+        ibm = INLPBiasMitigator()
+        test_bias_mitigated_embeddings = ibm(
+            self.evaluation_embeddings, self.seed_embeddings1, self.seed_embeddings2
+        )
+        assert allclose(
+            self.expected_bias_mitigated_embeddings, test_bias_mitigated_embeddings, atol=1e-6
+        )
+
+
+class OSCaRBiasMitigatorTest(AllenNlpTestCase):
+    def setup_method(self):
+        # embedding data from VERB demo
+        emb_filename = str(self.FIXTURES_ROOT / "fairness" / "bias_embeddings.json")
+        with open(emb_filename) as emb_file:
+            emb_data = json.load(emb_file)
+
+        self.bias_direction1 = torch.Tensor(emb_data["oscar_bias1"])
+        self.bias_direction2 = torch.Tensor(emb_data["oscar_bias2"])
+
+        evaluation_embeddings = []
+        expected_bias_mitigated_embeddings = []
+        for word in ["programmer", "grandpa", "grandma"]:
+            evaluation_embeddings.append(torch.Tensor(emb_data[word]).reshape(1, -1))
+            expected_bias_mitigated_embeddings.append(
+                torch.Tensor(emb_data["oscar_" + word]).reshape(1, -1)
+            )
+        self.evaluation_embeddings = torch.cat(evaluation_embeddings)
+        self.expected_bias_mitigated_embeddings = torch.cat(expected_bias_mitigated_embeddings)
+
+    def teardown_method(self):
+        pass
+
+    def test_invalid_dims(self):
+        ibm = INLPBiasMitigator()
+        with pytest.raises(ConfigurationError):
+            ibm(torch.zeros(2), torch.zeros(2), torch.zeros(2))
+        with pytest.raises(ConfigurationError):
+            ibm(torch.zeros(2), torch.zeros((2, 2)), torch.zeros((2, 3)))
+        with pytest.raises(ConfigurationError):
+            ibm(torch.zeros((2, 3)), torch.zeros(2), torch.zeros(2))
+        with pytest.raises(ConfigurationError):
+            ibm(torch.zeros((2, 1)), torch.zeros(1), torch.zeros(1))
+
+    @multi_device
+    def test_oscar_without_grad(self, device: str):
+        self.bias_direction1 = self.bias_direction1.to(device)
+        self.bias_direction2 = self.bias_direction2.to(device)
+        self.evaluation_embeddings = self.evaluation_embeddings.to(device)
+        self.expected_bias_mitigated_embeddings = self.expected_bias_mitigated_embeddings.to(device)
+
+        obm = OSCaRBiasMitigator()
+        test_bias_mitigated_embeddings = obm(
+            self.evaluation_embeddings, self.bias_direction1, self.bias_direction2
+        )
+        assert allclose(
+            self.expected_bias_mitigated_embeddings, test_bias_mitigated_embeddings, atol=1e-6
+        )
+
+    @multi_device
+    def test_oscar_with_grad(self, device: str):
+        with torch.autograd.set_detect_anomaly(True):
+            self.bias_direction1 = self.bias_direction1.requires_grad_().to(device)
+            self.bias_direction2 = self.bias_direction2.requires_grad_().to(device)
+            self.evaluation_embeddings = self.evaluation_embeddings.requires_grad_().to(device)
+            assert self.bias_direction1.grad is None
+            assert self.bias_direction2.grad is None
+            assert self.evaluation_embeddings.grad is None
+
+            obm = OSCaRBiasMitigator(requires_grad=True)
+            test_bias_mitigated_embeddings = obm(
+                self.evaluation_embeddings, self.bias_direction1, self.bias_direction2
+            )
+            test_bias_mitigated_embeddings.sum().backward()
+            assert self.bias_direction1.grad is not None
+            assert self.bias_direction2.grad is not None
+            assert self.evaluation_embeddings.grad is not None
