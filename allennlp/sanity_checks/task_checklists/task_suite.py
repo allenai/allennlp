@@ -370,8 +370,3 @@ class TaskSuite(Registrable):
             self.suite.add(test)
         else:
             logger.warning("'{}' was not added, as it contains no examples.".format(test.name))
-
-
-# We can't decorate `TaskSuite` with `TaskSuite.register()`, because `TaskSuite` hasn't been defined yet.  So we
-# put this down here.
-# TaskSuite.register("from_archive", constructor="constructor")(TaskSuite)
