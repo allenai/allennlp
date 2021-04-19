@@ -59,7 +59,7 @@ class SimpleInfluence(InfluenceInterpreter):
 
     !!! Note
         We choose the same default values for the LiSSA hyperparameters as
-        [Han, Xiaochuang et al.](https://api.semanticscholar.org/CorpusID:218628619).
+        [Han, Xiaochuang et al. (2020)](https://api.semanticscholar.org/CorpusID:218628619).
     """
 
     def __init__(
@@ -146,9 +146,12 @@ def get_inverse_hvp_lissa(
     This function approximates the product of the inverse of the Hessian and
     the vectors `vs` using LiSSA.
 
-    Adapted from [github.com/xhan77/influence-function-analysis]
-    (https://github.com/xhan77/influence-function-analysis/blob/78d5a967aba885f690d34e88d68da8678aee41f1/bert_util.py#L336)
-    which has the code for [Han, Xiaochuang et al.](https://api.semanticscholar.org/CorpusID:218628619).
+    Adapted from [github.com/kohpangwei/influence-release]
+    (https://github.com/kohpangwei/influence-release/blob/0f656964867da6ddcca16c14b3e4f0eef38a7472/influence/genericNeuralNet.py#L475),
+    the repo for [Koh, P.W., & Liang, P. (2017)](https://api.semanticscholar.org/CorpusID:13193974),
+    and [github.com/xhan77/influence-function-analysis]
+    (https://github.com/xhan77/influence-function-analysis/blob/78d5a967aba885f690d34e88d68da8678aee41f1/bert_util.py#L336),
+    the repo for [Han, Xiaochuang et al. (2020)](https://api.semanticscholar.org/CorpusID:218628619).
     """
     inverse_hvps = [torch.tensor(0) for _ in vs]
     for _ in Tqdm.tqdm(range(num_samples), desc="LiSSA samples", total=num_samples):
