@@ -189,10 +189,18 @@ class Registrable(FromParams):
 
         else:
             # is not a qualified class name
+            available = cls.list_available()
+            suggestion = _get_suggestion(name, available)
             raise ConfigurationError(
-                f"{name} is not a registered name for {cls.__name__}. "
-                "You probably need to use the --include-package flag "
-                "to load your custom code. Alternatively, you can specify your choices "
+                (
+                    f"'{name}' is not a registered name for '{cls.__name__}'"
+                    + (". " if not suggestion else f", did you mean '{suggestion}'? ")
+                )
+                + "If your registered class comes from custom code, you'll need to import "
+                "the corresponding modules. If you're using AllenNLP from the command-line, "
+                "this is done by using the '--include-package' flag, or by specifying your imports "
+                "in a '.allennlp_plugins' file. "
+                "Alternatively, you can specify your choices "
                 """using fully-qualified paths, e.g. {"model": "my_module.models.MyModel"} """
                 "in which case they will be automatically imported correctly."
             )
@@ -209,3 +217,19 @@ class Registrable(FromParams):
             raise ConfigurationError(f"Default implementation {default} is not registered")
         else:
             return [default] + [k for k in keys if k != default]
+
+
+def _get_suggestion(name: str, available: List[str]) -> Optional[str]:
+    # First check for simple mistakes like using '-' instead of '_', or vice-versa.
+    for ch, repl_ch in (("_", "-"), ("-", "_")):
+        suggestion = name.replace(ch, repl_ch)
+        if suggestion in available:
+            return suggestion
+    # If we still haven't found a reasonable suggestion, we return the first suggestion
+    # with an edit distance (with transpositions allowed) of 1 to `name`.
+    from nltk.metrics.distance import edit_distance
+
+    for suggestion in available:
+        if edit_distance(name, suggestion, transpositions=True) == 1:
+            return suggestion
+    return None
