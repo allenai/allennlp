@@ -1,9 +1,9 @@
 from typing import List, Iterator, Dict, Tuple, Any, Type, Union, Optional
 import logging
+from os import PathLike
 import json
 import re
 from contextlib import contextmanager
-from pathlib import Path
 
 import numpy
 import torch
@@ -314,7 +314,7 @@ class Predictor(Registrable):
     @classmethod
     def from_path(
         cls,
-        archive_path: Union[str, Path],
+        archive_path: Union[str, PathLike],
         predictor_name: str = None,
         cuda_device: int = -1,
         dataset_reader_to_load: str = "validation",
@@ -330,7 +330,7 @@ class Predictor(Registrable):
 
         # Parameters
 
-        archive_path : `Union[str, Path]`
+        archive_path : `Union[str, PathLike]`
             The path to the archive.
         predictor_name : `str`, optional (default=`None`)
             Name that the predictor is registered as, or None to use the
