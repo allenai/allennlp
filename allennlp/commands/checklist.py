@@ -31,18 +31,18 @@ class CheckList(Subcommand):
         )
 
         subparser.add_argument(
-            "archive_file", type=str, help="the archived model to make predictions with"
+            "archive_file", type=str, help="The archived model to make predictions with"
         )
 
-        subparser.add_argument("task", type=str, help="the name of the task suite")
+        subparser.add_argument("task", type=str, help="The name of the task suite")
 
-        subparser.add_argument("--checklist-suite", type=str, help="the checklist suite path")
+        subparser.add_argument("--checklist-suite", type=str, help="The checklist suite path")
 
         subparser.add_argument(
             "--capabilities",
             nargs="+",
             default=[],
-            help=('an optional list of strings of capabilities. Eg. "[Vocabulary, Robustness]"'),
+            help=('An optional list of strings of capabilities. Eg. "[Vocabulary, Robustness]"'),
         )
 
         subparser.add_argument(
@@ -57,7 +57,7 @@ class CheckList(Subcommand):
             type=str,
             default="",
             help=(
-                "an optional JSON structure used to provide additional parameters to the task suite"
+                "An optional JSON structure used to provide additional parameters to the task suite"
             ),
         )
 
@@ -66,19 +66,19 @@ class CheckList(Subcommand):
             type=str,
             default="",
             help=(
-                "an optional JSON structure used to provide additional "
+                "An optional JSON structure used to provide additional "
                 "parameters for printing test summary"
             ),
         )
 
-        subparser.add_argument("--output-file", type=str, help="path to output file")
+        subparser.add_argument("--output-file", type=str, help="Path to output file")
 
         subparser.add_argument(
-            "--cuda-device", type=int, default=-1, help="id of GPU to use (if any)"
+            "--cuda-device", type=int, default=-1, help="ID of GPU to use (if any)"
         )
 
         subparser.add_argument(
-            "--predictor", type=str, help="optionally specify a specific predictor to use"
+            "--predictor", type=str, help="Optionally specify a specific predictor to use"
         )
 
         subparser.add_argument(
@@ -86,7 +86,7 @@ class CheckList(Subcommand):
             type=str,
             default="",
             help=(
-                "an optional JSON structure used to provide additional parameters to the predictor"
+                "An optional JSON structure used to provide additional parameters to the predictor"
             ),
         )
 
