@@ -84,5 +84,7 @@ class ShardedDatasetReader(DatasetReader):
 
         for shard in self.shard_iterable(shards):
             logger.info(f"reading instances from {shard}")
+            # We call `self.reader._read()` here instead of `self.reader.read()` because `.read()`
+            # will prematurely call `self.reader.apply_token_indexers()`.
             for instance in self.reader._read(shard):
                 yield instance
