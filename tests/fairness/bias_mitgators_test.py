@@ -307,19 +307,18 @@ class OSCaRBiasMitigatorTest(AllenNlpTestCase):
 
     @multi_device
     def test_oscar_with_grad(self, device: str):
-        with torch.autograd.set_detect_anomaly(True):
-            self.bias_direction1 = self.bias_direction1.to(device).requires_grad_()
-            self.bias_direction2 = self.bias_direction2.to(device).requires_grad_()
-            self.evaluation_embeddings = self.evaluation_embeddings.to(device).requires_grad_()
-            assert self.bias_direction1.grad is None
-            assert self.bias_direction2.grad is None
-            assert self.evaluation_embeddings.grad is None
+        self.bias_direction1 = self.bias_direction1.to(device).requires_grad_()
+        self.bias_direction2 = self.bias_direction2.to(device).requires_grad_()
+        self.evaluation_embeddings = self.evaluation_embeddings.to(device).requires_grad_()
+        assert self.bias_direction1.grad is None
+        assert self.bias_direction2.grad is None
+        assert self.evaluation_embeddings.grad is None
 
-            obm = OSCaRBiasMitigator(requires_grad=True)
-            test_bias_mitigated_embeddings = obm(
-                self.evaluation_embeddings, self.bias_direction1, self.bias_direction2
-            )
-            test_bias_mitigated_embeddings.sum().backward()
-            assert self.bias_direction1.grad is not None
-            assert self.bias_direction2.grad is not None
-            assert self.evaluation_embeddings.grad is not None
+        obm = OSCaRBiasMitigator(requires_grad=True)
+        test_bias_mitigated_embeddings = obm(
+            self.evaluation_embeddings, self.bias_direction1, self.bias_direction2
+        )
+        test_bias_mitigated_embeddings.sum().backward()
+        assert self.bias_direction1.grad is not None
+        assert self.bias_direction2.grad is not None
+        assert self.evaluation_embeddings.grad is not None
