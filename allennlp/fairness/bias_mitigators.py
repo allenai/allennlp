@@ -440,12 +440,18 @@ class OSCaRBiasMitigator(BiasMitigator):
             )
 
             # Transform and restrict bias directions
-            restricted_bias_direction1 = torch.Tensor([1.0, 0.0])
+            restricted_bias_direction1 = torch.tensor([1.0, 0.0], requires_grad=self.requires_grad)
             bias_direction_inner_prod = torch.dot(bias_direction1, bias_direction2)
-            restricted_bias_direction2 = torch.Tensor(
-                [bias_direction_inner_prod, torch.sqrt(1 - torch.square(bias_direction_inner_prod))]
+            restricted_bias_direction2 = torch.tensor(
+                [
+                    bias_direction_inner_prod,
+                    torch.sqrt(1 - torch.square(bias_direction_inner_prod)),
+                ],
+                requires_grad=self.requires_grad,
             )
-            restricted_bias_direction2_orth = torch.Tensor([0.0, 1.0])
+            restricted_bias_direction2_orth = torch.tensor(
+                [0.0, 1.0], requires_grad=self.requires_grad
+            )
 
             restricted_bias_direction_inner_prod = torch.dot(
                 restricted_bias_direction1, restricted_bias_direction2

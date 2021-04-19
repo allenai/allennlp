@@ -74,8 +74,8 @@ class LinearBiasMitigatorTest(AllenNlpTestCase):
 
     @multi_device
     def test_lbm_with_grad(self, device: str):
-        self.bias_direction = self.bias_direction.requires_grad_().to(device)
-        self.evaluation_embeddings = self.evaluation_embeddings.requires_grad_().to(device)
+        self.bias_direction = self.bias_direction.to(device).requires_grad_()
+        self.evaluation_embeddings = self.evaluation_embeddings.to(device).requires_grad_()
         assert self.bias_direction.grad is None
         assert self.evaluation_embeddings.grad is None
 
@@ -176,10 +176,10 @@ class HardBiasMitigatorTest(AllenNlpTestCase):
 
     @multi_device
     def test_hbm_with_grad(self, device: str):
-        self.bias_direction = self.bias_direction.requires_grad_().to(device)
-        self.evaluation_embeddings = self.evaluation_embeddings.requires_grad_().to(device)
-        self.equalize_embeddings1 = self.equalize_embeddings1.requires_grad_().to(device)
-        self.equalize_embeddings2 = self.equalize_embeddings2.requires_grad_().to(device)
+        self.bias_direction = self.bias_direction.to(device).requires_grad_()
+        self.evaluation_embeddings = self.evaluation_embeddings.to(device).requires_grad_()
+        self.equalize_embeddings1 = self.equalize_embeddings1.to(device).requires_grad_()
+        self.equalize_embeddings2 = self.equalize_embeddings2.to(device).requires_grad_()
         assert self.bias_direction.grad is None
         assert self.evaluation_embeddings.grad is None
         assert self.equalize_embeddings1.grad is None
@@ -308,9 +308,9 @@ class OSCaRBiasMitigatorTest(AllenNlpTestCase):
     @multi_device
     def test_oscar_with_grad(self, device: str):
         with torch.autograd.set_detect_anomaly(True):
-            self.bias_direction1 = self.bias_direction1.requires_grad_().to(device)
-            self.bias_direction2 = self.bias_direction2.requires_grad_().to(device)
-            self.evaluation_embeddings = self.evaluation_embeddings.requires_grad_().to(device)
+            self.bias_direction1 = self.bias_direction1.to(device).requires_grad_()
+            self.bias_direction2 = self.bias_direction2.to(device).requires_grad_()
+            self.evaluation_embeddings = self.evaluation_embeddings.to(device).requires_grad_()
             assert self.bias_direction1.grad is None
             assert self.bias_direction2.grad is None
             assert self.evaluation_embeddings.grad is None
