@@ -64,6 +64,9 @@ class InfluenceInterpreter(Registrable):
     An `InfluenceInterpreter` interprets an AllenNLP models's outputs by finding the
     training instances that had the most influence on the prediction for each test input.
 
+    See [Understanding Black-box Predictions via Influence Functions]
+    (https://api.semanticscholar.org/CorpusID:13193974) for more information.
+
     Subclasses are required to implement the `_calculate_influence_scores()` method.
 
     # Parameters

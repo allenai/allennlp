@@ -38,6 +38,8 @@ class SimpleDataLoader(DataLoader):
         self._batch_generator: Optional[Iterator[TensorDict]] = None
 
     def __len__(self) -> int:
+        if self.batches_per_epoch is not None:
+            return self.batches_per_epoch
         return math.ceil(len(self.instances) / self.batch_size)
 
     @overrides

@@ -8,8 +8,8 @@ from allennlp.data.data_loaders import SimpleDataLoader
 
 from allennlp.interpret import InfluenceInterpreter
 from allennlp.interpret.influence_interpreters.simple_influence import (
-    flatten_tensors,
-    get_hessian_vector_product,
+    _flatten_tensors,
+    get_hvp,
     get_inverse_hvp_lissa,
 )
 
@@ -25,21 +25,26 @@ class DummyBilinearModelForTestingIF(Model):
         return output_dict
 
 
-def test_get_hessian_vector_product():
-    A = torch.tensor([[1.0, 2.0], [3.0, 4.0]])
+def test_get_hvp():
+    # This represents some train data point input.
+    X = torch.tensor([[1.0, 2.0], [3.0, 4.0]])
+    # This represents the weights of a model.
+    w = torch.nn.Parameter(torch.tensor([1, 2]).float(), requires_grad=True)
+    # This is the vector in the HVP.
     v = torch.tensor([10, 20]).float()
+    # And this is the forward pass / loss calculation of the model.
+    loss = 1 / 2 * (w @ X @ w.T)
 
-    x = torch.nn.Parameter(torch.tensor([1, 2]).float(), requires_grad=True)
-    x_loss = 1 / 2 * (x @ A @ x.T)
-    hessian_vector_product = get_hessian_vector_product(x_loss, [x], [v])[0]
-    ans = 1 / 2 * (A + A.T) @ v
-    assert torch.equal(hessian_vector_product, ans)
+    expected_answer = 1 / 2 * (X + X.T) @ v
+
+    hessian_vector_product = get_hvp(loss, [w], [v])[0]
+    assert torch.equal(hessian_vector_product, expected_answer)
 
 
 def test_flatten_tensors():
     A = torch.nn.Parameter(torch.tensor([[1.0, 2.0], [3.0, 4.0]]), requires_grad=True)
     B = torch.nn.Parameter(torch.tensor([[5.0, 6.0], [7.0, 8.0]]), requires_grad=True)
-    flatten_grad = flatten_tensors([A, B])
+    flatten_grad = _flatten_tensors([A, B])
     ans = torch.tensor([1, 2, 3, 4, 5, 6, 7, 8]).float()
     assert torch.equal(flatten_grad, ans)
 
@@ -57,7 +62,7 @@ def test_get_inverse_hvp_lissa():
     fake_instance = Instance({"tensors": TensorField(A)})
 
     # wrap fake instance into dataloader
-    lissa_data_loader = SimpleDataLoader([fake_instance], batch_size=1)
+    lissa_data_loader = SimpleDataLoader([fake_instance], batch_size=1, batches_per_epoch=1)
 
     inverse_hvp = get_inverse_hvp_lissa(
         vs=vs,
@@ -66,7 +71,6 @@ def test_get_inverse_hvp_lissa():
         lissa_data_loader=lissa_data_loader,
         damping=0.0,
         num_samples=1,
-        recursion_depth=1,
         scale=1.0,
     )
     # I tried to increase recursion depth to actually approx the inverse Hessian vector product,

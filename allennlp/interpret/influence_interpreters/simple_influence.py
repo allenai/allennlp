@@ -9,7 +9,7 @@ import torch.autograd as autograd
 from allennlp.common import Lazy
 from allennlp.common.tqdm import Tqdm
 from allennlp.data import DatasetReader, DatasetReaderInput, Instance
-from allennlp.data.data_loaders import DataLoader, SimpleDataLoader, MultiProcessDataLoader
+from allennlp.data.data_loaders import DataLoader, SimpleDataLoader
 from allennlp.interpret.influence_interpreters.influence_interpreter import (
     InfluenceInterpreter,
 )
@@ -24,34 +24,42 @@ class SimpleInfluence(InfluenceInterpreter):
     """
     Registered as an `InfluenceInterpreter` with name "simple-influence".
 
-    This goes through every examples in train set to calculate the influence score, and uses
-    the LiSSA algorithm (essentially a first-order Talyor approxmation) to approximate the inverse
-    of the Hessian used for influence score calculation.
+    This goes through every example in the train set to calculate the influence score. It uses
+    [LiSSA (Linear time Stochastic Second-Order Algorithm)](https://api.semanticscholar.org/CorpusID:10569090)
+    to approximate the inverse of the Hessian used for the influence score calculation.
 
     # Parameters
 
-    lissa_data_loader : `Lazy[DataLoader]`, optional (default = `Lazy(MultiProcessDataLoader)`)
-        The data loader used in LiSSA algorithm.
-        According to [https://arxiv.org/pdf/1703.04730.pdf](https://arxiv.org/pdf/1703.04730.pdf),
+    lissa_batch_size : `int`, optional (default = `8`)
+        The batch size to use for LiSSA.
+        According to [Koh, P.W., & Liang, P. (2017)](https://api.semanticscholar.org/CorpusID:13193974),
         it is better to use batched samples for approximation for better stability.
 
     damping : `float`, optional (default = `3e-3`)
-        This is a hyperparameter for LiSSA algorithm.
-        A damping termed added in case the approximated Hessian (during LiSSA algorithm) has
+        This is a hyperparameter for LiSSA.
+        A damping termed added in case the approximated Hessian (during LiSSA) has
         negative eigenvalues.
 
     num_samples : `int`, optional (default = `1`)
-        Optional. This is a hyperparameter for LiSSA algorithm that we
-        determine how many rounds of recursion process we would like to run for approxmation.
+        This is a hyperparameter for LiSSA that we
+        determine how many rounds of the recursion process we would like to run for approxmation.
 
     recursion_depth : `Union[float, int]`, optional (default = `0.25`)
-        This is a hyperparameter for LiSSA algorithm that
+        This is a hyperparameter for LiSSA that
         determines the recursion depth we would like to go through.
         If a `float`, it means X% of the training examples.
         If an `int`, it means recurse for X times.
 
     scale : `float`, optional, (default = `1e4`)
-        This is a hyperparameter for LiSSA algorithm to tune such that the Taylor expansion converges.
+        This is a hyperparameter for LiSSA to tune such that the Taylor expansion converges.
+        It is applied to scale down the loss during LiSSA to ensure that `H <= I`,
+        where `H` is the Hessian and `I` is the identity matrix.
+
+        See footnote 2 of [Koh, P.W., & Liang, P. (2017)](https://api.semanticscholar.org/CorpusID:13193974).
+
+    !!! Note
+        We choose the same default values for the LiSSA hyperparameters as
+        [Han, Xiaochuang et al.](https://api.semanticscholar.org/CorpusID:218628619).
     """
 
     def __init__(
@@ -65,15 +73,7 @@ class SimpleInfluence(InfluenceInterpreter):
         test_data_loader: Lazy[DataLoader] = Lazy(SimpleDataLoader.from_dataset_reader),
         params_to_freeze: List[str] = None,
         cuda_device: int = -1,
-        lissa_data_loader: Lazy[DataLoader] = Lazy(
-            MultiProcessDataLoader,
-            contructor_extras={
-                "batch_size": 8,
-                "shuffle": True,
-                "max_instances_in_memory": 8,
-                "quiet": True,
-            },
-        ),
+        lissa_batch_size: int = 8,
         damping: float = 3e-3,
         num_samples: int = 1,
         recursion_depth: Union[float, int] = 0.25,
@@ -90,11 +90,21 @@ class SimpleInfluence(InfluenceInterpreter):
             cuda_device=cuda_device,
         )
 
-        self._lissa_dataloader = lissa_data_loader.construct(
-            reader=train_dataset_reader, data_path=train_data_path
+        self._lissa_dataloader = SimpleDataLoader(
+            list(self._train_loader.iter_instances()),
+            lissa_batch_size,
+            shuffle=True,
+            vocab=self.vocab,
         )
         self._lissa_dataloader.set_target_device(self.device)
-        self._lissa_dataloader.index_with(self.vocab)
+        if isinstance(recursion_depth, float) and recursion_depth > 0.0:
+            self._lissa_dataloader.batches_per_epoch = int(
+                len(self._lissa_dataloader) * recursion_depth
+            )
+        elif isinstance(recursion_depth, int) and recursion_depth > 0:
+            self._lissa_dataloader.batches_per_epoch = recursion_depth
+        else:
+            raise ValueError("'recursion_depth' should be a positive int or float")
 
         self._damping = damping
         self._num_samples = num_samples
@@ -105,16 +115,7 @@ class SimpleInfluence(InfluenceInterpreter):
     def _calculate_influence_scores(
         self, test_instance: Instance, test_loss: float, test_grads: Sequence[torch.Tensor]
     ) -> List[float]:
-        # Approximate the inverse of Hessian-Vector Product through LiSSA algorithm
-        if isinstance(self._recursion_depth, float):
-            recursion_depth = int(
-                len(list(self._lissa_dataloader.iter_instances())) * self._recursion_depth
-            )
-        elif isinstance(self._recursion_depth, int):
-            recursion_depth = self._recursion_depth
-        else:
-            raise ValueError("'recursion_depth' shoudl be a float or an int")
-
+        # Approximate the inverse of Hessian-Vector Product through LiSSA
         inv_hvp = get_inverse_hvp_lissa(
             test_grads,
             self.model,
@@ -122,12 +123,12 @@ class SimpleInfluence(InfluenceInterpreter):
             self._lissa_dataloader,
             self._damping,
             self._num_samples,
-            recursion_depth,
             self._scale,
         )
         return [
             # dL_test * d theta as in 2.2 of [https://arxiv.org/pdf/2005.06676.pdf]
-            torch.dot(inv_hvp, flatten_tensors(x.grads)).item()
+            # TODO (epwalsh): should we divide `x.grads` by `self._scale`?
+            torch.dot(inv_hvp, _flatten_tensors(x.grads)).item()
             for x in Tqdm.tqdm(self.train_instances, desc="scoring train instances")
         ]
 
@@ -139,67 +140,96 @@ def get_inverse_hvp_lissa(
     lissa_data_loader: DataLoader,
     damping: float,
     num_samples: int,
-    recursion_depth: int,
     scale: float,
 ) -> torch.Tensor:
     """
-    This function approximates the inverse of Hessian-Vector Product (HVP) w.r.t. the input.
+    This function approximates the product of the inverse of the Hessian and
+    the vectors `vs` using LiSSA.
+
+    Adapted from [github.com/xhan77/influence-function-analysis]
+    (https://github.com/xhan77/influence-function-analysis/blob/78d5a967aba885f690d34e88d68da8678aee41f1/bert_util.py#L336)
+    which has the code for [Han, Xiaochuang et al.](https://api.semanticscholar.org/CorpusID:218628619).
     """
     inverse_hvps = [torch.tensor(0) for _ in vs]
-    for _ in range(num_samples):  # i.e. number of recursion
+    for _ in Tqdm.tqdm(range(num_samples), desc="LiSSA samples", total=num_samples):
         # See a explanation at "Stochastic estimation" paragraph in [https://arxiv.org/pdf/1703.04730.pdf]
         # initialize \tilde{H}^{−1}_0 v = v
         cur_estimates = vs
-        lissa_data_iterator = iter(lissa_data_loader)
         recursion_iter = Tqdm.tqdm(
-            range(recursion_depth), desc="calculating inverse HVP", total=recursion_depth
+            lissa_data_loader, desc="LiSSA depth", total=len(lissa_data_loader)
         )
-        for j in recursion_iter:
-            try:
-                training_batch = next(lissa_data_iterator)
-            except StopIteration:
-                # re-initialize a data loader to continue the recursion
-                lissa_data_iterator = iter(lissa_data_loader)
-                training_batch = next(lissa_data_iterator)
+        for j, training_batch in enumerate(recursion_iter):
+            # TODO (epwalsh): should we make sure `model` is in "train" or "eval" mode here?
             model.zero_grad()
             train_output_dict = model(**training_batch)
-
-            # sample a batch and calculate the gradient
             # Hessian of loss @ \tilde{H}^{−1}_{j - 1} v
-            hvps = get_hessian_vector_product(train_output_dict["loss"], used_params, cur_estimates)
+            hvps = get_hvp(train_output_dict["loss"], used_params, cur_estimates)
 
-            # this is the recursive step
+            # This is the recursive step:
             # cur_estimate = \tilde{H}^{−1}_{j - 1} v
             # (i.e. Hessian-Vector Product estimate from last iteration)
-            # v + (I - Hessian_at_x) * cur_estimate = v + cur_estimate - Hessian_at_x * cur_estimate
-            # Updating for \tilde{H}^{−1}_j v
+            # Updating for \tilde{H}^{−1}_j v, the new current estimate becomes:
+            # v + (I - (Hessian_at_x + damping)) * cur_estimate
+            # = v + (I + damping) * cur_estimate - Hessian_at_x * cur_estimate
+            # We divide `hvp / scale` here (or, equivalently `Hessian_at_x / scale`)
+            # so that we're effectively dividing the loss by `scale`.
             cur_estimates = [
                 v + (1 - damping) * cur_estimate - hvp / scale
                 for v, cur_estimate, hvp in zip(vs, cur_estimates, hvps)
             ]
-            # Manually checking if it converges
-            if (j % 50 == 0) or (j == recursion_depth - 1):
-                norm = np.linalg.norm(flatten_tensors(cur_estimates).cpu().numpy())
+
+            # Update the Tqdm progress bar with the current norm so the user can
+            # see it converge.
+            if (j % 50 == 0) or (j == len(lissa_data_loader) - 1):
+                norm = np.linalg.norm(_flatten_tensors(cur_estimates).cpu().numpy())
                 recursion_iter.set_description(desc=f"calculating inverse HVP, norm = {norm:.5f}")
 
-        # accumulating X_{[i,S_2]}  (notation from the LiSSA (algo. 1) [https://arxiv.org/pdf/1602.03943.pdf]
+        # Accumulating X_{[i,S_2]}  (notation from the LiSSA (algo. 1) [https://arxiv.org/pdf/1602.03943.pdf]
+        # Need to divide by `scale` again here because the `vs` represent gradients
+        # that haven't been scaled yet.
         inverse_hvps = [
             inverse_hvp + cur_estimate / scale
             for inverse_hvp, cur_estimate in zip(inverse_hvps, cur_estimates)
         ]
-    return_ihvp = flatten_tensors(inverse_hvps)
+    return_ihvp = _flatten_tensors(inverse_hvps)
     return_ihvp /= num_samples
     return return_ihvp
 
 
-def flatten_tensors(tensors: Sequence[torch.Tensor]) -> torch.Tensor:
+def get_hvp(
+    loss: torch.Tensor, params: Sequence[torch.Tensor], vectors: Sequence[torch.Tensor]
+) -> Tuple[torch.Tensor, ...]:
     """
-    Un-wraps a list of parameters gradients
+    Get a Hessian-Vector Product (HVP) `Hv` for each Hessian `H` of the `loss`
+    with respect to the one of the parameter tensors in `params` and the corresponding
+    vector `v` in `vectors`.
+
+    # Parameters
+
+    loss : `torch.Tensor`
+        The loss calculated from the output of the model.
+    params : `Sequence[torch.Tensor]`
+        Tunable and used parameters in the model that we will calculate the gradient and hessian
+        with respect to.
+    vectors : `Sequence[torch.Tensor]`
+        The list of vectors for calculating the HVP.
+    """
+    # Sanity check before performing element-wise multiplication
+    assert len(params) == len(vectors)
+    assert all(p.size() == v.size() for p, v in zip(params, vectors))
+    grads = autograd.grad(loss, params, create_graph=True, retain_graph=True)
+    hvp = autograd.grad(grads, params, grad_outputs=vectors)
+    return hvp
+
+
+def _flatten_tensors(tensors: Sequence[torch.Tensor]) -> torch.Tensor:
+    """
+    Unwraps a list of parameters gradients
 
     # Returns
 
     `torch.Tensor`
-        a tensor of shape (x,) where x is the total number of entires in the gradients.
+        A tensor of shape `(x,)` where `x` is the total number of entires in the gradients.
     """
     views = []
     for p in tensors:
@@ -209,37 +239,3 @@ def flatten_tensors(tensors: Sequence[torch.Tensor]) -> torch.Tensor:
             view = p.data.view(-1)
         views.append(view)
     return torch.cat(views, 0)
-
-
-def get_hessian_vector_product(
-    loss: torch.Tensor, params: Sequence[torch.Tensor], vectors: Sequence[torch.Tensor]
-) -> Tuple[torch.Tensor, ...]:
-    """
-    Get a Hessian-Vector Product (HVP) from the loss of a model. This is equivalent to:
-        1. Calculate parameters gradient;
-        2. Element-wise multiply each gradient with `vector` of the same size
-        3. For each product obtained (e.g. a matrix), calculate the gradient w.r.t. parameters.
-
-    Note here that we are taking gradient (Step 3) of gradient (Step 1), so we have Hessian as our results.
-    See [github.com/kohpangwei/influence-release]
-    (https://github.com/kohpangwei/influence-release/blob/master/influence/hessians.py).
-
-    Why we need `vector`? It turns out HVP is a common operations in many optimization operations.
-
-    # Parameters
-
-    loss : `torch.Tensor`
-        loss caluclated from the output of a model
-    params : `Sequence[torch.Tensor]`
-        Tunable and used parameters in the model that we will calculate the gradient/hession
-        with respect to.
-    vectors : `Sequence[torch.Tensor]`
-        List of "vectors" for calculating the Hessian-"Vector" Product.
-        Note a vector can be a unwrapped version of a matrix
-    """
-    # Sanity check before performing element-wise multiplication
-    assert len(params) == len(vectors)
-    assert all(p.size() == v.size() for p, v in zip(params, vectors))
-    grads = autograd.grad(loss, params, create_graph=True, retain_graph=True)
-    hvp = autograd.grad(grads, params, grad_outputs=vectors)
-    return hvp
