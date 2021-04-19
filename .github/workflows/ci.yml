@@ -458,7 +458,7 @@ jobs:
         git push
 
     - name: Re-write docs commit history
-      if: github.event_name == 'release' && github.ref == 'refs/heads/main'
+      if: github.event_name == 'release'
       run: |
         cd ~/allennlp-docs/
         git checkout --orphan latest_branch
