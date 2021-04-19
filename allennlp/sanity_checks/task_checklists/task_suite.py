@@ -77,7 +77,7 @@ class TaskSuite(Registrable):
     def __init__(
         self,
         suite: Optional[TestSuite] = None,
-        add_default_tests: bool = False,
+        add_default_tests: bool = True,
         data: Optional[List[Any]] = None,
         **kwargs,
     ):
@@ -374,4 +374,4 @@ class TaskSuite(Registrable):
 
 # We can't decorate `TaskSuite` with `TaskSuite.register()`, because `TaskSuite` hasn't been defined yet.  So we
 # put this down here.
-TaskSuite.register("from_archive", constructor="constructor")(TaskSuite)
+# TaskSuite.register("from_archive", constructor="constructor")(TaskSuite)

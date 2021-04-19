@@ -12,7 +12,7 @@ import json
 from overrides import overrides
 
 from allennlp.commands.subcommand import Subcommand
-from allennlp.common.checks import check_for_gpu
+from allennlp.common.checks import check_for_gpu, ConfigurationError
 from allennlp.models.archival import load_archive
 from allennlp.predictors.predictor import Predictor
 from allennlp.sanity_checks.task_checklists.task_suite import TaskSuite
@@ -116,10 +116,14 @@ def _get_predictor(args: argparse.Namespace) -> Predictor:
 
 
 def _get_task_suite(args: argparse.Namespace) -> TaskSuite:
-    if args.task in TaskSuite.list_available():
+    available_tasks = TaskSuite.list_available()
+    if args.task in available_tasks:
         suite_name = args.task
     else:
-        suite_name = None
+        raise ConfigurationError(
+            f"'{args.task}' is not a recognized task suite. "
+            f"Available tasks are: {available_tasks}."
+        )
 
     file_path = args.checklist_suite
 
