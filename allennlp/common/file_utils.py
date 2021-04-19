@@ -244,6 +244,7 @@ def cached_path(
         # Remove the hf:// prefix
         identifier = url_or_filename[5:]
 
+        filename: Optional[str]
         if len(identifier.split("/")) > 2:
             filename = "/".join(identifier.split("/")[2:])
             model_identifier = "/".join(identifier.split("/")[:2])
@@ -251,6 +252,7 @@ def cached_path(
             filename = None
             model_identifier = identifier
 
+        revision: Optional[str]
         if "@" in model_identifier:
             repo_id = model_identifier.split("@")[0]
             revision = model_identifier.split("@")[1]
@@ -260,15 +262,17 @@ def cached_path(
 
         if filename is not None:
             url = hf_hub_url(repo_id=repo_id, filename=filename, revision=revision)
-            url_or_filename = cached_download(
-                url=url,
-                library_name="allennlp",
-                library_version=VERSION,
-                cache_dir=CACHE_DIRECTORY,
+            url_or_filename = str(
+                cached_download(
+                    url=url,
+                    library_name="allennlp",
+                    library_version=VERSION,
+                    cache_dir=CACHE_DIRECTORY,
+                )
             )
         else:
-            extraction_path = Path(
-                snapshot_download(repo_id, revision=revision, cache_dir=CACHE_DIRECTORY)
+            extraction_path = snapshot_download(
+                repo_id, revision=revision, cache_dir=CACHE_DIRECTORY
             )
 
     file_path: str
