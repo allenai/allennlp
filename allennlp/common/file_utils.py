@@ -240,7 +240,7 @@ def cached_path(
     if not isinstance(url_or_filename, str):
         url_or_filename = str(url_or_filename)
 
-    if urlparse(url_or_filename).scheme == "hf":
+    if url_or_filename.startswith("hf://"):
         # Remove the hf:// prefix
         identifier = url_or_filename[5:]
 
