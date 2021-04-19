@@ -572,14 +572,18 @@ class TestHFHubDownload(AllenNlpTestCase):
     def test_cached_download(self):
         params = Params(
             {
-                "options_file":  "lysandre/test-elmo-tiny/options.json",
+                "options_file": "lysandre/test-elmo-tiny/options.json",
                 "weight_file": "lysandre/test-elmo-tiny/lm_weights.hdf5",
             }
         )
         embedding_layer = ElmoTokenEmbedder.from_params(vocab=None, params=params)
 
-        assert isinstance(embedding_layer, ElmoTokenEmbedder), "Embedding layer badly instantiated from HF Hub."
-        assert embedding_layer.get_output_dim() == 32, "Embedding layer badly instantiated from HF Hub."
+        assert isinstance(
+            embedding_layer, ElmoTokenEmbedder
+        ), "Embedding layer badly instantiated from HF Hub."
+        assert (
+            embedding_layer.get_output_dim() == 32
+        ), "Embedding layer badly instantiated from HF Hub."
 
     def test_snapshot_download(self):
         predictor = Predictor.from_path("lysandre/test-simple-tagger-tiny")

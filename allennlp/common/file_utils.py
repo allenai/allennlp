@@ -50,7 +50,7 @@ import numpy as np
 from overrides import overrides
 import requests
 from requests.adapters import HTTPAdapter
-from requests.exceptions import ConnectionError, HTTPError
+from requests.exceptions import ConnectionError
 from requests.packages.urllib3.util.retry import Retry
 import lmdb
 from torch import Tensor
@@ -259,9 +259,7 @@ def cached_path(
             revision = None
 
         if filename is not None:
-            url = hf_hub_url(
-                repo_id=repo_id, filename=filename, revision=revision
-            )
+            url = hf_hub_url(repo_id=repo_id, filename=filename, revision=revision)
             url_or_filename = cached_download(
                 url=url,
                 library_name="allennlp",
@@ -269,7 +267,9 @@ def cached_path(
                 cache_dir=CACHE_DIRECTORY,
             )
         else:
-            extraction_path = Path(snapshot_download(repo_id, revision=revision, cache_dir=CACHE_DIRECTORY))
+            extraction_path = Path(
+                snapshot_download(repo_id, revision=revision, cache_dir=CACHE_DIRECTORY)
+            )
 
     file_path: str
 
