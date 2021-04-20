@@ -419,7 +419,7 @@ class OSCaRBiasMitigator(BiasMitigator):
                     init_orth_matrix[i] - subspace_proj
                 )
 
-            mask = torch.count_nonzero(evaluation_embeddings, dim=-1) != 0
+            mask = ~(evaluation_embeddings == 0).all(dim=-1)
             # Transform all evaluation embeddings
             # using orthonormal basis computed above
             rotated_evaluation_embeddings = torch.matmul(
