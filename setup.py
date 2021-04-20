@@ -72,6 +72,7 @@ setup(
         "lmdb",
         "more-itertools",
         "wandb>=0.10.0,<0.11.0",
+        "huggingface_hub>=0.0.8",
     ],
     entry_points={"console_scripts": ["allennlp=allennlp.__main__:run"]},
     include_package_data=True,
