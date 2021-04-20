@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+
+## [v2.3.1](https://github.com/allenai/allennlp/releases/tag/v2.3.1) - 2021-04-20
+
 ### Added
 
 - Added support for the HuggingFace Hub as an alternative way to handle loading files. Hub downloads should be made through the `hf://` URL scheme.
