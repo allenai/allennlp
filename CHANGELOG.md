@@ -9,7 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Add new dimension to the `interpret` module: influence functions via the `InfluenceInterpreter` base class, along with a concrete implementation: `SimpleInfluence`.
+- Added a `quiet` parameter to the `MultiProcessDataLoading` that disables `Tqdm` progress bars.
 - The test for distributed metrics now takes a parameter specifying how often you want to run it.
+
+### Changed
+
+- Updated CONTRIBUTING.md to remind reader to upgrade pip setuptools to avoid spaCy installation issues.
 
 ### Fixed
 

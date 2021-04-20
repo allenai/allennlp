@@ -3,7 +3,7 @@ from allennlp.data.data_loaders import (
     TensorDict,
     allennlp_collate,
 )
-from allennlp.data.dataset_readers.dataset_reader import DatasetReader
+from allennlp.data.dataset_readers.dataset_reader import DatasetReader, DatasetReaderInput
 from allennlp.data.fields.field import DataArray, Field
 from allennlp.data.fields.text_field import TextFieldTensors
 from allennlp.data.instance import Instance
