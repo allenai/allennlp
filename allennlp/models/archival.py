@@ -8,7 +8,6 @@ import os
 import tempfile
 import tarfile
 import shutil
-from pathlib import Path
 from contextlib import contextmanager
 import glob
 
@@ -157,7 +156,7 @@ def archive_model(
 
 
 def load_archive(
-    archive_file: Union[str, Path],
+    archive_file: Union[str, PathLike],
     cuda_device: int = -1,
     overrides: Union[str, Dict[str, Any]] = "",
     weights_file: str = None,
@@ -167,7 +166,7 @@ def load_archive(
 
     # Parameters
 
-    archive_file : `Union[str, Path]`
+    archive_file : `Union[str, PathLike]`
         The archive file to load the model from.
     cuda_device : `int`, optional (default = `-1`)
         If `cuda_device` is >= 0, the model will be loaded onto the
