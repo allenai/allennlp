@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added a `quiet` parameter to the `MultiProcessDataLoading` that disables `Tqdm` progress bars.
 - The test for distributed metrics now takes a parameter specifying how often you want to run it.
 
+### Changed
+
+- Updated CONTRIBUTING.md to remind reader to upgrade pip setuptools to avoid spaCy installation issues.
+
 
 ## [v2.3.0](https://github.com/allenai/allennlp/releases/tag/v2.3.0) - 2021-04-14
 
