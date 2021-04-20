@@ -64,7 +64,13 @@ def assert_metrics_values(
     atol: float = 1e-05,
 ):
     for key in metrics:
-        assert_allclose(metrics[key], desired_values[key], rtol=rtol, atol=atol)
+        if isinstance(metrics[key], Dict) and isinstance(desired_values[key], Dict):
+            for subkey in metrics[key]:
+                assert_allclose(
+                    metrics[key][subkey], desired_values[key][subkey], rtol=rtol, atol=atol
+                )
+        else:
+            assert_allclose(metrics[key], desired_values[key], rtol=rtol, atol=atol)
 
 
 def global_distributed_metric(
