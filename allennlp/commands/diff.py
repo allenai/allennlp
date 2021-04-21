@@ -3,9 +3,8 @@
 
 ```bash
 allennlp diff \
-    roberta-large \
+    hf:///roberta-large/pytorch_model.bin \
     https://storage.googleapis.com/allennlp-public-models/transformer-qa-2020-10-03.tar.gz \
-    --checkpoint-type-1 huggingface \
     --strip-prefix-1 'roberta.' \
     --strip-prefix-2 '_text_field_embedder.token_embedder_tokens.transformer_model.'
 ```
@@ -65,17 +64,6 @@ class Diff(Subcommand):
             help="""the URL, path, or other identifier (see '--checkpoint-type-2')
             to the 2nd PyTorch checkpoint.""",
         )
-        for i in range(1, 3):
-            subparser.add_argument(
-                f"--checkpoint-type-{i}",
-                type=str,
-                choices=["file", "huggingface"],
-                default="file",
-                help=f"""the type of checkpoint corresponding to the 'checkpoint{i}' argument.
-                If 'file', 'checkpoint{i}' should point directly to a checkpoint file (e.g. '.pt', '.bin')
-                or an AllenNLP model archive ('.tar.gz').
-                If 'huggingface', 'checkpoint{i}' should be the name of a model on HuggingFace's model hub.""",
-            )
         subparser.add_argument(
             "--strip-prefix-1",
             type=str,
@@ -249,29 +237,18 @@ def checkpoint_diff(
     assert False, "Could not find edit script"
 
 
-def _get_checkpoint_path(checkpoint: str, checkpoint_type: str) -> str:
-    if checkpoint_type == "file":
-        if checkpoint.endswith(".tar.gz"):
-            return cached_path(checkpoint + "!weights.th", extract_archive=True)
-        elif ".tar.gz!" in checkpoint:
-            return cached_path(checkpoint, extract_archive=True)
-        else:
-            return cached_path(checkpoint)
-    elif checkpoint_type == "huggingface":
-        from transformers.file_utils import (
-            hf_bucket_url,
-            WEIGHTS_NAME,
-            cached_path as hf_cached_path,
-        )
-
-        return hf_cached_path(hf_bucket_url(checkpoint, WEIGHTS_NAME))
+def _get_checkpoint_path(checkpoint: str) -> str:
+    if checkpoint.endswith(".tar.gz"):
+        return cached_path(checkpoint + "!weights.th", extract_archive=True)
+    elif ".tar.gz!" in checkpoint:
+        return cached_path(checkpoint, extract_archive=True)
     else:
-        raise ValueError(f"bad checkpoint type '{checkpoint_type}'")
+        return cached_path(checkpoint)
 
 
 def _diff(args: argparse.Namespace):
-    checkpoint_1_path = _get_checkpoint_path(args.checkpoint1, args.checkpoint_type_1)
-    checkpoint_2_path = _get_checkpoint_path(args.checkpoint2, args.checkpoint_type_2)
+    checkpoint_1_path = _get_checkpoint_path(args.checkpoint1)
+    checkpoint_2_path = _get_checkpoint_path(args.checkpoint2)
     checkpoint_1 = load_state_dict(
         checkpoint_1_path, strip_prefix=args.strip_prefix_1, strict=False
     )

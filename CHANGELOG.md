@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+
+- Added `allennlp diff` command to compute a diff on model checkpoints, analogous to what `git diff` does on two files.
+- Added `allennlp.nn.util.load_state_dict` helper function.
+
+### Fixed
+
+- Fixed `cached_path()` for HuggingFace Hub files that are not associated with a user or organization, like `bert-base-uncased/pytorch_model.bin`.
+  To avoid ambiguity, these need to be downloaded like `cached_path("hf:///bert-base-uncased/pytorch_model.bin")` (note the extra "/" after "hf://").
+
 
 ## [v2.3.1](https://github.com/allenai/allennlp/releases/tag/v2.3.1) - 2021-04-20
 
@@ -32,8 +42,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Ported the following HuggingFace `LambdaLR`-based schedulers: `ConstantLearningRateScheduler`, `ConstantWithWarmupLearningRateScheduler`, `CosineWithWarmupLearningRateScheduler`, `CosineHardRestartsWithWarmupLearningRateScheduler`.
 - Added new `sub_token_mode` parameter to `pretrained_transformer_mismatched_embedder` class to support first sub-token embedding
-- Added `allennlp diff` command to compute a diff on model checkpoints, analogous to what `git diff` does on two files.
-- Added `allennlp.nn.util.load_state_dict` helper function.
 - Added a way to run a multi task model with a dataset reader as part of `allennlp predict`.
 - Added new `eval_mode` in `PretrainedTransformerEmbedder`. If it is set to `True`, the transformer is _always_ run in evaluation mode, which, e.g., disables dropout and does not update batch normalization statistics.
 - Added additional parameters to the W&B callback: `entity`, `group`, `name`, `notes`, and `wandb_kwargs`.

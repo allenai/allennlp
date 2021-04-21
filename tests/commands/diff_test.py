@@ -42,16 +42,12 @@ class TestDiffCommand(AllenNlpTestCase):
         )
 
     def test_from_huggingface(self, capsys):
-        model_id = "epwalsh/bert-xsmall-dummy"
+        model_id = "hf://epwalsh/bert-xsmall-dummy/pytorch_model.bin"
         sys.argv = [
             "allennlp",
             "diff",
             model_id,
             model_id,
-            "--checkpoint-type-1",
-            "huggingface",
-            "--checkpoint-type-2",
-            "huggingface",
         ]
         main()
         captured = capsys.readouterr()

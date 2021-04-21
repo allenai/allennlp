@@ -208,15 +208,43 @@ def cached_path(
     force_extract: bool = False,
 ) -> str:
     """
-    Given something that might be a URL (or might be a local path),
-    determine which. If it's a URL, download the file and cache it, and
-    return the path to the cached file. If it's already a local path,
-    make sure the file exists and then return the path.
+    Given something that might be a URL or local path, determine which.
+    If it's a remote resource, download the file and cache it, and
+    then return the path to the cached file. If it's already a local path,
+    make sure the file exists and return the path.
+
+    For URLs, "http://", "https://", "s3://", and "hf://" are all supported.
+    The later corresponds to the HuggingFace Hub.
+
+    For example, to download the PyTorch weights for the model `epwalsh/bert-xsmall-dummy`
+    on HuggingFace, you could do:
+
+    ```python
+    cached_path("hf://epwalsh/bert-xsmall-dummy/pytorch_model.bin")
+    ```
+
+    !!! Note
+        For models on HuggingFace that are not associated with a user or organization, such
+        as "bert-base-uncased", you need to add an extra "/" after "hf://" when downloading a
+        specific file to avoid ambiguity. For example:
+
+        ```python
+        cached_path("hf:///bert-base-uncased/pytorch_model.bin")
+        ```
+
+    For paths or URLs that point to a tarfile or zipfile, you can also add a path
+    to a specific file to the `url_or_filename` preceeded by a "!", and the archive will
+    be automatically extracted (provided you set `extract_archive` to `True`),
+    returning the local path to the specific file. For example:
+
+    ```python
+    cached_path("model.tar.gz!weights.th", extract_archive=True)
+    ```
 
     # Parameters
 
     url_or_filename : `Union[str, Path]`
-        A URL or local file to parse and possibly download.
+        A URL or path to parse and possibly download.
 
     cache_dir : `Union[str, Path]`, optional (default = `None`)
         The directory to cache downloads.
@@ -241,7 +269,7 @@ def cached_path(
         url_or_filename = str(url_or_filename)
 
     if url_or_filename.startswith("hf://"):
-        # Remove the hf:// prefix
+        # Remove the 'hf://' prefix
         identifier = url_or_filename[5:]
 
         filename: Optional[str]
@@ -251,6 +279,12 @@ def cached_path(
         else:
             filename = None
             model_identifier = identifier
+
+        # Models that are not associated with a user should be specified
+        # like `hf:///roberta-large` (note the extra '/' at the beginning).
+        # So we have to remove the extra '/' here.
+        if model_identifier.startswith("/"):
+            model_identifier = model_identifier[1:]
 
         revision: Optional[str]
         if "@" in model_identifier:
