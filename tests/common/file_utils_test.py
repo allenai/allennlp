@@ -598,7 +598,7 @@ class TestHFHubDownload(AllenNlpTestCase):
         assert meta.etag is not None
         assert meta.resource == "hf://t5-small/config.json"
 
-    def test_snapshow_download_no_user_or_org(self):
+    def test_snapshot_download_no_user_or_org(self):
         path = cached_path("hf://t5-small", cache_dir=self.TEST_DIR)
         assert os.path.isdir(path)
         assert pathlib.Path(os.path.dirname(path)) == self.TEST_DIR
