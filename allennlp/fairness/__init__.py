@@ -12,3 +12,8 @@ from allennlp.fairness.fairness_metrics import (
     Sufficiency,
     DemographicParityWithoutGroundTruth,
 )
+from allennlp.fairness.bias_metrics import (
+    WordEmbeddingAssociationTest,
+    EmbeddingCoherenceTest,
+    NaturalLanguageInference,
+)
