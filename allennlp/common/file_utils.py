@@ -839,7 +839,9 @@ class _Meta:
         return cls(**data)
 
 
-def _hf_hub_download(url, model_identifier: str, filename: Optional[str], cache_dir: str) -> str:
+def _hf_hub_download(
+    url, model_identifier: str, filename: Optional[str], cache_dir: Union[str, Path]
+) -> str:
     revision: Optional[str]
     if "@" in model_identifier:
         repo_id = model_identifier.split("@")[0]
