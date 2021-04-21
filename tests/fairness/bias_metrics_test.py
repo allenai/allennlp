@@ -70,10 +70,60 @@ class WordEmbeddingAssociationTestTest(AllenNlpTestCase):
 
 
 class EmbeddingCoherenceTestTest(AllenNlpTestCase):
+    def setup_method(self):
+        # embedding data from VERB demo
+        emb_filename = str(self.FIXTURES_ROOT / "fairness" / "bias_embeddings.json")
+        with open(emb_filename) as emb_file:
+            emb_data = json.load(emb_file)
+
+        self.X = torch.cat(
+            [
+                torch.Tensor(emb_data["he"]).reshape(1, -1),
+                torch.Tensor(emb_data["him"]).reshape(1, -1),
+            ]
+        )
+        self.Y = torch.cat(
+            [
+                torch.Tensor(emb_data["she"]).reshape(1, -1),
+                torch.Tensor(emb_data["her"]).reshape(1, -1),
+            ]
+        )
+        self.AB = torch.cat(
+            [
+                torch.Tensor(emb_data["engineer"]).reshape(1, -1),
+                torch.Tensor(emb_data["banker"]).reshape(1, -1),
+                torch.Tensor(emb_data["nurse"]).reshape(1, -1),
+                torch.Tensor(emb_data["receptionist"]).reshape(1, -1),
+            ]
+        )
+
+    def teardown_method(self):
+        pass
+
     def test_invalid_dims(self):
-        EmbeddingCoherenceTest()
+        ect = EmbeddingCoherenceTest()
+        with pytest.raises(ConfigurationError):
+            ect(torch.zeros(2), torch.zeros(2), torch.zeros(2))
+        with pytest.raises(ConfigurationError):
+            ect(torch.zeros((2, 2)), torch.zeros((2, 2)), torch.zeros(2))
+        with pytest.raises(ConfigurationError):
+            ect(torch.zeros((2, 2)), torch.zeros((2, 3)), torch.zeros((2, 2)))
+        with pytest.raises(ConfigurationError):
+            ect(torch.zeros((2, 2)), torch.zeros((2, 2)), torch.zeros((2, 3)))
+
+    @multi_device
+    def test_ect(self, device: str):
+        self.X = self.X.to(device)
+        self.Y = self.Y.to(device)
+        self.AB = self.AB.to(device)
+
+        ect = EmbeddingCoherenceTest()
+        test_ect_score = ect(self.X, self.Y, self.AB)
+        assert test_ect_score.item() == pytest.approx(0.800, rel=1e-4)
 
 
 class NaturalLanguageInferenceTest(AllenNlpTestCase):
-    def test_invalid_dims(self):
-        NaturalLanguageInference()
+    @multi_device
+    def test_nli(self, device: str):
+        entailment_predictions = torch.eye(3, device=device).long()
+        assert NaturalLanguageInference()(entailment_predictions, neutral_label=1) == 1 / 3
