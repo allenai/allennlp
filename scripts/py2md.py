@@ -274,7 +274,12 @@ class AllenNlpFilterProcessor(Struct):
     Used to filter out nodes that we don't want to document.
     """
 
-    PRIVATE_METHODS_TO_KEEP = {"DatasetReader._read", "__call__", "__iter__"}
+    PRIVATE_METHODS_TO_KEEP = {
+        "DatasetReader._read",
+        "__call__",
+        "__iter__",
+        "InfluenceInterpreter._calculate_influence_scores",
+    }
 
     def process(self, graph, _resolver):
         graph.visit(self._process_node)
