@@ -219,7 +219,7 @@ class EmbeddingCoherenceTest:
     def _get_ranks(self, x: torch.Tensor) -> torch.Tensor:
         tmp = x.argsort()
         ranks = torch.zeros_like(tmp)
-        ranks[tmp] = torch.arange(len(x))
+        ranks[tmp] = torch.arange(x.size(0), device=ranks)
         return ranks
 
     def spearman_correlation(self, x: torch.Tensor, y: torch.Tensor):
