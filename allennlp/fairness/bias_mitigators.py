@@ -46,10 +46,15 @@ class HardBiasMitigator(BiasMitigator):
     2. Equalizing: ensuring that protected variable-related words are averaged
     out to have the same norm.
 
+    Based on: T. Bolukbasi, K. W. Chang, J. Zou, V. Saligrama, and A. Kalai. [Man is to
+    computer programmer as woman is to homemaker? debiasing word embeddings]
+    (https://api.semanticscholar.org/CorpusID:1704893).
+    In ACM Transactions of Information Systems, 2016.
+
     Description taken from: Goenka, D. (2020). [Tackling Gender Bias in Word Embeddings]
     (https://towardsdatascience.com/tackling-gender-bias-in-word-embeddings-c965f4076a10).
 
-    Implementation based on Rathore, A., Dev, S., Phillips, J.M., Srikumar,
+    Implementation and terminology based on Rathore, A., Dev, S., Phillips, J.M., Srikumar,
     V., Zheng, Y., Yeh, C.M., Wang, J., Zhang, W., & Wang, B. (2021).
     [VERB: Visualizing and Interpreting Bias Mitigation Techniques for
     Word Representations](https://api.semanticscholar.org/CorpusID:233168618).
@@ -164,6 +169,11 @@ class LinearBiasMitigator(BiasMitigator):
     Linear bias mitigator. Mitigates bias in embeddings by removing component
     in the bias direction.
 
+    Based on: S. Dev and J. M. Phillips. [Attenuating bias in word vectors]
+    (https://api.semanticscholar.org/CorpusID:59158788).
+    In International Conference on Artificial Intelligence and Statistics,
+    Proceedings of Machine Learning Research, pages 879–887. PMLR, 2019.
+
     Implementation and terminology based on Rathore, A., Dev, S., Phillips, J.M., Srikumar,
     V., Zheng, Y., Yeh, C.M., Wang, J., Zhang, W., & Wang, B. (2021).
     [VERB: Visualizing and Interpreting Bias Mitigation Techniques for
@@ -213,6 +223,10 @@ class INLPBiasMitigator(BiasMitigator):
     Iterative Nullspace Projection. It mitigates bias by repeatedly building
     a linear classifier that separates concept groups and linearly
     projecting all words along the classifier normal.
+
+    Based on: Ravfogel, S., Elazar, Y., Gonen, H., Twiton, M., & Goldberg, Y. (2020).
+    [Null It Out: Guarding Protected Attributes by Iterative Nullspace Projection]
+    (https://api.semanticscholar.org/CorpusID:215786522). ArXiv, abs/2004.07667.
 
     Implementation and terminology based on Rathore, A., Dev, S., Phillips, J.M., Srikumar,
     V., Zheng, Y., Yeh, C.M., Wang, J., Zhang, W., & Wang, B. (2021).
@@ -328,6 +342,10 @@ class OSCaRBiasMitigator(BiasMitigator):
     through subspace orthogonalization. Formally, OSCaR applies a graded rotation
     on the embedding space to rectify two ideally-independent concept subspaces
     so that they become orthogonal.
+
+    Based on: Dev, S., Li, T., Phillips, J.M., & Srikumar, V. (2020). [OSCaR: Orthogonal Subspace
+    Correction and Rectification of Biases in Word Embeddings](https://api.semanticscholar.org/CorpusID:220281039).
+    ArXiv, abs/2007.00049.
 
     Implementation and terminology based on Rathore, A., Dev, S., Phillips, J.M., Srikumar,
     V., Zheng, Y., Yeh, C.M., Wang, J., Zhang, W., & Wang, B. (2021).

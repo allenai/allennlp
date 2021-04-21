@@ -84,6 +84,11 @@ class PairedPCABiasDirection(BiasDirection):
     !!! Note
         It is uncommon to utilize more than one direction to represent a concept.
 
+    Based on: T. Bolukbasi, K. W. Chang, J. Zou, V. Saligrama, and A. Kalai. [Man is to
+    computer programmer as woman is to homemaker? debiasing word embeddings]
+    (https://api.semanticscholar.org/CorpusID:1704893).
+    In ACM Transactions of Information Systems, 2016.
+
     Implementation and terminology based on Rathore, A., Dev, S., Phillips, J.M., Srikumar,
     V., Zheng, Y., Yeh, C.M., Wang, J., Zhang, W., & Wang, B. (2021).
     [VERB: Visualizing and Interpreting Bias Mitigation Techniques for
@@ -154,6 +159,9 @@ class TwoMeansBiasDirection(BiasDirection):
     !!! Note
         It is uncommon to utilize more than one direction to represent a concept.
 
+    Based on: Dev, S., & Phillips, J.M. (2019). [Attenuating Bias in Word Vectors]
+    (https://api.semanticscholar.org/CorpusID:59158788). AISTATS.
+
     Implementation and terminology based on Rathore, A., Dev, S., Phillips, J.M., Srikumar,
     V., Zheng, Y., Yeh, C.M., Wang, J., Zhang, W., & Wang, B. (2021).
     [VERB: Visualizing and Interpreting Bias Mitigation Techniques for
@@ -217,6 +225,10 @@ class ClassificationNormalBiasDirection(BiasDirection):
 
     !!! Note
         It is uncommon to utilize more than one direction to represent a concept.
+
+    Based on: Ravfogel, S., Elazar, Y., Gonen, H., Twiton, M., & Goldberg, Y. (2020).
+    [Null It Out: Guarding Protected Attributes by Iterative Nullspace Projection]
+    (https://api.semanticscholar.org/CorpusID:215786522). ArXiv, abs/2004.07667.
 
     Implementation and terminology based on Rathore, A., Dev, S., Phillips, J.M., Srikumar,
     V., Zheng, Y., Yeh, C.M., Wang, J., Zhang, W., & Wang, B. (2021).
