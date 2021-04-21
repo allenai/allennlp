@@ -3,7 +3,7 @@
 
 ```bash
 allennlp diff \
-    hf:///roberta-large/pytorch_model.bin \
+    hf://_/roberta-large/pytorch_model.bin \
     https://storage.googleapis.com/allennlp-public-models/transformer-qa-2020-10-03.tar.gz \
     --strip-prefix-1 'roberta.' \
     --strip-prefix-2 '_text_field_embedder.token_embedder_tokens.transformer_model.'

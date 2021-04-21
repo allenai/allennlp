@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Fixed `cached_path()` for HuggingFace Hub files that are not associated with a user or organization, like `bert-base-uncased/pytorch_model.bin`.
-  To avoid ambiguity, these need to be downloaded like `cached_path("hf:///bert-base-uncased/pytorch_model.bin")` (note the extra "/" after "hf://").
+  To avoid ambiguity, these need to be downloaded like `cached_path("hf://_/bert-base-uncased/pytorch_model.bin")` (note the extra "_/" after "hf://").
 
 
 ## [v2.3.1](https://github.com/allenai/allennlp/releases/tag/v2.3.1) - 2021-04-20

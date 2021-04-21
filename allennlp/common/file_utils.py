@@ -54,9 +54,9 @@ from requests.exceptions import ConnectionError
 from requests.packages.urllib3.util.retry import Retry
 import lmdb
 from torch import Tensor
-from huggingface_hub import hf_hub_url, cached_download, snapshot_download
-from allennlp.version import VERSION
+import huggingface_hub as hf_hub
 
+from allennlp.version import VERSION
 from allennlp.common.tqdm import Tqdm
 
 logger = logging.getLogger(__name__)
@@ -225,11 +225,11 @@ def cached_path(
 
     !!! Note
         For models on HuggingFace that are not associated with a user or organization, such
-        as "bert-base-uncased", you need to add an extra "/" after "hf://" when downloading a
+        as "bert-base-uncased", you need to add an extra "_/" after "hf://" when downloading a
         specific file to avoid ambiguity. For example:
 
         ```python
-        cached_path("hf:///bert-base-uncased/pytorch_model.bin")
+        cached_path("hf://_/bert-base-uncased/pytorch_model.bin")
         ```
 
     For paths or URLs that point to a tarfile or zipfile, you can also add a path
@@ -273,7 +273,7 @@ def cached_path(
         identifier = url_or_filename[5:]
 
         filename: Optional[str]
-        if len(identifier.split("/")) > 2:
+        if identifier.count("/") > 1:
             filename = "/".join(identifier.split("/")[2:])
             model_identifier = "/".join(identifier.split("/")[:2])
         else:
@@ -281,10 +281,13 @@ def cached_path(
             model_identifier = identifier
 
         # Models that are not associated with a user should be specified
-        # like `hf:///roberta-large` (note the extra '/' at the beginning).
-        # So we have to remove the extra '/' here.
+        # like `hf:///roberta-large` (note the extra '/' at the beginning)
+        # or `hf://_/roberta-large`.
+        # So we have to remove the extra '/' or '_/' here.
         if model_identifier.startswith("/"):
             model_identifier = model_identifier[1:]
+        elif model_identifier.startswith("_/"):
+            model_identifier = model_identifier[2:]
 
         revision: Optional[str]
         if "@" in model_identifier:
@@ -295,9 +298,9 @@ def cached_path(
             revision = None
 
         if filename is not None:
-            url = hf_hub_url(repo_id=repo_id, filename=filename, revision=revision)
+            url = hf_hub.hf_hub_url(repo_id=repo_id, filename=filename, revision=revision)
             url_or_filename = str(
-                cached_download(
+                hf_hub.cached_download(
                     url=url,
                     library_name="allennlp",
                     library_version=VERSION,
@@ -305,7 +308,7 @@ def cached_path(
                 )
             )
         else:
-            extraction_path = snapshot_download(
+            extraction_path = hf_hub.snapshot_download(
                 repo_id, revision=revision, cache_dir=CACHE_DIRECTORY
             )
 
