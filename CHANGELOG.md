@@ -11,6 +11,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added `allennlp diff` command to compute a diff on model checkpoints, analogous to what `git diff` does on two files.
 - Added `allennlp.nn.util.load_state_dict` helper function.
+- Added a T5 implementation to `modules.transformers`.
+
+### Changed
+
+- Weights & Biases callback can now work in anonymous mode (i.e. without the `WANDB_API_KEY` environment variable).
 
 ### Fixed
 
