@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added a T5 implementation to `modules.transformers`.
 
+### Changed
+
+- Weights & Biases callback can now work in anonymous mode (i.e. without the `WANDB_API_KEY` environment variable).
+
 ### Fixed
 
 - The `GradientDescentTrainer` no longer leaves stray model checkpoints around when it runs out of patience.
