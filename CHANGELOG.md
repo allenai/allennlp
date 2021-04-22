@@ -7,8 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+
+- Added a T5 implementation to `modules.transformers`.
+
 ### Fixed
 
+- Fixed `cached_path()` for "hf://" files.
 - Improved the error message for the `PolynomialDecay` LR scheduler when `num_steps_per_epoch` is missing.
 
 
