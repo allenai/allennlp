@@ -212,7 +212,7 @@ def cached_path(
     make sure the file exists and return the path.
 
     For URLs, "http://", "https://", "s3://", and "hf://" are all supported.
-    The later corresponds to the HuggingFace Hub.
+    The latter corresponds to the HuggingFace Hub.
 
     For example, to download the PyTorch weights for the model `epwalsh/bert-xsmall-dummy`
     on HuggingFace, you could do:
