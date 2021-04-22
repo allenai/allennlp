@@ -4,10 +4,9 @@ import pytest
 
 from allennlp.common import Params
 from allennlp.common import cached_transformers
-from allennlp.common.testing import assert_equal_parameters
-
+from allennlp.common.testing import assert_equal_parameters, AllenNlpTestCase
 from allennlp.modules.transformer import SelfAttention
-from allennlp.common.testing import AllenNlpTestCase
+from allennlp.nn.util import min_value_of_dtype
 
 from transformers.models.bert.configuration_bert import BertConfig
 from transformers.models.bert.modeling_bert import BertSelfAttention
@@ -160,7 +159,7 @@ class TestSelfAttention(AllenNlpTestCase):
             )[0]
         else:
             # The attn_mask is processed outside the self attention module in HF bert models.
-            attention_mask = (~(attention_mask == 1)) * -10e5
+            attention_mask = (~(attention_mask == 1)) * min_value_of_dtype(hidden_states.dtype)
             torch.manual_seed(1234)
             hf_output = pretrained_module.forward(hidden_states, attention_mask=attention_mask)[0]
 
