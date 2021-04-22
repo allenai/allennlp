@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Improved the error message for the `PolynomialDelay` LR scheduler when `num_steps_per_epoch` is missing.
+- Improved the error message for the `PolynomialDecay` LR scheduler when `num_steps_per_epoch` is missing.
 
 
 ## [v2.3.1](https://github.com/allenai/allennlp/releases/tag/v2.3.1) - 2021-04-20
