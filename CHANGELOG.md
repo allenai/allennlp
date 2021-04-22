@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - The `GradientDescentTrainer` no longer leaves stray model checkpoints around when it runs out of patience.
+- Fixed `cached_path()` for "hf://" files.
 
 
 ## [v2.3.1](https://github.com/allenai/allennlp/releases/tag/v2.3.1) - 2021-04-20
