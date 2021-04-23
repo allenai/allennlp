@@ -37,13 +37,13 @@ def get_modules(params_dict):
     hf_module = BertEncoder(BertConfig(**params))
     modules["bert"] = hf_module
 
-    torch.manual_seed(1234)
-    hf_module = RobertaEncoder(RobertaConfig(**params))
-    modules["roberta"] = hf_module
+    # torch.manual_seed(1234)
+    # hf_module = RobertaEncoder(RobertaConfig(**params))
+    # modules["roberta"] = hf_module
 
-    torch.manual_seed(1234)
-    hf_module = ElectraEncoder(ElectraConfig(**params))
-    modules["electra"] = hf_module
+    # torch.manual_seed(1234)
+    # hf_module = ElectraEncoder(ElectraConfig(**params))
+    # modules["electra"] = hf_module
 
     return modules
 
