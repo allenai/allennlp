@@ -5,7 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+
+## [v2.4.0](https://github.com/allenai/allennlp/releases/tag/v2.4.0) - 2021-04-22
+
+### Added
+
+- Added a T5 implementation to `modules.transformers`.
+
+### Changed
+
+- Weights & Biases callback can now work in anonymous mode (i.e. without the `WANDB_API_KEY` environment variable).
+
+### Fixed
+
+- The `GradientDescentTrainer` no longer leaves stray model checkpoints around when it runs out of patience.
+- Fixed `cached_path()` for "hf://" files.
 
 
 ## [v2.3.1](https://github.com/allenai/allennlp/releases/tag/v2.3.1) - 2021-04-20

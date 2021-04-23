@@ -5,7 +5,7 @@ For the most part we just use
 [PyTorch activations](https://pytorch.org/docs/master/nn.html#non-linear-activations).
 Here we provide a thin wrapper to allow registering them and instantiating them `from_params`.
 
-The available activation functions are
+The available activation functions include
 
 * "linear"
 * ["mish"](https://arxiv.org/abs/1908.08681)
@@ -26,6 +26,8 @@ The available activation functions are
 * ["tanhshrink"](https://pytorch.org/docs/master/nn.html#torch.nn.Tanhshrink)
 * ["selu"](https://pytorch.org/docs/master/nn.html#torch.nn.SELU)
 """
+
+import math
 
 import torch
 
@@ -86,3 +88,24 @@ class MishActivation(Activation):
 class SwishActivation(Activation):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return x * torch.sigmoid(x)
+
+
+@Activation.register("gelu_new")
+class GeluNew(Activation):
+    """
+    Implementation of the GELU activation function currently in Google BERT repo (identical to OpenAI GPT). Also
+    see the Gaussian Error Linear Units paper: https://arxiv.org/abs/1606.08415
+    """
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return (
+            0.5
+            * x
+            * (1.0 + torch.tanh(math.sqrt(2.0 / math.pi) * (x + 0.044715 * torch.pow(x, 3.0))))
+        )
+
+
+@Activation.register("gelu_fast")
+class GeluFast(Activation):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return 0.5 * x * (1.0 + torch.tanh(x * 0.7978845608 * (1.0 + 0.044715 * x * x)))

@@ -1,3 +1,4 @@
+import logging
 import os
 from typing import Optional, Dict, Any, List, Union, Tuple, TYPE_CHECKING
 
@@ -13,13 +14,18 @@ if TYPE_CHECKING:
     from allennlp.training.trainer import GradientDescentTrainer
 
 
+logger = logging.getLogger(__name__)
+
+
 @TrainerCallback.register("wandb")
 class WandBCallback(LogWriterCallback):
     """
     Logs training runs to Weights & Biases.
 
     !!! Note
-        This requires the environment variable 'WANDB_API_KEY' to be set.
+        This requires the environment variable 'WANDB_API_KEY' to be set in order
+        to authenticate with Weights & Biases. If not set, you may be prompted to
+        log in or upload the experiment to an anonymous account.
 
     In addition to the parameters that `LogWriterCallback` takes, there are several other
     parameters specific to `WandBWriter` listed below.
@@ -67,7 +73,9 @@ class WandBCallback(LogWriterCallback):
         wandb_kwargs: Optional[Dict[str, Any]] = None,
     ) -> None:
         if "WANDB_API_KEY" not in os.environ:
-            raise ValueError("Missing environment variable 'WANDB_API_KEY'")
+            logger.warning(
+                "Missing environment variable 'WANDB_API_KEY' required to authenticate to Weights & Biases."
+            )
 
         super().__init__(
             serialization_dir,
@@ -93,6 +101,7 @@ class WandBCallback(LogWriterCallback):
             notes=notes,
             config=Params.from_file(os.path.join(serialization_dir, "config.json")).as_dict(),
             tags=tags,
+            anonymous="allow",
             **(wandb_kwargs or {}),
         )
 
