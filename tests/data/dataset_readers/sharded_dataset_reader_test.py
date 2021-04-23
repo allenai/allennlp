@@ -73,14 +73,11 @@ class TestShardedDatasetReader(AllenNlpTestCase):
         assert counts[("snakes", "are", "animals", ".", "N", "V", "N", "N")] == 100
         assert counts[("birds", "are", "animals", ".", "N", "V", "N", "N")] == 100
 
-    @pytest.mark.skip("temporarily skip to check if memory is an issue")
     def test_sharded_read_glob(self):
         self.read_and_check_instances(self.identical_files_glob)
 
-    @pytest.mark.skip("temporarily skip to check if memory is an issue")
     def test_sharded_read_with_multiprocess_loader(self):
         self.read_and_check_instances(self.identical_files_glob, num_workers=2)
 
-    @pytest.mark.skip("temporarily skip to check if memory is an issue")
     def test_sharded_read_archive(self):
         self.read_and_check_instances(str(self.archive_filename))

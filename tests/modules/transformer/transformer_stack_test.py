@@ -37,13 +37,13 @@ def get_modules(params_dict):
     hf_module = BertEncoder(BertConfig(**params))
     modules["bert"] = hf_module
 
-    # torch.manual_seed(1234)
-    # hf_module = RobertaEncoder(RobertaConfig(**params))
-    # modules["roberta"] = hf_module
+    torch.manual_seed(1234)
+    hf_module = RobertaEncoder(RobertaConfig(**params))
+    modules["roberta"] = hf_module
 
-    # torch.manual_seed(1234)
-    # hf_module = ElectraEncoder(ElectraConfig(**params))
-    # modules["electra"] = hf_module
+    torch.manual_seed(1234)
+    hf_module = ElectraEncoder(ElectraConfig(**params))
+    modules["electra"] = hf_module
 
     return modules
 
@@ -169,6 +169,7 @@ class TestTransformerStack(AllenNlpTestCase):
             mapping,
         )
 
+    @pytest.mark.skip("Takes up too much memory")
     @pytest.mark.parametrize("module_name, hf_module", get_modules(PARAMS_DICT).items())
     def test_forward_against_huggingface_outputs(self, module_name, hf_module):
         hidden_states = torch.randn(2, 3, 6)
