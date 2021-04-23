@@ -2,9 +2,8 @@ from typing import Optional
 
 from overrides import overrides
 import torch
-import torch.distributed as dist
 
-from allennlp.common.util import is_distributed
+from allennlp.nn.util import dist_reduce_sum
 from allennlp.training.metrics.metric import Metric
 
 
@@ -40,15 +39,9 @@ class Entropy(Metric):
         entropy = weighted_negative_likelihood.sum(-1)
 
         _entropy = entropy.sum() / mask.sum()
-        _count = 1
 
-        if is_distributed():
-            count = torch.tensor(_count, device=device)
-            dist.all_reduce(_entropy, op=dist.ReduceOp.SUM)
-            dist.all_reduce(count, op=dist.ReduceOp.SUM)
-            _count = count.item()
-        self._entropy += _entropy.item()
-        self._count += _count
+        self._entropy += dist_reduce_sum(_entropy).item()
+        self._count += dist_reduce_sum(1)
 
     @overrides
     def get_metric(self, reset: bool = False):
