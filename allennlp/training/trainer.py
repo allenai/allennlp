@@ -771,9 +771,9 @@ class GradientDescentTrainer(Trainer):
             epoch_start_time = time.time()
             train_metrics = self._train_epoch(epoch)
 
+            # Back up the model now, in case something goes wrong later with the evaluation
             if self._primary and self._checkpointer is not None:
-                self._checkpointer.save_checkpoint(epoch, self, save_model_only=True)
-
+                self._checkpointer.shelve_model(epoch, self)
             # Wait for the primary process to finish saving the model checkpoint
             if self._distributed:
                 dist.barrier()
@@ -811,9 +811,6 @@ class GradientDescentTrainer(Trainer):
                     # Check validation metric for early stopping
                     this_epoch_val_metric = self._metric_tracker.combined_score(val_metrics)
                     self._metric_tracker.add_metrics(val_metrics)
-                    if self._metric_tracker.should_stop_early():
-                        logger.info("Ran out of patience.  Stopping training.")
-                        break
 
             # Create overall metrics dict
             training_elapsed_time = time.time() - training_start_time
@@ -849,11 +846,12 @@ class GradientDescentTrainer(Trainer):
             if self._momentum_scheduler:
                 self._momentum_scheduler.step(this_epoch_val_metric)
 
+            # The checkpointer saves state from the learning rate scheduler and the momentum
+            # scheduler, so we have to make sure those are updated before we save the checkpoint here.
             if self._primary and self._checkpointer is not None:
                 self._checkpointer.save_checkpoint(
                     epoch, self, is_best_so_far=self._metric_tracker.is_best_so_far()
                 )
-
             # Wait for the primary process to finish saving the checkpoint
             if self._distributed:
                 dist.barrier()
@@ -873,6 +871,10 @@ class GradientDescentTrainer(Trainer):
                 logger.info("Estimated training time remaining: %s", formatted_time)
 
             epochs_trained += 1
+
+            if self._metric_tracker.should_stop_early():
+                logger.info("Ran out of patience. Stopping training.")
+                break
         else:
             epoch = self._num_epochs - 1
 
