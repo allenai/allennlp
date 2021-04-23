@@ -27,7 +27,8 @@ class TaskSuite(Registrable):
     capabilities; eg. Vocabulary, SRL, Negation, etc.
 
     An example of the entire checklist process can be found at:
-    https://github.com/marcotcr/checklist/blob/master/notebooks/tutorials/
+    [https://github.com/marcotcr/checklist/blob/master/notebooks/tutorials/]
+    (https://github.com/marcotcr/checklist/blob/master/notebooks/tutorials/).
 
     A task suite should contain tests that check general capabilities, including
     but not limited to:
