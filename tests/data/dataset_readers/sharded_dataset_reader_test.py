@@ -3,7 +3,6 @@ import os
 import tarfile
 from collections import Counter
 from typing import Tuple
-import pytest
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.data_loaders import MultiProcessDataLoader
