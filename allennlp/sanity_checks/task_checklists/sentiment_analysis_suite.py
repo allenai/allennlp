@@ -1,4 +1,4 @@
-from typing import Optional, Iterable, List, Union
+from typing import Optional, Iterable, List, Union, Tuple
 import numpy as np
 from overrides import overrides
 from checklist.test_suite import TestSuite
@@ -64,6 +64,27 @@ class SentimentAnalysisSuite(TaskSuite):
             return np.array(labels), np.array(confs)
 
         return preds_and_confs_fn
+
+    @overrides
+    def _format_failing_examples(
+        self,
+        inputs: Tuple,
+        pred: int,
+        conf: Union[np.array, np.ndarray],
+        label: Optional[int] = None,
+        *args,
+        **kwargs,
+    ):
+        """
+        Formatting function for printing failed test examples.
+        """
+        labels = {self._positive: "Positive", self._negative: "Negative"}
+        ret = str(inputs)
+        if label is not None:
+            ret += " (Original: %s)" % labels[label]
+        ret += "\nPrediction: %s (Confidence: %.1f)" % (labels[pred], conf[pred])
+
+        return ret
 
     @overrides
     def _default_tests(self, data: Optional[Iterable[str]], num_test_cases=100):

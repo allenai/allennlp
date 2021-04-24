@@ -1,4 +1,4 @@
-from typing import Optional, Tuple, Iterable, Callable
+from typing import Optional, Tuple, Iterable, Callable, Union
 import itertools
 import numpy as np
 from overrides import overrides
@@ -76,6 +76,35 @@ class TextualEntailmentSuite(TaskSuite):
             return np.array(labels), np.array(confs)
 
         return preds_and_confs_fn
+
+    @overrides
+    def _format_failing_examples(
+        self,
+        inputs: Tuple,
+        pred: int,
+        conf: Union[np.array, np.ndarray],
+        label: Optional[int] = None,
+        *args,
+        **kwargs,
+    ):
+        """
+        Formatting function for printing failed test examples.
+        """
+        labels = {
+            self._entails: "Entails",
+            self._contradicts: "Contradicts",
+            self._neutral: "Neutral",
+        }
+        ret = "Premise: %s\nHypothesis: %s" % (inputs[0], inputs[1])
+        if label is not None:
+            ret += "\nOriginal: %s" % labels[label]
+        ret += "\nPrediction: Entails (%.1f), Contradicts (%.1f), Neutral (%.1f)" % (
+            conf[self._entails],
+            conf[self._contradicts],
+            conf[self._neutral],
+        )
+
+        return ret
 
     @classmethod
     def contractions(cls):

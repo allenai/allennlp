@@ -1,6 +1,5 @@
-from typing import Optional, Iterable, Tuple
+from typing import Optional, Iterable, Tuple, Union
 import itertools
-import sys
 import numpy as np
 from overrides import overrides
 from checklist.editor import MunchWithAdd as CheckListTemplate
@@ -9,25 +8,6 @@ from checklist.test_types import MFT
 from checklist.perturb import Perturb
 from allennlp.sanity_checks.task_checklists.task_suite import TaskSuite
 from allennlp.sanity_checks.task_checklists import utils
-
-
-def _format_squad_with_context(
-    context_and_question: Tuple,
-    pred: str,
-    conf: float,
-    label: Optional[str] = None,
-    *args,
-    **kwargs,
-):
-    """
-    Formatting function for printing failed test examples.
-    """
-    context, question = context_and_question
-    ret = "Context: %s\nQuestion: %s\n" % (context, question)
-    if label is not None:
-        ret += "Original answer: %s\n" % label
-    ret += "Predicted answer: %s\n" % pred
-    return ret
 
 
 def _crossproduct(template: CheckListTemplate):
@@ -72,6 +52,26 @@ class QuestionAnsweringSuite(TaskSuite):
 
         return preds_and_confs_fn
 
+    @overrides
+    def _format_failing_examples(
+        self,
+        inputs: Tuple,
+        pred: str,
+        conf: Union[np.array, np.ndarray],
+        label: Optional[str] = None,
+        *args,
+        **kwargs,
+    ):
+        """
+        Formatting function for printing failed test examples.
+        """
+        context, question = inputs
+        ret = "Context: %s\nQuestion: %s\n" % (context, question)
+        if label is not None:
+            ret += "Original answer: %s\n" % label
+        ret += "Predicted answer: %s\n" % pred
+        return ret
+
     @classmethod
     def contractions(cls):
         def _contractions(x):
@@ -93,12 +93,6 @@ class QuestionAnsweringSuite(TaskSuite):
             return (utils.strip_punctuation(x[0]), x[1])
 
         return context_punctuation
-
-    @overrides
-    def summary(self, capabilities=None, file=sys.stdout, **kwargs):
-        if "format_example_fn" not in kwargs:
-            kwargs["format_example_fn"] = _format_squad_with_context
-        super().summary(capabilities, file, **kwargs)
 
     @overrides
     def _setup_editor(self):

@@ -1,6 +1,8 @@
 import sys
 import logging
-from typing import Type, Optional, Dict, Any, Callable, List, Iterable, Union, TextIO
+from typing import Type, Optional, Dict, Any, Callable, List, Iterable, Union, TextIO, Tuple
+
+import numpy as np
 from checklist.test_suite import TestSuite
 from checklist.editor import Editor
 from checklist.test_types import MFT, INV, DIR
@@ -101,36 +103,7 @@ class TaskSuite(Registrable):
         Gives a description of the test suite. This is intended as a utility for
         examining the test suite.
         """
-
-        # The capabilities are sorted such that if the capability does not exist
-        # in the list of pre-defined `_capabilities`, then it is put at the end.
-        # `100` is selected as an arbitrary large number; we do not expect the
-        # number of capabilities to be higher.
-        def cap_order(x):
-            return self._capabilities.index(x) if x in self._capabilities else 100
-
-        capabilities = sorted(
-            set([x["capability"] for x in self.suite.info.values()]), key=cap_order
-        )
-        print(
-            "\n\nThis suite contains {} tests across {} capabilities.".format(
-                len(self.suite.tests), len(capabilities)
-            )
-        )
-        print()
-        for capability in capabilities:
-            tests = [
-                name for name, test in self.suite.info.items() if test["capability"] == capability
-            ]
-            if len(tests) > 0:
-                print(f"\n\t{capability} ({len(tests)} tests)\n")
-                for test in tests:
-                    description = self.suite.info[test]["description"]
-                    num_test_cases = len(self.suite.tests[test].data)
-                    about_test = "\t * {} ({} test cases)".format(test, num_test_cases)
-                    if description:
-                        about_test += " : {}".format(description)
-                    print(about_test)
+        self._summary(overview_only=True)
 
     def summary(
         self, capabilities: Optional[List[str]] = None, file: TextIO = sys.stdout, **kwargs
@@ -148,9 +121,79 @@ class TaskSuite(Registrable):
         old_stdout = sys.stdout
         try:
             sys.stdout = file
-            self.suite.summary(capabilities=capabilities, **kwargs)
+            self._summary(capabilities=capabilities, **kwargs)
         finally:
             sys.stdout = old_stdout
+
+    def _summary(
+        self, overview_only: bool = False, capabilities: Optional[List[str]] = None, **kwargs
+    ):
+        """
+        Internal function for description and summary.
+        """
+
+        # The capabilities are sorted such that if the capability does not exist
+        # in the list of pre-defined `_capabilities`, then it is put at the end.
+        # `100` is selected as an arbitrary large number; we do not expect the
+        # number of capabilities to be higher.
+        def cap_order(x):
+            return self._capabilities.index(x) if x in self._capabilities else 100
+
+        capabilities = capabilities or sorted(
+            set([x["capability"] for x in self.suite.info.values()]), key=cap_order
+        )
+        print(
+            "\n\nThis suite contains {} tests across {} capabilities.".format(
+                len(self.suite.tests), len(capabilities)
+            )
+        )
+        print()
+        for capability in capabilities:
+            tests = [
+                name for name, test in self.suite.info.items() if test["capability"] == capability
+            ]
+            num_tests = len(tests)
+            if num_tests > 0:
+                print(f'\nCapability: "{capability}" ({num_tests} tests)\n')
+                for test in tests:
+                    description = self.suite.info[test]["description"]
+                    num_test_cases = len(self.suite.tests[test].data)
+                    about_test = f"* Name: {test} ({num_test_cases} test cases)"
+                    if description:
+                        about_test += f"\n{description}"
+                    print(about_test)
+
+                    if not overview_only:
+                        if "format_example_fn" not in kwargs:
+                            kwargs["format_example_fn"] = self.suite.info[test].get(
+                                "format_example_fn", self._format_failing_examples
+                            )
+                        if "print_fn" not in kwargs:
+                            kwargs["print_fn"] = self.suite.info[test].get(
+                                "print_fn", self.suite.print_fn
+                            )
+                        print()
+                        self.suite.tests[test].summary(**kwargs)
+                        print()
+
+    def _format_failing_examples(
+        self,
+        inputs: Tuple[Any],
+        pred: Any,
+        conf: Union[np.array, np.ndarray],
+        *args,
+        **kwargs,
+    ):
+        """
+        Formatting function for printing failed test examples.
+        """
+        if conf.shape[0] <= 4:
+            confs = " ".join(["%.1f" % c for c in conf])
+            ret = "%s %s" % (confs, str(inputs))
+        else:
+            conf = conf[pred]
+            ret = "%s (%.1f) %s" % (pred, conf, str(inputs))
+        return ret
 
     def run(
         self,
