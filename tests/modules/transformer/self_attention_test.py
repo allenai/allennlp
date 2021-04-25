@@ -81,6 +81,7 @@ class TestSelfAttention(AllenNlpTestCase):
 
         assert self.self_attention.dropout.p == self.params_dict["dropout"]
 
+    @pytest.mark.skip("Takes up too much memory")
     @pytest.mark.parametrize("module_name, hf_module", get_modules(PARAMS_DICT).items())
     def test_forward_against_huggingface_output(self, module_name, hf_module):
         hidden_states = torch.randn(2, 3, 6)
@@ -101,6 +102,7 @@ class TestSelfAttention(AllenNlpTestCase):
 
         assert torch.allclose(output[0], hf_output[0])
 
+    @pytest.mark.skip("Takes up too much memory")
     @pytest.mark.parametrize(
         "pretrained_name",
         [
