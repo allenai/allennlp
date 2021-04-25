@@ -8,6 +8,7 @@ import torch.distributed as dist
 
 from allennlp.common.util import is_distributed
 from allennlp.training.metrics.metric import Metric
+from allennlp.nn.util import dist_reduce_sum
 
 
 @Metric.register("bleu")
@@ -118,24 +119,18 @@ class BLEU(Metric):
         None
         """
         predictions, gold_targets = self.detach_tensors(predictions, gold_targets)
-        device = gold_targets.device
         if is_distributed():
             world_size = dist.get_world_size()
+        else:
+            world_size = 1
 
         for ngram_size, _ in enumerate(self._ngram_weights, start=1):
             precision_matches, precision_totals = self._get_modified_precision_counts(
                 predictions, gold_targets, ngram_size
             )
-            if is_distributed():
-                _precision_matches = torch.tensor(precision_matches, device=device)
-                _precision_totals = torch.tensor(precision_totals, device=device)
-                dist.all_reduce(_precision_matches, op=dist.ReduceOp.SUM)
-                dist.all_reduce(_precision_totals, op=dist.ReduceOp.SUM)
-                precision_matches = _precision_matches.item() / world_size
-                precision_totals = _precision_totals.item() / world_size
 
-            self._precision_matches[ngram_size] += precision_matches
-            self._precision_totals[ngram_size] += precision_totals
+            self._precision_matches[ngram_size] += dist_reduce_sum(precision_matches) / world_size
+            self._precision_totals[ngram_size] += dist_reduce_sum(precision_totals) / world_size
 
         if not self._exclude_indices:
             _prediction_lengths = predictions.size(0) * predictions.size(1)
@@ -149,16 +144,8 @@ class BLEU(Metric):
             _prediction_lengths = valid_predictions_mask.sum().item()
             _reference_lengths = valid_gold_targets_mask.sum().item()
 
-        if is_distributed():
-            prediction_lengths = torch.tensor(_prediction_lengths, device=device)
-            reference_lengths = torch.tensor(_reference_lengths, device=device)
-            dist.all_reduce(prediction_lengths, op=dist.ReduceOp.SUM)
-            dist.all_reduce(reference_lengths, op=dist.ReduceOp.SUM)
-            _prediction_lengths = prediction_lengths.item()
-            _reference_lengths = reference_lengths.item()
-
-        self._prediction_lengths += _prediction_lengths
-        self._reference_lengths += _reference_lengths
+        self._prediction_lengths += dist_reduce_sum(_prediction_lengths)
+        self._reference_lengths += dist_reduce_sum(_reference_lengths)
 
     @overrides
     def get_metric(self, reset: bool = False) -> Dict[str, float]:

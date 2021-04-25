@@ -28,7 +28,6 @@ class Entropy(Metric):
             A masking tensor of shape (batch_size, ...).
         """
         logits, mask = self.detach_tensors(logits, mask)
-        device = logits.device
 
         if mask is None:
             mask = torch.ones(logits.size()[:-1], device=logits.device).bool()
