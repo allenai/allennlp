@@ -3,7 +3,7 @@ import pytest
 import torch
 
 from allennlp.common import Params
-from allennlp.common.testing import AllenNlpTestCase
+from allennlp.common.testing import AllenNlpTestCase, requires_gpu
 from allennlp.data import Vocabulary
 from allennlp.data.batch import Batch
 from allennlp.data.fields import TextField
@@ -15,11 +15,12 @@ from allennlp.modules.token_embedders import PretrainedTransformerEmbedder
 
 
 class TestPretrainedTransformerEmbedder(AllenNlpTestCase):
+    @requires_gpu
     def test_forward_runs_when_initialized_from_params(self):
         # This code just passes things off to `transformers`, so we only have a very simple
         # test.
         params = Params({"model_name": "bert-base-uncased"})
-        embedder = PretrainedTransformerEmbedder.from_params(params)
+        embedder = PretrainedTransformerEmbedder.from_params(params).cuda()
         token_ids = torch.randint(0, 100, (1, 4))
         mask = torch.randint(0, 2, (1, 4)).bool()
         output = embedder(token_ids=token_ids, mask=mask)
@@ -169,8 +170,9 @@ class TestPretrainedTransformerEmbedder(AllenNlpTestCase):
         assert bert_vectors.size() == (2, 8, 64)
         assert bert_vectors.requires_grad == (train_parameters or not last_layer_only)
 
+    @requires_gpu
     def test_big_token_type_ids(self):
-        token_embedder = PretrainedTransformerEmbedder("roberta-base")
+        token_embedder = PretrainedTransformerEmbedder("roberta-base").cuda()
         token_ids = torch.LongTensor([[1, 2, 3], [2, 3, 4]])
         mask = torch.ones_like(token_ids).bool()
         type_ids = torch.zeros_like(token_ids)
@@ -178,8 +180,9 @@ class TestPretrainedTransformerEmbedder(AllenNlpTestCase):
         with pytest.raises(ValueError):
             token_embedder(token_ids, mask, type_ids)
 
+    @requires_gpu
     def test_xlnet_token_type_ids(self):
-        token_embedder = PretrainedTransformerEmbedder("xlnet-base-cased")
+        token_embedder = PretrainedTransformerEmbedder("xlnet-base-cased").cuda()
         token_ids = torch.LongTensor([[1, 2, 3], [2, 3, 4]])
         mask = torch.ones_like(token_ids).bool()
         type_ids = torch.zeros_like(token_ids)
@@ -310,8 +313,11 @@ class TestPretrainedTransformerEmbedder(AllenNlpTestCase):
         )
         assert (unfolded_embeddings_out == unfolded_embeddings).all()
 
+    @requires_gpu
     def test_encoder_decoder_model(self):
-        token_embedder = PretrainedTransformerEmbedder("facebook/bart-large", sub_module="encoder")
+        token_embedder = PretrainedTransformerEmbedder(
+            "facebook/bart-large", sub_module="encoder"
+        ).cuda()
         token_ids = torch.LongTensor([[1, 2, 3], [2, 3, 4]])
         mask = torch.ones_like(token_ids).bool()
         token_embedder(token_ids, mask)
