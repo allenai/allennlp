@@ -154,25 +154,52 @@ class PretrainedTransformerIndexer(TokenIndexer):
             # TODO(zhaofengw): we aren't respecting word boundaries when segmenting wordpieces.
 
             indices = output["token_ids"]
+            type_ids = output.get("type_ids", [0] * len(indices))
+
             # Strips original special tokens
             indices = indices[
                 self._num_added_start_tokens : len(indices) - self._num_added_end_tokens
             ]
+            type_ids = type_ids[
+                self._num_added_start_tokens : len(type_ids) - self._num_added_end_tokens
+            ]
+
             # Folds indices
             folded_indices = [
                 indices[i : i + self._effective_max_length]
                 for i in range(0, len(indices), self._effective_max_length)
             ]
+            folded_type_ids = [
+                type_ids[i : i + self._effective_max_length]
+                for i in range(0, len(type_ids), self._effective_max_length)
+            ]
+
             # Adds special tokens to each segment
             folded_indices = [
                 self._tokenizer.build_inputs_with_special_tokens(segment)
                 for segment in folded_indices
             ]
+            single_sequence_start_type_ids = [
+                t.type_id for t in self._allennlp_tokenizer.single_sequence_start_tokens
+            ]
+            single_sequence_end_type_ids = [
+                t.type_id for t in self._allennlp_tokenizer.single_sequence_end_tokens
+            ]
+            folded_type_ids = [
+                single_sequence_start_type_ids + segment + single_sequence_end_type_ids
+                for segment in folded_type_ids
+            ]
+            assert all(
+                len(segment_indices) == len(segment_type_ids)
+                for segment_indices, segment_type_ids in zip(folded_indices, folded_type_ids)
+            )
+
             # Flattens
             indices = [i for segment in folded_indices for i in segment]
+            type_ids = [i for segment in folded_type_ids for i in segment]
 
             output["token_ids"] = indices
-            output["type_ids"] = [0] * len(indices)
+            output["type_ids"] = type_ids
             output["segment_concat_mask"] = [True] * len(indices)
 
         return output

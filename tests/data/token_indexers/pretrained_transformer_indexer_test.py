@@ -163,6 +163,22 @@ class TestPretrainedTransformerIndexer(AllenNlpTestCase):
         assert indexed["segment_concat_mask"] == [True] * len(expected_ids)
         assert indexed["mask"] == [True] * 7  # original length
 
+    def test_type_ids_when_folding(self):
+        allennlp_tokenizer = PretrainedTransformerTokenizer(
+            "bert-base-uncased", add_special_tokens=False
+        )
+        indexer = PretrainedTransformerIndexer(model_name="bert-base-uncased", max_length=6)
+        first_string = "How do trees get online?"
+        second_string = "They log in!"
+
+        tokens = allennlp_tokenizer.add_special_tokens(
+            allennlp_tokenizer.tokenize(first_string), allennlp_tokenizer.tokenize(second_string)
+        )
+        vocab = Vocabulary()
+        indexed = indexer.tokens_to_indices(tokens, vocab)
+        assert min(indexed["type_ids"]) == 0
+        assert max(indexed["type_ids"]) == 1
+
     @staticmethod
     def _assert_tokens_equal(expected_tokens, actual_tokens):
         for expected, actual in zip(expected_tokens, actual_tokens):
