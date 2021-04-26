@@ -23,7 +23,7 @@ class TestPretrainedTransformerEmbedder(AllenNlpTestCase):
         embedder = PretrainedTransformerEmbedder.from_params(params).cuda()
         token_ids = torch.randint(0, 100, (1, 4))
         mask = torch.randint(0, 2, (1, 4)).bool()
-        output = embedder(token_ids=token_ids, mask=mask)
+        output = embedder(token_ids=token_ids.cuda(), mask=mask.cuda())
         assert tuple(output.size()) == (1, 4, 768)
 
     @pytest.mark.parametrize(
@@ -178,7 +178,7 @@ class TestPretrainedTransformerEmbedder(AllenNlpTestCase):
         type_ids = torch.zeros_like(token_ids)
         type_ids[1, 1] = 1
         with pytest.raises(ValueError):
-            token_embedder(token_ids, mask, type_ids)
+            token_embedder(token_ids.cuda(), mask.cuda(), type_ids.cuda())
 
     @requires_gpu
     def test_xlnet_token_type_ids(self):
@@ -187,7 +187,7 @@ class TestPretrainedTransformerEmbedder(AllenNlpTestCase):
         mask = torch.ones_like(token_ids).bool()
         type_ids = torch.zeros_like(token_ids)
         type_ids[1, 1] = 1
-        token_embedder(token_ids, mask, type_ids)
+        token_embedder(token_ids.cuda(), mask.cuda(), type_ids.cuda())
 
     def test_long_sequence_splitting_end_to_end(self):
         # Mostly the same as the end_to_end test (except for adding max_length=4),
@@ -320,7 +320,7 @@ class TestPretrainedTransformerEmbedder(AllenNlpTestCase):
         ).cuda()
         token_ids = torch.LongTensor([[1, 2, 3], [2, 3, 4]])
         mask = torch.ones_like(token_ids).bool()
-        token_embedder(token_ids, mask)
+        token_embedder(token_ids.cuda(), mask.cuda())
 
     def test_embeddings_resize(self):
         regular_token_embedder = PretrainedTransformerEmbedder("bert-base-cased")
