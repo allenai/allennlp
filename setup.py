@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, Set
 from setuptools import find_packages, setup
 
 # PEP0440 compatible formatted version, see:

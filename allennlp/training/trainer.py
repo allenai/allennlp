@@ -14,7 +14,6 @@ import torch
 import torch.distributed as dist
 from torch.cuda import amp
 import torch.optim.lr_scheduler
-from torch.nn.parallel import DistributedDataParallel
 from torch.nn.utils import clip_grad_norm_
 
 from allennlp.common import Lazy, Registrable, Tqdm
@@ -22,6 +21,7 @@ from allennlp.common import util as common_util
 from allennlp.common.checks import ConfigurationError, check_for_gpu
 from allennlp.data import DataLoader, TensorDict
 from allennlp.models.model import Model
+from allennlp.nn.parallel.ddp_wrappers import DdpWrapper, TorchDdpWrapper
 from allennlp.training import util as training_util
 from allennlp.training.callbacks import TrainerCallback, SanityChecksCallback, ConsoleLoggerCallback
 from allennlp.training.checkpointer import Checkpointer
@@ -258,6 +258,10 @@ class GradientDescentTrainer(Trainer):
         [`NormalizationBiasVerification`](../../sanity_checks/normalization_bias_verification/),
         are ran.
 
+    ddp_wrapper : `Optional[DdpWrapper]`, optional (default = `None`)
+        A `DdpWrapper` to use if running in the distributed setting. If left unspecified,
+        the default `TorchDdpWrapper` is used.
+
     """
 
     def __init__(
@@ -285,6 +289,7 @@ class GradientDescentTrainer(Trainer):
         use_amp: bool = False,
         enable_default_callbacks: bool = True,
         run_sanity_checks: bool = True,
+        ddp_wrapper: Optional[DdpWrapper] = None,
     ) -> None:
         super().__init__(serialization_dir, cuda_device, distributed, local_rank, world_size)
 
@@ -358,10 +363,11 @@ class GradientDescentTrainer(Trainer):
         # normal case, reference to `Model` is retained. This reference is only used in
         # these places: `model.__call__`, `model.train` and `model.eval`.
         if self._distributed:
-            self._pytorch_model = DistributedDataParallel(
+            _ddp_wrapper = ddp_wrapper or TorchDdpWrapper()
+            self._pytorch_model = _ddp_wrapper.initialize(
                 self.model,
+                self.optimizer,
                 device_ids=None if self.cuda_device == torch.device("cpu") else [self.cuda_device],
-                find_unused_parameters=True,
             )
         else:
             self._pytorch_model = self.model

@@ -10,6 +10,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Added `TaskSuite` base class and command line functionality for running [`checklist`](https://github.com/marcotcr/checklist) test suites, along with implementations for `SentimentAnalysisSuite`, `QuestionAnsweringSuite`, and `TextualEntailmentSuite`. These can be found in the `allennlp.sanity_checks.task_checklists` module.
+- Added distributed training memory-saving utilities from [FairScale](https://github.com/facebookresearch/fairscale). These are available
+  when you install AllenNLP with the `fairscale` extras: `pip install allennlp[fairscale]`.
+- Added a `DdpWrapper` registrable class to `allennlp.nn.parallel` that generalized PyTorch's `DistributedDataParallel` wrapper for
+  use during distributed training.
+  The default implementation is `TorchDdpWrapper`, which is just a thin wrapper around `DistributedDataParallel`.
 
 
 ## Unreleased
