@@ -48,6 +48,8 @@ class TestCheckList(AllenNlpTestCase):
             str(self.task),
             "--task-suite-args",
             '{"positive": 1, "negative": 0}',
+            "--max-examples",
+            "1",
         ]
 
         main()
