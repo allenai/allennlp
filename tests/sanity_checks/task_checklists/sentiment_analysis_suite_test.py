@@ -1,5 +1,5 @@
 from allennlp.sanity_checks.task_checklists.sentiment_analysis_suite import SentimentAnalysisSuite
-from allennlp.common.testing import AllenNlpTestCase
+from allennlp.common.testing import AllenNlpTestCase, requires_gpu
 from allennlp.models.archival import load_archive
 from allennlp.predictors import Predictor
 
@@ -12,6 +12,8 @@ class TestSentimentAnalysisSuite(AllenNlpTestCase):
         )
         self.predictor = Predictor.from_archive(archive)
 
+    # Mark this as GPU so it runs on a self-hosted runner, which will be a lot faster.
+    @requires_gpu
     def test_run(self):
         data = [
             "This is really good",
@@ -22,4 +24,4 @@ class TestSentimentAnalysisSuite(AllenNlpTestCase):
             "I have visited the place for 3 years; great food!",
         ]
         suite = SentimentAnalysisSuite(add_default_tests=True, data=data)
-        suite.run(self.predictor, max_examples=10)
+        suite.run(self.predictor, max_examples=1)

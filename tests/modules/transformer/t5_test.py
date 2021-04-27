@@ -2,8 +2,11 @@ import pytest
 from transformers.models import t5 as hf_t5
 
 from allennlp.modules.transformer.t5 import T5
+from allennlp.common.testing import requires_gpu
 
 
+# Mark this as GPU so it runs on a self-hosted runner, which will be a lot faster.
+@requires_gpu
 @pytest.mark.parametrize(
     "pretrained_model_name",
     [
