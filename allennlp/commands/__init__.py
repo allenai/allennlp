@@ -19,6 +19,7 @@ from allennlp.commands.train import Train
 from allennlp.commands.count_instances import CountInstances
 from allennlp.common.plugins import import_plugins
 from allennlp.common.util import import_module_and_submodules
+from allennlp.commands.checklist import CheckList
 
 logger = logging.getLogger(__name__)
 

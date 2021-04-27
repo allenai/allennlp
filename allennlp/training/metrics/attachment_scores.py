@@ -2,9 +2,8 @@ from typing import Optional, List
 
 from overrides import overrides
 import torch
-import torch.distributed as dist
 
-from allennlp.common.util import is_distributed
+from allennlp.nn.util import dist_reduce_sum
 from allennlp.training.metrics.metric import Metric
 
 
@@ -59,7 +58,6 @@ class AttachmentScores(Metric):
             predicted_indices, predicted_labels, gold_indices, gold_labels, mask
         )
         predicted_indices, predicted_labels, gold_indices, gold_labels, mask = detached
-        device = predicted_indices.device
 
         if mask is None:
             mask = torch.ones_like(predicted_indices).bool()
@@ -83,24 +81,12 @@ class AttachmentScores(Metric):
         total_sentences = correct_indices.size(0)
         total_words = correct_indices.numel() - (~mask).sum()
 
-        if is_distributed():
-            dist.all_reduce(correct_indices, op=dist.ReduceOp.SUM)
-            dist.all_reduce(unlabeled_exact_match, op=dist.ReduceOp.SUM)
-            dist.all_reduce(correct_labels_and_indices, op=dist.ReduceOp.SUM)
-            dist.all_reduce(labeled_exact_match, op=dist.ReduceOp.SUM)
-            total_sentences = torch.tensor(total_sentences, device=device)
-            total_words = torch.tensor(total_words, device=device)
-            dist.all_reduce(total_sentences, op=dist.ReduceOp.SUM)
-            dist.all_reduce(total_words, op=dist.ReduceOp.SUM)
-            total_sentences = total_sentences.item()
-            total_words = total_words.item()
-
-        self._unlabeled_correct += correct_indices.sum()
-        self._exact_unlabeled_correct += unlabeled_exact_match.sum()
-        self._labeled_correct += correct_labels_and_indices.sum()
-        self._exact_labeled_correct += labeled_exact_match.sum()
-        self._total_sentences += total_sentences
-        self._total_words += total_words
+        self._unlabeled_correct += dist_reduce_sum(correct_indices).sum()
+        self._exact_unlabeled_correct += dist_reduce_sum(unlabeled_exact_match).sum()
+        self._labeled_correct += dist_reduce_sum(correct_labels_and_indices).sum()
+        self._exact_labeled_correct += dist_reduce_sum(labeled_exact_match).sum()
+        self._total_sentences += dist_reduce_sum(total_sentences)
+        self._total_words += dist_reduce_sum(total_words)
 
     def get_metric(
         self,

@@ -2,10 +2,9 @@ from typing import Dict, Optional
 
 from overrides import overrides
 import torch
-import torch.distributed as dist
 
-from allennlp.common.util import is_distributed
 from allennlp.training.metrics.metric import Metric
+from allennlp.nn.util import dist_reduce_sum
 
 
 @Metric.register("mean_absolute_error")
@@ -35,7 +34,6 @@ class MeanAbsoluteError(Metric):
             A tensor of the same shape as `predictions`.
         """
         predictions, gold_labels, mask = self.detach_tensors(predictions, gold_labels, mask)
-        device = gold_labels.device
 
         absolute_errors = torch.abs(predictions - gold_labels)
 
@@ -46,16 +44,8 @@ class MeanAbsoluteError(Metric):
             _total_count = gold_labels.numel()
         _absolute_error = torch.sum(absolute_errors)
 
-        if is_distributed():
-            absolute_error = torch.tensor(_absolute_error, device=device)
-            total_count = torch.tensor(_total_count, device=device)
-            dist.all_reduce(absolute_error, op=dist.ReduceOp.SUM)
-            dist.all_reduce(total_count, op=dist.ReduceOp.SUM)
-            _absolute_error = absolute_error.item()
-            _total_count = total_count.item()
-
-        self._absolute_error += float(_absolute_error)
-        self._total_count += int(_total_count)
+        self._absolute_error += float(dist_reduce_sum(_absolute_error))
+        self._total_count += int(dist_reduce_sum(_total_count))
 
     def get_metric(self, reset: bool = False) -> Dict[str, float]:
         """

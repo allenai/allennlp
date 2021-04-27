@@ -2107,7 +2107,7 @@ def tiny_value_of_dtype(dtype: torch.dtype):
         raise TypeError("Does not support dtype " + str(dtype))
 
 
-_V = TypeVar("_V", int, float)
+_V = TypeVar("_V", int, float, torch.Tensor)
 
 
 def dist_reduce(value: _V, reduce_op, **kwargs) -> _V:
@@ -2137,6 +2137,9 @@ def dist_reduce(value: _V, reduce_op, **kwargs) -> _V:
     device = int_to_device(-1 if dist.get_backend() != "nccl" else torch.cuda.current_device())
     value_tensor = torch.tensor(value, device=device, **kwargs)
     dist.all_reduce(value_tensor, op=reduce_op)
+
+    if isinstance(value, torch.Tensor):
+        return value_tensor
     return value_tensor.item()  # type: ignore[return-value]
 
 
@@ -2153,4 +2156,4 @@ def dist_reduce_sum(value: _V, **kwargs) -> _V:
     # result in an `AttributeError`.
     if not is_distributed():
         return value
-    return dist_reduce(value, dist.ReduceOp.SUM)
+    return dist_reduce(value, dist.ReduceOp.SUM, **kwargs)
