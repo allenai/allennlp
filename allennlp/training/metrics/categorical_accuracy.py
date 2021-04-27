@@ -2,9 +2,8 @@ from typing import Optional
 
 from overrides import overrides
 import torch
-import torch.distributed as dist
 
-from allennlp.common.util import is_distributed
+from allennlp.nn.util import dist_reduce_sum
 from allennlp.common.checks import ConfigurationError
 from allennlp.training.metrics.metric import Metric
 
@@ -98,15 +97,8 @@ class CategoricalAccuracy(Metric):
             _total_count = torch.tensor(gold_labels.numel())
         _correct_count = correct.sum()
 
-        if is_distributed():
-            device = torch.device("cuda" if dist.get_backend() == "nccl" else "cpu")
-            _correct_count = _correct_count.to(device)
-            _total_count = _total_count.to(device)
-            dist.all_reduce(_correct_count, op=dist.ReduceOp.SUM)
-            dist.all_reduce(_total_count, op=dist.ReduceOp.SUM)
-
-        self.correct_count += _correct_count.item()
-        self.total_count += _total_count.item()
+        self.correct_count += dist_reduce_sum(_correct_count).item()
+        self.total_count += dist_reduce_sum(_total_count).item()
 
     def get_metric(self, reset: bool = False):
         """
