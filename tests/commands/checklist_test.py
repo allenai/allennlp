@@ -3,7 +3,7 @@ import sys
 
 from allennlp.commands import main
 from allennlp.commands.checklist import CheckList
-from allennlp.common.testing import AllenNlpTestCase
+from allennlp.common.testing import AllenNlpTestCase, requires_gpu
 
 
 class TestCheckList(AllenNlpTestCase):
@@ -39,6 +39,8 @@ class TestCheckList(AllenNlpTestCase):
         assert args.output_file == "/dev/null"
         assert args.cuda_device == 0
 
+    # Mark this as GPU so it runs on a self-hosted runner, which will be a lot faster.
+    @requires_gpu
     def test_works_with_known_model(self):
 
         sys.argv = [
@@ -50,6 +52,8 @@ class TestCheckList(AllenNlpTestCase):
             '{"positive": 1, "negative": 0}',
             "--max-examples",
             "1",
+            "--cuda-device",
+            "0",
         ]
 
         main()
