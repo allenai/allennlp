@@ -173,20 +173,23 @@ AllenNLP requires Python 3.6.1 or later and [PyTorch](https://pytorch.org/).
 It's recommended that you install the PyTorch ecosystem **before** installing AllenNLP by following the instructions on [pytorch.org](https://pytorch.org/).
 
 The preferred way to install AllenNLP is via `pip`. Just run `pip install allennlp`.
-This will install the base version of AllenNLP without any extras. 
+This will install the base version of AllenNLP without any extras. To install with extras, see the table below.
 
 <table>
 <tr>
     <td><b> extra </b></td>
-    <td><code> install command </code> </td>
+    <td><b> install command <b></td>
+    <td><b> description <b></td>
 </tr>
 <tr>
-    <td><b> allennlp.commands </b></td>
-    <td> Functionality for the CLI </td>
+    <td> all </td>
+    <td><code> pip install allennlp[all] </code></td>
+    <td> all extras </td>
 </tr>
 <tr>
-    <td><b> allennlp.common </b></td>
-    <td> Utility modules that are used across the library </td>
+    <td> fairscale </td>
+    <td><code> pip install allennlp[fairscale] </code></td>
+    <td> utilities for scalable training through <a href="https://github.com/facebookresearch/fairscale">FairScale</a></td>
 </tr>
 </table>
 
