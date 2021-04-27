@@ -7,12 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Changed
+
+- Use `dist_reduce_sum` in distributed metrics.
+
+### Added
+
+- Added `TaskSuite` base class and command line functionality for running [`checklist`](https://github.com/marcotcr/checklist) test suites, along with implementations for `SentimentAnalysisSuite`, `QuestionAnsweringSuite`, and `TextualEntailmentSuite`. These can be found in the `allennlp.sanity_checks.task_checklists` module.
+
+
+## Unreleased
+
+### Fixed
+
+- When `PretrainedTransformerIndexer` folds long sequences, it no longer loses the information from token type ids.
+
+
+## [v2.4.0](https://github.com/allenai/allennlp/releases/tag/v2.4.0) - 2021-04-22
+
 ### Added
 
 - Added a T5 implementation to `modules.transformers`.
 
+### Changed
+
+- Weights & Biases callback can now work in anonymous mode (i.e. without the `WANDB_API_KEY` environment variable).
+
 ### Fixed
 
+- The `GradientDescentTrainer` no longer leaves stray model checkpoints around when it runs out of patience.
 - Fixed `cached_path()` for "hf://" files.
 - Improved the error message for the `PolynomialDecay` LR scheduler when `num_steps_per_epoch` is missing.
 
@@ -34,7 +57,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Fixed a bug with the `ShardedDatasetReader` when used with multi-process data loading (https://github.com/allenai/allennlp/issues/5132).
-
 
 ## [v2.3.0](https://github.com/allenai/allennlp/releases/tag/v2.3.0) - 2021-04-14
 
@@ -97,6 +119,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added support for PyTorch version 1.8 and `torchvision` version 0.9 .
 - `Model.get_parameters_for_histogram_tensorboard_logging` is deprecated in favor of
   `Model.get_parameters_for_histogram_logging`.
+
 
 ### Fixed
 
