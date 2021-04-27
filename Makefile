@@ -85,6 +85,8 @@ install :
 	# Due to a weird thing with pip, we may need egg-info before running `pip install -e`.
 	# See https://github.com/pypa/pip/issues/4537.
 	python setup.py install_egg_info
+	# Need to install PyTorch first, since some dependencies require PyTorch before they can be installed.
+	grep -Eo 'torch(vision)?[><=,.0-9]+' setup.py | xargs pip install
 	pip install --upgrade --upgrade-strategy eager -e . -r dev-requirements.txt
 	# Docs are not built on docker, and the runner is unable to find
 	# the nltk_data folder. Hence, we download the requirement.

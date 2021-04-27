@@ -1,3 +1,4 @@
+from typing import Dict, List
 from setuptools import find_packages, setup
 
 # PEP0440 compatible formatted version, see:
@@ -18,6 +19,25 @@ from setuptools import find_packages, setup
 VERSION = {}  # type: ignore
 with open("allennlp/version.py", "r") as version_file:
     exec(version_file.read(), VERSION)
+
+
+EXTRAS: Dict[str, List[str]] = {"fairscale": ["fairscale>=0.3.6,<0.4.0"]}
+
+
+def add_all_extras():
+    """
+    Compiles all of the requirements listed under extras and adds them to an additional
+    extra called 'all'.
+    """
+    all_extras: Set[str] = set()
+    for extras in EXTRAS.values():
+        for requirement in extras:
+            all_extras.add(requirement)
+    EXTRAS["all"] = list(all_extras)
+
+
+add_all_extras()
+
 
 setup(
     name="allennlp",
@@ -75,6 +95,7 @@ setup(
         "wandb>=0.10.0,<0.11.0",
         "huggingface_hub>=0.0.8",
     ],
+    extras_require=EXTRAS,
     entry_points={"console_scripts": ["allennlp=allennlp.__main__:run"]},
     include_package_data=True,
     python_requires=">=3.6.1",
