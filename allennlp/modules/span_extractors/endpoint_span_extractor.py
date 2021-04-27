@@ -1,13 +1,8 @@
-from typing import Optional
-
 import torch
 from torch.nn.parameter import Parameter
-from overrides import overrides
 
 from allennlp.modules.span_extractors.span_extractor import SpanExtractor
-from allennlp.modules.token_embedders.embedding import Embedding
 from allennlp.nn import util
-from allennlp.common.checks import ConfigurationError
 
 
 @SpanExtractor.register("endpoint")
@@ -61,26 +56,17 @@ class EndpointSpanExtractor(SpanExtractor):
         bucket_widths: bool = False,
         use_exclusive_start_indices: bool = False,
     ) -> None:
-        super().__init__()
-        self._input_dim = input_dim
+        super().__init__(
+            input_dim=input_dim,
+            num_width_embeddings=num_width_embeddings,
+            span_width_embedding_dim=span_width_embedding_dim,
+            bucket_widths=bucket_widths,
+        )
         self._combination = combination
-        self._num_width_embeddings = num_width_embeddings
-        self._bucket_widths = bucket_widths
 
         self._use_exclusive_start_indices = use_exclusive_start_indices
         if use_exclusive_start_indices:
             self._start_sentinel = Parameter(torch.randn([1, 1, int(input_dim)]))
-
-        self._span_width_embedding: Optional[Embedding] = None
-        if num_width_embeddings is not None and span_width_embedding_dim is not None:
-            self._span_width_embedding = Embedding(
-                num_embeddings=num_width_embeddings, embedding_dim=span_width_embedding_dim
-            )
-        elif num_width_embeddings is not None or span_width_embedding_dim is not None:
-            raise ConfigurationError(
-                "To use a span width embedding representation, you must"
-                "specify both num_width_buckets and span_width_embedding_dim."
-            )
 
     def get_input_dim(self) -> int:
         return self._input_dim
@@ -91,8 +77,7 @@ class EndpointSpanExtractor(SpanExtractor):
             return combined_dim + self._span_width_embedding.get_output_dim()
         return combined_dim
 
-    @overrides
-    def forward(
+    def _embed_spans(
         self,
         sequence_tensor: torch.FloatTensor,
         span_indices: torch.LongTensor,
@@ -148,19 +133,5 @@ class EndpointSpanExtractor(SpanExtractor):
         combined_tensors = util.combine_tensors(
             self._combination, [start_embeddings, end_embeddings]
         )
-        if self._span_width_embedding is not None:
-            # Embed the span widths and concatenate to the rest of the representations.
-            if self._bucket_widths:
-                span_widths = util.bucket_values(
-                    span_ends - span_starts, num_total_buckets=self._num_width_embeddings  # type: ignore
-                )
-            else:
-                span_widths = span_ends - span_starts
-
-            span_width_embeddings = self._span_width_embedding(span_widths)
-            combined_tensors = torch.cat([combined_tensors, span_width_embeddings], -1)
-
-        if span_indices_mask is not None:
-            return combined_tensors * span_indices_mask.unsqueeze(-1)
 
         return combined_tensors

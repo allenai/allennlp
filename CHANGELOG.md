@@ -11,8 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added `TaskSuite` base class and command line functionality for running [`checklist`](https://github.com/marcotcr/checklist) test suites, along with implementations for `SentimentAnalysisSuite`, `QuestionAnsweringSuite`, and `TextualEntailmentSuite`. These can be found in the `allennlp.sanity_checks.task_checklists` module.
 
+### Changed
 
-## Unreleased
+- Refactored all span extractors, putting specific span embedding computations into the `_embed_spans` method and leaving the common code in `SpanExtractor.forward` to unify the arguments. And the `SelfAttentiveSpanExtractor` is able to embed span widths.
+
 
 ### Fixed
 
