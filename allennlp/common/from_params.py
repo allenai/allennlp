@@ -135,8 +135,8 @@ def infer_params(
     if not has_kwargs:
         return parameters
 
-    # "mro" is "method resolution order".  The first one is the current class, the next is the
-    # first superclass, and so on.  We take the first superclass we find that inherits from
+    # "mro" is "method resolution order". The first one is the current class, the next is the
+    # first superclass, and so on. We take the first superclass we find that inherits from
     # FromParams.
     super_class = None
     for super_class_candidate in cls.mro()[1:]:
