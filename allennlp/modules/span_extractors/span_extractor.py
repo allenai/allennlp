@@ -29,7 +29,9 @@ class SpanExtractor(torch.nn.Module, Registrable):
         them. Span representation can be computed in many different ways,
         such as concatenation of the start and end spans, attention over the
         vectors contained inside the span, etc.
+
         # Parameters
+
         sequence_tensor : `torch.FloatTensor`, required.
             A tensor of shape (batch_size, sequence_length, embedding_size)
             representing an embedded sequence of words.
