@@ -1,12 +1,15 @@
 import torch
 
 from allennlp.modules.span_extractors.span_extractor import SpanExtractor
+from allennlp.modules.span_extractors.span_extractor_with_span_width_embedding import (
+    SpanExtractorWithSpanWidthEmbedding,
+)
 from allennlp.modules.time_distributed import TimeDistributed
 from allennlp.nn import util
 
 
 @SpanExtractor.register("self_attentive")
-class SelfAttentiveSpanExtractor(SpanExtractor):
+class SelfAttentiveSpanExtractor(SpanExtractorWithSpanWidthEmbedding):
     """
     Computes span representations by generating an unnormalized attention score for each
     word in the document. Spans representations are computed with respect to these
@@ -54,9 +57,6 @@ class SelfAttentiveSpanExtractor(SpanExtractor):
             bucket_widths=bucket_widths,
         )
         self._global_attention = TimeDistributed(torch.nn.Linear(input_dim, 1))
-
-    def get_input_dim(self) -> int:
-        return self._input_dim
 
     def get_output_dim(self) -> int:
         if self._span_width_embedding is not None:

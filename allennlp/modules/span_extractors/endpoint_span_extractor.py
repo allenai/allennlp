@@ -2,11 +2,14 @@ import torch
 from torch.nn.parameter import Parameter
 
 from allennlp.modules.span_extractors.span_extractor import SpanExtractor
+from allennlp.modules.span_extractors.span_extractor_with_span_width_embedding import (
+    SpanExtractorWithSpanWidthEmbedding,
+)
 from allennlp.nn import util
 
 
 @SpanExtractor.register("endpoint")
-class EndpointSpanExtractor(SpanExtractor):
+class EndpointSpanExtractor(SpanExtractorWithSpanWidthEmbedding):
     """
     Represents spans as a combination of the embeddings of their endpoints. Additionally,
     the width of the spans can be embedded and concatenated on to the final combination.
@@ -67,9 +70,6 @@ class EndpointSpanExtractor(SpanExtractor):
         self._use_exclusive_start_indices = use_exclusive_start_indices
         if use_exclusive_start_indices:
             self._start_sentinel = Parameter(torch.randn([1, 1, int(input_dim)]))
-
-    def get_input_dim(self) -> int:
-        return self._input_dim
 
     def get_output_dim(self) -> int:
         combined_dim = util.get_combined_dim(self._combination, [self._input_dim, self._input_dim])

@@ -3,11 +3,14 @@ from torch.nn.parameter import Parameter
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.modules.span_extractors.span_extractor import SpanExtractor
+from allennlp.modules.span_extractors.span_extractor_with_span_width_embedding import (
+    SpanExtractorWithSpanWidthEmbedding,
+)
 from allennlp.nn import util
 
 
 @SpanExtractor.register("bidirectional_endpoint")
-class BidirectionalEndpointSpanExtractor(SpanExtractor):
+class BidirectionalEndpointSpanExtractor(SpanExtractorWithSpanWidthEmbedding):
     """
     Represents spans from a bidirectional encoder as a concatenation of two different
     representations of the span endpoints, one for the forward direction of the encoder
@@ -95,9 +98,6 @@ class BidirectionalEndpointSpanExtractor(SpanExtractor):
         if use_sentinels:
             self._start_sentinel = Parameter(torch.randn([1, 1, int(input_dim / 2)]))
             self._end_sentinel = Parameter(torch.randn([1, 1, int(input_dim / 2)]))
-
-    def get_input_dim(self) -> int:
-        return self._input_dim
 
     def get_output_dim(self) -> int:
         unidirectional_dim = int(self._input_dim / 2)
