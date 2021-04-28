@@ -3,7 +3,6 @@ Various utilities that don't fit anywhere else.
 """
 import hashlib
 import io
-import pickle
 from datetime import timedelta
 import importlib
 import json
@@ -30,12 +29,14 @@ from typing import (
     Sequence,
 )
 
+import dill
 import numpy
 import spacy
 import torch
 import torch.distributed as dist
 from spacy.cli.download import download as spacy_download
 from spacy.language import Language as SpacyModelType
+import base58
 
 from allennlp.common.checks import log_pytorch_version_info
 from allennlp.common.params import Params
@@ -702,9 +703,9 @@ def cycle_iterator_function(iterator_function: Callable[[], Iterable[T]]) -> Ite
 
 
 def hash_object(o: Any) -> str:
-    """Returns a 32-character hash code of arbitrary Python objects."""
+    """Returns a character hash code of arbitrary Python objects."""
     m = hashlib.blake2b()
     with io.BytesIO() as buffer:
-        pickle.dump(o, buffer)
+        dill.dump(o, buffer)
         m.update(buffer.getbuffer())
-        return m.hexdigest()
+        return base58.b58encode(m.digest()).decode()
