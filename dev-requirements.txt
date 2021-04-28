@@ -7,7 +7,7 @@ flake8
 mypy==0.812
 
 # Automatic code formatting
-black==20.8b1
+black==21.4b1
 
 # Allows generation of coverage reports with pytest.
 pytest-cov
