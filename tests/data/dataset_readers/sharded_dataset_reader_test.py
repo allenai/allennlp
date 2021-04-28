@@ -54,7 +54,7 @@ class TestShardedDatasetReader(AllenNlpTestCase):
 
     def read_and_check_instances(self, filepath: str, num_workers: int = 0):
         data_loader = MultiProcessDataLoader(
-            self.reader, filepath, num_workers=num_workers, batch_size=1
+            self.reader, filepath, num_workers=num_workers, batch_size=1, start_method="spawn"
         )
         all_instances = []
         for instance in data_loader.iter_instances():

@@ -169,6 +169,7 @@ class TestTransformerStack(AllenNlpTestCase):
             mapping,
         )
 
+    @pytest.mark.skip("Takes up too much memory")
     @pytest.mark.parametrize("module_name, hf_module", get_modules(PARAMS_DICT).items())
     def test_forward_against_huggingface_outputs(self, module_name, hf_module):
         hidden_states = torch.randn(2, 3, 6)

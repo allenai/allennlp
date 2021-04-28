@@ -588,3 +588,19 @@ class TestHFHubDownload(AllenNlpTestCase):
     def test_snapshot_download(self):
         predictor = Predictor.from_path("hf://lysandre/test-simple-tagger-tiny")
         assert predictor._dataset_reader._token_indexers["tokens"].namespace == "test_tokens"
+
+    def test_cached_download_no_user_or_org(self):
+        path = cached_path("hf://t5-small/config.json", cache_dir=self.TEST_DIR)
+        assert os.path.isfile(path)
+        assert pathlib.Path(os.path.dirname(path)) == self.TEST_DIR
+        assert os.path.isfile(path + ".json")
+        meta = _Meta.from_path(path + ".json")
+        assert meta.etag is not None
+        assert meta.resource == "hf://t5-small/config.json"
+
+    def test_snapshot_download_no_user_or_org(self):
+        path = cached_path("hf://t5-small")
+        assert os.path.isdir(path)
+        assert os.path.isfile(path + ".json")
+        meta = _Meta.from_path(path + ".json")
+        assert meta.resource == "hf://t5-small"
