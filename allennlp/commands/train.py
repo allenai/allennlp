@@ -456,6 +456,34 @@ def _train_worker(
         local_rank=process_rank,
     )
 
+    ### CHANGED ###
+    from allennlp_models import pretrained
+    from allennlp.fairness.bias_direction import PairedPCABiasDirection
+    from allennlp.fairness.bias_mitigators import HardBiasMitigator
+    from allennlp.fairness.bias_utils import (
+        load_word_pairs,
+        wrap_snli_embedder_with_hard_bias_mitigator,
+    )
+
+    # Load pretrained model
+    predictor = pretrained.load_predictor("pair-classification-roberta-snli")
+    train_loop.model = predictor._model
+    definitional_pairs = load_word_pairs(
+        "/Users/arjuns/Documents/allennlp/test_fixtures/fairness/definitional_pairs.json",
+        train_loop.model.vocab,
+        "tags",
+    )
+    equalize_pairs = load_word_pairs(
+        "/Users/arjuns/Documents/allennlp/test_fixtures/fairness/definitional_pairs.json",
+        train_loop.model.vocab,
+        "tags",
+    )
+    wrap_snli_embedder_with_hard_bias_mitigator(
+        train_loop.model, definitional_pairs, equalize_pairs
+    )
+
+    ### CHANGED ###
+
     if dry_run:
         return None
 
