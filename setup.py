@@ -53,7 +53,7 @@ setup(
         "torch>=1.6.0,<1.9.0",
         "torchvision>=0.8.1,<0.10.0",
         "jsonnet>=0.10.0 ; sys.platform != 'win32'",
-        "overrides==3.1.0",
+        "overrides==5.0.1",
         "nltk",
         "spacy>=2.1.0,<3.1",
         "numpy",
