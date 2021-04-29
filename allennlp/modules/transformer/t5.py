@@ -15,6 +15,7 @@ from torch.nn import CrossEntropyLoss
 from allennlp.common import FromParams, Params, Lazy, Registrable
 from allennlp.common.checks import ConfigurationError
 from allennlp.modules.transformer import TransformerModule
+from allennlp.modules.transformer.general_self_attention import T5Attention as NewT5Attention
 from allennlp.modules.transformer.util import (
     apply_mask,
     get_extended_attention_mask,
@@ -132,6 +133,7 @@ class T5Attention(TransformerModule, FromParams):
         has_relative_attention_bias: bool = False,
         relative_attention_num_buckets: int = 32,
         dropout: float = 0.1,
+        normalize: bool = True,
     ):
         super().__init__()
         self.is_decoder = is_decoder
@@ -153,12 +155,13 @@ class T5Attention(TransformerModule, FromParams):
                 self.relative_attention_num_buckets, self.num_heads
             )
 
-        self.q.weight.data.normal_(mean=0.0, std=(hidden_size * key_value_proj_dim) ** -0.5)
-        self.k.weight.data.normal_(mean=0.0, std=hidden_size ** -0.5)
-        self.v.weight.data.normal_(mean=0.0, std=hidden_size ** -0.5)
-        self.o.weight.data.normal_(mean=0.0, std=(num_heads * key_value_proj_dim) ** -0.5)
-        if self.has_relative_attention_bias:
-            self.relative_attention_bias.weight.data.normal_(mean=0.0, std=hidden_size ** -0.5)
+        if normalize:
+            self.q.weight.data.normal_(mean=0.0, std=(hidden_size * key_value_proj_dim) ** -0.5)
+            self.k.weight.data.normal_(mean=0.0, std=hidden_size ** -0.5)
+            self.v.weight.data.normal_(mean=0.0, std=hidden_size ** -0.5)
+            self.o.weight.data.normal_(mean=0.0, std=(num_heads * key_value_proj_dim) ** -0.5)
+            if self.has_relative_attention_bias:
+                self.relative_attention_bias.weight.data.normal_(mean=0.0, std=hidden_size ** -0.5)
 
     @staticmethod
     def _relative_position_bucket(
@@ -385,7 +388,7 @@ class T5LayerSelfAttention(TransformerModule, FromParams):
         dropout: float = 0.1,
     ):
         super().__init__()
-        self.self_attention = self_attention or T5Attention()
+        self.self_attention = self_attention or NewT5Attention()
         self.layer_norm = layer_norm or T5LayerNorm(hidden_size=self.self_attention.hidden_size)
         self.dropout = nn.Dropout(dropout)
 
@@ -436,7 +439,7 @@ class T5LayerCrossAttention(TransformerModule, FromParams):
         dropout: float = 0.1,
     ):
         super().__init__()
-        self.enc_dec_attention = enc_dec_attention or T5Attention(
+        self.enc_dec_attention = enc_dec_attention or NewT5Attention(
             is_decoder=True, has_relative_attention_bias=False
         )
         self.layer_norm = layer_norm or T5LayerNorm(hidden_size=self.enc_dec_attention.hidden_size)

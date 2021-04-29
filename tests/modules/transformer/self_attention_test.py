@@ -5,7 +5,9 @@ import pytest
 from allennlp.common import Params
 from allennlp.common import cached_transformers
 from allennlp.common.testing import assert_equal_parameters, AllenNlpTestCase
-from allennlp.modules.transformer import SelfAttention
+
+# from allennlp.modules.transformer import SelfAttention
+from allennlp.modules.transformer.general_self_attention import SelfAttention
 from allennlp.nn.util import min_value_of_dtype
 
 from transformers.models.bert.configuration_bert import BertConfig
@@ -55,31 +57,30 @@ def get_modules(params_dict):
 
 
 class TestSelfAttention(AllenNlpTestCase):
-    def setup_method(self):
-        super().setup_method()
-
-        self.params_dict = {key: val for key, val in PARAMS_DICT.items()}
-
-        params = Params(copy.deepcopy(self.params_dict))
-
-        self.self_attention = SelfAttention.from_params(params)
-
     def test_can_construct_from_params(self):
-        assert self.self_attention.num_attention_heads == self.params_dict["num_attention_heads"]
-        assert self.self_attention.attention_head_size == int(
-            self.params_dict["hidden_size"] / self.params_dict["num_attention_heads"]
+
+        params_dict = {key: val for key, val in PARAMS_DICT.items()}
+
+        params = Params(copy.deepcopy(params_dict))
+
+        self_attention = SelfAttention.from_params(params)
+
+        assert self_attention.num_attention_heads == params_dict["num_attention_heads"]
+        assert self_attention.attention_head_size == int(
+            params_dict["hidden_size"] / params_dict["num_attention_heads"]
         )
 
         assert (
-            self.self_attention.all_head_size
-            == self.params_dict["num_attention_heads"] * self.self_attention.attention_head_size
+            self_attention.all_head_size
+            == params_dict["num_attention_heads"] * self_attention.attention_head_size
         )
 
-        assert self.self_attention.query.in_features == self.params_dict["hidden_size"]
-        assert self.self_attention.key.in_features == self.params_dict["hidden_size"]
-        assert self.self_attention.value.in_features == self.params_dict["hidden_size"]
+        assert self_attention.query.in_features == params_dict["hidden_size"]
+        assert self_attention.key.in_features == params_dict["hidden_size"]
+        assert self_attention.value.in_features == params_dict["hidden_size"]
 
-        assert self.self_attention.dropout.p == self.params_dict["dropout"]
+        # assert self_attention.dropout.p == params_dict["dropout"]
+        assert self_attention.dropout == params_dict["dropout"]
 
     @pytest.mark.skip("Takes up too much memory")
     @pytest.mark.parametrize("module_name, hf_module", get_modules(PARAMS_DICT).items())
