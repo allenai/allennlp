@@ -11,6 +11,10 @@ from allennlp.training.optimizers.optimizer import Optimizer, make_parameter_gro
 class FairScaleOssOptimizer(fairscale.optim.OSS, Optimizer):
     """
     FairScale's OSS optimizer.
+
+    !!! Note
+        If training with AMP, you should set `broadcast_fp16` to `True`.
+
     """
 
     def __init__(
