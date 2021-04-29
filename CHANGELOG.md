@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   The default implementation is `TorchDdpWrapper`, which is just a thin wrapper around `DistributedDataParallel`.
 - Added a `GradScaler` registrable class to `allennlp.training.grad_scalars` that wraps / generalizes PyTorch's `GradScaler`.
   Includes a subclass for FairScale's `ShardedGradScaler`.
+- Added `FairScaleOssOptimizer`.
 
 
 ## Unreleased
