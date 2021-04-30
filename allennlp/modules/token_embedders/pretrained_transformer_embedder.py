@@ -56,7 +56,10 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
     override_weights_strip_prefix: `Optional[str]`, optional (default = `None`)
         If set, strip the given prefix from the state dict when loading it.
     load_weights: `bool`, optional (default = `True`)
-        Whether to load the pretraiend weights.
+        Whether to load the pretrained weights. If you're loading your model/predictor from an AllenNLP archive
+        it usually makes sense to set this to `False` (via the `overrides` parameter)
+        to avoid unnecessarily caching and loading the original pretrained weights,
+        since the archive will already contain all of the weights needed.
     gradient_checkpointing: `bool`, optional (default = `None`)
         Enable or disable gradient checkpointing.
     tokenizer_kwargs: `Dict[str, Any]`, optional (default = `None`)
