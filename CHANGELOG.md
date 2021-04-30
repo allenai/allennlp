@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added a way to avoid downloading and loading pretrained weights in modules that wrap transformers
   such as the `PretrainedTransformerEmbedder` and `PretrainedTransformerMismatchedEmbedder`.
   You can do this by setting the parameter `load_weights` to `False`.
+  See [PR #5172](https://github.com/allenai/allennlp/pull/5172) for more details.
 
 
 ## Unreleased
