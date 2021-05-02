@@ -395,11 +395,11 @@ class GradientDescentTrainer(Trainer):
             if self._scaler is not None:
                 # Need to first unscale gradients in order to clip as usual.
                 self._scaler.unscale_(self.optimizer)
-            return clip_grad_norm_(parameters_to_clip, self._grad_norm)
+            return clip_grad_norm_(parameters_to_clip, self._grad_norm).item()
         else:
             return torch.norm(
                 torch.stack([torch.norm(p.grad.detach()) for p in parameters_to_clip])
-            )
+            ).item()
 
     def batch_outputs(self, batch: TensorDict, for_training: bool) -> Dict[str, torch.Tensor]:
         """
