@@ -49,6 +49,17 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         When `True` (the default), only the final layer of the pretrained transformer is taken
         for the embeddings. But if set to `False`, a scalar mix of all of the layers
         is used.
+    override_weights_file: `Optional[str]`, optional (default = `None`)
+        If set, this specifies a file from which to load alternate weights that override the
+        weights from huggingface. The file is expected to contain a PyTorch `state_dict`, created
+        with `torch.save()`.
+    override_weights_strip_prefix: `Optional[str]`, optional (default = `None`)
+        If set, strip the given prefix from the state dict when loading it.
+    load_weights: `bool`, optional (default = `True`)
+        Whether to load the pretrained weights. If you're loading your model/predictor from an AllenNLP archive
+        it usually makes sense to set this to `False` (via the `overrides` parameter)
+        to avoid unnecessarily caching and loading the original pretrained weights,
+        since the archive will already contain all of the weights needed.
     gradient_checkpointing: `bool`, optional (default = `None`)
         Enable or disable gradient checkpointing.
     tokenizer_kwargs: `Dict[str, Any]`, optional (default = `None`)
@@ -74,6 +85,7 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         last_layer_only: bool = True,
         override_weights_file: Optional[str] = None,
         override_weights_strip_prefix: Optional[str] = None,
+        load_weights: bool = True,
         gradient_checkpointing: Optional[bool] = None,
         tokenizer_kwargs: Optional[Dict[str, Any]] = None,
         transformer_kwargs: Optional[Dict[str, Any]] = None,
@@ -86,6 +98,7 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
             True,
             override_weights_file=override_weights_file,
             override_weights_strip_prefix=override_weights_strip_prefix,
+            load_weights=load_weights,
             **(transformer_kwargs or {}),
         )
 
