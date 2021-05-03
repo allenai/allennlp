@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Use `dist_reduce_sum` in distributed metrics.
-- Allow Google Cloud Storage paths in `cached_path`.
+- Allow Google Cloud Storage paths in `cached_path` ("gs://...").
 
 ### Added
 
