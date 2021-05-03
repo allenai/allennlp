@@ -372,6 +372,8 @@ class GradientDescentTrainer(Trainer):
                     cuda_device=self.cuda_device,
                 )
             self._pytorch_model = ddp_wrapper.get_wrapped_model()
+        elif ddp_wrapper is not None:
+            raise ValueError("DDP wrappers can only be used in distributed training")
         else:
             self._pytorch_model = self.model
 

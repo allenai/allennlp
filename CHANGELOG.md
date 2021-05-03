@@ -19,6 +19,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Added `TaskSuite` base class and command line functionality for running [`checklist`](https://github.com/marcotcr/checklist) test suites, along with implementations for `SentimentAnalysisSuite`, `QuestionAnsweringSuite`, and `TextualEntailmentSuite`. These can be found in the `allennlp.sanity_checks.task_checklists` module.
+- Added a module `allennlp.training.data_parallel` with a new base class, `DdpWrapper`, which generalizes
+  PyTorch's `DistributedDataParallel` wrapper to support other implementations. Two implementations of
+  this class are provided. The default is `TorchDdpWrapper`, which is just a thin wrapper around
+  `DistributedDataParallel`. The other is `FairScaleFsdpWrapper`, which wraps FairScale's
+  [`FullyShardedDataParallel`](https://fairscale.readthedocs.io/en/latest/api/nn/fsdp.html).
+  You can specify the `DdpWrapper` to use with the `ddp_wrapper` parameter to the `GradientDescentTrainer`.
 - Added a way to avoid downloading and loading pretrained weights in modules that wrap transformers
   such as the `PretrainedTransformerEmbedder` and `PretrainedTransformerMismatchedEmbedder`.
   You can do this by setting the parameter `load_weights` to `False`.
