@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Use `dist_reduce_sum` in distributed metrics.
 - Allow Google Cloud Storage paths in `cached_path` ("gs://...").
+- Print the first batch to the console by default.
 
 ### Added
 
@@ -19,7 +20,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   such as the `PretrainedTransformerEmbedder` and `PretrainedTransformerMismatchedEmbedder`.
   You can do this by setting the parameter `load_weights` to `False`.
   See [PR #5172](https://github.com/allenai/allennlp/pull/5172) for more details.
-
 - Added `SpanExtractorWithSpanWidthEmbedding`, putting specific span embedding computations into the `_embed_spans` method and leaving the common code in `SpanExtractorWithSpanWidthEmbedding` to unify the arguments, and modified `BidirectionalEndpointSpanExtractor`, `EndpointSpanExtractor` and `SelfAttentiveSpanExtractor` accordingly. Now, `SelfAttentiveSpanExtractor` can also embed span widths.
 
 
