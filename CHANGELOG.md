@@ -7,17 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Changed
+
+- Use `dist_reduce_sum` in distributed metrics.
+- Allow Google Cloud Storage paths in `cached_path` ("gs://...").
+
 ### Added
 
 - Added `TaskSuite` base class and command line functionality for running [`checklist`](https://github.com/marcotcr/checklist) test suites, along with implementations for `SentimentAnalysisSuite`, `QuestionAnsweringSuite`, and `TextualEntailmentSuite`. These can be found in the `allennlp.sanity_checks.task_checklists` module.
-- Added distributed training memory-saving utilities from [FairScale](https://github.com/facebookresearch/fairscale). These are available
-  when you install AllenNLP with the `fairscale` extras: `pip install allennlp[fairscale]`.
-- Added a `DdpWrapper` registrable class to `allennlp.nn.parallel` that generalized PyTorch's `DistributedDataParallel` wrapper for
-  use during distributed training.
-  The default implementation is `TorchDdpWrapper`, which is just a thin wrapper around `DistributedDataParallel`.
-- Added a `GradScaler` registrable class to `allennlp.training.grad_scalars` that wraps / generalizes PyTorch's `GradScaler`.
-  Includes a subclass for FairScale's `ShardedGradScaler`.
-- Added `FairScaleOssOptimizer`.
+- Added a way to avoid downloading and loading pretrained weights in modules that wrap transformers
+  such as the `PretrainedTransformerEmbedder` and `PretrainedTransformerMismatchedEmbedder`.
+  You can do this by setting the parameter `load_weights` to `False`.
+  See [PR #5172](https://github.com/allenai/allennlp/pull/5172) for more details.
 
 
 ## Unreleased
@@ -41,6 +42,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The `GradientDescentTrainer` no longer leaves stray model checkpoints around when it runs out of patience.
 - Fixed `cached_path()` for "hf://" files.
+- Improved the error message for the `PolynomialDecay` LR scheduler when `num_steps_per_epoch` is missing.
 
 
 ## [v2.3.1](https://github.com/allenai/allennlp/releases/tag/v2.3.1) - 2021-04-20

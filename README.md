@@ -154,6 +154,10 @@ to distribute as a plugin, see the [subcommand API docs](https://docs.allennlp.o
     <td> A data processing module for loading datasets and encoding strings as integers for representation in matrices </td>
 </tr>
 <tr>
+    <td><b> allennlp.fairness </b></td>
+    <td> A module for bias mitigation and fairness algorithms and metrics </td>
+</tr>
+<tr>
     <td><b> allennlp.modules </b></td>
     <td> A collection of PyTorch modules for use with text </td>
 </tr>
