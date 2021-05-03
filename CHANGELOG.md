@@ -10,6 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Use `dist_reduce_sum` in distributed metrics.
+- The type of the `grad_norm` parameter of `GradientDescentTrainer` is now `Union[float, bool]`,
+  with a default value of `False`. `False` means gradients are not rescaled and the gradient
+  norm is never even calculated. `True` means the gradients are still not rescaled but the gradient
+  norm is calculated and passed on to callbacks. A `float` value means gradients are rescaled.
 - Allow Google Cloud Storage paths in `cached_path` ("gs://...").
 
 ### Added

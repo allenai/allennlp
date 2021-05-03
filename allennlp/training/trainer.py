@@ -14,7 +14,6 @@ import torch
 import torch.distributed as dist
 from torch.cuda import amp
 import torch.optim.lr_scheduler
-from torch.nn.parallel import DistributedDataParallel
 from torch.nn.utils import clip_grad_norm_
 
 from allennlp.common import Lazy, Registrable, Tqdm
@@ -25,6 +24,7 @@ from allennlp.models.model import Model
 from allennlp.training import util as training_util
 from allennlp.training.callbacks import TrainerCallback, SanityChecksCallback, ConsoleLoggerCallback
 from allennlp.training.checkpointer import Checkpointer
+from allennlp.training.data_parallel import DdpWrapper, TorchDdpWrapper
 from allennlp.training.learning_rate_schedulers import LearningRateScheduler
 from allennlp.training.metric_tracker import MetricTracker
 from allennlp.training.momentum_schedulers import MomentumScheduler
@@ -187,8 +187,11 @@ class GradientDescentTrainer(Trainer):
         Data parallelism is controlled at the allennlp train level, so each trainer will have a single
         GPU.
 
-    grad_norm : `float`, optional, (default = `None`).
-        If provided, gradient norms will be rescaled to have a maximum of this value.
+    grad_norm : `Union[float, bool]`, optional, (default = `False`).
+        If a float, gradient norms will be rescaled to have a maximum of this value.
+        If `True`, the gradient norms will be calculated and passed through to any `TrainerCallbacks`,
+        but won't be rescaled.
+        If `False`, gradient norms will not be calculated or rescaled.
 
     grad_clipping : `float`, optional (default = `None`).
         If provided, gradients will be clipped `during the backward pass` to have an (absolute)
@@ -258,6 +261,10 @@ class GradientDescentTrainer(Trainer):
         [`NormalizationBiasVerification`](../../sanity_checks/normalization_bias_verification/),
         are ran.
 
+    ddp_wrapper : `Optional[DdpWrapper]`, optional (default = `None`)
+        If training in distributed mode, you can specify which `DdpWrapper` to use.
+        By default, `TorchDdpWrapper` is used.
+
     """
 
     def __init__(
@@ -272,7 +279,7 @@ class GradientDescentTrainer(Trainer):
         serialization_dir: Optional[str] = None,
         checkpointer: Checkpointer = None,
         cuda_device: Optional[Union[int, torch.device]] = None,
-        grad_norm: Optional[float] = None,
+        grad_norm: Union[float, bool] = False,
         grad_clipping: Optional[float] = None,
         learning_rate_scheduler: Optional[LearningRateScheduler] = None,
         momentum_scheduler: Optional[MomentumScheduler] = None,
@@ -285,6 +292,7 @@ class GradientDescentTrainer(Trainer):
         use_amp: bool = False,
         enable_default_callbacks: bool = True,
         run_sanity_checks: bool = True,
+        ddp_wrapper: Optional[DdpWrapper] = None,
     ) -> None:
         super().__init__(serialization_dir, cuda_device, distributed, local_rank, world_size)
 
@@ -358,30 +366,40 @@ class GradientDescentTrainer(Trainer):
         # normal case, reference to `Model` is retained. This reference is only used in
         # these places: `model.__call__`, `model.train` and `model.eval`.
         if self._distributed:
-            self._pytorch_model = DistributedDataParallel(
-                self.model,
-                device_ids=None if self.cuda_device == torch.device("cpu") else [self.cuda_device],
-                find_unused_parameters=True,
-            )
+            if ddp_wrapper is None:
+                ddp_wrapper = TorchDdpWrapper(
+                    self.model,
+                    cuda_device=self.cuda_device,
+                )
+            self._pytorch_model = ddp_wrapper.get_wrapped_model()
         else:
             self._pytorch_model = self.model
 
-    def rescale_gradients(self) -> float:
+    def rescale_gradients(self) -> Optional[float]:
         """
         Performs gradient rescaling. Is a no-op if gradient rescaling is not enabled.
 
-        Returns the norm of the gradients.
+        Returns the norm of the gradients if `grad_norm` is `True` or a `float`,
+        otherwise returns `None`.
         """
-        parameters_to_clip = [p for p in self.model.parameters() if p.grad is not None]
-        if self._grad_norm:
+        if isinstance(self._grad_norm, float):
             if self._scaler is not None:
                 # Need to first unscale gradients in order to clip as usual.
                 self._scaler.unscale_(self.optimizer)
-            return clip_grad_norm_(parameters_to_clip, self._grad_norm).item()
-        else:
+            # Sometimes logic for clipping has to implemented within the model, like
+            # with FairScale's FullyShardedDataParallel.
+            if hasattr(self._pytorch_model, "clip_grad_norm_"):
+                return self._pytorch_model.clip_grad_norm_(self._grad_norm).item()
+            else:
+                parameters_to_clip = [p for p in self.model.parameters() if p.grad is not None]
+                return clip_grad_norm_(parameters_to_clip, self._grad_norm).item()
+        elif self._grad_norm:
+            parameters_to_clip = [p for p in self.model.parameters() if p.grad is not None]
             return torch.norm(
                 torch.stack([torch.norm(p.grad.detach()) for p in parameters_to_clip])
             ).item()
+        else:
+            return None
 
     def batch_outputs(self, batch: TensorDict, for_training: bool) -> Dict[str, torch.Tensor]:
         """
@@ -984,7 +1002,7 @@ class GradientDescentTrainer(Trainer):
         validation_metric: Union[str, List[str]] = "-loss",
         num_epochs: int = 20,
         cuda_device: Optional[Union[int, torch.device]] = None,
-        grad_norm: float = None,
+        grad_norm: Union[float, bool] = False,
         grad_clipping: float = None,
         distributed: bool = False,
         world_size: int = 1,
@@ -999,6 +1017,7 @@ class GradientDescentTrainer(Trainer):
         callbacks: List[Lazy[TrainerCallback]] = None,
         enable_default_callbacks: bool = True,
         run_sanity_checks: bool = True,
+        ddp_wrapper: Optional[Lazy[DdpWrapper]] = None,
     ) -> "Trainer":
         """
         This method exists so that we can have a documented method to construct this class using
@@ -1024,9 +1043,18 @@ class GradientDescentTrainer(Trainer):
                 cuda_device = -1
 
         check_for_gpu(cuda_device)
-        if cuda_device >= 0:
-            # Moving model to GPU here so that the optimizer state gets constructed on
-            # the right device.
+
+        # Need to wrap model with DddpWrapper or move model to right device before initializing the optimizer.
+        ddp_wrapper_: Optional[DdpWrapper] = None
+        if distributed:
+            if ddp_wrapper is None:
+                ddp_wrapper_ = TorchDdpWrapper(model, cuda_device=cuda_device)
+            else:
+                ddp_wrapper_ = ddp_wrapper.construct(
+                    model=model, cuda_device=cuda_device, mixed_precision=use_amp
+                )
+            model = ddp_wrapper_.model
+        elif cuda_device >= 0:
             model = model.cuda(cuda_device)
 
         if no_grad:
@@ -1091,6 +1119,7 @@ class GradientDescentTrainer(Trainer):
             use_amp=use_amp,
             enable_default_callbacks=enable_default_callbacks,
             run_sanity_checks=run_sanity_checks,
+            ddp_wrapper=ddp_wrapper_,
         )
 
 
