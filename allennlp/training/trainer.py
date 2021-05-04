@@ -384,7 +384,7 @@ class GradientDescentTrainer(Trainer):
         Returns the norm of the gradients if `grad_norm` is `True` or a `float`,
         otherwise returns `None`.
         """
-        if isinstance(self._grad_norm, float):
+        if not isinstance(self._grad_norm, bool):
             if self._scaler is not None:
                 # Need to first unscale gradients in order to clip as usual.
                 self._scaler.unscale_(self.optimizer)
@@ -1046,8 +1046,10 @@ class GradientDescentTrainer(Trainer):
 
         check_for_gpu(cuda_device)
 
-        # Need to wrap model with DddpWrapper or move model to right device before initializing the optimizer.
+        # Need to wrap model with DdpWrapper or move model to right device before initializing the optimizer.
+        # We set the wrapped model to `pytorch_model`.
         ddp_wrapper_: Optional[DdpWrapper] = None
+        pytorch_model: torch.nn.Module
         if distributed:
             if ddp_wrapper is None:
                 ddp_wrapper_ = TorchDdpWrapper(model, cuda_device=cuda_device)
@@ -1055,19 +1057,22 @@ class GradientDescentTrainer(Trainer):
                 ddp_wrapper_ = ddp_wrapper.construct(
                     model=model, cuda_device=cuda_device, mixed_precision=use_amp
                 )
+            # DdpWrapper will move the model to the right device(s).
             model = ddp_wrapper_.model
+            pytorch_model = ddp_wrapper_.get_wrapped_model()
         elif cuda_device >= 0:
             model = model.cuda(cuda_device)
+            pytorch_model = model
 
         if no_grad:
-            for name, parameter in model.named_parameters():
+            for name, parameter in pytorch_model.named_parameters():
                 if any(re.search(regex, name) for regex in no_grad):
                     parameter.requires_grad_(False)
 
-        parameters = [[n, p] for n, p in model.named_parameters() if p.requires_grad]
+        parameters = [[n, p] for n, p in pytorch_model.named_parameters() if p.requires_grad]
         optimizer_ = optimizer.construct(model_parameters=parameters)
 
-        common_util.log_frozen_and_tunable_parameter_names(model)
+        common_util.log_frozen_and_tunable_parameter_names(pytorch_model)
 
         batches_per_epoch: Optional[int]
         try:
