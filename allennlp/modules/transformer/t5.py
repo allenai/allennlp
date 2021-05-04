@@ -20,6 +20,7 @@ from allennlp.modules.transformer.util import (
     get_extended_attention_mask,
 )
 from allennlp.nn.beam_search import BeamSearch
+from allennlp.nn.parallel import DdpWrapper
 
 # Unfortunately mypy is insane, so I have to wrap these in unions.
 FloatT = Union[torch.FloatTensor]
@@ -977,6 +978,7 @@ class T5(TransformerModule, Registrable):
         output_all_hidden_states: bool = False,
         beam_size: int = 3,
         max_decoding_steps: int = 100,
+        ddp_wrapper: Optional[DdpWrapper] = None,
     ):
         super().__init__()
         self.model_dim = model_dim

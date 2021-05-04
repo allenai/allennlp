@@ -26,6 +26,7 @@ from allennlp.data import DatasetReader, Vocabulary
 from allennlp.data import DataLoader
 from allennlp.models.archival import archive_model, CONFIG_NAME, verify_include_in_archive
 from allennlp.models.model import _DEFAULT_WEIGHTS, Model
+from allennlp.nn.parallel import DdpWrapper
 from allennlp.training.trainer import Trainer
 from allennlp.training import util as training_util
 
@@ -319,6 +320,7 @@ def train_model(
                 device_ids,
                 file_friendly_logging,
                 include_in_archive,
+                distributed_params.duplicate(),
             ),
             nprocs=num_procs,
         )
@@ -343,6 +345,7 @@ def _train_worker(
     distributed_device_ids: List[int] = None,
     file_friendly_logging: bool = False,
     include_in_archive: List[str] = None,
+    distributed_params: Optional[Params] = None,
 ) -> Optional[Model]:
     """
     Helper to train the configured model/experiment. In distributed mode, this is spawned as a
@@ -379,6 +382,8 @@ def _train_worker(
         down tqdm's output to only once every 10 seconds.
     include_in_archive : `List[str]`, optional
         Paths relative to `serialization_dir` that should be archived in addition to the default ones.
+    distributed_params : `Optional[Params]`, optional
+        Additional distributed params.
 
     # Returns
 
@@ -400,8 +405,11 @@ def _train_worker(
 
     include_package = include_package or []
 
+    ddp_wrapper: Optional[DdpWrapper] = None
+
     if distributed:
         assert distributed_device_ids is not None
+        assert distributed_params is not None
 
         # Since the worker is spawned and not forked, the extra imports need to be done again.
         # Both the ones from the plugins and the ones from `include_package`.
@@ -422,7 +430,7 @@ def _train_worker(
         # In distributed training, the configured device is always going to be a list.
         # The corresponding gpu id for the particular worker is obtained by picking the id
         # from the device list with the rank as index
-        gpu_id = distributed_device_ids[process_rank]  # type: ignore
+        gpu_id = int(distributed_device_ids[process_rank])  # type: ignore
 
         # Till now, "cuda_device" might not be set in the trainer params.
         # But a worker trainer needs to only know about its specific GPU id.
@@ -431,7 +439,7 @@ def _train_worker(
         params["trainer"]["distributed"] = True
 
         if gpu_id >= 0:
-            torch.cuda.set_device(int(gpu_id))
+            torch.cuda.set_device(gpu_id)
             dist.init_process_group(
                 backend="nccl",
                 init_method=f"tcp://{primary_addr}:{primary_port}",
@@ -445,6 +453,11 @@ def _train_worker(
                 world_size=world_size,
                 rank=global_rank,
             )
+
+        if "ddp_wrapper" in distributed_params:
+            ddp_wrapper_params = distributed_params.pop("ddp_wrapper")
+            ddp_wrapper = DdpWrapper.from_params(ddp_wrapper_params, cuda_device=gpu_id)
+
         logging.info(
             f"Process group of world size {world_size} initialized "
             f"for distributed training in worker {global_rank}"
@@ -454,6 +467,7 @@ def _train_worker(
         params=params,
         serialization_dir=serialization_dir,
         local_rank=process_rank,
+        ddp_wrapper=ddp_wrapper,
     )
 
     if dry_run:
@@ -566,6 +580,7 @@ class TrainModel(Registrable):
         test_data_path: Any = None,
         evaluate_on_test: bool = False,
         batch_weight_key: str = "",
+        ddp_wrapper: Optional[DdpWrapper] = None,
     ) -> "TrainModel":
         """
         This method is intended for use with our `FromParams` logic, to construct a `TrainModel`
@@ -709,7 +724,9 @@ class TrainModel(Registrable):
 
         vocabulary_ = vocabulary.construct(instances=instance_generator)
 
-        model_ = model.construct(vocab=vocabulary_, serialization_dir=serialization_dir)
+        model_ = model.construct(
+            vocab=vocabulary_, serialization_dir=serialization_dir, ddp_wrapper=ddp_wrapper
+        )
 
         # Initializing the model can have side effect of expanding the vocabulary.
         # Save the vocab only in the primary. In the degenerate non-distributed
@@ -730,6 +747,7 @@ class TrainModel(Registrable):
             model=model_,
             data_loader=data_loaders["train"],
             validation_data_loader=data_loaders.get("validation"),
+            ddp_wrapper=ddp_wrapper,
         )
         assert trainer_ is not None
 

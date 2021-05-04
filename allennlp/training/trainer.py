@@ -21,10 +21,10 @@ from allennlp.common import util as common_util
 from allennlp.common.checks import ConfigurationError, check_for_gpu
 from allennlp.data import DataLoader, TensorDict
 from allennlp.models.model import Model
+from allennlp.nn.parallel import DdpWrapper, TorchDdpWrapper
 from allennlp.training import util as training_util
 from allennlp.training.callbacks import TrainerCallback, SanityChecksCallback, ConsoleLoggerCallback
 from allennlp.training.checkpointer import Checkpointer
-from allennlp.training.data_parallel import DdpWrapper, TorchDdpWrapper
 from allennlp.training.learning_rate_schedulers import LearningRateScheduler
 from allennlp.training.metric_tracker import MetricTracker
 from allennlp.training.momentum_schedulers import MomentumScheduler
@@ -261,10 +261,6 @@ class GradientDescentTrainer(Trainer):
         [`NormalizationBiasVerification`](../../sanity_checks/normalization_bias_verification/),
         are ran.
 
-    ddp_wrapper : `Optional[DdpWrapper]`, optional (default = `None`)
-        If training in distributed mode, you can specify which `DdpWrapper` to use.
-        By default, `TorchDdpWrapper` is used.
-
     """
 
     def __init__(
@@ -293,6 +289,7 @@ class GradientDescentTrainer(Trainer):
         enable_default_callbacks: bool = True,
         run_sanity_checks: bool = True,
         ddp_wrapper: Optional[DdpWrapper] = None,
+        _pytorch_model: Optional[torch.nn.Module] = None,
     ) -> None:
         super().__init__(serialization_dir, cuda_device, distributed, local_rank, world_size)
 
@@ -358,22 +355,8 @@ class GradientDescentTrainer(Trainer):
                 raise ValueError("Using AMP requires a cuda device")
             self._scaler = amp.GradScaler()
 
-        # Using `DistributedDataParallel`(ddp) brings in a quirk wrt AllenNLP's `Model` interface and its
-        # usage. A `Model` object is wrapped by `ddp`, but assigning the wrapped model to `self.model`
-        # will break the usages such as `Model.get_regularization_penalty`, `Model.get_metrics`, etc.
-        #
-        # Hence a reference to Pytorch's object is maintained in the case of distributed training and in the
-        # normal case, reference to `Model` is retained. This reference is only used in
-        # these places: `model.__call__`, `model.train` and `model.eval`.
-        if self._distributed:
-            if ddp_wrapper is None:
-                ddp_wrapper = TorchDdpWrapper(
-                    self.model,
-                    cuda_device=self.cuda_device,
-                )
-            self._pytorch_model = ddp_wrapper.get_wrapped_model()
-        elif ddp_wrapper is not None:
-            raise ValueError("DDP wrappers can only be used in distributed training")
+        if _pytorch_model is not None:
+            self._pytorch_model = _pytorch_model
         else:
             self._pytorch_model = self.model
 
@@ -1019,7 +1002,7 @@ class GradientDescentTrainer(Trainer):
         callbacks: List[Lazy[TrainerCallback]] = None,
         enable_default_callbacks: bool = True,
         run_sanity_checks: bool = True,
-        ddp_wrapper: Optional[Lazy[DdpWrapper]] = None,
+        ddp_wrapper: Optional[DdpWrapper] = None,
     ) -> "Trainer":
         """
         This method exists so that we can have a documented method to construct this class using
@@ -1046,22 +1029,24 @@ class GradientDescentTrainer(Trainer):
 
         check_for_gpu(cuda_device)
 
-        # Need to wrap model with DdpWrapper or move model to right device before initializing the optimizer.
+        # Need to wrap model with a DdpWrapper ("Distributed data-parallel wrapper")
+        # or move model to right device before initializing the optimizer.
+        # Using DDP brings in a quirk wrt AllenNLP's `Model` interface and its
+        # usage. A `Model` object is wrapped by `DdpWrapper`, but assigning the wrapped model to `self.model`
+        # will break the usages such as `Model.get_regularization_penalty`, `Model.get_metrics`, etc.
+        # Hence a reference to Pytorch's object is maintained in the case of distributed training and in the
+        # normal case, reference to `Model` is retained. This reference is only used in
+        # these places: `model.__call__`, `model.train` and `model.eval`.
         # We set the wrapped model to `pytorch_model`.
-        ddp_wrapper_: Optional[DdpWrapper] = None
         pytorch_model: torch.nn.Module
         if distributed:
             if ddp_wrapper is None:
-                ddp_wrapper_ = TorchDdpWrapper(model, cuda_device=cuda_device)
-            else:
-                ddp_wrapper_ = ddp_wrapper.construct(
-                    model=model, cuda_device=cuda_device, mixed_precision=use_amp
-                )
+                ddp_wrapper = TorchDdpWrapper(cuda_device=cuda_device)
             # DdpWrapper will move the model to the right device(s).
-            model = ddp_wrapper_.model
-            pytorch_model = ddp_wrapper_.get_wrapped_model()
-        elif cuda_device >= 0:
-            model = model.cuda(cuda_device)
+            model, pytorch_model = ddp_wrapper.wrap_model(model)
+        else:
+            if cuda_device >= 0:
+                model = model.cuda(cuda_device)
             pytorch_model = model
 
         if no_grad:
@@ -1126,7 +1111,7 @@ class GradientDescentTrainer(Trainer):
             use_amp=use_amp,
             enable_default_callbacks=enable_default_callbacks,
             run_sanity_checks=run_sanity_checks,
-            ddp_wrapper=ddp_wrapper_,
+            _pytorch_model=pytorch_model,
         )
 
 
