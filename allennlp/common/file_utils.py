@@ -45,6 +45,8 @@ import boto3
 import botocore
 import torch
 from filelock import FileLock as _FileLock
+from google.cloud import storage
+from google.api_core.exceptions import NotFound
 import numpy as np
 from overrides import overrides
 import requests
@@ -211,7 +213,7 @@ def cached_path(
     then return the path to the cached file. If it's already a local path,
     make sure the file exists and return the path.
 
-    For URLs, "http://", "https://", "s3://", and "hf://" are all supported.
+    For URLs, "http://", "https://", "s3://", "gs://", and "hf://" are all supported.
     The latter corresponds to the HuggingFace Hub.
 
     For example, to download the PyTorch weights for the model `epwalsh/bert-xsmall-dummy`
@@ -281,7 +283,7 @@ def cached_path(
 
     parsed = urlparse(url_or_filename)
 
-    if parsed.scheme in ("http", "https", "s3", "hf"):
+    if parsed.scheme in ("http", "https", "s3", "hf", "gs"):
         # URL, so get it from the cache (downloading if necessary)
         file_path = get_from_cache(url_or_filename, cache_dir)
 
@@ -373,20 +375,28 @@ def is_url_or_existing_file(url_or_filename: Union[str, Path, None]) -> bool:
         return False
     url_or_filename = os.path.expanduser(str(url_or_filename))
     parsed = urlparse(url_or_filename)
-    return parsed.scheme in ("http", "https", "s3") or os.path.exists(url_or_filename)
+    return parsed.scheme in ("http", "https", "s3", "gs") or os.path.exists(url_or_filename)
 
 
 def _split_s3_path(url: str) -> Tuple[str, str]:
+    return _split_cloud_path(url, "s3")
+
+
+def _split_gcs_path(url: str) -> Tuple[str, str]:
+    return _split_cloud_path(url, "gs")
+
+
+def _split_cloud_path(url: str, provider: str) -> Tuple[str, str]:
     """Split a full s3 path into the bucket name and path."""
     parsed = urlparse(url)
     if not parsed.netloc or not parsed.path:
-        raise ValueError("bad s3 path {}".format(url))
+        raise ValueError("bad {} path {}".format(provider, url))
     bucket_name = parsed.netloc
-    s3_path = parsed.path
+    provider_path = parsed.path
     # Remove '/' at beginning of path.
-    if s3_path.startswith("/"):
-        s3_path = s3_path[1:]
-    return bucket_name, s3_path
+    if provider_path.startswith("/"):
+        provider_path = provider_path[1:]
+    return bucket_name, provider_path
 
 
 def _s3_request(func: Callable):
@@ -435,6 +445,49 @@ def _s3_get(url: str, temp_file: IO) -> None:
     s3_resource = _get_s3_resource()
     bucket_name, s3_path = _split_s3_path(url)
     s3_resource.Bucket(bucket_name).download_fileobj(s3_path, temp_file)
+
+
+def _gcs_request(func: Callable):
+    """
+    Wrapper function for gcs requests in order to create more helpful error
+    messages.
+    """
+
+    @wraps(func)
+    def wrapper(url: str, *args, **kwargs):
+        try:
+            return func(url, *args, **kwargs)
+        except NotFound:
+            raise FileNotFoundError("file {} not found".format(url))
+
+    return wrapper
+
+
+def _get_gcs_client():
+    storage_client = storage.Client()
+    return storage_client
+
+
+def _get_gcs_blob(url: str) -> storage.blob.Blob:
+    gcs_resource = _get_gcs_client()
+    bucket_name, gcs_path = _split_gcs_path(url)
+    bucket = gcs_resource.bucket(bucket_name)
+    blob = bucket.blob(gcs_path)
+    return blob
+
+
+@_gcs_request
+def _gcs_md5(url: str) -> Optional[str]:
+    """Get GCS object's md5."""
+    blob = _get_gcs_blob(url)
+    return blob.md5_hash
+
+
+@_gcs_request
+def _gcs_get(url: str, temp_filename: str) -> None:
+    """Pull a file directly from GCS."""
+    blob = _get_gcs_blob(url)
+    blob.download_to_filename(temp_filename)
 
 
 def _session_with_backoff() -> requests.Session:
@@ -923,6 +976,8 @@ def get_from_cache(url: str, cache_dir: Union[str, Path] = None) -> str:
     try:
         if url.startswith("s3://"):
             etag = _s3_etag(url)
+        elif url.startswith("gs://"):
+            etag = _gcs_md5(url)
         else:
             etag = _http_etag(url)
     except (requests.exceptions.ConnectionError, botocore.exceptions.EndpointConnectionError):
@@ -977,6 +1032,8 @@ def get_from_cache(url: str, cache_dir: Union[str, Path] = None) -> str:
                 # GET file object
                 if url.startswith("s3://"):
                     _s3_get(url, cache_file)
+                elif url.startswith("gs://"):
+                    _gcs_get(url, cache_file.name)
                 else:
                     _http_get(url, cache_file)
 

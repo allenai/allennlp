@@ -147,21 +147,32 @@ class TransformerModule(torch.nn.Module):
         relevant_module: Optional[Union[str, List[str]]] = None,
         source: str = "huggingface",
         mapping: Optional[Dict[str, str]] = None,
+        load_weights: bool = True,
     ):
         """
         Returns the relevant underlying module given a model name/object.
 
-        # Parameters:
+        # Parameters
 
-        pretrained_module: Name of the transformer model containing the layer,
-                           or the actual layer (not the model object).
-        relevant_module: Name of the desired module. Defaults to cls._relevant_module.
-        source: Where the model came from. Default - huggingface.
-        mapping: Optional mapping that determines any differences in the module names
-        between the class modules and the input model's modules. Default - cls._huggingface_mapping
+        pretrained_module : `Union[str, torch.nn.Module]`
+            Name of the transformer model containing the layer,
+            or the actual layer (not the model object).
+        relevant_module : `Optional[Union[str, List[str]]]`, optional
+            Name of the desired module. Defaults to cls._relevant_module.
+        source : `str`, optional
+            Where the model came from. Default - huggingface.
+        mapping : `Dict[str, str]`, optional
+            Optional mapping that determines any differences in the module names
+            between the class modules and the input model's modules.
+            Default - cls._huggingface_mapping
+        load_weights : `bool`, optional
+            Whether or not to load the pretrained weights.
+            Default is `True`.
         """
         if isinstance(pretrained_module, str):
-            pretrained_module = cached_transformers.get(pretrained_module, False)
+            pretrained_module = cached_transformers.get(
+                pretrained_module, False, load_weights=load_weights
+            )
 
         relevant_module = relevant_module or cls._relevant_module
 
@@ -192,6 +203,7 @@ class TransformerModule(torch.nn.Module):
         pretrained_module: Union[str, torch.nn.Module],
         source: str = "huggingface",
         mapping: Optional[Dict[str, str]] = None,
+        load_weights: bool = True,
         **kwargs,
     ):
         """
@@ -208,7 +220,7 @@ class TransformerModule(torch.nn.Module):
             )
 
         pretrained_module = cls.get_relevant_module(
-            pretrained_module, source=source, mapping=mapping
+            pretrained_module, source=source, mapping=mapping, load_weights=load_weights
         )
         final_kwargs = cls._get_input_arguments(pretrained_module, source, mapping)
         final_kwargs.update(kwargs)

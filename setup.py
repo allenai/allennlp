@@ -77,6 +77,7 @@ setup(
         "datasets>=1.2.1",
         "dill",
         "base58",
+        "google-cloud-storage>=1.38.0,<1.39.0",
     ],
     entry_points={"console_scripts": ["allennlp=allennlp.__main__:run"]},
     include_package_data=True,
