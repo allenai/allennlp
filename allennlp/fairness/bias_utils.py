@@ -1,62 +1,110 @@
-import json
 import torch
+import json
+from os import PathLike
+from typing import List, Tuple, Union
+
+from allennlp.data import Vocabulary
+from allennlp.data.tokenizers.tokenizer import Tokenizer
 
 
-def load_words(fname, vocab, namespace):
+def _convert_word_to_ids_tensor(word, tokenizer, vocab, namespace, all_cases):
+    # function does NOT strip special tokens if tokenizer adds them
+    if all_cases:
+        words_list = [word.lower(), word.title(), word.upper()]
+    else:
+        words_list = [word]
+    ids = []
+    for w in words_list:
+        # if vocab is None, use tokenizer vocab (only works for Huggingface PreTrainedTokenizer)
+        if vocab:
+            tokens = tokenizer.tokenize(w)
+            ids.append(torch.tensor([vocab.get_token_index(t.text, namespace) for t in tokens]))
+        else:
+            ids.append(torch.tensor(tokenizer.tokenizer(w)["input_ids"]))
+    return ids
+
+
+def load_words(
+    fname: Union[str, PathLike],
+    tokenizer: Tokenizer,
+    vocab: Vocabulary = None,
+    namespace: str = "tokens",
+    all_cases: bool = True,
+) -> List[torch.Tensor]:
+    """
+    This function loads a list of words from a file,
+    tokenizes each word into subword tokens, and converts the
+    tokens into IDs.
+
+    # Parameters
+
+    fname : `Union[str, PathLike]`
+        Name of file containing list of words to load.
+    tokenizer : `Tokenizer`
+        Tokenizer to tokenize words in file.
+    vocab : `Vocabulary`, optional (default=`None`)
+        Vocabulary of tokenizer. If `None`, assumes tokenizer is of
+        type `PreTrainedTokenizer` and uses tokenizer's `vocab` attribute.
+    namespace : `str`
+        Namespace of vocab to use when tokenizing.
+    all_cases : `bool`, optional (default=`True`)
+    `   Whether to tokenize lower, title, and upper cases of each word.
+
+    # Returns
+
+    word_ids : `List[torch.Tensor]`
+        List of tensors containing the IDs of subword tokens for
+        each word in the file.
+    """
     word_ids = []
     with open(fname) as f:
         words = json.load(f)
         for w in words:
-            if (
-                w.lower() in vocab._token_to_index[namespace]
-                and w.title() in vocab._token_to_index[namespace]
-            ):
-                word_ids.append(vocab.get_token_index(w.lower(), namespace))
-                word_ids.append(vocab.get_token_index(w.title(), namespace))
-    return torch.LongTensor(word_ids)
+            word_ids.extend(_convert_word_to_ids_tensor(w, tokenizer, vocab, namespace, all_cases))
+    return word_ids
 
 
-def load_word_pairs(fname, vocab, namespace):
+def load_word_pairs(
+    fname: Union[str, PathLike],
+    tokenizer: Tokenizer,
+    vocab: Vocabulary = None,
+    namespace: str = "token",
+    all_cases: bool = True,
+) -> Tuple[List[torch.Tensor], List[torch.Tensor]]:
+    """
+    This function loads a list of pairs of words from a file,
+    tokenizes each word into subword tokens, and converts the
+    tokens into IDs.
+
+    # Parameters
+
+    fname : `Union[str, PathLike]`
+        Name of file containing list of pairs of words to load.
+    tokenizer : `Tokenizer`
+        Tokenizer to tokenize words in file.
+    vocab : `Vocabulary`, optional (default=`None`)
+        Vocabulary of tokenizer. If `None`, assumes tokenizer is of
+        type `PreTrainedTokenizer` and uses tokenizer's `vocab` attribute.
+    namespace : `str`
+        Namespace of vocab to use when tokenizing.
+    all_cases : `bool`, optional (default=`True`)
+    `   Whether to tokenize lower, title, and upper cases of each word.
+
+    # Returns
+
+    word_ids : `Tuple[List[torch.Tensor], List[torch.Tensor]]`
+        Pair of lists of tensors containing the IDs of subword tokens for
+        words in the file.
+    """
     word_ids1 = []
     word_ids2 = []
     with open(fname) as f:
         words = json.load(f)
         for w1, w2 in words:
-            if (
-                w1.lower() in vocab._token_to_index[namespace]
-                and w2.lower() in vocab._token_to_index[namespace]
-                and w1.title() in vocab._token_to_index[namespace]
-                and w2.title() in vocab._token_to_index[namespace]
-            ):
-                word_ids1.append(vocab.get_token_index(w1.lower(), namespace))
-                word_ids1.append(vocab.get_token_index(w1.title(), namespace))
-
-                word_ids2.append(vocab.get_token_index(w2.lower(), namespace))
-                word_ids2.append(vocab.get_token_index(w2.title(), namespace))
-    return torch.LongTensor(word_ids1), torch.LongTensor(word_ids2)
-
-
-# allennlp train training_config/pair_classification/snli_roberta.jsonnet --include-package allennlp_models -s /tmp/snli -r
-def wrap_snli_embedder_with_hard_bias_mitigator(model, definitional_pairs, equalize_pairs):
-    fn = (
-        model._text_field_embedder.token_embedder_tokens.transformer_model.embeddings.word_embeddings.forward
-    )
-
-    def new_embedder(*args, **kwargs):
-        emb = fn(*args, **kwargs)
-
-        with torch.no_grad():
-            definitional_emb1 = fn(definitional_pairs[0])
-            definitional_emb2 = fn(definitional_pairs[1])
-
-            equalize_emb1 = fn(equalize_pairs[0])
-            equalize_emb2 = fn(equalize_pairs[1])
-
-        bias_direction = PairedPCABiasDirection()(definitional_emb1, definitional_emb2)
-        bias_mitigated_emb = HardBiasMitigator()(emb, bias_direction, equalize_emb1, equalize_emb2)
-
-        return bias_mitigated_emb[: emb.size(0)]
-
-    model._text_field_embedder.token_embedder_tokens.transformer_model.embeddings.word_embeddings.forward = (
-        new_embedder
-    )
+            word_ids1.extend(
+                _convert_word_to_ids_tensor(w1, tokenizer, vocab, namespace, all_cases)
+            )
+            word_ids2.extend(
+                _convert_word_to_ids_tensor(w2, tokenizer, vocab, namespace, all_cases)
+            )
+    return word_ids1, word_ids2
