@@ -48,7 +48,7 @@ def load_words(
     namespace : `str`
         Namespace of vocab to use when tokenizing.
     all_cases : `bool`, optional (default=`True`)
-    `   Whether to tokenize lower, title, and upper cases of each word.
+        Whether to tokenize lower, title, and upper cases of each word.
 
     # Returns
 
@@ -88,7 +88,7 @@ def load_word_pairs(
     namespace : `str`
         Namespace of vocab to use when tokenizing.
     all_cases : `bool`, optional (default=`True`)
-    `   Whether to tokenize lower, title, and upper cases of each word.
+        Whether to tokenize lower, title, and upper cases of each word.
 
     # Returns
 

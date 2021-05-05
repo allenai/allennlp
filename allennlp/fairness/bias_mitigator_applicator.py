@@ -1,6 +1,7 @@
 """
 A Model wrapper to mitigate biases in 
-contextual embeddings.
+contextual embeddings upon training/finetuning
+on a downstream task.
 
 Based on: Dev, S., Li, T., Phillips, J.M., & Srikumar, V. (2020).
 [On Measuring and Mitigating Biased Inferences of Word Embeddings]
@@ -28,7 +29,7 @@ class BiasMitigatorApplicator(Model):
     vocab : `Vocabulary`
         Vocabulary of base model.
     base_model : `Lazy[Model]`
-        Base model for which to mitigate bias.
+        Base model for which to mitigate biases.
     bias_mitigator : `BiasMitigatorWrapper`
         Bias mitigator to apply to base model.
     """
