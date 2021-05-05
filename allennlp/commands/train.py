@@ -320,7 +320,7 @@ def train_model(
                 device_ids,
                 file_friendly_logging,
                 include_in_archive,
-                distributed_params.duplicate(),
+                Params(distributed_params),
             ),
             nprocs=num_procs,
         )
@@ -667,6 +667,10 @@ class TrainModel(Registrable):
         batch_weight_key: `str`, optional (default=`""`)
             The name of metric used to weight the loss on a per-batch basis.  This is only used
             during evaluation on final test data, if you've specified `evaluate_on_test=True`.
+
+        ddp_wrapper : `Optional[DdpWrapper]`, optional (default = `None`)
+            A `DdpWrapper` to use in distributed trainer. Passed to the model and the trainer.
+
         """
         # Train data loader.
         data_loaders: Dict[str, DataLoader] = {

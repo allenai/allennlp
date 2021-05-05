@@ -20,7 +20,7 @@ from allennlp.modules.transformer.util import (
     get_extended_attention_mask,
 )
 from allennlp.nn.beam_search import BeamSearch
-from allennlp.nn.parallel import DdpWrapper
+from allennlp.nn.parallel import DdpWrapper, NoOpDdpWrapper
 
 # Unfortunately mypy is insane, so I have to wrap these in unions.
 FloatT = Union[torch.FloatTensor]
@@ -817,16 +817,22 @@ class T5EncoderStack(T5Stack, FromParams):
         final_layer_norm: Optional[T5LayerNorm] = None,
         block_ff: Lazy[T5LayerFF] = Lazy(T5LayerFF),
         dropout: float = 0.1,
+        ddp_wrapper: Optional[DdpWrapper] = None,
     ) -> "T5EncoderStack":
+        if ddp_wrapper is None:
+            ddp_wrapper = NoOpDdpWrapper()
         blocks = [
-            T5Block(
-                attention=T5LayerSelfAttention(
-                    self_attention=block_self_attention.construct(
-                        is_decoder=False, has_relative_attention_bias=(i == 0)
-                    )
+            ddp_wrapper.wrap_module(
+                T5Block(
+                    attention=T5LayerSelfAttention(
+                        self_attention=block_self_attention.construct(
+                            is_decoder=False, has_relative_attention_bias=(i == 0)
+                        )
+                    ),
+                    cross_attention=None,
+                    ff=block_ff.construct(),
                 ),
-                cross_attention=None,
-                ff=block_ff.construct(),
+                recursive=True,
             )
             for i in range(num_blocks)
         ]
@@ -861,21 +867,27 @@ class T5DecoderStack(T5Stack, FromParams):
         final_layer_norm: Optional[T5LayerNorm] = None,
         block_ff: Lazy[T5LayerFF] = Lazy(T5LayerFF),
         dropout: float = 0.1,
+        ddp_wrapper: Optional[DdpWrapper] = None,
     ) -> "T5DecoderStack":
+        if ddp_wrapper is None:
+            ddp_wrapper = NoOpDdpWrapper()
         blocks = [
-            T5Block(
-                attention=T5LayerSelfAttention(
-                    self_attention=block_self_attention.construct(
-                        is_decoder=True, has_relative_attention_bias=(i == 0)
-                    )
+            ddp_wrapper.wrap_module(
+                T5Block(
+                    attention=T5LayerSelfAttention(
+                        self_attention=block_self_attention.construct(
+                            is_decoder=True, has_relative_attention_bias=(i == 0)
+                        )
+                    ),
+                    cross_attention=T5LayerCrossAttention(
+                        enc_dec_attention=block_cross_attention.construct(
+                            is_decoder=True,
+                            has_relative_attention_bias=False,
+                        )
+                    ),
+                    ff=block_ff.construct(),
                 ),
-                cross_attention=T5LayerCrossAttention(
-                    enc_dec_attention=block_cross_attention.construct(
-                        is_decoder=True,
-                        has_relative_attention_bias=False,
-                    )
-                ),
-                ff=block_ff.construct(),
+                recursive=True,
             )
             for i in range(num_blocks)
         ]
@@ -981,13 +993,20 @@ class T5(TransformerModule, Registrable):
         ddp_wrapper: Optional[DdpWrapper] = None,
     ):
         super().__init__()
+
+        if ddp_wrapper is None:
+            ddp_wrapper = NoOpDdpWrapper()
+
         self.model_dim = model_dim
         self.token_embeddings = token_embeddings or nn.Embedding(vocab_size, model_dim)
         if token_embeddings is None:
             self.token_embeddings.weight.data.normal_(mean=0.0, std=1.0)
-
-        self.encoder: T5EncoderStack = encoder.construct(token_embeddings=self.token_embeddings)
-        self.decoder: T5DecoderStack = decoder.construct(token_embeddings=self.token_embeddings)
+        self.encoder: T5EncoderStack = encoder.construct(
+            token_embeddings=self.token_embeddings, ddp_wrapper=ddp_wrapper
+        )
+        self.decoder: T5DecoderStack = decoder.construct(
+            token_embeddings=self.token_embeddings, ddp_wrapper=ddp_wrapper
+        )
         self.lm_head = nn.Linear(
             self.decoder.hidden_size, self.token_embeddings.num_embeddings, bias=False
         )

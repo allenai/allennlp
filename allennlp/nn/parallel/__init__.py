@@ -1,4 +1,4 @@
-from allennlp.nn.parallel.ddp_wrapper import DdpWrapper, TorchDdpWrapper
+from allennlp.nn.parallel.ddp_wrapper import DdpWrapper, TorchDdpWrapper, NoOpDdpWrapper
 
 try:
     from allennlp.nn.parallel.fairscale_fsdp_wrapper import FairScaleFsdpWrapper

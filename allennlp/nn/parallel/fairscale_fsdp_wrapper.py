@@ -1,7 +1,7 @@
 from typing import Union, Tuple
 
 from fairscale.nn import FullyShardedDataParallel as FSDP
-from fairscale.nn.auto_wrap import enable_wrap, auto_wrap, wrap
+from fairscale.nn.wrap import enable_wrap, auto_wrap, wrap
 from overrides import overrides
 import torch
 
