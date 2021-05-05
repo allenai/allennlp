@@ -21,7 +21,7 @@ from allennlp.common import util as common_util
 from allennlp.common.checks import ConfigurationError, check_for_gpu
 from allennlp.data import DataLoader, TensorDict
 from allennlp.models.model import Model
-from allennlp.nn.parallel import DdpWrapper, TorchDdpWrapper
+from allennlp.nn.parallel import DdpWrapper, DdpWrappedModel, TorchDdpWrapper
 from allennlp.training import util as training_util
 from allennlp.training.callbacks import TrainerCallback, SanityChecksCallback, ConsoleLoggerCallback
 from allennlp.training.checkpointer import Checkpointer
@@ -231,8 +231,7 @@ class GradientDescentTrainer(Trainer):
         the "trainer" entry, that specifies a list of "cuda_devices").
 
     local_rank : `int`, optional, (default = `0`)
-        This is the unique identifier of the `Trainer` in a distributed process group. The GPU device id is
-        used as the rank.
+        This is the unique identifier of the `Trainer` in a distributed process group.
 
         In a typical AllenNLP configuration file, this parameter does not get an entry under the
         "trainer", it gets constructed separately.
@@ -261,6 +260,12 @@ class GradientDescentTrainer(Trainer):
         [`NormalizationBiasVerification`](../../sanity_checks/normalization_bias_verification/),
         are ran.
 
+    ddp_wrapped_model : `Optional[DdpWrappedModel]`, optional (default = `None`)
+        The `model` wrapped with a `DdpWrapper` for distributed training.
+
+        !!! Note
+            This is required for distributed training.
+
     """
 
     def __init__(
@@ -273,7 +278,7 @@ class GradientDescentTrainer(Trainer):
         validation_data_loader: DataLoader = None,
         num_epochs: int = 20,
         serialization_dir: Optional[str] = None,
-        checkpointer: Checkpointer = None,
+        checkpointer: Optional[Checkpointer] = None,
         cuda_device: Optional[Union[int, torch.device]] = None,
         grad_norm: Union[float, bool] = False,
         grad_clipping: Optional[float] = None,
@@ -288,8 +293,7 @@ class GradientDescentTrainer(Trainer):
         use_amp: bool = False,
         enable_default_callbacks: bool = True,
         run_sanity_checks: bool = True,
-        ddp_wrapper: Optional[DdpWrapper] = None,
-        _pytorch_model: Optional[torch.nn.Module] = None,
+        ddp_wrapped_model: Optional[DdpWrappedModel] = None,
     ) -> None:
         super().__init__(serialization_dir, cuda_device, distributed, local_rank, world_size)
 
@@ -318,16 +322,10 @@ class GradientDescentTrainer(Trainer):
 
         # For tracking is_best_so_far and should_stop_early
         self._metric_tracker = MetricTracker(validation_metric, patience)
-
         self._num_epochs = num_epochs
-
-        self._checkpointer: Optional[Checkpointer] = checkpointer
-        if checkpointer is None and serialization_dir is not None:
-            self._checkpointer = Checkpointer(serialization_dir)
-
+        self._checkpointer = checkpointer
         self._grad_norm = grad_norm
         self._grad_clipping = grad_clipping
-
         self._learning_rate_scheduler = learning_rate_scheduler
         self._momentum_scheduler = momentum_scheduler
         self._moving_average = moving_average
@@ -355,10 +353,18 @@ class GradientDescentTrainer(Trainer):
                 raise ValueError("Using AMP requires a cuda device")
             self._scaler = amp.GradScaler()
 
-        if _pytorch_model is not None:
-            self._pytorch_model = _pytorch_model
-        else:
-            self._pytorch_model = self.model
+        self._ddp_wrapped_model = ddp_wrapped_model
+        if distributed:
+            # The model needs to be wrapped before initializing the optimizer,
+            # so at this point it's too late to wrap the model.
+            if ddp_wrapped_model is None:
+                raise ValueError("trainer requires 'ddp_wrapped_model' for distributed training")
+
+    @property
+    def _pytorch_model(self):
+        if self._ddp_wrapped_model is None:
+            return self.model
+        return self._ddp_wrapped_model.model
 
     def rescale_gradients(self) -> Optional[float]:
         """
@@ -373,8 +379,8 @@ class GradientDescentTrainer(Trainer):
                 self._scaler.unscale_(self.optimizer)
             # Sometimes logic for clipping has to implemented within the model, like
             # with FairScale's FullyShardedDataParallel.
-            if hasattr(self._pytorch_model, "clip_grad_norm_"):
-                return self._pytorch_model.clip_grad_norm_(self._grad_norm).item()
+            if self._ddp_wrapped_model is not None:
+                return self._ddp_wrapped_model.clip_grad_norm_(self._grad_norm).item()
             else:
                 parameters_to_clip = [p for p in self.model.parameters() if p.grad is not None]
                 return clip_grad_norm_(parameters_to_clip, self._grad_norm).item()
@@ -886,7 +892,7 @@ class GradientDescentTrainer(Trainer):
             None if self._checkpointer is None else self._checkpointer.best_model_state()
         )
         if best_model_state:
-            self.model.load_state_dict(best_model_state)
+            self._pytorch_model.load_state_dict(best_model_state)
 
         return metrics, epoch
 
@@ -897,7 +903,7 @@ class GradientDescentTrainer(Trainer):
             # `restore_state_after_checkpointing` when it is done to put this back to what it was.
             self._moving_average.assign_average_value()
 
-        model_state = self.model.state_dict()
+        model_state = self._pytorch_model.state_dict()
 
         # These are the training states we need to persist.
         training_states = {
@@ -945,7 +951,7 @@ class GradientDescentTrainer(Trainer):
             # No checkpoint to restore, start at 0
             return 0
 
-        self.model.load_state_dict(model_state)
+        self._pytorch_model.load_state_dict(model_state)
         self.optimizer.load_state_dict(training_state["optimizer"])
         if (
             self._learning_rate_scheduler is not None
@@ -986,7 +992,7 @@ class GradientDescentTrainer(Trainer):
         patience: int = None,
         validation_metric: Union[str, List[str]] = "-loss",
         num_epochs: int = 20,
-        cuda_device: Optional[Union[int, torch.device]] = None,
+        cuda_device: Optional[int] = None,
         grad_norm: Union[float, bool] = False,
         grad_clipping: float = None,
         distributed: bool = False,
@@ -998,7 +1004,7 @@ class GradientDescentTrainer(Trainer):
         learning_rate_scheduler: Lazy[LearningRateScheduler] = None,
         momentum_scheduler: Lazy[MomentumScheduler] = None,
         moving_average: Lazy[MovingAverage] = None,
-        checkpointer: Lazy[Checkpointer] = Lazy(Checkpointer),
+        checkpointer: Optional[Lazy[Checkpointer]] = Lazy(Checkpointer),
         callbacks: List[Lazy[TrainerCallback]] = None,
         enable_default_callbacks: bool = True,
         run_sanity_checks: bool = True,
@@ -1037,17 +1043,17 @@ class GradientDescentTrainer(Trainer):
         # Hence a reference to Pytorch's object is maintained in the case of distributed training and in the
         # normal case, reference to `Model` is retained. This reference is only used in
         # these places: `model.__call__`, `model.train` and `model.eval`.
-        # We set the wrapped model to `pytorch_model`.
-        pytorch_model: torch.nn.Module
+        ddp_wrapped_model: Optional[DdpWrappedModel] = None
         if distributed:
             if ddp_wrapper is None:
                 ddp_wrapper = TorchDdpWrapper(cuda_device=cuda_device)
             # DdpWrapper will move the model to the right device(s).
-            model, pytorch_model = ddp_wrapper.wrap_model(model)
+            model, ddp_wrapped_model = ddp_wrapper.wrap_model(model)
         else:
             if cuda_device >= 0:
                 model = model.cuda(cuda_device)
-            pytorch_model = model
+
+        pytorch_model = model if ddp_wrapped_model is None else ddp_wrapped_model.model
 
         if no_grad:
             for name, parameter in pytorch_model.named_parameters():
@@ -1081,7 +1087,11 @@ class GradientDescentTrainer(Trainer):
             if momentum_scheduler is None
             else momentum_scheduler.construct(optimizer=optimizer_)
         )
-        checkpointer_ = checkpointer.construct(serialization_dir=serialization_dir)
+        checkpointer_ = (
+            None
+            if checkpointer is None
+            else checkpointer.construct(serialization_dir=serialization_dir)
+        )
 
         callbacks_: List[TrainerCallback] = []
         for callback_ in callbacks or []:
@@ -1111,7 +1121,7 @@ class GradientDescentTrainer(Trainer):
             use_amp=use_amp,
             enable_default_callbacks=enable_default_callbacks,
             run_sanity_checks=run_sanity_checks,
-            _pytorch_model=pytorch_model,
+            ddp_wrapped_model=ddp_wrapped_model,
         )
 
 

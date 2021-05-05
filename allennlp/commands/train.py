@@ -434,6 +434,7 @@ def _train_worker(
 
         # Till now, "cuda_device" might not be set in the trainer params.
         # But a worker trainer needs to only know about its specific GPU id.
+        params["trainer"]["local_rank"] = process_rank
         params["trainer"]["cuda_device"] = gpu_id
         params["trainer"]["world_size"] = world_size
         params["trainer"]["distributed"] = True
@@ -456,7 +457,12 @@ def _train_worker(
 
         if "ddp_wrapper" in distributed_params:
             ddp_wrapper_params = distributed_params.pop("ddp_wrapper")
-            ddp_wrapper = DdpWrapper.from_params(ddp_wrapper_params, cuda_device=gpu_id)
+            ddp_wrapper = DdpWrapper.from_params(
+                ddp_wrapper_params,
+                local_rank=process_rank,
+                world_size=world_size,
+                cuda_device=gpu_id,
+            )
 
         logging.info(
             f"Process group of world size {world_size} initialized "

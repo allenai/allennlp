@@ -10,6 +10,7 @@ import torch
 
 import allennlp
 from allennlp.common import Registrable
+from allennlp.common.util import is_distributed
 from allennlp.nn import util as nn_util
 from allennlp.training import util as training_util
 
@@ -32,23 +33,29 @@ class Checkpointer(Registrable):
 
         In a typical AllenNLP configuration file, this argument does not get an entry under the
         "checkpointer", it gets passed in separately.
+
     keep_serialized_model_every_num_seconds : `int`, optional (default=`None`)
-        If num_serialized_models_to_keep is not None, then occasionally it's useful to
-        save models at a given interval in addition to the last num_serialized_models_to_keep.
-        To do so, specify keep_serialized_model_every_num_seconds as the number of seconds
+        If `num_serialized_models_to_keep` is not None, then occasionally it's useful to
+        save models at a given interval in addition to the last `num_serialized_models_to_keep`.
+        To do so, specify `keep_serialized_model_every_num_seconds` as the number of seconds
         between permanently saved checkpoints.  Note that this option is only used if
-        num_serialized_models_to_keep is not None, otherwise all checkpoints are kept.
+        `num_serialized_models_to_keep` is not None, otherwise all checkpoints are kept.
+
     model_save_interval : `float`, optional (default=`None`)
         If provided, then serialize models every `model_save_interval`
         seconds within single epochs.  In all cases, models are also saved
         at the end of every epoch if `serialization_dir` is provided.
+
+        !!! Note
+            Currently this option is not supported with distributed training.
+
     """
 
     default_implementation = "default"
 
     def __init__(
         self,
-        serialization_dir: str,
+        serialization_dir: Optional[str] = None,
         keep_serialized_model_every_num_seconds: int = None,
         num_serialized_models_to_keep: int = 2,
         model_save_interval: float = None,
@@ -57,6 +64,13 @@ class Checkpointer(Registrable):
         self._keep_serialized_model_every_num_seconds = keep_serialized_model_every_num_seconds
         self._num_serialized_models_to_keep = num_serialized_models_to_keep
         self._model_save_interval = model_save_interval
+        if is_distributed() and model_save_interval is not None:
+            # TODO (epwalsh): It's possible to support this, it just requires additional
+            # syncronization to avoid dead-locks when using certain `DdpWrapper`s, like
+            # `FairScaleFsdpWrapper`.
+            raise ValueError(
+                "'model_save_interval' is currently not supported during distributed training"
+            )
 
         self._last_permanent_saved_checkpoint_time = time.time()
         self._serialized_paths: List[Tuple[float, str, str]] = []
@@ -179,11 +193,9 @@ class Checkpointer(Registrable):
         Return the location of the latest model and training state files.
         If there isn't a valid checkpoint then return None.
         """
-        have_checkpoint = self._serialization_dir is not None and any(
+        if self._serialization_dir is None or not any(
             "model_state_epoch_" in x for x in os.listdir(self._serialization_dir)
-        )
-
-        if not have_checkpoint:
+        ):
             return None
 
         serialization_files = os.listdir(self._serialization_dir)

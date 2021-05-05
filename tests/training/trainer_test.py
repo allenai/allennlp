@@ -314,6 +314,7 @@ class TestTrainer(TrainerTestBase):
             validation_data_loader=self.validation_data_loader,
             num_epochs=1,
             serialization_dir=self.TEST_DIR,
+            checkpointer=Checkpointer(self.TEST_DIR),
         )
         trainer.train()
         new_trainer = GradientDescentTrainer(
@@ -323,6 +324,7 @@ class TestTrainer(TrainerTestBase):
             validation_data_loader=self.validation_data_loader,
             num_epochs=3,
             serialization_dir=self.TEST_DIR,
+            checkpointer=Checkpointer(self.TEST_DIR),
         )
 
         epoch = new_trainer._restore_checkpoint()
@@ -345,6 +347,7 @@ class TestTrainer(TrainerTestBase):
             num_epochs=1,
             serialization_dir=self.TEST_DIR,
             moving_average=moving_average,
+            checkpointer=Checkpointer(self.TEST_DIR),
         )
         trainer.train()
 
@@ -357,6 +360,7 @@ class TestTrainer(TrainerTestBase):
             num_epochs=3,
             serialization_dir=self.TEST_DIR,
             moving_average=new_moving_average,
+            checkpointer=Checkpointer(self.TEST_DIR),
         )
 
         epoch = new_trainer._restore_checkpoint()
@@ -588,6 +592,7 @@ class TestTrainer(TrainerTestBase):
             validation_data_loader=self.validation_data_loader,
             num_epochs=4,
             serialization_dir=self.TEST_DIR,
+            checkpointer=Checkpointer(self.TEST_DIR),
         )
         trainer.train()
 
@@ -604,6 +609,7 @@ class TestTrainer(TrainerTestBase):
             validation_data_loader=self.validation_data_loader,
             num_epochs=6,
             serialization_dir=self.TEST_DIR,
+            checkpointer=Checkpointer(self.TEST_DIR),
         )
         epoch = new_trainer._restore_checkpoint()
         assert epoch == 4
@@ -659,6 +665,7 @@ class TestTrainer(TrainerTestBase):
             validation_data_loader=self.validation_data_loader,
             num_epochs=2,
             serialization_dir=self.TEST_DIR,
+            checkpointer=Checkpointer(self.TEST_DIR),
         )
         trainer.train()
 
@@ -671,6 +678,7 @@ class TestTrainer(TrainerTestBase):
             validation_data_loader=self.validation_data_loader,
             num_epochs=4,
             serialization_dir=self.TEST_DIR,
+            checkpointer=Checkpointer(self.TEST_DIR),
         )
         epoch = new_trainer._restore_checkpoint()
         assert epoch == 2
@@ -913,6 +921,7 @@ class TestTrainer(TrainerTestBase):
             validation_metric="-loss",
             num_epochs=1,
             serialization_dir=self.TEST_DIR,
+            checkpointer=Checkpointer(self.TEST_DIR),
         )
         trainer.train()
         _ = trainer._restore_checkpoint()
@@ -931,6 +940,7 @@ class TestTrainer(TrainerTestBase):
             validation_metric="-loss",
             num_epochs=2,
             serialization_dir=self.TEST_DIR,
+            checkpointer=Checkpointer(self.TEST_DIR),
         )
         restore_trainer.train()
         _ = restore_trainer._restore_checkpoint()
@@ -952,6 +962,7 @@ class TestTrainer(TrainerTestBase):
             validation_metric="+loss",
             num_epochs=1,
             serialization_dir=self.TEST_DIR,
+            checkpointer=Checkpointer(self.TEST_DIR),
         )
         trainer.train()
 
@@ -971,6 +982,7 @@ class TestTrainer(TrainerTestBase):
             validation_metric="+loss",
             num_epochs=2,
             serialization_dir=self.TEST_DIR,
+            checkpointer=Checkpointer(self.TEST_DIR),
         )
         restore_trainer.train()
         _ = restore_trainer._restore_checkpoint()
@@ -994,6 +1006,7 @@ class TestTrainer(TrainerTestBase):
             validation_metric="+loss",
             num_epochs=1,
             serialization_dir=self.TEST_DIR,
+            checkpointer=Checkpointer(self.TEST_DIR),
         )
         training_metrics = original_trainer.train()
 
@@ -1006,6 +1019,7 @@ class TestTrainer(TrainerTestBase):
             validation_metric="+loss",
             num_epochs=2,
             serialization_dir=self.TEST_DIR,
+            checkpointer=Checkpointer(self.TEST_DIR),
         )
         restored_metrics = restored_trainer.train()
 
