@@ -15,7 +15,8 @@ from torch.nn import CrossEntropyLoss
 from allennlp.common import FromParams, Params, Lazy, Registrable
 from allennlp.common.checks import ConfigurationError
 from allennlp.modules.transformer import TransformerModule
-from allennlp.modules.transformer.general_self_attention import T5Attention as NewT5Attention
+
+# from allennlp.modules.transformer.general_self_attention import T5Attention
 from allennlp.modules.transformer.util import (
     apply_mask,
     get_extended_attention_mask,
@@ -134,6 +135,7 @@ class T5Attention(TransformerModule, FromParams):
         relative_attention_num_buckets: int = 32,
         dropout: float = 0.1,
         normalize: bool = True,
+        is_cross_attention: bool = False,
     ):
         super().__init__()
         self.is_decoder = is_decoder
@@ -388,7 +390,7 @@ class T5LayerSelfAttention(TransformerModule, FromParams):
         dropout: float = 0.1,
     ):
         super().__init__()
-        self.self_attention = self_attention or NewT5Attention()
+        self.self_attention = self_attention or T5Attention()
         self.layer_norm = layer_norm or T5LayerNorm(hidden_size=self.self_attention.hidden_size)
         self.dropout = nn.Dropout(dropout)
 
@@ -439,8 +441,10 @@ class T5LayerCrossAttention(TransformerModule, FromParams):
         dropout: float = 0.1,
     ):
         super().__init__()
-        self.enc_dec_attention = enc_dec_attention or NewT5Attention(
-            is_decoder=True, has_relative_attention_bias=False
+        self.enc_dec_attention = enc_dec_attention or T5Attention(
+            is_decoder=True,
+            has_relative_attention_bias=False,
+            is_cross_attention=True,
         )
         self.layer_norm = layer_norm or T5LayerNorm(hidden_size=self.enc_dec_attention.hidden_size)
         self.dropout = nn.Dropout(dropout)

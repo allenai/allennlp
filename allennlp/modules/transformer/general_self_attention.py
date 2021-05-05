@@ -9,6 +9,29 @@ from allennlp.modules.attention import Attention
 from allennlp.modules.transformer.transformer_module import TransformerModule
 from allennlp.modules.transformer.util import apply_mask
 
+# Unfortunately mypy is insane, so we have to wrap these in unions.
+FloatT = Union[torch.FloatTensor]
+IntT = Union[torch.IntTensor]
+BoolT = Union[torch.BoolTensor]
+
+
+@dataclass
+class KeyValueState:
+    key_state: FloatT
+    value_state: FloatT
+
+
+@dataclass
+class GeneralSelfAttentionOutput:
+    """
+    Encapsulates the outputs of the `GeneralSelfAttention` module.
+    """
+
+    hidden_states: FloatT
+    key_value_state: Optional[Tuple[FloatT, FloatT]] = None
+    position_bias: Optional[FloatT] = None
+    attention_probs: Optional[FloatT] = None
+
 
 class GeneralSelfAttention(TransformerModule, FromParams):
     """
@@ -20,14 +43,15 @@ class GeneralSelfAttention(TransformerModule, FromParams):
         hidden_size: int = 512,
         attention_head_size: int = 64,
         num_attention_heads: int = 8,
-        # has_relative_attention_bias: bool = False, # t5
-        # relative_attention_num_buckets: int = 32, # t5
-        # is_decoder: bool = False, # t5
         scoring_func: str = "scaled_dot_product",
         output_linear: bool = False,
         dropout: float = 0.0,
         bias: bool = True,
         normalize_weights: bool = False,
+        is_decoder: bool = False,
+        is_cross_attention: bool = False,
+        has_relative_attention_bias: bool = False,
+        relative_attention_num_buckets: int = 32,
     ):
 
         super().__init__()
@@ -37,6 +61,10 @@ class GeneralSelfAttention(TransformerModule, FromParams):
                 "The hidden size (%d) is not a multiple of the number of attention "
                 "heads (%d)" % (hidden_size, num_attention_heads)
             )
+
+        if is_cross_attention:
+            assert is_decoder, "The attention layer can be a cross-attention layer only "
+            "if it is within a decoder."
 
         self.hidden_size = hidden_size
         self.num_attention_heads = num_attention_heads
@@ -58,16 +86,18 @@ class GeneralSelfAttention(TransformerModule, FromParams):
         else:
             self.attn = Attention.by_name(self.scoring_func)()
 
-        # self.is_decoder = is_decoder
-        # self.has_relative_attention_bias = has_relative_attention_bias
-        # self.relative_attention_num_buckets = relative_attention_num_buckets
+        self.has_relative_attention_bias = has_relative_attention_bias
+        self.relative_attention_num_buckets = relative_attention_num_buckets
 
-        # if self.has_relative_attention_bias:
-        #     self.relative_attention_bias = torch.nn.Embedding(
-        #         self.relative_attention_num_buckets, self.num_attention_heads
-        #     )
+        if self.has_relative_attention_bias:
+            self.relative_attention_bias = torch.nn.Embedding(
+                self.relative_attention_num_buckets, self.num_attention_heads
+            )
 
         self.dropout = dropout
+
+        self.is_decoder = is_decoder
+        self.is_cross_attention = is_cross_attention
 
         if normalize_weights:
             self._normalize()
@@ -84,8 +114,8 @@ class GeneralSelfAttention(TransformerModule, FromParams):
                 mean=0.0, std=(self.num_attention_heads * self.attention_head_size) ** -0.5
             )
 
-        # if self.has_relative_attention_bias:
-        #     self.relative_attention_bias.weight.data.normal_(mean=0.0, std=hidden_size ** -0.5)
+        if hasattr(self, "has_relative_attention_bias") and self.has_relative_attention_bias:
+            self.relative_attention_bias.weight.data.normal_(mean=0.0, std=self.hidden_size ** -0.5)
 
     def _transpose_for_scores(self, x: torch.Tensor):
         new_x_shape = x.size()[:-1] + (
@@ -100,17 +130,52 @@ class GeneralSelfAttention(TransformerModule, FromParams):
         query_layer = self._transpose_for_scores(mixed_query_layer)
         return query_layer
 
-    def _key_layer(self, key_states: torch.Tensor, past_key_states: Optional[torch.Tensor] = None):
-        mixed_key_layer = self.key(key_states)
-        key_layer = self._transpose_for_scores(mixed_key_layer)
-        return key_layer
-
-    def _value_layer(
-        self, value_states: torch.Tensor, past_value_states: Optional[torch.Tensor] = None
+    def _project(
+        self,
+        query_states: torch.Tensor,
+        layer: torch.nn.Linear,
+        source_states: Optional[torch.Tensor] = None,
+        past_key_or_value_states: Optional[torch.Tensor] = None,
     ):
-        mixed_value_layer = self.value(value_states)
-        value_layer = self._transpose_for_scores(mixed_value_layer)
-        return value_layer
+        if self.is_decoder:
+            if self.is_cross_attention:
+                if past_key_or_value_states is None:
+                    assert source_states is not None, "Encoder final state needs to be passed."
+                    query_states = source_states
+                else:
+                    return past_key_or_value_states
+
+        layer_output = layer(query_states)
+        layer_output = self._transpose_for_scores(layer_output)
+        if self.is_decoder:
+            layer_output = torch.cat([past_key_or_value_states, layer_output], dim=2)
+
+        return layer_output
+
+    def _position_bias(
+        self,
+        position_bias,
+        seq_lengths,
+        past_key_states,
+        attention_scores,
+    ):
+        seq_length, real_seq_length, key_length = seq_lengths
+
+        if position_bias is None:
+            if self.has_relative_attention_bias:
+                position_bias = self.compute_bias(real_seq_length, key_length)
+            else:
+                position_bias = torch.zeros(
+                    (1, self.num_attention_heads, real_seq_length, key_length),
+                    device=attention_scores.device,
+                    dtype=attention_scores.dtype,
+                )
+
+            # if key and values are already calculated
+            # we want only the last query position bias
+            if past_key_states is not None:
+                position_bias = position_bias[:, :, -seq_length:, :]
+        return position_bias
 
     def _get_attention_probs(
         self,
@@ -119,45 +184,37 @@ class GeneralSelfAttention(TransformerModule, FromParams):
         attention_mask: torch.Tensor,
         head_mask: torch.Tensor,
         position_bias: Optional[torch.Tensor] = None,
+        seq_lengths: Optional[Tuple[int, int, int]] = None,
+        past_key_states: Optional[torch.Tensor] = None,
         **kwargs,
     ):
         attention_scores = self.attn(query_layer, key_layer.transpose(-1, -2))
 
-        # if position_bias is None:
-        #     if self.has_relative_attention_bias:
-        #         position_bias = self.compute_bias(real_seq_length, key_length)
-        #     else:
-        #         position_bias = torch.zeros(
-        #             (1, self.num_attention_heads, real_seq_length, key_length),
-        #             device=scores.device,
-        #             dtype=scores.dtype,
-        #         )
+        # return attention_scores
 
-        #     # if key and values are already calculated
-        #     # we want only the last query position bias
-        #     if past_key_value is not None:
-        #         position_bias = position_bias[:, :, -seq_length:, :]
+        position_bias = self._position_bias(
+            position_bias, seq_lengths, past_key_states, attention_scores
+        )
 
-        #     if mask is not None:
-        #         # Shape: (batch_size, num_heads, seq_length, key_length)
-        #         position_bias = apply_mask(position_bias, mask)
-
-        # scores += position_bias
-
-        if attention_mask is not None:
-            attention_scores = apply_mask(attention_scores, attention_mask)
+        if position_bias is not None:
+            if attention_mask is not None:
+                # Shape: (batch_size, num_heads, seq_length, key_length)
+                position_bias = apply_mask(position_bias, attention_mask)
+            attention_scores += position_bias
+        else:
+            if attention_mask is not None:
+                attention_scores = apply_mask(attention_scores, attention_mask)
 
         attention_probs = torch.nn.Softmax(dim=-1)(attention_scores)
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
-
         attention_probs = F.dropout(attention_probs, p=self.dropout, training=self.training)
 
         if head_mask is not None:
             attention_probs = attention_probs * head_mask
 
-        return attention_probs
+        return attention_probs, position_bias
 
     def _output_layer(self, attention_probs: torch.Tensor, value_layer: torch.Tensor):
         context_layer = torch.matmul(attention_probs, value_layer)
@@ -170,108 +227,101 @@ class GeneralSelfAttention(TransformerModule, FromParams):
 
         return context_layer
 
-    def _get_key_value_states(
-        self,
-        query_states: torch.Tensor,
-        key_states: Optional[torch.Tensor] = None,
-        value_states: Optional[torch.Tensor] = None,
-    ):
-        if key_states is None:
-            key_states = query_states
-        if value_states is None:
-            value_states = query_states
-        return key_states, value_states
+    def _get_lengths(self, query_states, past_key_states, source_states):
+
+        seq_length = query_states.shape[1]
+        effective_seq_len = seq_length
+
+        key_length = seq_length
+
+        if past_key_states is not None:
+            # TODO: query_length from up the stack: move logic here.
+            # TODO: clarify the logic here.
+            effective_seq_len += past_key_states.shape[2]
+            if self.is_cross_attention:
+                key_length = source_states.shape[1]
+
+        return (seq_length, effective_seq_len, key_length)
 
     def forward(
         self,
         query_states: torch.Tensor,
-        key_states: Optional[torch.Tensor] = None,
-        value_states: Optional[torch.Tensor] = None,
+        past_key_states: Optional[torch.Tensor] = None,
+        past_value_states: Optional[torch.Tensor] = None,
         attention_mask: Optional[torch.BoolTensor] = None,
+        source_states: Optional[torch.Tensor] = None,
+        source_attention_mask: Optional[torch.BoolTensor] = None,
         head_mask: Optional[torch.Tensor] = None,
+        position_bias: Optional[torch.Tensor] = None,
         output_attentions: bool = False,
+        use_cache: bool = False,
     ):
         """
         query_states : `torch.Tensor`
             Shape `batch_size x seq_len x hidden_dim`
-        key_states : `torch.Tensor`, optional
+        past_key_states : `torch.Tensor`, optional
             Shape `batch_size x seq_len x hidden_dim`
-        value_states : `torch.Tensor`, optional
+            These are the key_states from the previous step of the decoder.
+        past_value_states : `torch.Tensor`, optional
             Shape `batch_size x seq_len x hidden_dim`
+            These are the value_states from the previous step of the decoder.
         attention_mask : `torch.BoolTensor`, optional
             Shape `batch_size x seq_len`
+        source_states : `torch.Tensor`, optional
+            Shape `batch_size x source_seq_len x hidden_dim`
+            This is from the final state of attention over the source (encoder);
+            it is passed when this module is being used for cross-attention.
+        source_attention_mask : `torch.BoolTensor`, optional
+            Shape `batch_size x source_seq_len`
         head_mask : `torch.BoolTensor`, optional
+        position_bias : `torch.Tensor`, optional
         output_attentions : `bool`
             Whether to also return the attention probabilities, default = `False`
-        """
-        # if key_states is None:
-        #     key_states = query_states
-        # if value_states is None:
-        #     value_states = query_states
 
-        key_states, value_states = self._get_key_value_states(
-            query_states, key_states, value_states
+        !!! Note
+            `source_states` needs to be passed in case of cross-attention.
+
+        """
+        query_layer = self._query_layer(query_states)
+        key_layer = self._project(
+            query_states,
+            self.key,
+            source_states,
+            past_key_states,
         )
 
-        query_layer = self._query_layer(query_states)
-        key_layer = self._key_layer(key_states)
-        value_layer = self._value_layer(value_states)
+        value_layer = self._project(
+            query_states,
+            self.value,
+            source_states,
+            past_value_states,
+        )
 
-        attention_probs = self._get_attention_probs(
-            query_layer, key_layer, attention_mask, head_mask
+        if self.is_cross_attention:
+            attention_mask = source_attention_mask
+
+        seq_lengths = self._get_lengths(query_states, past_key_states, source_states)
+
+        attention_probs, position_bias = self._get_attention_probs(
+            query_layer,
+            key_layer,
+            attention_mask,
+            head_mask,
+            position_bias,
+            seq_lengths,
+            past_key_states,
         )
 
         context_layer = self._output_layer(attention_probs, value_layer)
 
-        outputs = (context_layer, attention_probs) if output_attentions else (context_layer,)
-        return outputs
-
-
-# Unfortunately mypy is insane, so we have to wrap these in unions.
-FloatT = Union[torch.FloatTensor]
-IntT = Union[torch.IntTensor]
-BoolT = Union[torch.BoolTensor]
-
-
-@dataclass
-class T5AttentionOutput:
-    hidden_states: FloatT
-    key_value_state: Optional[Tuple[FloatT, FloatT]]
-    position_bias: FloatT
-    attn_weights: Optional[FloatT] = None
-
-
-class T5Attention(GeneralSelfAttention):
-    def __init__(
-        self,
-        is_decoder: bool = False,
-        hidden_size: int = 512,
-        key_value_proj_dim: int = 64,
-        num_heads: int = 8,
-        has_relative_attention_bias: bool = False,
-        relative_attention_num_buckets: int = 32,
-        dropout: float = 0.1,
-        normalize: bool = True,
-    ):
-
-        super().__init__(
-            hidden_size=hidden_size,
-            attention_head_size=key_value_proj_dim,
-            num_attention_heads=num_heads,
-            output_linear=True,
-            dropout=dropout,
-            bias=False,
-            normalize_weights=normalize,
+        present_key_value_state = (
+            (key_layer, value_layer) if (self.is_decoder and use_cache) else None
+        )
+        outputs = GeneralSelfAttentionOutput(
+            context_layer, present_key_value_state, position_bias, attention_probs
         )
 
-        self.is_decoder = is_decoder
-        self.has_relative_attention_bias = has_relative_attention_bias
-        self.relative_attention_num_buckets = relative_attention_num_buckets
-
-        if self.has_relative_attention_bias:
-            self.relative_attention_bias = torch.nn.Embedding(
-                self.relative_attention_num_buckets, self.num_attention_heads
-            )
+        return outputs
 
     @staticmethod
     def _relative_position_bucket(
@@ -349,152 +399,85 @@ class T5Attention(GeneralSelfAttention):
         )  # shape (1, num_heads, query_length, key_length)
         return values
 
-    def _get_attention_probs(
+
+class T5Attention(GeneralSelfAttention):
+
+    # _relevant_module = ["encoder.block.0.layer.0.self_attention"]
+    _huggingface_mapping = {
+        "q": "query",
+        "k": "key",
+        "v": "value",
+        "o": "output",
+        "layers": "layer",
+    }
+
+    def __init__(
         self,
-        query_layer: torch.Tensor,
-        key_layer: torch.Tensor,
-        attention_mask: torch.Tensor,
-        head_mask: torch.Tensor,
-        position_bias: torch.Tensor,
-        real_seq_length: int,
-        key_length: int,
-        query_length: int,
+        is_decoder: bool = False,
+        hidden_size: int = 512,
+        key_value_proj_dim: int = 64,
+        num_heads: int = 8,
+        has_relative_attention_bias: bool = False,
+        relative_attention_num_buckets: int = 32,
+        dropout: float = 0.1,
+        normalize: bool = True,
+        is_cross_attention: bool = False,
     ):
-        # compute scores
-        scores = torch.matmul(
-            query_layer, key_layer.transpose(3, 2)
-        )  # equivalent of torch.einsum("bnqd,bnkd->bnqk", query_states, key_states), compatible with onnx op>9
 
-        if position_bias is None:
-            if self.has_relative_attention_bias:
-                position_bias = self.compute_bias(real_seq_length, key_length)
-            else:
-                position_bias = torch.zeros(
-                    (1, self.num_attention_heads, real_seq_length, key_length),
-                    device=scores.device,
-                    dtype=scores.dtype,
-                )
+        super().__init__(
+            hidden_size=hidden_size,
+            attention_head_size=key_value_proj_dim,
+            num_attention_heads=num_heads,
+            output_linear=True,
+            scoring_func="scaled_dot_product",
+            dropout=dropout,
+            bias=False,
+            normalize_weights=normalize,
+            is_decoder=is_decoder,
+            is_cross_attention=is_cross_attention,
+            has_relative_attention_bias=has_relative_attention_bias,
+            relative_attention_num_buckets=relative_attention_num_buckets,
+        )
 
-            # if key and values are already calculated
-            # we want only the last query position bias
-            # TODO: use past_key_value correctly!!
-            # if past_key_value is not None:
-            #     position_bias = position_bias[:, :, -seq_length:, :]
+        self.attn = Attention.by_name(self.scoring_func)(1, False)
 
-            if attention_mask is not None:
-                # Shape: (batch_size, num_heads, seq_length, key_length)
-                position_bias = apply_mask(position_bias, attention_mask)
-
-        scores += position_bias
-        attn_weights = F.softmax(scores.float(), dim=-1).type_as(
-            scores
-        )  # (batch_size, num_heads, seq_length, key_length)
-        attn_weights = F.dropout(
-            attn_weights, p=self.dropout, training=self.training
-        )  # (batch_size, num_heads, seq_length, key_length)
-
-        # Mask heads if we want to
-        if head_mask is not None:
-            attn_weights = attn_weights * head_mask
-
-        return attn_weights
-
-    def _get_key_value_states(
-        self,
-        query_states: torch.Tensor,
-        key_states: Optional[torch.Tensor] = None,
-        value_states: Optional[torch.Tensor] = None,
-    ):
-        # TODO: simplify
-        # FIX: past_key_value usage needs to be fixed.
-        past_key_value = None
-        if past_key_value is None:
-            # if key_value_states is None:  # unnecessary check?
-            key_value_states = (query_states, query_states)
-        else:
-            if key_value_states is None:
-                # self-attn
-                # (batch_size, num_heads, key_length, dim_per_head)
-                hidden_states = torch.cat([past_key_value, query_states], dim=2)
-            else:
-                # cross-attn
-                hidden_states = past_key_value
-
-            key_value_states = (hidden_states, hidden_states)
-
-        return key_value_states
-
-    def _get_seq_key_length(self, hidden_states, past_key_value, key_value_states, query_length):
-        batch_size, seq_length = hidden_states.shape[:2]
-        real_seq_length = seq_length
-
-        if past_key_value is not None:
-            assert (
-                len(past_key_value) == 2
-            ), "past_key_value should have 2 past states: keys and values. Got {} past states".format(
-                len(past_key_value)
-            )
-            real_seq_length += past_key_value[0].shape[2] if query_length is None else query_length
-
-        key_length = real_seq_length if key_value_states is None else key_value_states.shape[1]
-
-        return real_seq_length, key_length
-
-    def forward(
+    def forward(  # type: ignore
         self,
         hidden_states: torch.Tensor,
         mask: Optional[torch.BoolTensor] = None,
         key_value_states: Optional[FloatT] = None,
         position_bias: Optional[FloatT] = None,
-        past_key_value: Optional[Tuple[FloatT, FloatT]] = None,
+        past_key_value: Optional[
+            Tuple[FloatT, FloatT]
+        ] = None,  # this is used when taking decoding steps.
         layer_head_mask: Optional[BoolT] = None,
-        query_length: Optional[int] = None,
+        query_length: Optional[int] = None,  # only relevant in cross-attention.
         use_cache: bool = False,
         output_attentions: bool = False,
-    ) -> T5AttentionOutput:
+    ) -> GeneralSelfAttentionOutput:
         """
         Self-attention (if key_value_states is None) or attention over source sentence (provided by
         key_value_states).
         """
-        # Input is (batch_size, seq_length, dim)
-        # Mask is (batch_size, key_length) (non-causal) or (batch_size, key_length, key_length)
-        # past_key_value[0] is (batch_size, num_heads, q_len - 1, dim_per_head)
-        # batch_size, seq_length = hidden_states.shape[:2]
-        # real_seq_length = seq_length
+        if past_key_value:
+            past_key_states = past_key_value[0]
+            past_value_states = past_key_value[1]
+        else:
+            past_key_states = None
+            past_value_states = None
 
-        real_seq_length, key_length = self._get_seq_key_length(
-            hidden_states, past_key_value, key_value_states, query_length
-        )
-        # FIX: use key value states.
-        key_value_states = self._get_key_value_states(hidden_states, None, None)
-
-        # get query states
-        query_states = self._query_layer(
-            hidden_states
-        )  # (batch_size, num_heads, seq_length, dim_per_head)
-
-        key_states = self._key_layer(key_value_states[0])
-        value_states = self._value_layer(key_value_states[1])
-
-        attn_weights = self._get_attention_probs(
-            query_states,
-            key_states,
-            mask,
-            layer_head_mask,
-            position_bias,
-            real_seq_length,
-            key_length,
-            query_length,
+        outputs = super().forward(
+            query_states=hidden_states,
+            past_key_states=past_key_states,
+            past_value_states=past_value_states,
+            attention_mask=mask,
+            source_states=key_value_states,
+            source_attention_mask=None,  # TODO: is this a bug in current T5 code?
+            head_mask=layer_head_mask,
+            position_bias=position_bias,
+            output_attentions=output_attentions,
         )
 
-        attn_output = self._output_layer(attn_weights, value_states)
-
-        present_key_value_state = (
-            (key_states, value_states) if (self.is_decoder and use_cache) else None
-        )
-        outputs = T5AttentionOutput(attn_output, present_key_value_state, position_bias)
-        if output_attentions:
-            outputs.attn_weights = attn_weights
         return outputs
 
 
@@ -539,6 +522,12 @@ class SelfAttention(GeneralSelfAttention):
             dropout=dropout,
             bias=True,
         )
+
+    def forward(self, *args, **kwargs):
+        outputs = super().forward(*args, **kwargs)
+        if outputs.attention_probs is not None:
+            return (outputs.hidden_states, outputs.attention_probs)
+        return (outputs.hidden_states,)
 
     @classmethod
     def _get_mapping(

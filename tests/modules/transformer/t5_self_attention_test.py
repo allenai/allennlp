@@ -89,4 +89,8 @@ class TestT5Attention(AllenNlpTestCase):
         attention_mask_hf = (attention_mask == 0).view((2, 1, 1, 3)).expand(2, 2, 3, 3) * -10e5
         hf_output = hf_module.forward(hidden_states, mask=attention_mask_hf)
 
-        assert torch.allclose(output.hidden_states, hf_output[0])
+        hs = output.hidden_states
+        print(hs)
+        print(hf_output[0])
+
+        assert torch.allclose(hs, hf_output[0])
