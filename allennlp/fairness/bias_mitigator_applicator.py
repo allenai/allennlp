@@ -1,3 +1,13 @@
+"""
+A Model wrapper to mitigate biases in 
+contextual embeddings.
+
+Based on: Dev, S., Li, T., Phillips, J.M., & Srikumar, V. (2020).
+[On Measuring and Mitigating Biased Inferences of Word Embeddings]
+(https://api.semanticscholar.org/CorpusID:201670701).
+ArXiv, abs/1908.09369.
+"""
+
 from overrides import overrides
 
 from allennlp.fairness.bias_mitigator_wrappers import BiasMitigatorWrapper
