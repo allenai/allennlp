@@ -426,6 +426,7 @@ def _train_worker(
 
         # Till now, "cuda_device" might not be set in the trainer params.
         # But a worker trainer needs to only know about its specific GPU id.
+        params["trainer"]["local_rank"] = process_rank
         params["trainer"]["cuda_device"] = gpu_id
         params["trainer"]["world_size"] = world_size
         params["trainer"]["distributed"] = True
