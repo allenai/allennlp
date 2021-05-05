@@ -85,6 +85,7 @@ class PCABiasDirectionWrapper(BiasDirectionWrapper):
         # embedding of original word
         ids_embeddings = []
         for i in self.ids:
+            i = i.to(module.weight.device)
             ids_embeddings.append(torch.mean(module.forward(i), dim=0, keepdim=True))
         ids_embeddings = torch.cat(ids_embeddings)
 
@@ -138,9 +139,11 @@ class PairedPCABiasDirectionWrapper(BiasDirectionWrapper):
         # embedding of original word
         ids1_embeddings = []
         for i in self.ids1:
+            i = i.to(module.weight.device)
             ids1_embeddings.append(torch.mean(module.forward(i), dim=0, keepdim=True))
         ids2_embeddings = []
         for i in self.ids2:
+            i = i.to(module.weight.device)
             ids2_embeddings.append(torch.mean(module.forward(i), dim=0, keepdim=True))
         ids1_embeddings = torch.cat(ids1_embeddings)
         ids2_embeddings = torch.cat(ids2_embeddings)
@@ -193,9 +196,11 @@ class TwoMeansBiasDirectionWrapper(BiasDirectionWrapper):
         # embedding of original word
         ids1_embeddings = []
         for i in self.ids1:
+            i = i.to(module.weight.device)
             ids1_embeddings.append(torch.mean(module.forward(i), dim=0, keepdim=True))
         ids2_embeddings = []
         for i in self.ids2:
+            i = i.to(module.weight.device)
             ids2_embeddings.append(torch.mean(module.forward(i), dim=0, keepdim=True))
         ids1_embeddings = torch.cat(ids1_embeddings)
         ids2_embeddings = torch.cat(ids2_embeddings)
@@ -245,9 +250,11 @@ class ClassificationNormalBiasDirectionWrapper(BiasDirectionWrapper):
         # embedding of original word
         ids1_embeddings = []
         for i in self.ids1:
+            i = i.to(module.weight.device)
             ids1_embeddings.append(torch.mean(module.forward(i), dim=0, keepdim=True))
         ids2_embeddings = []
         for i in self.ids2:
+            i = i.to(module.weight.device)
             ids2_embeddings.append(torch.mean(module.forward(i), dim=0, keepdim=True))
         ids1_embeddings = torch.cat(ids1_embeddings)
         ids2_embeddings = torch.cat(ids2_embeddings)
