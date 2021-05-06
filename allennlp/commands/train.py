@@ -324,12 +324,12 @@ def train_model(
             ),
             nprocs=num_procs,
         )
-        if dry_run:
-            return None
-        else:
+        if not dry_run and os.path.exists(os.path.join(serialization_dir, _DEFAULT_WEIGHTS)):
             archive_model(serialization_dir, include_in_archive=include_in_archive)
             model = Model.load(params, serialization_dir)
             return model
+        else:
+            return None
 
 
 def _train_worker(
