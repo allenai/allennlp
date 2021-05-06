@@ -1,13 +1,15 @@
 import torch
-from overrides import overrides
 
 from allennlp.modules.span_extractors.span_extractor import SpanExtractor
+from allennlp.modules.span_extractors.span_extractor_with_span_width_embedding import (
+    SpanExtractorWithSpanWidthEmbedding,
+)
 from allennlp.modules.time_distributed import TimeDistributed
 from allennlp.nn import util
 
 
 @SpanExtractor.register("self_attentive")
-class SelfAttentiveSpanExtractor(SpanExtractor):
+class SelfAttentiveSpanExtractor(SpanExtractorWithSpanWidthEmbedding):
     """
     Computes span representations by generating an unnormalized attention score for each
     word in the document. Spans representations are computed with respect to these
@@ -23,6 +25,14 @@ class SelfAttentiveSpanExtractor(SpanExtractor):
 
     input_dim : `int`, required.
         The final dimension of the `sequence_tensor`.
+    num_width_embeddings : `int`, optional (default = `None`).
+        Specifies the number of buckets to use when representing
+        span width features.
+    span_width_embedding_dim : `int`, optional (default = `None`).
+        The embedding size for the span_width features.
+    bucket_widths : `bool`, optional (default = `False`).
+        Whether to bucket the span widths into log-space buckets. If `False`,
+        the raw span widths are used.
 
     # Returns
 
@@ -33,22 +43,31 @@ class SelfAttentiveSpanExtractor(SpanExtractor):
         over which they are normalized.
     """
 
-    def __init__(self, input_dim: int) -> None:
-        super().__init__()
-        self._input_dim = input_dim
+    def __init__(
+        self,
+        input_dim: int,
+        num_width_embeddings: int = None,
+        span_width_embedding_dim: int = None,
+        bucket_widths: bool = False,
+    ) -> None:
+        super().__init__(
+            input_dim=input_dim,
+            num_width_embeddings=num_width_embeddings,
+            span_width_embedding_dim=span_width_embedding_dim,
+            bucket_widths=bucket_widths,
+        )
         self._global_attention = TimeDistributed(torch.nn.Linear(input_dim, 1))
 
-    def get_input_dim(self) -> int:
-        return self._input_dim
-
     def get_output_dim(self) -> int:
+        if self._span_width_embedding is not None:
+            return self._input_dim + self._span_width_embedding.get_output_dim()
         return self._input_dim
 
-    @overrides
-    def forward(
+    def _embed_spans(
         self,
         sequence_tensor: torch.FloatTensor,
         span_indices: torch.LongTensor,
+        sequence_mask: torch.BoolTensor = None,
         span_indices_mask: torch.BoolTensor = None,
     ) -> torch.FloatTensor:
         # shape (batch_size, sequence_length, 1)
@@ -71,11 +90,5 @@ class SelfAttentiveSpanExtractor(SpanExtractor):
         # respect to the normalised attention distributions.
         # Shape: (batch_size, num_spans, embedding_dim)
         attended_text_embeddings = util.weighted_sum(span_embeddings, span_attention_weights)
-
-        if span_indices_mask is not None:
-            # Above we were masking the widths of spans with respect to the max
-            # span width in the batch. Here we are masking the spans which were
-            # originally passed in as padding.
-            return attended_text_embeddings * span_indices_mask.unsqueeze(-1)
 
         return attended_text_embeddings
