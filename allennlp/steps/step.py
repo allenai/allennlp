@@ -13,7 +13,6 @@ from typing import (
     Sequence,
     List,
     Dict,
-    MutableMapping,
     Type,
     Callable,
     Union,
@@ -32,46 +31,11 @@ from allennlp.common.from_params import (
 )
 from allennlp.common.util import hash_object
 from allennlp.data import Vocabulary
+from allennlp.steps.format import Format, DillFormat
 
 logger = logging.getLogger(__name__)
 
 _version_re = re.compile("""^[a-zA-Z0-9]+$""")
-
-
-class StepCache(MutableMapping["Step", Any], Registrable):
-    def __delitem__(self, key: "Step"):
-        raise NotImplementedError("Cached results are forever.")
-
-    def __iter__(self):
-        raise NotImplementedError("Step caches are not iterable.")
-
-    def __contains__(self, item: "Step"):
-        raise NotImplementedError
-
-
-@StepCache.register("memory")
-class MemoryStepCache(StepCache):
-    def __init__(self):
-        self.cache: Dict[str, Any] = {}
-
-    def __getitem__(self, step: "Step") -> Any:
-        return self.cache.get(step.unique_id())
-
-    def __setitem__(self, step: "Step", value: Any) -> None:
-        if step.cache_results:
-            self.cache[step.unique_id()] = value
-        else:
-            logger.warning("Tried to cache step %s despite being marked as uncacheable.", step.name)
-
-    def __contains__(self, step: "Step"):
-        return step.unique_id() in self.cache
-
-    def __len__(self) -> int:
-        return len(self.cache)
-
-
-_default_step_cache = MemoryStepCache()
-
 
 T = TypeVar("T")
 
@@ -79,22 +43,46 @@ T = TypeVar("T")
 class Step(Registrable, Generic[T]):
     DETERMINISTIC: bool = False
     VERSION: Optional[str] = None
+    FORMAT: Format = DillFormat("gz")
 
-    def __init__(self, **kwargs):
+    def __init__(
+        self,
+        step_name: Optional[str] = None,
+        cache_results: Optional[bool] = None,
+        step_format: Optional[Format] = None,
+        **kwargs
+    ):
+        """`Step.__init__()` takes all the arguments we want to run the step with. They get passed
+        to `Step.run()` (almost) as they are. If the arguments are other instances of `Step`, those
+        will be replaced with the step's results before calling `run()`. Further, there are two special
+        parameters:
+        * `step_name` contains an optional human-readable name for the step. This name is used for
+          error messages and the like, and has no consequence on the actual computation.
+        * `cache_results` specifies whether the results of this step should be cached. If this is
+          `False`, the step is recomputed every time it is needed. If this is not set at all,
+          we cache if the step is marked as `DETERMINISTIC`, and we don't cache otherwise.
+        """
         if self.VERSION is not None:
             assert _version_re.match(
                 self.VERSION
             ), f"Invalid characters in version '{self.VERSION}'"
-        self.name = kwargs.pop("step_name", None)
-
+        self.name = step_name
         self.kwargs = kwargs
+
         self.unique_id_cache: Optional[str] = None
         if self.name is None:
             self.name = self.unique_id()
 
-        self.cache_results = kwargs.pop("cache_results", self.DETERMINISTIC)
-        self.cache_results = bool(self.cache_results)
+        self.format = step_format
+        if self.format is None:
+            self.format = self.FORMAT
+
+        if cache_results is None:
+            cache_results = self.DETERMINISTIC
+        self.cache_results = bool(cache_results)
         if self.cache_results and not self.DETERMINISTIC:
+            # TODO: This is dumb. Steps that depend on non-deterministic other steps are also
+            # non-deterministic, but we don't warn about those.
             logger.warning(
                 f"Task {self.name} is going to be cached despite not being deterministic."
             )
@@ -174,14 +162,14 @@ class Step(Registrable, Generic[T]):
                 if constructed_arg in existing_steps:  # the string matches an existing task
                     constructed_arg = existing_steps[constructed_arg]
                 else:
-                    raise RefStep.MissingStepError(constructed_arg)
+                    raise _RefStep.MissingStepError(constructed_arg)
 
             if isinstance(constructed_arg, Step):
-                if isinstance(constructed_arg, RefStep):
+                if isinstance(constructed_arg, _RefStep):
                     try:
                         constructed_arg = existing_steps[constructed_arg.ref()]
                     except KeyError:
-                        raise RefStep.MissingStepError(constructed_arg.ref())
+                        raise _RefStep.MissingStepError(constructed_arg.ref())
 
                 return_type = inspect.signature(constructed_arg.run).return_annotation
                 if return_type == inspect.Signature.empty:
@@ -215,10 +203,10 @@ class Step(Registrable, Generic[T]):
     def run(self, **kwargs) -> T:
         raise NotImplementedError
 
-    def result(self, cache: Optional[StepCache] = None):
+    def result(self, cache: Optional["StepCache"] = None):
         if cache is None:
-            global _default_step_cache
-            cache = _default_step_cache
+            from allennlp.steps.step_cache import default_step_cache
+            cache = default_step_cache
         if self in cache:
             return cache[self]
 
@@ -275,11 +263,8 @@ class Step(Registrable, Generic[T]):
         return self.unique_id_cache
 
 
-Split = Sequence[Any]
-
-
 @Step.register("ref")
-class RefStep(Step[T]):
+class _RefStep(Step[T]):
     def run(self, ref: str) -> T:
         raise ConfigurationError(
             f"Step {self.name} is still a RefStep (referring to {ref}). RefSteps cannot be executed. "
@@ -321,42 +306,7 @@ def step_graph_from_params(params: Dict[str, Params]) -> Dict[str, Step]:
                 step_params, existing_steps=parsed_steps, extras={"step_name": step_name}
             )
             steps_parsed += 1
-        except RefStep.MissingStepError:
+        except _RefStep.MissingStepError:
             next_unparsed_steps[step_name] = step_params_backup
 
     return parsed_steps
-
-
-@dataclass
-class AllenNlpDataset:
-    splits: Mapping[str, Split]
-    vocab: Optional[Vocabulary] = None
-    metadata: Mapping[str, Any] = field(default_factory=dict)
-
-
-@Step.register("huggingface_dataset")
-class HuggingfaceDataset(Step):
-    DETERMINISTIC = True
-    VERSION = "001"
-
-    def run(self, dataset_name: str) -> AllenNlpDataset:
-        return AllenNlpDataset(datasets.load_dataset(dataset_name), None, {"source": "huggingface"})
-
-
-@Step.register("text_only")
-class TextOnlyDataset(Step):
-    DETERMINISTIC = True
-
-    def run(self, input: AllenNlpDataset, fields_to_keep: Set[str]) -> AllenNlpDataset:
-        return dataclasses.replace(
-            input,
-            splits={
-                split_name: [
-                    {"text": field_value}
-                    for instance in split
-                    for field_name, field_value in instance.items()
-                    if field_name in fields_to_keep
-                ]
-                for split_name, split in input.splits.items()
-            },
-        )
