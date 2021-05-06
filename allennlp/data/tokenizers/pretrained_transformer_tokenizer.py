@@ -1,4 +1,5 @@
 import copy
+import dataclasses
 import logging
 from typing import Any, Dict, List, Optional, Tuple, Iterable
 
@@ -426,9 +427,6 @@ class PretrainedTransformerTokenizer(Tokenizer):
 
         # Make sure we don't change the input parameters
         tokens2 = copy.deepcopy(tokens2)
-
-        # We add special tokens and also set token type ids.
-        import dataclasses
 
         if tokens2 is None:
             return (

@@ -5,7 +5,7 @@ import torch
 from allennlp.common import Registrable
 
 
-class Backbone(Registrable, torch.nn.Module):
+class Backbone(torch.nn.Module, Registrable):
     """
     A `Backbone` operates on basic model inputs and produces some encoding of those inputs that will
     be shared among one or more `Heads` in a multi-task setting.  For plain text inputs, this is

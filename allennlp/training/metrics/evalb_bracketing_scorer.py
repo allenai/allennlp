@@ -8,12 +8,9 @@ import shutil
 from overrides import overrides
 from nltk import Tree
 
-import torch
-import torch.distributed as dist
-
-from allennlp.common.util import is_distributed
 from allennlp.common.checks import ConfigurationError
 from allennlp.training.metrics.metric import Metric
+from allennlp.nn.util import dist_reduce_sum
 
 logger = logging.getLogger(__name__)
 
@@ -153,21 +150,9 @@ class EvalbBracketingScorer(Metric):
 
         shutil.rmtree(tempdir)
 
-        if is_distributed():
-            device = torch.device("cuda" if dist.get_backend() == "nccl" else "cpu")
-            correct_predicted_brackets = torch.tensor(_correct_predicted_brackets, device=device)
-            predicted_brackets = torch.tensor(_predicted_brackets, device=device)
-            gold_brackets = torch.tensor(_gold_brackets, device=device)
-            dist.all_reduce(correct_predicted_brackets, op=dist.ReduceOp.SUM)
-            dist.all_reduce(predicted_brackets, op=dist.ReduceOp.SUM)
-            dist.all_reduce(gold_brackets, op=dist.ReduceOp.SUM)
-            _correct_predicted_brackets = correct_predicted_brackets.item()
-            _predicted_brackets = predicted_brackets.item()
-            _gold_brackets = gold_brackets.item()
-
-        self._correct_predicted_brackets += _correct_predicted_brackets
-        self._gold_brackets += _gold_brackets
-        self._predicted_brackets += _predicted_brackets
+        self._correct_predicted_brackets += dist_reduce_sum(_correct_predicted_brackets)
+        self._gold_brackets += dist_reduce_sum(_gold_brackets)
+        self._predicted_brackets += dist_reduce_sum(_predicted_brackets)
 
     @overrides
     def get_metric(self, reset: bool = False):
