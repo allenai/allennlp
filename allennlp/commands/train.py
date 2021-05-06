@@ -426,7 +426,6 @@ def _train_worker(
 
         # Till now, "cuda_device" might not be set in the trainer params.
         # But a worker trainer needs to only know about its specific GPU id.
-        params["trainer"]["local_rank"] = process_rank
         params["trainer"]["cuda_device"] = gpu_id
         params["trainer"]["world_size"] = world_size
         params["trainer"]["distributed"] = True
@@ -724,13 +723,12 @@ class TrainModel(Registrable):
         for data_loader_ in data_loaders.values():
             data_loader_.index_with(model_.vocab)
 
-        # We don't need to pass serialization_dir and local_rank here, because they will have been
-        # passed through the trainer by from_params already, because they were keyword arguments to
-        # construct this class in the first place.
         trainer_ = trainer.construct(
+            serialization_dir=serialization_dir,
             model=model_,
             data_loader=data_loaders["train"],
             validation_data_loader=data_loaders.get("validation"),
+            local_rank=local_rank,
         )
         assert trainer_ is not None
 

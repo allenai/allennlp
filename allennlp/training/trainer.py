@@ -286,7 +286,13 @@ class GradientDescentTrainer(Trainer):
         enable_default_callbacks: bool = True,
         run_sanity_checks: bool = True,
     ) -> None:
-        super().__init__(serialization_dir, cuda_device, distributed, local_rank, world_size)
+        super().__init__(
+            serialization_dir=serialization_dir,
+            cuda_device=cuda_device,
+            distributed=distributed,
+            local_rank=local_rank,
+            world_size=world_size,
+        )
 
         # I am not calling move_to_gpu here, because if the model is
         # not already on the GPU then the optimizer is going to be wrong.
