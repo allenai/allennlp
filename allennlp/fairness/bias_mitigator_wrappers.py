@@ -42,7 +42,7 @@ class HardBiasMitigatorWrapper(BiasMitigatorWrapper):
 
     bias_direction : `BiasDirectionWrapper`
         Bias direction used by mitigator.
-    embedding_layer : `torch.nn.Embedding`,
+    embedding_layer : `torch.nn.Embedding`
         Embedding layer of base model.
     equalize_word_pairs_file : `Union[PathLike, str]`
         Path of file containing equalize word pairs.
@@ -117,7 +117,7 @@ class LinearBiasMitigatorWrapper(BiasMitigatorWrapper):
 
     bias_direction : `BiasDirectionWrapper`
         Bias direction used by mitigator.
-    embedding_layer : `torch.nn.Embedding`,
+    embedding_layer : `torch.nn.Embedding`
         Embedding layer of base model.
     requires_grad : `bool`, optional (default=`True`)
         Option to enable gradient calculation for bias mitigator.
@@ -155,7 +155,7 @@ class INLPBiasMitigatorWrapper(BiasMitigatorWrapper):
 
     # Parameters
 
-    embedding_layer : `torch.nn.Embedding`,
+    embedding_layer : `torch.nn.Embedding`
         Embedding layer of base model.
     seed_word_pairs_file : `Union[PathLike, str]`
         Path of file containing seed word pairs.
@@ -219,7 +219,7 @@ class OSCaRBiasMitigatorWrapper(BiasMitigatorWrapper):
         Bias direction of first concept subspace used by mitigator.
     bias_direction2 : `BiasDirectionWrapper`
         Bias direction of second concept subspace used by mitigator.
-    embedding_layer : `torch.nn.Embedding`,
+    embedding_layer : `torch.nn.Embedding`
         Embedding layer of base model.
     requires_grad : `bool`, optional (default=`True`)
         Option to enable gradient calculation for bias mitigator.

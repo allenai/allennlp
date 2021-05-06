@@ -26,3 +26,16 @@ from allennlp.fairness.bias_mitigators import (
     OSCaRBiasMitigator,
 )
 from allennlp.fairness.bias_utils import load_words, load_word_pairs
+from allennlp.fairness.bias_mitigator_applicator import BiasMitigatorApplicator
+from allennlp.fairness.bias_mitigator_wrappers import (
+    HardBiasMitigatorWrapper,
+    LinearBiasMitigatorWrapper,
+    INLPBiasMitigatorWrapper,
+    OSCaRBiasMitigatorWrapper,
+)
+from allennlp.fairness.bias_direction_wrappers import (
+    PCABiasDirectionWrapper,
+    PairedPCABiasDirectionWrapper,
+    TwoMeansBiasDirectionWrapper,
+    ClassificationNormalBiasDirectionWrapper,
+)

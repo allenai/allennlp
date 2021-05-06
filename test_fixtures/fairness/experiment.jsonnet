@@ -21,7 +21,7 @@ local transformer_dim = 20;
   "validation_data_path": "test_fixtures/fairness/snli_dev.jsonl",
   "test_data_path": "test_fixtures/fairness/snli_test.jsonl",
   "model": {
-    "type": "bias_mitigator_applicator", 
+    "type": "allennlp.fairness.bias_mitigator_applicator.BiasMitigatorApplicator", 
     "base_model": {
       "type": "basic_classifier",
       "text_field_embedder": {
