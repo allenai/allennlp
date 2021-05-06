@@ -1,16 +1,13 @@
 import copy
-import dataclasses
 import inspect
+import itertools
 import logging
 import random
 import re
-from dataclasses import dataclass, field
 from typing import (
     Optional,
-    Mapping,
     Any,
     Set,
-    Sequence,
     List,
     Dict,
     Type,
@@ -19,9 +16,8 @@ from typing import (
     cast,
     TypeVar,
     Generic,
+    Iterable, MutableMapping,
 )
-
-import datasets
 
 from allennlp.common import Registrable, Params
 from allennlp.common.checks import ConfigurationError
@@ -30,7 +26,6 @@ from allennlp.common.from_params import (
     pop_and_construct_arg,
 )
 from allennlp.common.util import hash_object
-from allennlp.data import Vocabulary
 from allennlp.steps.format import Format, DillFormat
 
 logger = logging.getLogger(__name__)
@@ -50,9 +45,11 @@ class Step(Registrable, Generic[T]):
         step_name: Optional[str] = None,
         cache_results: Optional[bool] = None,
         step_format: Optional[Format] = None,
-        **kwargs
+        produce_results: bool = False,
+        **kwargs,
     ):
-        """`Step.__init__()` takes all the arguments we want to run the step with. They get passed
+        """
+        `Step.__init__()` takes all the arguments we want to run the step with. They get passed
         to `Step.run()` (almost) as they are. If the arguments are other instances of `Step`, those
         will be replaced with the step's results before calling `run()`. Further, there are two special
         parameters:
@@ -73,6 +70,8 @@ class Step(Registrable, Generic[T]):
         if self.name is None:
             self.name = self.unique_id()
 
+        self.produce_results = produce_results
+
         self.format = step_format
         if self.format is None:
             self.format = self.FORMAT
@@ -81,8 +80,6 @@ class Step(Registrable, Generic[T]):
             cache_results = self.DETERMINISTIC
         self.cache_results = bool(cache_results)
         if self.cache_results and not self.DETERMINISTIC:
-            # TODO: This is dumb. Steps that depend on non-deterministic other steps are also
-            # non-deterministic, but we don't warn about those.
             logger.warning(
                 f"Task {self.name} is going to be cached despite not being deterministic."
             )
@@ -203,9 +200,10 @@ class Step(Registrable, Generic[T]):
     def run(self, **kwargs) -> T:
         raise NotImplementedError
 
-    def result(self, cache: Optional["StepCache"] = None):
+    def result(self, cache: Optional[MutableMapping["Step", Any]] = None):
         if cache is None:
             from allennlp.steps.step_cache import default_step_cache
+
             cache = default_step_cache
         if self in cache:
             return cache[self]
@@ -262,6 +260,41 @@ class Step(Registrable, Generic[T]):
 
         return self.unique_id_cache
 
+    def __hash__(self):
+        return hash(self.unique_id())
+
+    def __eq__(self, other):
+        if isinstance(self, Step):
+            return self.unique_id() == other.unique_id()
+        else:
+            return False
+
+    def dependencies(self) -> Set["Step"]:
+        def dependencies_internal(o: Any) -> Iterable[Step]:
+            if isinstance(o, Step):
+                yield o
+            elif isinstance(o, str):
+                return  # Confusingly, str is an Iterable of itself, resulting in infinite recursion.
+            elif isinstance(o, Iterable):
+                yield from itertools.chain(*(dependencies_internal(i) for i in o))
+            elif isinstance(o, Dict):
+                yield from dependencies_internal(o.values())
+            else:
+                return
+
+        return set(dependencies_internal(self.kwargs.values()))
+
+    def recursive_dependencies(self) -> Set["Step"]:
+        seen = set()
+        steps = list(self.dependencies())
+        while len(steps) > 0:
+            step = steps.pop()
+            if step in seen:
+                continue
+            seen.add(step)
+            steps.extend(step.dependencies())
+        return seen
+
 
 @Step.register("ref")
 class _RefStep(Step[T]):
@@ -308,5 +341,20 @@ def step_graph_from_params(params: Dict[str, Params]) -> Dict[str, Step]:
             steps_parsed += 1
         except _RefStep.MissingStepError:
             next_unparsed_steps[step_name] = step_params_backup
+
+    # Sanity-check the graph
+    for step in parsed_steps.values():
+        if step.cache_results:
+            nondeterministic_dependencies = [
+                s for s in step.recursive_dependencies() if not s.DETERMINISTIC
+            ]
+            if len(nondeterministic_dependencies) > 0:
+                nd_step = nondeterministic_dependencies[0]
+                logger.warning(
+                    f"Task {step.name} is set to cache results, but depends on non-deterministic "
+                    f"step {nd_step.name}. This will produce confusing results."
+                )
+                # We show this warning only once.
+                break
 
     return parsed_steps

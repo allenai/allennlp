@@ -18,6 +18,7 @@ T = TypeVar("T")
 
 class Format(Registrable, Generic[T]):
     """Formats write objects to directories and read them back out."""
+
     VERSION: int = NotImplemented
     default_implementation = "dill"
 
@@ -52,6 +53,7 @@ class Format(Registrable, Generic[T]):
 class DillFormat(Format):
     """This format writes the artifact as a single file using dill (a drop-in replacement for pickle).
     Optionally, it can compress the data."""
+
     VERSION = 1
 
     OPEN_FUNCTIONS = {
@@ -65,7 +67,7 @@ class DillFormat(Format):
         "bz2": bz2.open,
         "bzip": bz2.open,
         "bzip2": bz2.open,
-        "lzma": lzma.open
+        "lzma": lzma.open,
     }
 
     SUFFIXES = {
@@ -100,7 +102,9 @@ class DillFormat(Format):
             unpickler = dill.Unpickler(file=f)
             version = unpickler.load()
             if version > self.VERSION:
-                raise ValueError(f"File {filename} is too recent for this version of {self.__class__}.")
+                raise ValueError(
+                    f"File {filename} is too recent for this version of {self.__class__}."
+                )
             iterator = unpickler.load()
             if iterator:
                 return DillFormatIterator(filename)
@@ -127,7 +131,9 @@ class DillFormatIterator(abc.Iterator):
             raise ValueError(f"File {filename} is too recent for this version of {self.__class__}.")
         iterator = self.unpickler.load()
         if not iterator:
-            raise ValueError(f"Tried to open {filename} as an iterator, but it does not store an iterator.")
+            raise ValueError(
+                f"Tried to open {filename} as an iterator, but it does not store an iterator."
+            )
 
     def __iter__(self):
         return self

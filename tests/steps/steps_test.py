@@ -2,7 +2,8 @@ import pytest
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
-from allennlp.steps.step import HuggingfaceDataset, TextOnlyDataset, Step, step_graph_from_params
+from allennlp.steps.examples import HuggingfaceDataset, TextOnlyDataset
+from allennlp.steps.step import Step, step_graph_from_params
 
 import logging
 
