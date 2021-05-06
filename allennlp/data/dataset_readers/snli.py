@@ -25,7 +25,7 @@ def maybe_collapse_label(label: str, collapse: bool):
     return label
 
 
-@DatasetReader.register("snli")
+@DatasetReader.register("snli_for_bias")
 class SnliReader(DatasetReader):
     """
     Reads a file from the Stanford Natural Language Inference (SNLI) dataset.  This data is

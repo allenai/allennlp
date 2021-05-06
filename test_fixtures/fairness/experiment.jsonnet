@@ -3,7 +3,7 @@ local transformer_dim = 20;
 
 {
   "dataset_reader":{
-    "type": "snli",
+    "type": "snli_for_bias",
     "tokenizer": {
       "type": "pretrained_transformer",
       "model_name": transformer_model,
