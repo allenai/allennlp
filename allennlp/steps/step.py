@@ -16,7 +16,8 @@ from typing import (
     cast,
     TypeVar,
     Generic,
-    Iterable, MutableMapping,
+    Iterable,
+    MutableMapping,
 )
 
 from allennlp.common import Registrable, Params

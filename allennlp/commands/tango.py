@@ -15,6 +15,7 @@ from allennlp.common.params import Params
 from allennlp.common import logging as common_logging
 from allennlp.common import util as common_util
 from allennlp.steps.step import step_graph_from_params
+from allennlp.steps.step_cache import DirectoryStepCache
 
 logger = logging.getLogger(__name__)
 
@@ -110,8 +111,20 @@ def run_tango(
 
     common_util.prepare_environment(params)
 
-    Path(serialization_dir).mkdir(parents=True, exist_ok=True)
-
     step_graph = step_graph_from_params(params.pop("steps"))
 
-    # TODO: now what?
+    serialization_dir = Path(serialization_dir)
+    serialization_dir.mkdir(parents=True, exist_ok=True)
+    step_cache = DirectoryStepCache(serialization_dir / "step_cache")
+
+    # produce results
+    for name, step in step_graph.items():
+        if step.produce_results:
+            _ = step.result(step_cache)
+
+    # symlink everything that has been computed
+    for name, step in step_graph.items():
+        if step in step_cache:
+            (serialization_dir / name).symlink_to(
+                step_cache.path_for_step(step), target_is_directory=True
+            )

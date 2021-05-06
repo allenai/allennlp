@@ -69,23 +69,20 @@ class DirectoryStepCache(StepCache):
         self.cache = weakref.WeakValueDictionary()
 
     def __contains__(self, step: Step):
-        key = step.unique_id()
-        if key in self.cache:
+        if step.unique_id() in self.cache:
             return True
-        return (self.dir / key).exists()
+        return self.path_for_step(step).exists()
 
     def __getitem__(self, step: Step) -> Any:
-        key = step.unique_id()
         try:
-            return self.cache[key]
+            return self.cache[step.unique_id()]
         except KeyError:
-            result = step.format.read(self.dir / key)
-            self.cache[key] = result
+            result = step.format.read(self.path_for_step(step))
+            self.cache[step.unique_id()] = result
             return result
 
     def __setitem__(self, step: Step, value: Any) -> None:
-        key = step.unique_id()
-        location = self.dir / key
+        location = self.path_for_step(step)
         step.format.write(value, location)
         metadata = {
             "step": step.unique_id(),
@@ -93,7 +90,10 @@ class DirectoryStepCache(StepCache):
         }
         with (location / "metadata.json").open("wt") as f:
             json.dump(metadata, f)
-        self.cache[key] = value
+        self.cache[step.unique_id()] = value
 
     def __len__(self) -> int:
-        pass
+        return sum(1 for _ in self.dir.glob("*/metadata.json"))
+
+    def path_for_step(self, step: Step) -> pathlib.Path:
+        return self.dir / step.unique_id()
