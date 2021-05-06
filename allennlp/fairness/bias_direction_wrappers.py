@@ -24,6 +24,9 @@ class BiasDirectionWrapper(Registrable):
         self.direction = None
         self.noise = None
 
+    def __call__(self, module):
+        raise NotImplementedError
+
     def train(self, mode: bool = True):
         """
 
@@ -61,7 +64,7 @@ class PCABiasDirectionWrapper(BiasDirectionWrapper):
     namespace : `str`, optional (default=`"tokens"`)
         Namespace of direction_vocab to use when tokenizing.
         Disregarded when direction_vocab is `None`.
-    requires_grad : `bool`, optional (default=`True`)
+    requires_grad : `bool`, optional (default=`False`)
         Option to enable gradient calculation for bias direction.
     noise : `float`, optional (default=`1e-10`)
         To avoid numerical instability if embeddings are initialized uniformly.
@@ -73,7 +76,7 @@ class PCABiasDirectionWrapper(BiasDirectionWrapper):
         tokenizer: Tokenizer,
         direction_vocab: Vocabulary = None,
         namespace: str = "tokens",
-        requires_grad: bool = True,
+        requires_grad: bool = False,
         noise: float = 1e-10,
     ):
         self.ids = load_words(seed_words_file, tokenizer, direction_vocab, namespace)
@@ -113,7 +116,7 @@ class PairedPCABiasDirectionWrapper(BiasDirectionWrapper):
     namespace : `str`, optional (default=`"tokens"`)
         Namespace of direction_vocab to use when tokenizing.
         Disregarded when direction_vocab is `None`.
-    requires_grad : `bool`, optional (default=`True`)
+    requires_grad : `bool`, optional (default=`False`)
         Option to enable gradient calculation for bias direction.
     noise : `float`, optional (default=`1e-10`)
         To avoid numerical instability if embeddings are initialized uniformly.
@@ -125,7 +128,7 @@ class PairedPCABiasDirectionWrapper(BiasDirectionWrapper):
         tokenizer: Tokenizer,
         direction_vocab: Vocabulary = None,
         namespace: str = "tokens",
-        requires_grad: bool = True,
+        requires_grad: bool = False,
         noise: float = 1e-10,
     ):
         self.ids1, self.ids2 = load_word_pairs(
@@ -170,7 +173,7 @@ class TwoMeansBiasDirectionWrapper(BiasDirectionWrapper):
     namespace : `str`, optional (default=`"tokens"`)
         Namespace of direction_vocab to use when tokenizing.
         Disregarded when direction_vocab is `None`.
-    requires_grad : `bool`, optional (default=`True`)
+    requires_grad : `bool`, optional (default=`False`)
         Option to enable gradient calculation for bias direction.
     noise : `float`, optional (default=`1e-10`)
         To avoid numerical instability if embeddings are initialized uniformly.
@@ -182,7 +185,7 @@ class TwoMeansBiasDirectionWrapper(BiasDirectionWrapper):
         tokenizer: Tokenizer,
         direction_vocab: Vocabulary = None,
         namespace: str = "tokens",
-        requires_grad: bool = True,
+        requires_grad: bool = False,
         noise: float = 1e-10,
     ):
         self.ids1, self.ids2 = load_word_pairs(

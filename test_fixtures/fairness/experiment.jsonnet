@@ -3,7 +3,7 @@ local transformer_dim = 20;
 
 {
   "dataset_reader":{
-    "type": "allennlp_models.pair_classification.dataset_readers.snli.SnliReader",
+    "type": "snli",
     "tokenizer": {
       "type": "pretrained_transformer",
       "model_name": transformer_model,
@@ -21,7 +21,7 @@ local transformer_dim = 20;
   "validation_data_path": "test_fixtures/fairness/snli_dev.jsonl",
   "test_data_path": "test_fixtures/fairness/snli_test.jsonl",
   "model": {
-    "type": "allennlp.fairness.bias_mitigator_applicator.BiasMitigatorApplicator", 
+    "type": "bias_mitigator_applicator", 
     "base_model": {
       "type": "basic_classifier",
       "text_field_embedder": {

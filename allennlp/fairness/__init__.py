@@ -26,4 +26,3 @@ from allennlp.fairness.bias_mitigators import (
     OSCaRBiasMitigator,
 )
 from allennlp.fairness.bias_utils import load_words, load_word_pairs
-from allennlp.fairness.bias_mitigator_applicator import BiasMitigatorApplicator

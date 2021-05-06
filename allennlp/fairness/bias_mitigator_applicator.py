@@ -1,7 +1,7 @@
 """
-A Model wrapper to mitigate biases in 
-contextual embeddings upon training/finetuning
-on a downstream task.
+A Model wrapper to mitigate biases in
+contextual embeddings during finetuning
+on a downstream task and test time.
 
 Based on: Dev, S., Li, T., Phillips, J.M., & Srikumar, V. (2020).
 [On Measuring and Mitigating Biased Inferences of Word Embeddings]
@@ -22,7 +22,7 @@ from allennlp.nn.util import find_embedding_layer
 @Model.register("bias_mitigator_applicator")
 class BiasMitigatorApplicator(Model):
     """
-    Wrapper class to apply bias mitigation to any Model.
+    Wrapper class to apply bias mitigation to any pretrained Model.
 
     # Parameters
 
@@ -30,7 +30,7 @@ class BiasMitigatorApplicator(Model):
         Vocabulary of base model.
     base_model : `Lazy[Model]`
         Base model for which to mitigate biases.
-    bias_mitigator : `BiasMitigatorWrapper`
+    bias_mitigator : `Lazy[BiasMitigatorWrapper]`
         Bias mitigator to apply to base model.
     """
 
@@ -38,16 +38,16 @@ class BiasMitigatorApplicator(Model):
         self,
         vocab: Vocabulary,
         base_model: Lazy[Model],
-        bias_mitigator: BiasMitigatorWrapper,
+        bias_mitigator: Lazy[BiasMitigatorWrapper],
         **kwargs
     ):
         super().__init__(vocab, **kwargs)
 
         self.base_model = base_model.construct(vocab=vocab, **kwargs)
-        self.bias_mitigator = bias_mitigator
-
-        # want to permanently add bias mitigation hook
+        # want to keep bias mitigation hook during test time
         embedding_layer = find_embedding_layer(self.base_model)
+
+        self.bias_mitigator = bias_mitigator.construct(embedding_layer=embedding_layer)
         embedding_layer.register_forward_hook(self.bias_mitigator)
 
         self.vocab = self.base_model.vocab
