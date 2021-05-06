@@ -293,7 +293,7 @@ def pop_and_construct_arg(
         freeze = load_module_params.pop("freeze", True)
         archive = load_archive(archive_file)
         result = archive.extract_module(module_path, freeze)
-        if get_type_class(result) != get_type_class(annotation):
+        if not isinstance(result, annotation):
             raise ConfigurationError(
                 f"The module from model at {archive_file} at path {module_path} "
                 f"was expected of type {annotation} but is of type {type(result)}"
@@ -490,15 +490,6 @@ def construct_arg(
         if isinstance(popped_params, Params):
             return popped_params.as_dict()
         return popped_params
-
-
-def get_type_class(typ):
-    try:
-        # Python 3.5 / 3.6
-        return typ.__extra__
-    except AttributeError:
-        # Python 3.7
-        return typ.__origin__
 
 
 class FromParams:

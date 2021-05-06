@@ -27,7 +27,6 @@ on a downstream task.
 ### Fixed
 
 - When `PretrainedTransformerIndexer` folds long sequences, it no longer loses the information from token type ids.
-- Fixed issue in `FromParams` where when loading pretrained model, subscripted generics could not be used with `isinstance` (https://stackoverflow.com/questions/53854463/python-3-7-check-if-type-annotation-is-subclass-of-generic).
 
 ## [v2.4.0](https://github.com/allenai/allennlp/releases/tag/v2.4.0) - 2021-04-22
 

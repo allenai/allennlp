@@ -100,7 +100,10 @@ class HardBiasMitigatorWrapper(BiasMitigatorWrapper):
         module_out = module_out.flatten(end_dim=-2)
         # only return bias-mitigated evaluation embeddings
         module_out = self.mitigator(
-            module_out, self.predetermined_bias_direction, ids1_embeddings, ids2_embeddings
+            module_out,
+            self.predetermined_bias_direction.to(module_out.device),
+            ids1_embeddings.to(module_out.device),
+            ids2_embeddings.to(module_out.device),
         )[: module_out.size(0)]
         return module_out.reshape(module_out_size)
 
@@ -141,7 +144,9 @@ class LinearBiasMitigatorWrapper(BiasMitigatorWrapper):
         module_out_size = module_out.size()
         # flatten tensor except for last dimension
         module_out = module_out.flatten(end_dim=-2)
-        module_out = self.mitigator(module_out, self.predetermined_bias_direction)
+        module_out = self.mitigator(
+            module_out, self.predetermined_bias_direction.to(module_out.device)
+        )
         return module_out.reshape(module_out_size)
 
     def train(self, mode: bool = True):
@@ -202,7 +207,9 @@ class INLPBiasMitigatorWrapper(BiasMitigatorWrapper):
         module_out_size = module_out.size()
         # flatten tensor except for last dimension
         module_out = module_out.flatten(end_dim=-2)
-        module_out = self.mitigator(module_out, ids1_embeddings, ids2_embeddings)
+        module_out = self.mitigator(
+            module_out, ids1_embeddings.to(module_out.device), ids2_embeddings.to(module_out.device)
+        )
         return module_out.reshape(module_out_size)
 
     def train(self, mode: bool = True):
@@ -247,7 +254,9 @@ class OSCaRBiasMitigatorWrapper(BiasMitigatorWrapper):
         # flatten tensor except for last dimension
         module_out = module_out.flatten(end_dim=-2)
         module_out = self.mitigator(
-            module_out, self.predetermined_bias_direction1, self.predetermined_bias_direction2
+            module_out,
+            self.predetermined_bias_direction1.to(module_out.device),
+            self.predetermined_bias_direction2.to(module_out.device),
         )
         return module_out.reshape(module_out_size)
 

@@ -28,7 +28,7 @@ class BiasMitigatorApplicator(Model):
 
     vocab : `Vocabulary`
         Vocabulary of base model.
-    base_model : `Lazy[Model]`
+    base_model : `Model`
         Base model for which to mitigate biases.
     bias_mitigator : `Lazy[BiasMitigatorWrapper]`
         Bias mitigator to apply to base model.
@@ -37,13 +37,13 @@ class BiasMitigatorApplicator(Model):
     def __init__(
         self,
         vocab: Vocabulary,
-        base_model: Lazy[Model],
+        base_model: Model,
         bias_mitigator: Lazy[BiasMitigatorWrapper],
         **kwargs
     ):
         super().__init__(vocab, **kwargs)
 
-        self.base_model = base_model.construct(vocab=vocab, **kwargs)
+        self.base_model = base_model
         # want to keep bias mitigation hook during test time
         embedding_layer = find_embedding_layer(self.base_model)
 
