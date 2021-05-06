@@ -16,15 +16,9 @@ BoolT = Union[torch.BoolTensor]
 
 
 @dataclass
-class KeyValueState:
-    key_state: FloatT
-    value_state: FloatT
-
-
-@dataclass
-class GeneralSelfAttentionOutput:
+class GeneralAttentionOutput:
     """
-    Encapsulates the outputs of the `GeneralSelfAttention` module.
+    Encapsulates the outputs of the `GeneralAttention` module.
     """
 
     hidden_states: FloatT
@@ -33,9 +27,47 @@ class GeneralSelfAttentionOutput:
     attention_probs: Optional[FloatT] = None
 
 
-class GeneralSelfAttention(TransformerModule, FromParams):
+class GeneralAttention(TransformerModule, FromParams):
     """
-    TODO
+    This module computes self-attention (or cross-attention), similar to the architecture in BERT.
+    Details in the paper:
+    [BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding, Devlin et al, 2019]
+    (https://api.semanticscholar.org/CorpusID:52967399)
+
+    Additionally, it has the following functionality:
+
+    * the attention scoring function can be specified.
+    * it can be used in encoders as well as decoders.
+    * `position_bias` can be used, which makes it suitable for
+    [T5-style attention](https://api.semanticscholar.org/CorpusID:204838007) as well.
+
+    # Parameters
+
+    hidden_size: `int` (default = `512`)
+        The size of the expected input tensor.
+    attention_head_size: `int` (default = `64`)
+        The size of a single attention head.
+    num_attention_heads: `int` (default = `8`)
+        The number of attention heads.
+    scoring_func: `str` (default = `scaled_dot_product`)
+        The name of the attention-calculating function to be used.
+        Eg. `additive`, `linear`, etc. For a complete list, please check :mod:`allennlp.modules.attention`.
+    output_linear: `bool` (default = `False`)
+        Whether to add an additional output linear layer at the end.
+    dropout: `float` (default = `0.0`)
+        The dropout probability.
+    bias: `bool` (default = `True`)
+        Whether to include bias weights in query, key, value (and output) linear layers.
+    normalize_weights: `bool` (default = `False`)
+        Whether to normalize the initial weights.
+    is_decoder: `bool` (default = `False`)
+        Whether this module is being used in a decoder stack or not.
+    is_cross_attention: `bool` (default = `False`)
+        Whether this module is being used for cross-attention in a decoder stack or not.
+        If `is_cross_attention` is `True`, then `is_decoder` must also be `True`.
+    has_relative_attention_bias: `bool` (default = `False`)
+    relative_attention_num_buckets: `int` (default = `32`)
+        This is ignored if `has_relative_attention_bias` is set to `False`.
     """
 
     def __init__(
@@ -75,6 +107,7 @@ class GeneralSelfAttention(TransformerModule, FromParams):
         self.key = torch.nn.Linear(hidden_size, self.all_head_size, bias=bias)
         self.value = torch.nn.Linear(hidden_size, self.all_head_size, bias=bias)
 
+        # out linear layer for distilbert, T5 etc.
         if output_linear:
             self.output = torch.nn.Linear(hidden_size, self.all_head_size, bias=bias)
 
@@ -132,25 +165,31 @@ class GeneralSelfAttention(TransformerModule, FromParams):
 
     def _project(
         self,
-        query_states: torch.Tensor,
+        hidden_states: torch.Tensor,
         layer: torch.nn.Linear,
         source_states: Optional[torch.Tensor] = None,
-        past_key_or_value_states: Optional[torch.Tensor] = None,
+        past_key_or_value: Optional[torch.Tensor] = None,
     ):
-        if self.is_decoder:
-            if self.is_cross_attention:
-                if past_key_or_value_states is None:
-                    assert source_states is not None, "Encoder final state needs to be passed."
-                    query_states = source_states
-                else:
-                    return past_key_or_value_states
+        # TODO: clarify logic in terms of is_decoder and is_cross_attention
+        # to make it more readable.
+        if source_states is None:
+            # self-attn
+            # (batch_size, num_heads, seq_length, dim_per_head)
+            hidden_states = self._transpose_for_scores(layer(hidden_states))
+        elif past_key_or_value is None:
+            # cross-attn
+            # (batch_size, num_heads, seq_length, dim_per_head)
+            hidden_states = self._transpose_for_scores(layer(source_states))
 
-        layer_output = layer(query_states)
-        layer_output = self._transpose_for_scores(layer_output)
-        if self.is_decoder:
-            layer_output = torch.cat([past_key_or_value_states, layer_output], dim=2)
-
-        return layer_output
+        if past_key_or_value is not None:
+            if source_states is None:
+                # self-attn
+                # (batch_size, num_heads, key_length, dim_per_head)
+                hidden_states = torch.cat([past_key_or_value, hidden_states], dim=2)
+            else:
+                # cross-attn
+                hidden_states = past_key_or_value
+        return hidden_states
 
     def _position_bias(
         self,
@@ -190,8 +229,6 @@ class GeneralSelfAttention(TransformerModule, FromParams):
     ):
         attention_scores = self.attn(query_layer, key_layer.transpose(-1, -2))
 
-        # return attention_scores
-
         position_bias = self._position_bias(
             position_bias, seq_lengths, past_key_states, attention_scores
         )
@@ -227,19 +264,17 @@ class GeneralSelfAttention(TransformerModule, FromParams):
 
         return context_layer
 
-    def _get_lengths(self, query_states, past_key_states, source_states):
+    def _get_lengths(self, query_states, past_key_states, source_states, query_length):
 
         seq_length = query_states.shape[1]
         effective_seq_len = seq_length
 
-        key_length = seq_length
-
         if past_key_states is not None:
             # TODO: query_length from up the stack: move logic here.
-            # TODO: clarify the logic here.
-            effective_seq_len += past_key_states.shape[2]
-            if self.is_cross_attention:
-                key_length = source_states.shape[1]
+            # TODO: clarify the logic here in terms of encoder/decoder case.
+            effective_seq_len += past_key_states.shape[2] if query_length is None else query_length
+
+        key_length = effective_seq_len if source_states is None else source_states.shape[1]
 
         return (seq_length, effective_seq_len, key_length)
 
@@ -255,6 +290,7 @@ class GeneralSelfAttention(TransformerModule, FromParams):
         position_bias: Optional[torch.Tensor] = None,
         output_attentions: bool = False,
         use_cache: bool = False,
+        query_length: Optional[int] = None,
     ):
         """
         query_states : `torch.Tensor`
@@ -283,6 +319,7 @@ class GeneralSelfAttention(TransformerModule, FromParams):
 
         """
         query_layer = self._query_layer(query_states)
+
         key_layer = self._project(
             query_states,
             self.key,
@@ -300,7 +337,7 @@ class GeneralSelfAttention(TransformerModule, FromParams):
         if self.is_cross_attention:
             attention_mask = source_attention_mask
 
-        seq_lengths = self._get_lengths(query_states, past_key_states, source_states)
+        seq_lengths = self._get_lengths(query_states, past_key_states, source_states, query_length)
 
         attention_probs, position_bias = self._get_attention_probs(
             query_layer,
@@ -317,7 +354,7 @@ class GeneralSelfAttention(TransformerModule, FromParams):
         present_key_value_state = (
             (key_layer, value_layer) if (self.is_decoder and use_cache) else None
         )
-        outputs = GeneralSelfAttentionOutput(
+        outputs = GeneralAttentionOutput(
             context_layer, present_key_value_state, position_bias, attention_probs
         )
 
@@ -400,15 +437,14 @@ class GeneralSelfAttention(TransformerModule, FromParams):
         return values
 
 
-class T5Attention(GeneralSelfAttention):
+class T5Attention(GeneralAttention):
 
-    # _relevant_module = ["encoder.block.0.layer.0.self_attention"]
+    _relevant_module = ["encoder.block.0.layer.0.SelfAttention"]
     _huggingface_mapping = {
         "q": "query",
         "k": "key",
         "v": "value",
         "o": "output",
-        "layers": "layer",
     }
 
     def __init__(
@@ -439,7 +475,7 @@ class T5Attention(GeneralSelfAttention):
             relative_attention_num_buckets=relative_attention_num_buckets,
         )
 
-        self.attn = Attention.by_name(self.scoring_func)(1, False)
+        self.attn = Attention.by_name(self.scoring_func)(scaling_factor=1, normalize=False)
 
     def forward(  # type: ignore
         self,
@@ -454,7 +490,7 @@ class T5Attention(GeneralSelfAttention):
         query_length: Optional[int] = None,  # only relevant in cross-attention.
         use_cache: bool = False,
         output_attentions: bool = False,
-    ) -> GeneralSelfAttentionOutput:
+    ) -> GeneralAttentionOutput:
         """
         Self-attention (if key_value_states is None) or attention over source sentence (provided by
         key_value_states).
@@ -476,12 +512,76 @@ class T5Attention(GeneralSelfAttention):
             head_mask=layer_head_mask,
             position_bias=position_bias,
             output_attentions=output_attentions,
+            use_cache=use_cache,
+            query_length=query_length,
         )
 
         return outputs
 
+    @classmethod
+    def _get_input_arguments(
+        cls,
+        pretrained_module: torch.nn.Module,
+        source="huggingface",
+        mapping: Optional[Dict[str, str]] = None,
+        **kwargs,
+    ):
+        submodules = cls._get_mapped_submodules(pretrained_module, source, mapping)
+        final_kwargs = {}
 
-class SelfAttention(GeneralSelfAttention):
+        final_kwargs["hidden_size"] = submodules["query"].in_features
+
+        if hasattr(submodules[""], "num_attention_heads"):
+            final_kwargs["num_heads"] = submodules[""].num_attention_heads
+        elif hasattr(submodules[""], "n_heads"):
+            final_kwargs["num_heads"] = submodules[""].n_heads
+        else:
+            raise AttributeError("Cannot find a relevant attribute for number of heads.")
+
+        final_kwargs["key_value_proj_dim"] = int(
+            submodules["query"].out_features / final_kwargs["num_heads"]
+        )
+
+        final_kwargs["dropout"] = pretrained_module.dropout
+        final_kwargs["has_relative_attention_bias"] = pretrained_module.has_relative_attention_bias
+        final_kwargs[
+            "relative_attention_num_buckets"
+        ] = pretrained_module.relative_attention_num_buckets
+        final_kwargs["is_decoder"] = pretrained_module.is_decoder
+
+        final_kwargs.update(**kwargs)
+
+        return final_kwargs
+
+    @classmethod
+    def _get_mapped_submodules(
+        cls,
+        pretrained_module: torch.nn.Module,
+        source: str = "huggingface",
+        mapping: Optional[Dict[str, str]] = None,
+    ):
+        """
+        Subclasses overload this method, and provide appropriate name mapping based on the source.
+        """
+        submodules = dict(pretrained_module.named_modules())
+        # combined_mapping = cls._get_mapping(pretrained_module, source, mapping)
+        for name, module in pretrained_module.named_modules():
+            newname = name
+            if name in ["q", "q.weight"]:
+                newname = newname.replace("q", "query")
+            elif name in ["k", "k.weight"]:
+                newname = newname.replace("k", "key")
+            elif name in ["v", "v.weight"]:
+                newname = newname.replace("v", "value")
+            elif name in ["o", "o.weight"]:
+                newname = newname.replace("o", "output")
+            else:
+                pass
+            submodules[newname] = submodules.pop(name)
+        return submodules
+
+
+class SelfAttention(GeneralAttention):
     """
     This module computes the self-attention, similar to the architecture in BERT. Additionally, the attention
     scoring function can be specified.

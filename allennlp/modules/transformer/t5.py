@@ -16,7 +16,10 @@ from allennlp.common import FromParams, Params, Lazy, Registrable
 from allennlp.common.checks import ConfigurationError
 from allennlp.modules.transformer import TransformerModule
 
-# from allennlp.modules.transformer.general_self_attention import T5Attention
+from allennlp.modules.transformer.general_attention import (
+    T5Attention,
+    GeneralAttentionOutput,
+)
 from allennlp.modules.transformer.util import (
     apply_mask,
     get_extended_attention_mask,
@@ -124,7 +127,7 @@ class T5AttentionOutput:
     attn_weights: Optional[FloatT] = None
 
 
-class T5Attention(TransformerModule, FromParams):
+class T5AttentionOld(TransformerModule, FromParams):
     def __init__(
         self,
         is_decoder: bool = False,
@@ -405,7 +408,7 @@ class T5LayerSelfAttention(TransformerModule, FromParams):
         output_attentions: bool = False,
     ) -> T5LayerSelfAttentionOutput:
         normed_hidden_states = self.layer_norm(hidden_states)
-        attention_output: T5AttentionOutput = self.self_attention(
+        attention_output: GeneralAttentionOutput = self.self_attention(
             normed_hidden_states,
             mask=attention_mask,
             position_bias=position_bias,
@@ -415,11 +418,17 @@ class T5LayerSelfAttention(TransformerModule, FromParams):
             output_attentions=output_attentions,
         )
         hidden_states = hidden_states + self.dropout(attention_output.hidden_states)
+        # return T5LayerSelfAttentionOutput(
+        #     hidden_states,
+        #     attention_output.key_value_state,
+        #     attention_output.position_bias,
+        #     attention_output.attn_weights,
+        # )
         return T5LayerSelfAttentionOutput(
             hidden_states,
             attention_output.key_value_state,
             attention_output.position_bias,
-            attention_output.attn_weights,
+            attention_output.attention_probs,
         )
 
 
@@ -462,7 +471,7 @@ class T5LayerCrossAttention(TransformerModule, FromParams):
         output_attentions: bool = False,
     ) -> T5LayerCrossAttentionOutput:
         normed_hidden_states = self.layer_norm(hidden_states)
-        attention_output: T5AttentionOutput = self.enc_dec_attention(
+        attention_output: GeneralAttentionOutput = self.enc_dec_attention(
             normed_hidden_states,
             mask=attention_mask,
             key_value_states=key_value_states,
@@ -474,11 +483,18 @@ class T5LayerCrossAttention(TransformerModule, FromParams):
             output_attentions=output_attentions,
         )
         layer_output = hidden_states + self.dropout(attention_output.hidden_states)
+        # return T5LayerCrossAttentionOutput(
+        #     layer_output,
+        #     attention_output.key_value_state,
+        #     attention_output.position_bias,
+        #     attention_output.attn_weights,
+        # )
+
         return T5LayerCrossAttentionOutput(
             layer_output,
             attention_output.key_value_state,
             attention_output.position_bias,
-            attention_output.attn_weights,
+            attention_output.attention_probs,
         )
 
 
@@ -967,6 +983,17 @@ class T5Output:
 
 class T5(TransformerModule, Registrable):
     _huggingface_mapping = {"shared": "token_embeddings"}
+    _huggingface_mapping.update(
+        {
+            "q": "query",
+            "k": "key",
+            "v": "value",
+            "o": "output",
+            "block": "blocks",
+            "SelfAttention": "self_attention",
+            "EncDecAttention": "enc_dec_attention",
+        }
+    )
 
     default_implementation = "default"
 

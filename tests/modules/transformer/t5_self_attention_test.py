@@ -1,11 +1,13 @@
 import copy
 import torch
+import pytest
 
 from allennlp.common import Params
-from allennlp.common.testing import AllenNlpTestCase
+from allennlp.common import cached_transformers
+from allennlp.common.testing import assert_equal_parameters, AllenNlpTestCase
 
 # from allennlp.modules.transformer.t5 import T5Attention
-from allennlp.modules.transformer.general_self_attention import T5Attention
+from allennlp.modules.transformer.general_attention import T5Attention
 
 from transformers.models.t5.configuration_t5 import T5Config
 from transformers.models.t5.modeling_t5 import T5Attention as HFT5Attention
@@ -28,23 +30,6 @@ class TestT5Attention(AllenNlpTestCase):
 
         t5_attention = T5Attention.from_params(params)
 
-        # the old one
-        # assert t5_attention.num_heads == params_dict["num_heads"]
-        # assert t5_attention.key_value_proj_dim == params_dict["key_value_proj_dim"]
-
-        # assert (
-        #     t5_attention.inner_dim
-        #     == params_dict["num_heads"] * params_dict["key_value_proj_dim"]
-        # )
-
-        # assert t5_attention.q.in_features == params_dict["hidden_size"]
-        # assert t5_attention.k.in_features == params_dict["hidden_size"]
-        # assert t5_attention.v.in_features == params_dict["hidden_size"]
-        # assert t5_attention.o.in_features == params_dict["hidden_size"]
-
-        # assert t5_attention.dropout == params_dict["dropout"]
-
-        # the new one
         assert t5_attention.num_attention_heads == params_dict["num_heads"]
         assert t5_attention.attention_head_size == params_dict["key_value_proj_dim"]
 
@@ -90,7 +75,28 @@ class TestT5Attention(AllenNlpTestCase):
         hf_output = hf_module.forward(hidden_states, mask=attention_mask_hf)
 
         hs = output.hidden_states
-        print(hs)
-        print(hf_output[0])
 
         assert torch.allclose(hs, hf_output[0])
+
+    @pytest.mark.parametrize(
+        "pretrained_name",
+        [
+            "t5-small",
+        ],
+    )
+    def test_loading_from_pretrained_weights_using_model_name(self, pretrained_name):
+
+        torch.manual_seed(1234)
+        pretrained = cached_transformers.get(pretrained_name, False)
+
+        pretrained_module = pretrained.encoder.block[0].layer[0].SelfAttention
+
+        module = T5Attention.from_pretrained_module(pretrained_name)
+
+        mapping = {
+            val: key
+            for key, val in module._construct_default_mapping(
+                pretrained_module, "huggingface", {}
+            ).items()
+        }
+        assert_equal_parameters(pretrained_module, module, mapping=mapping)
