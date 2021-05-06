@@ -88,7 +88,7 @@ install :
 	pip install --upgrade --upgrade-strategy eager -e . -r dev-requirements.txt
 	# Docs are not built on docker, and the runner is unable to find
 	# the nltk_data folder. Hence, we download the requirement.
-	python -c 'import nltk; nltk.download("sentiwordnet")'
+	python -c 'import nltk; nltk.download("wordnet")'
 #
 # Documention helpers.
 #
