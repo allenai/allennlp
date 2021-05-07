@@ -8,6 +8,7 @@ coverage:
     project:
       default:
         threshold: 1%
+        informational: true
     changes: false
 comment: false
 ignore:
