@@ -182,10 +182,20 @@ class GradientDescentTrainer(Trainer):
         A `Checkpointer` is responsible for periodically saving model weights.  If none is given
         here, we will construct one with default parameters.
 
-    cuda_device : `int`, optional (default = `-1`)
-        An integer specifying the CUDA device(s) to use for this process. If -1, the CPU is used.
-        Data parallelism is controlled at the allennlp train level, so each trainer will have a single
-        GPU.
+    cuda_device : `Optional[Union[int, torch.device]]`, optional (default = `None`)
+        An integer or `torch.device` specifying the CUDA device to use for this process.
+        If -1, the CPU is used. If `None` and you have a GPU available, that GPU will be used.
+
+        !!! Note
+            If you *don't* intend to use a GPU, but you have one available, you'll need
+            to explicitly set `cuda_device=-1`.
+
+        !!! Note
+            If you intend to use a GPU, your model already needs to be on the correct device,
+            which you can do with `model = model.cuda()`.
+
+        !!! Note
+            Data parallelism is controlled at the allennlp train level, so each trainer will have a single GPU.
 
     grad_norm : `float`, optional, (default = `None`).
         If provided, gradient norms will be rescaled to have a maximum of this value.
