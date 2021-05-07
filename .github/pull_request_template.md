@@ -21,4 +21,5 @@ Changes proposed in this pull request:
 
 <!-- Please complete this checklist AFTER submitting your PR to speed along the review process. -->
 - [ ] All GitHub Actions jobs for my pull request have passed.
-- [ ] **`codecov/patch`** reports high test coverage (at least 90%)
+- [ ] **`codecov/patch`** reports high test coverage (at least 90%).
+    You can find this under the "Actions" tab of the pull request once the other checks have finished.
