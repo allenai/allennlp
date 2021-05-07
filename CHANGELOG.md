@@ -22,10 +22,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   See [PR #5172](https://github.com/allenai/allennlp/pull/5172) for more details.
 - Added `SpanExtractorWithSpanWidthEmbedding`, putting specific span embedding computations into the `_embed_spans` method and leaving the common code in `SpanExtractorWithSpanWidthEmbedding` to unify the arguments, and modified `BidirectionalEndpointSpanExtractor`, `EndpointSpanExtractor` and `SelfAttentiveSpanExtractor` accordingly. Now, `SelfAttentiveSpanExtractor` can also embed span widths.
 
-
 ### Fixed
 
 - When `PretrainedTransformerIndexer` folds long sequences, it no longer loses the information from token type ids.
+- Fixed documentation for `GradientDescentTrainer.cuda_device`.
 
 
 ## [v2.4.0](https://github.com/allenai/allennlp/releases/tag/v2.4.0) - 2021-04-22
