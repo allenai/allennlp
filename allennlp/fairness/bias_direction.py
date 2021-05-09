@@ -1,6 +1,6 @@
 """
 A suite of differentiable methods to compute the bias direction
-or concept subspace representing protected variables.
+or concept subspace representing binary protected variables.
 """
 
 import torch
@@ -69,6 +69,9 @@ class PCABiasDirection(BiasDirection):
 
         with torch.set_grad_enabled(self.requires_grad):
             # pca_lowrank centers the embeddings by default
+            # There will be two dimensions when applying PCA to
+            # definitionally-gendered words: 1) the gender direction,
+            # 2) all other directions, with the gender direction being principal.
             _, _, V = torch.pca_lowrank(seed_embeddings, q=2)
             # get top principal component
             bias_direction = V[:, 0]
