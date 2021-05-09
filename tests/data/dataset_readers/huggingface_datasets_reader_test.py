@@ -5,7 +5,7 @@ from allennlp.data.dataset_readers.huggingface_datasets_reader import Huggingfac
 from allennlp.data.tokenizers import WhitespaceTokenizer
 
 
-# TODO Add test where we compare huggingface wrapped reader with an explicitly built dataset
+# TODO Add test where we compare huggingface wrapped reader with an explicitly coded dataset
 # TODO pab-vmware/Abhishek-P Add test where we load conll2003 and test it
 #  the way tested for conll2003 specific reader
 class HuggingfaceDatasetReaderTest:
@@ -71,27 +71,6 @@ class HuggingfaceDatasetReaderTest:
 
         # Confirm all features were mapped
         assert len(instance.fields) == len(entry)
-
-    def test_read_with_preload(self):
-        dataset = "glue"
-        config = "cola"
-        split = "train"
-        tokenizer: Tokenizer = WhitespaceTokenizer()
-        huggingface_reader = HuggingfaceDatasetReader(
-            dataset_name=dataset, config_name=config, tokenizer=tokenizer, preload=True
-        )
-        instances = list(huggingface_reader.read(split))
-        # Confirm instance were made for all rows
-        assert len(instances) == len(huggingface_reader.dataset[split])
-
-        entry = huggingface_reader.dataset[split][0]
-        instance = instances[0]
-
-        # Confirm all features were mapped
-        assert len(instance.fields) == len(entry)
-
-        # Confirm it was tokenized
-        assert len(instance["sentence"]) > 1
 
     """
     Test mapping of the datasets.feature.Translation and datasets.feature.TranslationVariableLanguages
