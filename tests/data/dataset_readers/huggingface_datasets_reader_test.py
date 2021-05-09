@@ -30,12 +30,12 @@ class HuggingfaceDatasetReaderTest:
         # Confirm all features were mapped
         assert len(instance.fields) == len(entry)
 
-    def test_read_unsupported_sequence_nesting(self):
+    def test_read_sequence_nesting(self):
         dataset = "diplomacy_detection"
         split = "train"
         huggingface_reader = HuggingfaceDatasetReader(dataset_name=dataset)
-        with pytest.raises(ValueError):
-            next(huggingface_reader.read(split))
+        instances = list(huggingface_reader.read(split))
+        assert len(instances) == len(huggingface_reader.dataset[split])
 
     def test_read_with_tokenizer(self):
         dataset = "glue"
