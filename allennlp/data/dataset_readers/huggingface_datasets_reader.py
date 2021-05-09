@@ -83,7 +83,6 @@ class HuggingfaceDatasetReader(DatasetReader):
         for index in self.shard_iterable(range(len(dataset_split))):
             yield self.text_to_instance(file_path, dataset_split[index])
 
-
     def raise_feature_not_supported_value_error(value):
         raise ValueError(f"Datasets feature type {type(value)} is not supported yet.")
 
