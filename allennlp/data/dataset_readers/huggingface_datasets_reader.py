@@ -20,29 +20,6 @@ class HuggingfaceDatasetReader(DatasetReader):
 
     This reader implementation wraps the huggingface datasets package
 
-    Following dataset and configurations have been verified and work with this reader
-
-            Dataset                       Dataset Configuration
-            `xnli`                        `ar`
-            `xnli`                        `en`
-            `xnli`                        `de`
-            `xnli`                        `all_languages`
-            `glue`                        `cola`
-            `glue`                        `mrpc`
-            `glue`                        `sst2`
-            `glue`                        `qqp`
-            `glue`                        `mnli`
-            `glue`                        `mnli_matched`
-            `universal_dependencies`      `en_lines`
-            `universal_dependencies`      `ko_kaist`
-            `universal_dependencies`      `af_afribooms`
-            `swahili`                     `NA`
-            `conll2003`                   `NA`
-            `dbpedia_14`                  `NA`
-            `trec`                        `NA`
-            `emotion`                     `NA`
-             Note: universal_dependencies will require you to install `conllu` package separately
-
     Registered as a `DatasetReader` with name `huggingface-datasets`
 
     # Parameters
@@ -50,9 +27,6 @@ class HuggingfaceDatasetReader(DatasetReader):
         Name of the dataset from huggingface datasets the reader will be used for.
     config_name : `str`, optional (default=`None`)
         Configuration(mandatory for some datasets) of the dataset.
-    preload : `bool`, optional (default=`False`)
-        If `True` all splits for the dataset is loaded(includes download etc) as part of the initialization,
-        otherwise each split is loaded on when `read()` is used for the same for the first time.
     tokenizer : `Tokenizer`, optional (default=`None`)
         If specified is used for tokenization of string and text fields from the dataset.
         This is useful since text in allennlp is dealt with as a series of tokens.
@@ -105,8 +79,10 @@ class HuggingfaceDatasetReader(DatasetReader):
             self.load_dataset_split(file_path)
 
         # TODO see if use of Dataset.select() is better
-        for entry in self.shard_iterable(self.dataset[file_path]):
-            yield self.text_to_instance(file_path, entry)
+        dataset_split = self.dataset[file_path]
+        for index in self.shard_iterable(range(len(dataset_split))):
+            yield self.text_to_instance(file_path, dataset_split[index])
+
 
     def raise_feature_not_supported_value_error(value):
         raise ValueError(f"Datasets feature type {type(value)} is not supported yet.")
@@ -114,22 +90,16 @@ class HuggingfaceDatasetReader(DatasetReader):
     def text_to_instance(self, *inputs) -> Instance:
         """
         Takes care of converting dataset entry into AllenNLP friendly instance
-        Currently it is implemented in an unseemly catch-up model
-        where it converts datasets.features that are required for the supported dataset,
-         ideally it would require design where we cleanly deliberate, decide
-        map dataset.feature to an allenlp.data.field  and then go ahead with converting it
-        Doing that would provide the best chance of providing largest possible coverage with datasets
 
         Currently this is how datasets.features types are mapped to AllenNLP Fields
 
-        dataset.feature type        allennlp.data.fields
-        `ClassLabel`                  `LabelField` in feature name namespace
-        `Value.string`                `TextField` with value as Token
-        `Value.*`                     `LabelField` with value being label in feature name namespace
-        `Sequence.string`             `ListField` of `TextField` with individual string as token
-        `Sequence.ClassLabel`         `ListField` of `ClassLabel` in feature name namespace
-        `Translation`                 `ListField` of 2 ListField (ClassLabel and TextField)
-        `TranslationVariableLanguages`                 `ListField` of 2 ListField (ClassLabel and TextField)
+        dataset.feature type           allennlp.data.fields
+        `ClassLabel`                   `LabelField` in feature name namespace
+        `Value.string`                 `TextField` with value as Token
+        `Value.*`                      `LabelField` with value being label in feature name namespace
+        `Translation`                  `ListField` of 2 ListField (ClassLabel and TextField)
+        `TranslationVariableLanguages` `ListField` of 2 ListField (ClassLabel and TextField)
+        `Sequence`                     `ListField` of sub-types
         """
 
         # features indicate the different information available in each entry from dataset
