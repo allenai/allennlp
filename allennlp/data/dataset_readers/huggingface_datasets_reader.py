@@ -255,7 +255,7 @@ def map_TranslationVariableLanguages(
     return fields
 
 
-# Value mapper - Maps a single Value
+# value mapper - Maps a single text value to TextField
 def map_String(feature: str, text: str, value, tokenizer: Optional[Tokenizer]) -> TextField:
     field: TextField
     if tokenizer is not None:
@@ -265,5 +265,6 @@ def map_String(feature: str, text: str, value, tokenizer: Optional[Tokenizer]) -
     return field
 
 
+# value mapper - Maps a single value to a LabelField
 def map_to_Label(namespace, item, skip_indexing=True) -> LabelField:
     return LabelField(label=item, label_namespace=namespace, skip_indexing=skip_indexing)
