@@ -117,6 +117,16 @@ class EvaluateBiasMitigation(Subcommand):
         return subparser
 
 
+def _add(accumulator_dict, append_dict):
+    """
+    Adds append_dict to accumulator_dict, concatenating values for duplicate keys.
+    """
+    for k, v in append_dict.items():
+        if k not in accumulator_dict:
+            accumulator_dict[k] = []
+        accumulator_dict[k] += v
+
+
 def compute_metrics(probs, model, taus):
     """
     Computes the following metrics:
@@ -229,9 +239,13 @@ def evaluate_from_args(args: argparse.Namespace) -> Tuple[Dict[str, Any], Dict[s
         args.cuda_device,
         predictions_output_file=bias_mitigated_filename,
     )
+
+    bias_mitigated_predictions = {}
     with open(bias_mitigated_file, "r") as fd:
-        bias_mitigated_predictions = json.load(fd)
-    probs = torch.tensor(bias_mitigated_predictions["probs"])
+        for line in fd:
+            _add(bias_mitigated_predictions, json.loads(line))
+
+    probs = torch.tensor(bias_mitigated_predictions["probs"], device=args.cuda_device)
     bias_mitigated_metrics = compute_metrics(probs, bias_mitigated_model, args.taus)
     metrics_json = json.dumps({**bias_mitigated_output_metrics, **bias_mitigated_metrics}, indent=2)
     if args.bias_mitigated_output_file:
@@ -248,9 +262,13 @@ def evaluate_from_args(args: argparse.Namespace) -> Tuple[Dict[str, Any], Dict[s
         args.cuda_device,
         predictions_output_file=baseline_filename,
     )
+
+    baseline_predictions = {}
     with open(baseline_file, "r") as fd:
-        baseline_predictions = json.load(fd)
-    probs = torch.tensor(baseline_predictions["probs"])
+        for line in fd:
+            _add(baseline_predictions, json.loads(line))
+
+    probs = torch.tensor(baseline_predictions["probs"], device=args.cuda_device)
     baseline_metrics = compute_metrics(probs, baseline_model, args.taus)
     metrics_json = json.dumps({**baseline_output_metrics, **baseline_metrics}, indent=2)
     if args.baseline_output_file:
