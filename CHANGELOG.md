@@ -16,8 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Added `TaskSuite` base class and command line functionality for running [`checklist`](https://github.com/marcotcr/checklist) test suites, along with implementations for `SentimentAnalysisSuite`, `QuestionAnsweringSuite`, and `TextualEntailmentSuite`. These can be found in the `allennlp.sanity_checks.task_checklists` module.
-- Added `BiasMitigatorApplicator`, which wraps any Model and mitigates biases following training/finetuning
+- Added `BiasMitigatorApplicator`, which wraps any Model and mitigates biases by finetuning
 on a downstream task.
+- Added `EvaluateBiasMitigation`, which evaluates the effectiveness of bias mitigation by computing
+SNLI-related metrics for a bias-mitigated and baseline model.
 - Added a way to avoid downloading and loading pretrained weights in modules that wrap transformers
   such as the `PretrainedTransformerEmbedder` and `PretrainedTransformerMismatchedEmbedder`.
   You can do this by setting the parameter `load_weights` to `False`.

@@ -39,4 +39,3 @@ from allennlp.fairness.bias_direction_wrappers import (
     TwoMeansBiasDirectionWrapper,
     ClassificationNormalBiasDirectionWrapper,
 )
-from allennlp.fairness.evaluate_bias_mitigation import Evaluate
