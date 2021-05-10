@@ -4,6 +4,7 @@ Subcommand for running Tango experiments
 
 import argparse
 import logging
+from collections import MutableSet
 from os import PathLike
 from pathlib import Path
 from typing import Union, Dict, Any, List, Optional
@@ -117,14 +118,28 @@ def run_tango(
     serialization_dir.mkdir(parents=True, exist_ok=True)
     step_cache = DirectoryStepCache(serialization_dir / "step_cache")
 
-    # produce results
-    for name, step in step_graph.items():
-        if step.produce_results:
-            _ = step.result(step_cache)
+    if dry_run:
+        class SetWithFallback(set):
+            def __contains__(self, item):
+                return item in step_cache or super().__contains__(item)
+        cached_steps = SetWithFallback()
 
-    # symlink everything that has been computed
-    for name, step in step_graph.items():
-        if step in step_cache:
-            (serialization_dir / name).symlink_to(
-                step_cache.path_for_step(step), target_is_directory=True
-            )
+        for step in step_graph.values():
+            if step.produce_results:
+                for step_name, cached in step.dry_run(cached_steps):
+                    if cached:
+                        print(f"Getting {step_name} from cache")
+                    else:
+                        print(f"Computing {step_name}")
+    else:
+        # produce results
+        for name, step in step_graph.items():
+            if step.produce_results:
+                _ = step.result(step_cache)
+
+        # symlink everything that has been computed
+        for name, step in step_graph.items():
+            if step in step_cache:
+                (serialization_dir / name).symlink_to(
+                    step_cache.path_for_step(step), target_is_directory=True
+                )

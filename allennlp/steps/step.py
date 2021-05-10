@@ -17,7 +17,7 @@ from typing import (
     TypeVar,
     Generic,
     Iterable,
-    MutableMapping,
+    Tuple, MutableMapping, MutableSet,
 )
 
 from allennlp.common import Registrable, Params
@@ -38,6 +38,7 @@ T = TypeVar("T")
 
 class Step(Registrable, Generic[T]):
     DETERMINISTIC: bool = False
+    CACHEABLE: Optional[bool] = None
     VERSION: Optional[str] = None
     FORMAT: Format = DillFormat("gz")
 
@@ -77,13 +78,39 @@ class Step(Registrable, Generic[T]):
         if self.format is None:
             self.format = self.FORMAT
 
-        if cache_results is None:
-            cache_results = self.DETERMINISTIC
-        self.cache_results = bool(cache_results)
-        if self.cache_results and not self.DETERMINISTIC:
-            logger.warning(
-                f"Task {self.name} is going to be cached despite not being deterministic."
-            )
+        if cache_results is True:
+            if not self.CACHEABLE:
+                raise ConfigurationError(
+                    f"Step {self.name} is configured to use the cache, but it's not a cacheable step."
+                )
+            if not self.DETERMINISTIC:
+                logger.warning(
+                    f"Step {self.name} is going to be cached despite not being deterministic."
+                )
+            self.cache_results = True
+        elif cache_results is False:
+            self.cache_results = False
+        elif cache_results is None:
+            c = (self.DETERMINISTIC, self.CACHEABLE)
+            if c == (False, None):
+                self.cache_results = False
+            elif c == (True, None):
+                self.cache_results = True
+            elif c == (False, False):
+                self.cache_results = False
+            elif c == (True, False):
+                self.cache_results = False
+            elif c == (False, True):
+                logger.warning(
+                    f"Step {self.name} is set to be cacheable despite not being deterministic."
+                )
+                self.cache_results = True
+            elif c == (True, True):
+                self.cache_results = True
+            else:
+                assert False, "Step.DETERMINISTIC or step.CACHEABLE are set to an invalid value."
+        else:
+            raise ConfigurationError(f"Step {step_name}'s cache_results parameter is set to an invalid value.")
 
     @classmethod
     def from_params(
@@ -128,22 +155,25 @@ class Step(Registrable, Generic[T]):
         choice = params.pop_choice("type", choices=as_registrable.list_available())
         subclass, constructor_name = as_registrable.resolve_class_name(choice)
         kwargs: Dict[str, Any] = {}
+
         parameters = infer_params(subclass, subclass.run)
+        del parameters["self"]
+        init_parameters = infer_params(subclass)
+        del init_parameters["self"]
+        del init_parameters["kwargs"]
+        parameter_overlap = parameters.keys() & init_parameters.keys()
+        assert len(parameter_overlap) <= 0, (
+            f"If this assert fails it means that you wrote a Step with a run() method that takes one of the "
+            f"reserved parameters ({', '.join(init_parameters.keys())})"
+        )
+        parameters.update(init_parameters)
+
         accepts_kwargs = False
         for param_name, param in parameters.items():
-            # Skip "self". You're not *required* to call the first parameter "self",
-            # so in theory this logic is fragile, but if you don't call the self parameter
-            # "self" you kind of deserve what happens.
-            if param_name == "self":
-                continue
-
             if param.kind == param.VAR_KEYWORD:
-                # When a class takes **kwargs, we do two things: first, we assume that the **kwargs are
-                # getting passed to the super class, so we inspect super class constructors to get
-                # allowed arguments (that happens in `infer_params` above).  Second, we store the fact
-                # that the method allows extra keys; if we get extra parameters, instead of crashing,
-                # we'll just pass them as-is to the constructor, and hope that you know what you're
-                # doing.
+                # When a class takes **kwargs we store the fact that the method allows extra keys; if
+                # we get extra parameters, instead of crashing, we'll just pass them as-is to the
+                # constructor, and hope that you know what you're doing.
                 accepts_kwargs = True
                 continue
 
@@ -201,7 +231,7 @@ class Step(Registrable, Generic[T]):
     def run(self, **kwargs) -> T:
         raise NotImplementedError
 
-    def result(self, cache: Optional[MutableMapping["Step", Any]] = None):
+    def result(self, cache: Optional[MutableMapping["Step", Any]] = None) -> T:
         if cache is None:
             from allennlp.steps.step_cache import default_step_cache
 
@@ -211,7 +241,7 @@ class Step(Registrable, Generic[T]):
 
         def replace_steps_with_results(o: Any):
             if isinstance(o, Step):
-                return o.result()
+                return o.result(cache)
             elif isinstance(o, List):
                 return [replace_steps_with_results(i) for i in o]
             elif isinstance(o, Set):
@@ -230,6 +260,25 @@ class Step(Registrable, Generic[T]):
                 result = list(result)
             cache[self] = result
         return result
+
+    def dry_run(self, cached_steps: MutableSet["Step"]) -> Iterable[Tuple[str, bool]]:
+        if self in cached_steps:
+            yield self.name, True
+            return
+
+        def find_steps_from_inputs(o: Any):
+            if isinstance(o, Step):
+                yield from o.dry_run(cached_steps)
+            elif isinstance(o, List):
+                yield from itertools.chain.from_iterable(find_steps_from_inputs(i) for i in o)
+            elif isinstance(o, Set):
+                yield from itertools.chain.from_iterable(find_steps_from_inputs(i) for i in o)
+            elif isinstance(o, Dict):
+                yield from itertools.chain.from_iterable(find_steps_from_inputs(i) for i in o.values())
+
+        yield from find_steps_from_inputs(self.kwargs)
+        yield self.name, False
+        cached_steps.add(self)
 
     def unique_id(self) -> str:
         if self.unique_id_cache is None:
