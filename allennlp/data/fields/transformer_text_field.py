@@ -20,7 +20,7 @@ class TransformerTextField(Field[torch.Tensor]):
         "attention_mask",
         "special_tokens_mask",
         "offsets_mapping",
-        "padding_token_id"
+        "padding_token_id",
     ]
 
     def __init__(
@@ -30,7 +30,7 @@ class TransformerTextField(Field[torch.Tensor]):
         attention_mask: Optional[torch.Tensor] = None,
         special_tokens_mask: Optional[torch.Tensor] = None,
         offsets_mapping: Optional[torch.Tensor] = None,
-        padding_token_id: int = 0
+        padding_token_id: int = 0,
     ) -> None:
         self.token_ids = token_ids
         self.token_type_ids = token_type_ids
@@ -55,7 +55,8 @@ class TransformerTextField(Field[torch.Tensor]):
             result[name] = torch.nn.functional.pad(
                 tensor,
                 (0, padding_length - len(tensor)),
-                value=self.padding_token_id if name == "token_ids" else 0)
+                value=self.padding_token_id if name == "token_ids" else 0,
+            )
         return result
 
     @overrides
@@ -71,10 +72,8 @@ class TransformerTextField(Field[torch.Tensor]):
             if len(t) <= 16:
                 return "[" + ", ".join(map(str, t)) + "]"
             else:
-                return "[" + \
-                       ", ".join(map(str, t[:8])) + \
-                       ", ".join(map(str, t[-8:])) + \
-                       "]"
+                return "[" + ", ".join(map(str, t[:8])) + ", ".join(map(str, t[-8:])) + "]"
+
         return {
             name: readable_tensor(getattr(self, name))
             for name in self.__slots__

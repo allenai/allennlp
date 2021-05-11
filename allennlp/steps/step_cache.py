@@ -90,7 +90,8 @@ class DirectoryStepCache(StepCache):
         except FileExistsError:
             raise IOError(
                 f"Some other process is already writing to {temp_location}. If you are sure there is no other "
-                "process, remove that directory and run again.")
+                "process, remove that directory and run again."
+            )
         try:
             step.format.write(value, temp_location)
             metadata = {
@@ -101,7 +102,7 @@ class DirectoryStepCache(StepCache):
                 json.dump(metadata, f)
             self.cache[step.unique_id()] = value
             temp_location.rename(location)
-        except:
+        except:  # noqa: E722
             shutil.rmtree(temp_location)
             raise
 

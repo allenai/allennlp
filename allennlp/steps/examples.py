@@ -2,18 +2,17 @@ import copy
 import dataclasses
 import logging
 import re
-from typing import Set, Optional, Union, List, Dict, Collection, Any, Tuple, Iterable
+from typing import Set, Optional, Union, List, Dict, Any, Tuple, Iterable
 
 import datasets
-import more_itertools
 import torch.optim
 from datasets import Dataset
 from transformers import AutoTokenizer
 
-from allennlp.data import Batch, BatchSampler, DataLoader, Vocabulary
+from allennlp.data import DataLoader, Vocabulary
 from allennlp.data.fields.transformer_text_field import TransformerTextField
 from allennlp.models import Model
-from allennlp.steps.dataset import AllenNlpDataset, AllenNlpBatchedDataset
+from allennlp.steps.dataset import AllenNlpDataset
 from allennlp.steps.step import Step
 from allennlp.training import Checkpointer, TrainerCallback, GradientDescentTrainer
 from allennlp.training.learning_rate_schedulers import LearningRateScheduler
@@ -25,7 +24,7 @@ from allennlp.training.moving_average import MovingAverage
 class HuggingfaceDataset(Step):
     DETERMINISTIC = True
     VERSION = "001"
-    CACHEABLE = False   # These are already cached by huggingface.
+    CACHEABLE = False  # These are already cached by huggingface.
 
     def run(self, dataset_name: str) -> AllenNlpDataset:
         return AllenNlpDataset(datasets.load_dataset(dataset_name), None, {"source": "huggingface"})
@@ -64,7 +63,7 @@ class Tokenize(Step):
         add_special_tokens: bool = True,
         max_length: Optional[int] = 512,
         special_tokens_mask: bool = False,
-        offset_mapping: bool = False
+        offset_mapping: bool = False,
     ) -> AllenNlpDataset:
         tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
         assert tokenizer.pad_token_type_id == 0
@@ -73,8 +72,10 @@ class Tokenize(Step):
 
         # find all the strings
         if fields_to_tokenize is None:
+
             def should_tokenize_field(_: str) -> bool:
                 return True
+
         else:
             regexes_to_tokenize = [re.compile(r) for r in fields_to_tokenize]
 
@@ -116,18 +117,26 @@ class Tokenize(Step):
             return_token_type_ids=True,
             return_attention_mask=False,
             return_special_tokens_mask=special_tokens_mask,
-            return_offsets_mapping=offset_mapping)
+            return_offsets_mapping=offset_mapping,
+        )
 
         # make fields
         string_to_field = {
             s: TransformerTextField(
                 torch.tensor(encoded["input_ids"][i], dtype=torch.int32),
                 torch.tensor(encoded["token_type_ids"][i], dtype=torch.int32),
-                torch.tensor(encoded["attention_mask"][i], dtype=torch.bool) if "attention_mask" in encoded else None,
-                torch.tensor(encoded["special_tokens_mask"][i], dtype=torch.bool) if "special_tokens_mask" in encoded else None,
-                torch.tensor(encoded["offset_mapping"][i], dtype=torch.int32) if "offset_mapping" in encoded else None,
-                tokenizer.pad_token_id
-            ) for i, s in enumerate(strings)
+                torch.tensor(encoded["attention_mask"][i], dtype=torch.bool)
+                if "attention_mask" in encoded
+                else None,
+                torch.tensor(encoded["special_tokens_mask"][i], dtype=torch.bool)
+                if "special_tokens_mask" in encoded
+                else None,
+                torch.tensor(encoded["offset_mapping"][i], dtype=torch.int32)
+                if "offset_mapping" in encoded
+                else None,
+                tokenizer.pad_token_id,
+            )
+            for i, s in enumerate(strings)
         }
 
         def replace_string_objects(o: Any) -> Any:
@@ -139,10 +148,7 @@ class Tokenize(Step):
             elif isinstance(o, List) or isinstance(o, Dataset):
                 return [replace_string_objects(i) for i in o]
             elif isinstance(o, Dict):
-                return {
-                    key: replace_string_objects(value)
-                    for key, value in o.items()
-                }
+                return {key: replace_string_objects(value) for key, value in o.items()}
             else:
                 return o
 
@@ -197,16 +203,15 @@ class TrainingStep(Step):
         run_sanity_checks: bool = True,
     ) -> Model:
 
-
         trainer = GradientDescentTrainer(
             model,
             optimizer=optimizer,
-            data_loader=None, # dataloader
+            data_loader=None,  # dataloader
             patience=patience,
             validation_metric=validation_metric,
-            validation_data_loader=None, # validation dataloader
+            validation_data_loader=None,  # validation dataloader
             num_epochs=num_epochs,
-            serialization_dir=None, # serialization dir
+            serialization_dir=None,  # serialization dir
             checkpointer=checkpointer,
             cuda_device=cuda_device,
             grad_norm=grad_norm,
@@ -218,4 +223,5 @@ class TrainingStep(Step):
             num_gradient_accumulation_steps=num_gradient_accumulation_steps,
             use_amp=use_amp,
             enable_default_callbacks=enable_default_callbacks,
-            run_sanity_checks=run_sanity_checks)
+            run_sanity_checks=run_sanity_checks,
+        )

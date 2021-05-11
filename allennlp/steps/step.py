@@ -17,7 +17,9 @@ from typing import (
     TypeVar,
     Generic,
     Iterable,
-    Tuple, MutableMapping, MutableSet,
+    Tuple,
+    MutableMapping,
+    MutableSet,
 )
 
 from allennlp.common import Registrable, Params
@@ -110,7 +112,9 @@ class Step(Registrable, Generic[T]):
             else:
                 assert False, "Step.DETERMINISTIC or step.CACHEABLE are set to an invalid value."
         else:
-            raise ConfigurationError(f"Step {step_name}'s cache_results parameter is set to an invalid value.")
+            raise ConfigurationError(
+                f"Step {step_name}'s cache_results parameter is set to an invalid value."
+            )
 
     @classmethod
     def from_params(
@@ -264,7 +268,9 @@ class Step(Registrable, Generic[T]):
 
     def ensure_result(self, cache: Optional[MutableMapping["Step", Any]] = None) -> None:
         if not self.cache_results:
-            raise ValueError("It does not make sense to call ensure_result() on a step that's not cacheable.")
+            raise ValueError(
+                "It does not make sense to call ensure_result() on a step that's not cacheable."
+            )
 
         if cache is None:
             from allennlp.steps.step_cache import default_step_cache
@@ -294,7 +300,9 @@ class Step(Registrable, Generic[T]):
             elif isinstance(o, Set):
                 yield from itertools.chain.from_iterable(find_steps_from_inputs(i) for i in o)
             elif isinstance(o, Dict):
-                yield from itertools.chain.from_iterable(find_steps_from_inputs(i) for i in o.values())
+                yield from itertools.chain.from_iterable(
+                    find_steps_from_inputs(i) for i in o.values()
+                )
 
         yield from find_steps_from_inputs(self.kwargs)
         yield self.name, False
