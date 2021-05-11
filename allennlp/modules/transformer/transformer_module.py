@@ -11,7 +11,7 @@ import torch
 import torch.distributed as dist
 
 from allennlp.common.util import is_distributed, is_global_primary
-from allennlp.nn.util import distributed_device
+from allennlp.nn.util import distributed_device, read_state_dict
 
 if TYPE_CHECKING:
     from transformers.configuration_utils import PretrainedConfig
@@ -204,8 +204,8 @@ class TransformerModule(torch.nn.Module):
                 weights_path = cached_path(f"hf://{model_name}/{WEIGHTS_NAME}")
 
         # Now load the state dict.
-        logger.info("Loading state dict from %s", weights_path)
-        state_dict = torch.load(weights_path, map_location="cpu")
+        logger.info("Reading state dict from %s", weights_path)
+        state_dict = read_state_dict(weights_path)
 
         # Keep just the relevant_module, remove everything else.
         state_dict = cls._get_relevant_submodule_state(state_dict)

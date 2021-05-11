@@ -926,7 +926,7 @@ def device_mapping(cuda_device: int):
     return inner_device_mapping
 
 
-def load_state_dict(
+def read_state_dict(
     path: Union[PathLike, str],
     strip_prefix: Optional[str] = None,
     ignore: Optional[List[str]] = None,
@@ -934,7 +934,7 @@ def load_state_dict(
     cuda_device: int = -1,
 ) -> Dict[str, torch.Tensor]:
     """
-    Load a PyTorch model state dictionary from a checkpoint at the given `path`.
+    Read a PyTorch model state dictionary from a checkpoint at the given `path`.
 
     # Parameters
 
