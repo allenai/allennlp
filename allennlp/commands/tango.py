@@ -145,3 +145,4 @@ def run_tango(
                 step_link.symlink_to(
                     step_cache.path_for_step(step).relative_to(serialization_dir), target_is_directory=True
                 )
+                print(f"The output for \"{name}\" is in {step_link}.")
