@@ -159,11 +159,15 @@ def compute_predictions_diff(bias_mitigated_labels, baseline_labels, tokens, bas
     """
     Returns label changes induced by bias mitigation and the corresponding sentence pairs.
     """
-    diff = {}
+    diff = []
     for idx, label in enumerate(bias_mitigated_labels):
         if label != baseline_labels[idx]:
-            diff["sentence_pair"] = baseline_tokenizer.convert_tokens_to_string(tokens[idx])
-            diff["label_change"] = "{} -> {}".format(baseline_labels[idx], label)
+            diff.append(
+                {
+                    "sentence_pair": baseline_tokenizer.convert_tokens_to_string(tokens[idx]),
+                    "label_change": "{} -> {}".format(baseline_labels[idx], label),
+                }
+            )
     return diff
 
 
