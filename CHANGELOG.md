@@ -20,6 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 on a downstream task.
 - Added `EvaluateBiasMitigation`, which evaluates the effectiveness of bias mitigation by computing
 SNLI-related metrics for a bias-mitigated and baseline model.
+- Added `allennlp diff` command to compute a diff on model checkpoints, analogous to what `git diff` does on two files.
+- Added `allennlp.nn.util.load_state_dict` helper function.
 - Added a way to avoid downloading and loading pretrained weights in modules that wrap transformers
   such as the `PretrainedTransformerEmbedder` and `PretrainedTransformerMismatchedEmbedder`.
   You can do this by setting the parameter `load_weights` to `False`.
@@ -29,6 +31,7 @@ SNLI-related metrics for a bias-mitigated and baseline model.
 ### Fixed
 
 - When `PretrainedTransformerIndexer` folds long sequences, it no longer loses the information from token type ids.
+- Fixed documentation for `GradientDescentTrainer.cuda_device`.
 
 ## [v2.4.0](https://github.com/allenai/allennlp/releases/tag/v2.4.0) - 2021-04-22
 

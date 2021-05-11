@@ -16,6 +16,8 @@ from allennlp.fairness.bias_direction import TwoMeansBiasDirection
 
 class LinearBiasMitigatorTest(AllenNlpTestCase):
     def setup_method(self):
+        super().setup_method()
+
         # embedding data from VERB demo
         emb_filename = str(self.FIXTURES_ROOT / "fairness" / "bias_embeddings.json")
         with open(emb_filename) as emb_file:
@@ -47,9 +49,6 @@ class LinearBiasMitigatorTest(AllenNlpTestCase):
         self.expected_bias_mitigated_embeddings = torch.cat(
             expected_bias_mitigated_embeddings
         ).reshape(2, 2, -1)
-
-    def teardown_method(self):
-        pass
 
     def test_invalid_dims(self):
         lbm = LinearBiasMitigator()
@@ -88,6 +87,8 @@ class LinearBiasMitigatorTest(AllenNlpTestCase):
 
 class HardBiasMitigatorTest(AllenNlpTestCase):
     def setup_method(self):
+        super().setup_method()
+
         # embedding data from VERB demo
         emb_filename = str(self.FIXTURES_ROOT / "fairness" / "bias_embeddings.json")
         with open(emb_filename) as emb_file:
@@ -136,9 +137,6 @@ class HardBiasMitigatorTest(AllenNlpTestCase):
         self.expected_bias_mitigated_embeddings = torch.cat(
             expected_bias_mitigated_embeddings
         ).reshape(4, 2, -1)
-
-    def teardown_method(self):
-        pass
 
     def test_invalid_dims(self):
         hbm = HardBiasMitigator()
@@ -201,6 +199,8 @@ class HardBiasMitigatorTest(AllenNlpTestCase):
 
 class INLPBiasMitigatorTest(AllenNlpTestCase):
     def setup_method(self):
+        super().setup_method()
+
         # embedding data from VERB demo
         emb_filename = str(self.FIXTURES_ROOT / "fairness" / "bias_embeddings.json")
         with open(emb_filename) as emb_file:
@@ -225,9 +225,6 @@ class INLPBiasMitigatorTest(AllenNlpTestCase):
             )
         self.evaluation_embeddings = torch.cat(evaluation_embeddings)
         self.expected_bias_mitigated_embeddings = torch.cat(expected_bias_mitigated_embeddings)
-
-    def teardown_method(self):
-        pass
 
     def test_invalid_dims(self):
         ibm = INLPBiasMitigator()
@@ -258,6 +255,8 @@ class INLPBiasMitigatorTest(AllenNlpTestCase):
 
 class OSCaRBiasMitigatorTest(AllenNlpTestCase):
     def setup_method(self):
+        super().setup_method()
+
         # embedding data from VERB demo
         emb_filename = str(self.FIXTURES_ROOT / "fairness" / "bias_embeddings.json")
         with open(emb_filename) as emb_file:
@@ -275,9 +274,6 @@ class OSCaRBiasMitigatorTest(AllenNlpTestCase):
             )
         self.evaluation_embeddings = torch.cat(evaluation_embeddings)
         self.expected_bias_mitigated_embeddings = torch.cat(expected_bias_mitigated_embeddings)
-
-    def teardown_method(self):
-        pass
 
     def test_invalid_dims(self):
         ibm = INLPBiasMitigator()

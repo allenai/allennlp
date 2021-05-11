@@ -1,6 +1,6 @@
 """
 A suite of differentiable methods to mitigate
-bias in embeddings.
+biases for binary concepts in embeddings.
 """
 
 import torch
@@ -46,6 +46,11 @@ class HardBiasMitigator(BiasMitigator):
 
     2. Equalizing: ensuring that protected variable-related words are averaged
     out to have the same norm.
+
+    !!! Note
+        For a detailed walkthrough and visual descriptions of the steps, please
+        refer to Figure 4 in [VERB: Visualizing and Interpreting Bias Mitigation Techniques
+        for Word Representations](https://api.semanticscholar.org/CorpusID:233168618).
 
     Based on: T. Bolukbasi, K. W. Chang, J. Zou, V. Saligrama, and A. Kalai. [Man is to
     computer programmer as woman is to homemaker? debiasing word embeddings]
@@ -170,6 +175,11 @@ class LinearBiasMitigator(BiasMitigator):
     Linear bias mitigator. Mitigates bias in embeddings by removing component
     in the bias direction.
 
+    !!! Note
+        For a detailed walkthrough and visual descriptions of the steps, please
+        refer to Figure 3 in [VERB: Visualizing and Interpreting Bias Mitigation Techniques
+        for Word Representations](https://api.semanticscholar.org/CorpusID:233168618).
+
     Based on: S. Dev and J. M. Phillips. [Attenuating bias in word vectors]
     (https://api.semanticscholar.org/CorpusID:59158788).
     In International Conference on Artificial Intelligence and Statistics,
@@ -224,6 +234,11 @@ class INLPBiasMitigator(BiasMitigator):
     Iterative Nullspace Projection. It mitigates bias by repeatedly building
     a linear classifier that separates concept groups and linearly
     projecting all words along the classifier normal.
+
+    !!! Note
+        For a detailed walkthrough and visual descriptions of the steps, please
+        refer to Figure 5 in [VERB: Visualizing and Interpreting Bias Mitigation Techniques
+        for Word Representations](https://api.semanticscholar.org/CorpusID:233168618).
 
     Based on: Ravfogel, S., Elazar, Y., Gonen, H., Twiton, M., & Goldberg, Y. (2020).
     [Null It Out: Guarding Protected Attributes by Iterative Nullspace Projection]
@@ -344,6 +359,11 @@ class OSCaRBiasMitigator(BiasMitigator):
     on the embedding space to rectify two ideally-independent concept subspaces
     so that they become orthogonal.
 
+    !!! Note
+        For a detailed walkthrough and visual descriptions of the steps, please
+        refer to Figure 6 in [VERB: Visualizing and Interpreting Bias Mitigation Techniques
+        for Word Representations](https://api.semanticscholar.org/CorpusID:233168618).
+
     Based on: Dev, S., Li, T., Phillips, J.M., & Srikumar, V. (2020). [OSCaR: Orthogonal Subspace
     Correction and Rectification of Biases in Word Embeddings](https://api.semanticscholar.org/CorpusID:220281039).
     ArXiv, abs/2007.00049.
@@ -447,7 +467,8 @@ class OSCaRBiasMitigator(BiasMitigator):
             # Want to adjust first 2 coordinates and leave d - 2
             # other orthogonal components fixed
             fixed_rotated_evaluation_embeddings = rotated_evaluation_embeddings[..., 2:]
-            # Restrict attention to subspace S
+            # Restrict attention to subspace S spanned by bias directions
+            # which we hope to make orthogonal
             restricted_rotated_evaluation_embeddings = torch.cat(
                 [
                     torch.matmul(rotated_evaluation_embeddings, bias_direction1.reshape(-1, 1)),
