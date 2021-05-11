@@ -140,6 +140,8 @@ def run_tango(
         # symlink everything that has been computed
         for name, step in step_graph.items():
             if step in step_cache:
-                (serialization_dir / name).symlink_to(
-                    step_cache.path_for_step(step), target_is_directory=True
+                step_link = serialization_dir / name
+                step_link.unlink(missing_ok=True)
+                step_link.symlink_to(
+                    step_cache.path_for_step(step).relative_to(serialization_dir), target_is_directory=True
                 )
