@@ -1,6 +1,7 @@
 import json
 import logging
 import pathlib
+import shutil
 import weakref
 from os import PathLike
 from typing import MutableMapping, Any, Dict, Union
@@ -83,14 +84,26 @@ class DirectoryStepCache(StepCache):
 
     def __setitem__(self, step: Step, value: Any) -> None:
         location = self.path_for_step(step)
-        step.format.write(value, location)
-        metadata = {
-            "step": step.unique_id(),
-            "checksum": step.format.checksum(location),
-        }
-        with (location / "metadata.json").open("wt") as f:
-            json.dump(metadata, f)
-        self.cache[step.unique_id()] = value
+        temp_location = location.with_suffix(".temp")
+        try:
+            temp_location.mkdir(parents=True, exist_ok=False)
+        except FileExistsError:
+            raise IOError(
+                f"Some other process is already writing to {temp_location}. If you are sure there is no other "
+                "process, remove that directory and run again.")
+        try:
+            step.format.write(value, temp_location)
+            metadata = {
+                "step": step.unique_id(),
+                "checksum": step.format.checksum(temp_location),
+            }
+            with (temp_location / "metadata.json").open("wt") as f:
+                json.dump(metadata, f)
+            self.cache[step.unique_id()] = value
+            temp_location.rename(location)
+        except:
+            shutil.rmtree(temp_location)
+            raise
 
     def __len__(self) -> int:
         return sum(1 for _ in self.dir.glob("*/metadata.json"))
