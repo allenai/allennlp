@@ -178,7 +178,7 @@ class TransformerModule(torch.nn.Module):
         state_dict = read_state_dict(weights_path)
 
         # Keep just the relevant_module, remove everything else.
-        state_dict = cls._get_relevant_submodule_state(state_dict)
+        state_dict = cls._get_relevant_submodule_state(state_dict, relevant_module=relevant_module)
 
         return state_dict
 
@@ -275,9 +275,7 @@ class TransformerModule(torch.nn.Module):
                 )
                 # Now map keys from the HuggingFace state_dict to the corresponding keys from
                 # this class. This is called recursively on each submodule of the current module.
-                state_dict = TransformerModule._get_mapped_state_dict(
-                    model, pretrained_state_dict, mapping=mapping
-                )
+                state_dict = model._get_mapped_state_dict(pretrained_state_dict, mapping=mapping)
 
             if not is_distributed() or loading_strategy == DistributedLoadingStrategy.FREE_FOR_ALL:
                 assert state_dict is not None
@@ -318,7 +316,7 @@ def _get_mapped_state_dict(
         }
         # Recursively call this function from the submodule to map this part
         # of the state_dict.
-        module_state_dict = TransformerModule._get_mapped_state_dict(submodule, module_state_dict)
+        module_state_dict = _get_mapped_state_dict(submodule, module_state_dict)
         # And then update the full state_dict.
         for key, value in module_state_dict.items():
             state_dict[name + "." + key] = value

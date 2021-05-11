@@ -29,7 +29,7 @@ class AttentionLayer(TransformerModule, FromParams):
         Dropout probability for the `OutputLayer`.
     """
 
-    _relevant_module = "encoder.layers.0.attention"
+    _relevant_module = "encoder.layer.0.attention"
     _huggingface_mapping = {"layer": "layers"}
 
     def __init__(
@@ -83,7 +83,7 @@ class AttentionLayer(TransformerModule, FromParams):
 
         final_kwargs["hidden_size"] = config.hidden_size
         final_kwargs["num_attention_heads"] = config.num_attention_heads
-        final_kwargs["attention_dropout"] = config.attention_probs_dropout_drop
+        final_kwargs["attention_dropout"] = config.attention_probs_dropout_prob
         final_kwargs["hidden_dropout"] = config.hidden_dropout_prob
 
         final_kwargs.update(**kwargs)
@@ -112,7 +112,7 @@ class TransformerLayer(TransformerModule, FromParams):
         This is helpful when using the layer in a decoder.
     """
 
-    _relevant_module = "encoder.layers.0"
+    _relevant_module = "encoder.layer.0"
     _huggingface_mapping = {
         "layer": "layers",
         "intermediate_act_fn": "act_fn",
@@ -214,7 +214,7 @@ class TransformerLayer(TransformerModule, FromParams):
         final_kwargs = {}
         final_kwargs["hidden_size"] = config.hidden_size
         final_kwargs["num_attention_heads"] = config.num_attention_heads
-        final_kwargs["attention_dropout"] = config.attention_probs_dropout_drop
+        final_kwargs["attention_dropout"] = config.attention_probs_dropout_prob
         final_kwargs["hidden_dropout"] = config.hidden_dropout_prob
         final_kwargs["intermediate_size"] = config.intermediate_size
         final_kwargs["activation"] = config.hidden_act
