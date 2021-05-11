@@ -5,7 +5,7 @@ Adapted from [HuggingFace]
 
 import math
 from dataclasses import dataclass
-from typing import Optional, Tuple, List, Union, Dict, Any
+from typing import Optional, Tuple, List, Union, Dict, TYPE_CHECKING
 
 import torch
 from torch import nn
@@ -20,6 +20,9 @@ from allennlp.modules.transformer.util import (
     get_extended_attention_mask,
 )
 from allennlp.nn.beam_search import BeamSearch
+
+if TYPE_CHECKING:
+    from transformers.configuration_utils import PretrainedConfig
 
 # Unfortunately mypy is insane, so I have to wrap these in unions.
 FloatT = Union[torch.FloatTensor]
@@ -1003,16 +1006,7 @@ class T5(TransformerModule, Registrable):
         )
 
     @classmethod
-    def _get_input_arguments(
-        cls,
-        pretrained_module: torch.nn.Module,
-        source: str = "huggingface",
-        mapping: Optional[Dict[str, str]] = None,
-        **kwargs,
-    ) -> Dict[str, Any]:
-        from transformers.models.t5 import T5Config
-
-        config: T5Config = pretrained_module.config
+    def _from_config(cls, config: "PretrainedConfig", **kwargs):
         attention_kwargs = {
             "hidden_size": config.d_model,
             "key_value_proj_dim": config.d_kv,
@@ -1039,8 +1033,8 @@ class T5(TransformerModule, Registrable):
                 }
             ),
         )
-        return {
-            "encoder": Lazy(
+        return cls(
+            encoder=Lazy(
                 T5EncoderStack.basic_encoder,
                 contructor_extras={
                     "num_blocks": config.num_layers,
@@ -1050,7 +1044,7 @@ class T5(TransformerModule, Registrable):
                     "dropout": config.dropout_rate,
                 },
             ),
-            "decoder": Lazy(
+            decoder=Lazy(
                 T5DecoderStack.basic_decoder,
                 contructor_extras={
                     "num_blocks": config.num_decoder_layers,
@@ -1061,12 +1055,12 @@ class T5(TransformerModule, Registrable):
                     "dropout": config.dropout_rate,
                 },
             ),
-            "decoder_start_token_id": config.decoder_start_token_id,
-            "pad_token_id": config.pad_token_id,
-            "eos_token_id": config.eos_token_id,
-            "vocab_size": config.vocab_size,
-            "model_dim": config.d_model,
-        }
+            decoder_start_token_id=config.decoder_start_token_id,
+            pad_token_id=config.pad_token_id,
+            eos_token_id=config.eos_token_id,
+            vocab_size=config.vocab_size,
+            model_dim=config.d_model,
+        )
 
     def _shift_right(self, input_ids, start_value: int):
         # shift inputs to the right

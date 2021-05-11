@@ -2019,6 +2019,17 @@ def tiny_value_of_dtype(dtype: torch.dtype):
 _V = TypeVar("_V", int, float, torch.Tensor)
 
 
+def distributed_device() -> torch.device:
+    """
+    Get the correct `torch.device` of the current process to use for distributed point-to-point communication.
+    """
+    if not is_distributed():
+        raise RuntimeError(
+            "'distributed_device()' can only be called within a distributed process group"
+        )
+    return int_to_device(-1 if dist.get_backend() != "nccl" else torch.cuda.current_device())
+
+
 def dist_reduce(value: _V, reduce_op, **kwargs) -> _V:
     """
     Reduces the given `value` across all distributed worker nodes according the given
@@ -2043,7 +2054,7 @@ def dist_reduce(value: _V, reduce_op, **kwargs) -> _V:
     """
     if not is_distributed():
         return value
-    device = int_to_device(-1 if dist.get_backend() != "nccl" else torch.cuda.current_device())
+    device = distributed_device()
     value_tensor = torch.tensor(value, device=device, **kwargs)
     dist.all_reduce(value_tensor, op=reduce_op)
 

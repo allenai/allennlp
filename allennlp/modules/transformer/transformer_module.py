@@ -1,229 +1,420 @@
-from typing import Optional, Dict, Union, List, Any
+from collections import OrderedDict
+from enum import Enum
+from itertools import chain
 import logging
-import inspect
+import os
+from os import PathLike
+from typing import TYPE_CHECKING, Optional, Dict, Union, List, Any, TypeVar, Type
+import warnings
 
 import torch
+import torch.distributed as dist
 
-from allennlp.common import cached_transformers
+from allennlp.common.util import is_distributed, is_global_primary
+from allennlp.nn.util import distributed_device
+
+if TYPE_CHECKING:
+    from transformers.configuration_utils import PretrainedConfig
+
 
 logger = logging.getLogger(__name__)
+
+
+_T = TypeVar("_T", bound="TransformerModule")
+StateDictType = Union[Dict[str, torch.Tensor], "OrderedDict[str, torch.Tensor]"]
+
+
+class DistributedLoadingStrategy(Enum):
+    """
+    Strategy options for loading state dictionaries in distributed process groups.
+    """
+
+    FREE_FOR_ALL = "FREE_FOR_ALL"
+    """
+    Each process group loads its own state dict from disk.
+    """
+
+    MEMORY_EFFICIENT = "MEMORY_EFFICIENT"
+    """
+    Only the primary process group loads the state dict from disk, then it broadcasts
+    each state tensor one-by-one to the other process groups.
+    """
+
+    @classmethod
+    def from_str(cls, s: str) -> "DistributedLoadingStrategy":
+        for option in cls:
+            if option.value.lower() == s.lower():
+                return option
+        raise ValueError(f"Unknown distributed loading strategy: '{s}'")
 
 
 class TransformerModule(torch.nn.Module):
     """
     Base class to help with generalized loading of pretrained weights.
 
-    `_huggingface_mapping` is an optional mapping for each class, that determines
-    any differences in the module names between the class modules and the huggingface model's
-    modules.
-
-    `_relevant_module` is an optional str or list of str which contains the expected name of the module
-    in the huggingface pretrained model. It can be a list to account for different names in different
-    models. The search is carried out in the order of the list.
+    Subclasses should override `_from_config()` if you want to instantiate them with
+    `from_pretrained_module()`.
     """
 
     _huggingface_mapping: Dict[str, str] = {}
-    _relevant_module: Optional[Union[str, List[str]]] = None
+    """
+    An optional mapping for each class that determines any differences in the module
+    names between the class modules and the HuggingFace model's modules.
+    Keys correspond to HuggingFace submodule names, values correspond to submodules names of this module.
+    """
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    _relevant_module: Optional[Union[str, List[str]]] = None
+    """
+    An optional string or list of strings which contains the expected name of the module
+    in the HuggingFace pretrained model. It can be a list to account for different names in different
+    models. The search is carried out in the order of the list.
+    """
+
+    _distributed_loading_strategy: DistributedLoadingStrategy = (
+        DistributedLoadingStrategy.FREE_FOR_ALL
+    )
+    """
+    The default strategy for loading a state dictionary within a distributed process group.
+    """
 
     @classmethod
     def _get_mapping(
         cls,
-        pretrained_module: Optional[torch.nn.Module] = None,
-        source: str = "huggingface",
         mapping: Optional[Dict[str, str]] = None,
     ):
         """
-        Returns the mapping to be used, based on the optional `pretrained_module`.
-        If `pretrained_module` is not given, the default module-level mapping is returned.
+        Returns the mapping to be used, based on the optional `mapping` overrides
+        and the default module-level mapping.
         """
         combined_mapping = {}
-        if "huggingface" == source:
-            combined_mapping.update(cls._huggingface_mapping)
+        combined_mapping.update(cls._huggingface_mapping)
         if mapping is not None:
             combined_mapping.update(mapping)
         return combined_mapping
 
-    @classmethod
-    def _get_mapped_submodules(
-        cls,
-        pretrained_module: torch.nn.Module,
-        source: str = "huggingface",
+    @staticmethod
+    def _get_mapped_state_dict(
+        module: torch.nn.Module,
+        state_dict: StateDictType,
         mapping: Optional[Dict[str, str]] = None,
-    ):
+    ) -> StateDictType:
         """
-        Subclasses overload this method, and provide appropriate name mapping based on the source.
-        """
-        submodules = dict(pretrained_module.named_modules())
-        combined_mapping = cls._get_mapping(pretrained_module, source, mapping)
-        for name, module in pretrained_module.named_modules():
-            newname = name
-            for key, val in combined_mapping.items():
-                newname = newname.replace(key, val)
-            submodules[newname] = submodules.pop(name)
-        return submodules
+        Recursively map keys in a HuggingFace `state_dict` to the corresponding keys
+        for this module and all submodules.
 
-    def _construct_default_mapping(
-        self,
-        pretrained_module: torch.nn.Module,
-        source: str = "huggingface",
-        mapping: Optional[Dict[str, str]] = None,
-    ):
+        This is a `@staticmethod` instead of an instance method so that we can call
+        it on modules that do not inherit from `TransformerModule` in case those
+        modules have submodules that are `TransformerModule` instances.
         """
-        Recursively constructs the default mapping of parameter names for loading pretrained module weights.
-        Keys are parameter names from this module, and values are corresponding parameter names in the
-        expected pretrained module, as per `source`.
-        """
-        combined_mapping = self._get_mapping(pretrained_module, source, mapping)
-        for name, module in self.named_modules():
-            if name != "":
-                if hasattr(module, "_construct_default_mapping"):
-                    # We handle collisions by giving priority to the outer module's mapping.
-                    combined_mapping = dict(
-                        list(
-                            module._construct_default_mapping(
-                                pretrained_module, source, combined_mapping
-                            ).items()
-                        )
-                        + list(combined_mapping.items())
-                    )
-        return combined_mapping
+        # First fix all top-level keys according to `combined_mapping`.
+        combined_mapping = (
+            module._get_mapping(mapping) if isinstance(module, TransformerModule) else {}
+        )
+        for hf_key, cls_key in combined_mapping.items():
+            relevant_keys = set([key for key in state_dict.keys() if key.startswith(hf_key)])
+            for key in relevant_keys:
+                new_key = key.replace(hf_key, cls_key, 1)
+                state_dict[new_key] = state_dict.pop(key)
 
-    def _load_from_pretrained_module(
-        self,
-        pretrained_module: torch.nn.Module,
-        source="huggingface",
-        mapping: Optional[Dict[str, str]] = None,
-        ignore_absent_parameters: Optional[List] = None,
-    ):
-        """
-        Loads the weights of the `pretrained_module` into the instance.
-        Optionally, a `mapping` is specified for any differences in parameter names
-        between `pretrained_module` and the instance.
-        """
-        ignore_absent_parameters = ignore_absent_parameters or []
-        combined_mapping = self._construct_default_mapping(pretrained_module, source, mapping)
-        if mapping is not None:
-            combined_mapping.update(mapping)
-
-        inverse_mapping = {val: key for key, val in combined_mapping.items()}
-        pretrained_parameters = dict(pretrained_module.named_parameters())
-        for name, parameter in self.named_parameters():
-            pretrained_name = name
-            for key, val in inverse_mapping.items():
-                # so that we replace the names of submodules too.
-                # eg. module.key.anothermodule --> module.val.anothermodule
-                pretrained_name = pretrained_name.replace(key, val)
-            if not any(
-                [pretrained_name.startswith(paraname) for paraname in ignore_absent_parameters]
-            ):
-                if pretrained_name not in pretrained_parameters:
-                    raise ValueError(
-                        f"Couldn't find a matching parameter for {name}. Is this module "
-                        "compatible with the pretrained module you're using?"
-                    )
-                parameter.data.copy_(pretrained_parameters[pretrained_name].data)
-
-    @classmethod
-    def _get_input_arguments(
-        cls,
-        pretrained_module: torch.nn.Module,
-        source: str = "huggingface",
-        mapping: Optional[Dict[str, str]] = None,
-        **kwargs,
-    ) -> Dict[str, Any]:
-        """
-        Constructs the arguments required for instantiating an object of this class, using
-        the values from `pretrained_module`.
-        """
-        return kwargs
-
-    @classmethod
-    def get_relevant_module(
-        cls,
-        pretrained_module: Union[str, torch.nn.Module],
-        relevant_module: Optional[Union[str, List[str]]] = None,
-        source: str = "huggingface",
-        mapping: Optional[Dict[str, str]] = None,
-        load_weights: bool = True,
-    ):
-        """
-        Returns the relevant underlying module given a model name/object.
-
-        # Parameters
-
-        pretrained_module : `Union[str, torch.nn.Module]`
-            Name of the transformer model containing the layer,
-            or the actual layer (not the model object).
-        relevant_module : `Optional[Union[str, List[str]]]`, optional
-            Name of the desired module. Defaults to cls._relevant_module.
-        source : `str`, optional
-            Where the model came from. Default - huggingface.
-        mapping : `Dict[str, str]`, optional
-            Optional mapping that determines any differences in the module names
-            between the class modules and the input model's modules.
-            Default - cls._huggingface_mapping
-        load_weights : `bool`, optional
-            Whether or not to load the pretrained weights.
-            Default is `True`.
-        """
-        if isinstance(pretrained_module, str):
-            pretrained_module = cached_transformers.get(
-                pretrained_module, False, load_weights=load_weights
+        # Now loop through the submodules, calling this function on each submodule.
+        for name, submodule in module.named_children():
+            # Pull-out the part of the state_dict corresponding to just this submodule.
+            relevant_keys = set([key for key in state_dict.keys() if key.startswith(name + ".")])
+            module_state_dict = {
+                key.replace(name + ".", "", 1): state_dict.pop(key) for key in relevant_keys
+            }
+            # Recursively call this function from the submodule to map this part
+            # of the state_dict.
+            module_state_dict = TransformerModule._get_mapped_state_dict(
+                submodule, module_state_dict
             )
+            # And then update the full state_dict.
+            for key, value in module_state_dict.items():
+                state_dict[name + "." + key] = value
 
-        relevant_module = relevant_module or cls._relevant_module
+        return state_dict
 
-        if relevant_module is not None:
-            submodules = cls._get_mapped_submodules(pretrained_module, source, mapping)
-            # If the relevant_module is not found, we assume that the pretrained_module
-            # is already the relevant module.
-            if isinstance(relevant_module, str):
-                relevant_module = [relevant_module]
+    @classmethod
+    def _get_relevant_submodule_state(
+        cls,
+        state_dict: StateDictType,
+        relevant_module: Optional[Union[str, List[str]]] = None,
+    ) -> StateDictType:
+        """
+        Returns the relevant part of the `state_dict`.
+        """
+        relevant_modules: Optional[List[str]] = None
+        if relevant_module:
+            relevant_modules = (
+                [relevant_module] if isinstance(relevant_module, str) else relevant_module
+            )
+        elif isinstance(cls._relevant_module, str):
+            relevant_modules = [cls._relevant_module]
+        elif isinstance(cls._relevant_module, list):
+            relevant_modules = cls._relevant_module
+
+        if relevant_modules:
             found = False
-            for module in relevant_module:
-                if module in submodules:
-                    pretrained_module = submodules[module]
+            for module_name in relevant_modules:
+                relevant_keys = set(
+                    [key for key in state_dict.keys() if key.startswith(module_name + ".")]
+                )
+                if relevant_keys:
+                    # Only keep elements of state dict that correspond to the relevant module.
+                    state_dict = {
+                        key.replace(module_name + ".", "", 1): value
+                        for key, value in state_dict.items()
+                        if key in relevant_keys
+                    }
                     found = True
                     break
 
             if not found:
-                logger.warning(
-                    "{} was not found! The submodules are: {}".format(
-                        relevant_module, submodules.keys()
-                    )
+                warnings.warn(
+                    f"{relevant_modules} was not found at top level of state_dict!", UserWarning
                 )
-        return pretrained_module
+
+        return state_dict
+
+    @classmethod
+    def _get_pretrained_state_dict(
+        cls,
+        model_name: str,
+        weights_path: Optional[Union[str, PathLike]] = None,
+        relevant_module: Optional[Union[str, List[str]]] = None,
+    ) -> StateDictType:
+        """
+        Get a HuggingFace pretrained `state_dict` corresponding to this module.
+        """
+        if weights_path is None:
+            from transformers.file_utils import WEIGHTS_NAME
+
+            # First see if we can find the weights locally.
+            if os.path.isdir(model_name):
+                local_weights_path = os.path.join(model_name, WEIGHTS_NAME)
+                if os.path.isfile(local_weights_path):
+                    logger.info("Found weights at local path %s", local_weights_path)
+                    weights_path = local_weights_path
+
+            # If we haven't found locally, we assume model ID corresponds to a model
+            # on the HuggingFace Hub.
+            if weights_path is None:
+                from allennlp.common.file_utils import cached_path
+
+                weights_path = cached_path(f"hf://{model_name}/{WEIGHTS_NAME}")
+
+        # Now load the state dict.
+        logger.info("Loading state dict from %s", weights_path)
+        state_dict = torch.load(weights_path, map_location="cpu")
+
+        # Keep just the relevant_module, remove everything else.
+        state_dict = cls._get_relevant_submodule_state(state_dict)
+
+        return state_dict
+
+    @staticmethod
+    def _collect_state_dict(
+        module: torch.nn.Module, state_dict: Optional[StateDictType], recurse: bool = True
+    ) -> StateDictType:
+        """
+        Collect a module's state dict across distributed processes.
+        """
+        # This is the device we'll use for the broadcast operation.
+        device = distributed_device()
+
+        # Gather current state dict and prepare to iterator over it.
+        # We iterate over this state dict instead of `state_dict` so we can be sure
+        # that the order is consistent across processes.
+        # We'll also update this state dict as we go and return it at the end.
+        if recurse:
+            current_state_dict = module.state_dict()
+        else:
+            # Only collect state of direct members, including both parameters and buffers.
+            current_state_dict = OrderedDict(
+                chain(
+                    # Paramaters
+                    ((n, p.data) for (n, p) in module.named_parameters(recurse=False)),
+                    # Buffers
+                    module.named_buffers(recurse=False),
+                )
+            )
+        keys = list(current_state_dict.keys())
+
+        for key in keys:
+            tensor = current_state_dict[key]
+            if is_global_primary():
+                assert state_dict is not None
+                if key in state_dict:
+                    tensor = state_dict[key]
+                else:
+                    logger.warning(
+                        f"Missing key {key} from state_dict (available keys: {list(state_dict.keys())})"
+                    )
+            tensor = tensor.to(device)
+            dist.broadcast(tensor, 0)
+            current_state_dict[key] = tensor
+
+        return current_state_dict
+
+    @staticmethod
+    def _load_state_dict_distributed(
+        module: torch.nn.Module, state_dict: Optional[StateDictType], strict: bool = True
+    ) -> None:
+        """
+        Load a `state_dict` within a distributed process group.
+
+        The `state_dict` may be `None` if the current process group is not the global primary,
+        in which case it will gather the parameters from the global primary one-by-one.
+
+        This is a `@staticmethod` instead of an instance method so that we can call
+        it on modules that do not inherit from `TransformerModule` in case those
+        modules have submodules that are `TransformerModule` instances.
+        """
+        submodules = dict(module.named_children())
+
+        # If we've found a sharded module or there aren't any more submodules of the current module,
+        # we collect the state_dict and load it now instead of recursing further.
+        if getattr(module, "_is_sharded", False) or not submodules:
+            state_dict = TransformerModule._collect_state_dict(module, state_dict)
+            assert state_dict is not None
+            module.load_state_dict(state_dict, strict=strict)
+        else:
+            # We'll recursively call this function on each submodule, but first we need
+            # to collect any parameters that are direct members of this module.
+            direct_member_state_dict = TransformerModule._collect_state_dict(
+                module, state_dict, recurse=False
+            )
+            missing_keys, unexpected_keys = module.load_state_dict(
+                direct_member_state_dict, strict=False
+            )
+            if strict and unexpected_keys:
+                raise ValueError(f"Unexpected keys in state dict: {unexpected_keys}")
+
+            # Okay, now for the recursive part.
+            for name, submodule in submodules.items():
+                submodule_state_dict: Optional[StateDictType] = None
+                if is_global_primary():
+                    assert state_dict is not None
+                    submodule_state_dict = {
+                        key.replace(name + ".", "", 1): value
+                        for key, value in state_dict.items()
+                        if key.startswith(name + ".")
+                    }
+                submodule_state_dict = TransformerModule._collect_state_dict(
+                    submodule, submodule_state_dict
+                )
+                assert submodule_state_dict is not None
+                submodule.load_state_dict(submodule_state_dict, strict=strict)
+
+    @classmethod
+    def _from_config(cls: Type[_T], config: "PretrainedConfig", **kwargs) -> _T:
+        """
+        Instantiate this module from a HuggingFace config. Subclasses should override
+        this method if you want to be able to instantiate them with `from_pretrained_module()`.
+        """
+        raise NotImplementedError
 
     @classmethod
     def from_pretrained_module(
-        cls,
-        pretrained_module: Union[str, torch.nn.Module],
-        source: str = "huggingface",
-        mapping: Optional[Dict[str, str]] = None,
+        cls: Type[_T],
+        model_name: str,
         load_weights: bool = True,
+        weights_path: Optional[Union[str, PathLike]] = None,
+        auto_config_kwargs: Optional[Dict[str, Any]] = None,
+        mapping: Optional[Dict[str, str]] = None,
+        relevant_module: Optional[Union[str, List[str]]] = None,
+        strict: bool = True,
+        distributed_loading_strategy: Optional[Union[str, DistributedLoadingStrategy]] = None,
         **kwargs,
-    ):
+    ) -> _T:
         """
-        Creates and returns an instance of the class, by using the weights
-        (and the architecture, by default) of the `pretrained_module`.
-        Optionally, the architecture can be changed by providing arguments.
-        """
-        accepted_args = inspect.getfullargspec(cls).args
-        accepted_args.remove("self")
-        for key in kwargs:
-            assert key in accepted_args, (
-                "{} is not a valid argument for creating an instance of `{}`. "
-                "Accepted arguments are {}.".format(key, cls.__name__, accepted_args)
-            )
+        Initialize this module from a corresponding model from HuggingFace.
 
-        pretrained_module = cls.get_relevant_module(
-            pretrained_module, source=source, mapping=mapping, load_weights=load_weights
-        )
-        final_kwargs = cls._get_input_arguments(pretrained_module, source, mapping)
-        final_kwargs.update(kwargs)
-        module = cls(**final_kwargs)
-        module._load_from_pretrained_module(pretrained_module, source, mapping)
-        return module
+
+        !!! Note
+            This method is only available for subclasses that implement `from_config()`.
+            Otherwise a `NotImplementedError` will be raised.
+
+        # Parameters
+
+        model_name : `str`
+            The model identifier or path.
+
+        load_weights : `bool`, optional (default = `True`)
+            Whether to download and load the pretrained weights. If `False`, the
+            weights are left uninitialized.
+
+        weights_path : `Optional[Union[str, PathLike]]`, optional (default = `None`)
+            When `load_weights` is `True`, this can be set to override the weights file.
+            Otherwise the default weights from the pretrained model are used.
+
+        auto_config_kwargs : `Optional[Dict[str, Any]]`, optional (default = `None`)
+            Optional key-word arguments to pass to `transformers.AutoConfig.from_pretrained()`
+            to load the pretrained model's configuration file.
+
+        mapping : `Optional[Dict[str, str]]`, optional (default = `None`)
+            Optional mapping that determines any differences in the submodule names
+            between this module and the pretrained model from HuggingFace.
+            If not given, the class's default is used: `cls._huggingface_mapping`.
+
+        relevant_module : `Optionall[str]`, optional (default = `None`)
+            An optional submodule of the HuggingFace module to initialize weights from.
+            This is only relevant when `load_weights` is `True`.
+            If not given, the class's default is used: `cls._relevant_module`.
+
+        strict : `bool`, optional (default = `True`)
+            Whether to load the `state_dict` in "strict" model. This only applies
+            when `load_weights` is `True`.
+
+        distributed_loading_strategy : `Optional[Union[str, DistributedLoadingStrategy]]`, optional (default = `None`)
+            The loading strategy to use within a distributed process group. This only applies
+            when `load_weights` is `True`. If not specified, this class's default is used:
+            `cls._distributed_loading_strategy`.
+
+        **kwargs : Any
+            Key word arguments to pass to `cls.from_config()` when instantiating the module.
+        """  # noqa: E501
+        from transformers import AutoConfig
+
+        config = AutoConfig.from_pretrained(model_name, **(auto_config_kwargs or {}))
+        model = cls._from_config(config, **kwargs)
+
+        if load_weights:
+            # Resolve the loading strategy to use.
+            loading_strategy: DistributedLoadingStrategy
+            if isinstance(distributed_loading_strategy, DistributedLoadingStrategy):
+                loading_strategy = distributed_loading_strategy
+            elif isinstance(distributed_loading_strategy, str):
+                loading_strategy = DistributedLoadingStrategy.from_str(distributed_loading_strategy)
+            else:
+                loading_strategy = cls._distributed_loading_strategy
+
+            state_dict: Optional[StateDictType] = None
+            if is_global_primary() or loading_strategy == DistributedLoadingStrategy.FREE_FOR_ALL:
+                # Load the pretrained HuggingFace state_dict.
+                pretrained_state_dict = cls._get_pretrained_state_dict(
+                    model_name,
+                    weights_path=weights_path,
+                    relevant_module=relevant_module,
+                )
+                # Now map keys from the HuggingFace state_dict to the corresponding keys from
+                # this class. This is called recursively on each submodule of the current module.
+                state_dict = TransformerModule._get_mapped_state_dict(
+                    model, pretrained_state_dict, mapping=mapping
+                )
+
+            if not is_distributed() or loading_strategy == DistributedLoadingStrategy.FREE_FOR_ALL:
+                assert state_dict is not None
+                logger.info("Loading state_dict into module")
+                model.load_state_dict(state_dict, strict=strict)
+            else:
+                # We're in distributed training. `state_dict` is `None` for all process groups
+                # except the global primary.
+                # Syncronize here since non-primary process groups will have to wait for the primary
+                # to load the state_dict into memory.
+                dist.barrier()
+                # Now load the state dict into the model.
+                logger.info("Loading state_dict into module (MEMORY_EFFICIENT strategy)")
+                TransformerModule._load_state_dict_distributed(model, state_dict, strict=strict)
+
+        return model

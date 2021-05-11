@@ -1,10 +1,12 @@
-from typing import Optional, Dict
+from typing import Optional, TYPE_CHECKING
 
 import torch
 
 from allennlp.common import FromParams
-
 from allennlp.modules.transformer.transformer_module import TransformerModule
+
+if TYPE_CHECKING:
+    from transformers.configuration_utils import PretrainedConfig
 
 
 class Embeddings(TransformerModule, FromParams):
@@ -182,32 +184,12 @@ class TransformerEmbeddings(Embeddings):
         return embeddings
 
     @classmethod
-    def _get_input_arguments(
-        cls,
-        pretrained_module: torch.nn.Module,
-        source="huggingface",
-        mapping: Optional[Dict[str, str]] = None,
-        **kwargs,
-    ):
-        submodules = cls._get_mapped_submodules(pretrained_module, source, mapping)
-
+    def _from_config(cls, config: "PretrainedConfig", **kwargs):
         final_kwargs = {}
-
-        final_kwargs["vocab_size"] = submodules["embeddings.word_embeddings"].num_embeddings
-        final_kwargs["embedding_size"] = submodules["embeddings.word_embeddings"].embedding_dim
-        final_kwargs["pad_token_id"] = submodules["embeddings.word_embeddings"].padding_idx
-        final_kwargs["max_position_embeddings"] = submodules[
-            "embeddings.position_embeddings"
-        ].num_embeddings
-
-        if "embeddings.token_type_embeddings" in submodules:
-            final_kwargs["type_vocab_size"] = submodules[
-                "embeddings.token_type_embeddings"
-            ].num_embeddings
-
-        else:
-            final_kwargs["type_vocab_size"] = 0
-
+        final_kwargs["vocab_size"] = config.vocab_size
+        final_kwargs["embedding_size"] = config.hidden_size
+        final_kwargs["pad_token_id"] = config.pad_token_id
+        final_kwargs["max_position_embeddings"] = config.max_position_embeddings
+        final_kwargs["type_vocab_size"] = config.type_vocab_size
         final_kwargs.update(**kwargs)
-
-        return final_kwargs
+        return cls(**final_kwargs)

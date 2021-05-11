@@ -125,7 +125,10 @@ almost = AlmostRegularTransformer()
 
 from allennlp.modules.transformer.positional_encoding import SinusoidalPositionalEncoding
 
-from allennlp.modules.transformer.transformer_module import TransformerModule
+from allennlp.modules.transformer.transformer_module import (
+    TransformerModule,
+    DistributedLoadingStrategy,
+)
 from allennlp.modules.transformer.transformer_embeddings import (
     Embeddings,
     TransformerEmbeddings,
