@@ -1,6 +1,4 @@
-from collections import OrderedDict
 from enum import Enum
-from itertools import chain
 import logging
 import os
 from os import PathLike
@@ -11,7 +9,7 @@ import torch
 import torch.distributed as dist
 
 from allennlp.common.util import is_distributed, is_global_primary
-from allennlp.nn.util import distributed_device, read_state_dict
+from allennlp.nn.util import StateDictType, read_state_dict, load_state_dict_distributed
 
 if TYPE_CHECKING:
     from transformers.configuration_utils import PretrainedConfig
@@ -21,23 +19,26 @@ logger = logging.getLogger(__name__)
 
 
 _T = TypeVar("_T", bound="TransformerModule")
-StateDictType = Union[Dict[str, torch.Tensor], "OrderedDict[str, torch.Tensor]"]
 
 
 class DistributedLoadingStrategy(Enum):
     """
-    Strategy options for loading state dictionaries in distributed process groups.
+    Strategy options for loading state dictionaries across distributed processes.
     """
 
     FREE_FOR_ALL = "FREE_FOR_ALL"
     """
-    Each process group loads its own state dict from disk.
+    Each process loads its own state dict from disk.
     """
 
     MEMORY_EFFICIENT = "MEMORY_EFFICIENT"
     """
-    Only the primary process group loads the state dict from disk, then it broadcasts
+    Only the primary process loads the state dict from disk, then it broadcasts
     each state tensor one-by-one to the other process groups.
+
+    This is particularly useful when you have multiple distributed workers on the same
+    machine (shared CPU memory), and don't have enough memory for each process to load
+    its own copy of the state dict at the same time.
     """
 
     @classmethod
@@ -92,47 +93,16 @@ class TransformerModule(torch.nn.Module):
             combined_mapping.update(mapping)
         return combined_mapping
 
-    @staticmethod
     def _get_mapped_state_dict(
-        module: torch.nn.Module,
+        self,
         state_dict: StateDictType,
         mapping: Optional[Dict[str, str]] = None,
     ) -> StateDictType:
         """
         Recursively map keys in a HuggingFace `state_dict` to the corresponding keys
         for this module and all submodules.
-
-        This is a `@staticmethod` instead of an instance method so that we can call
-        it on modules that do not inherit from `TransformerModule` in case those
-        modules have submodules that are `TransformerModule` instances.
         """
-        # First fix all top-level keys according to `combined_mapping`.
-        combined_mapping = (
-            module._get_mapping(mapping) if isinstance(module, TransformerModule) else {}
-        )
-        for hf_key, cls_key in combined_mapping.items():
-            relevant_keys = set([key for key in state_dict.keys() if key.startswith(hf_key)])
-            for key in relevant_keys:
-                new_key = key.replace(hf_key, cls_key, 1)
-                state_dict[new_key] = state_dict.pop(key)
-
-        # Now loop through the submodules, calling this function on each submodule.
-        for name, submodule in module.named_children():
-            # Pull-out the part of the state_dict corresponding to just this submodule.
-            relevant_keys = set([key for key in state_dict.keys() if key.startswith(name + ".")])
-            module_state_dict = {
-                key.replace(name + ".", "", 1): state_dict.pop(key) for key in relevant_keys
-            }
-            # Recursively call this function from the submodule to map this part
-            # of the state_dict.
-            module_state_dict = TransformerModule._get_mapped_state_dict(
-                submodule, module_state_dict
-            )
-            # And then update the full state_dict.
-            for key, value in module_state_dict.items():
-                state_dict[name + "." + key] = value
-
-        return state_dict
+        return _get_mapped_state_dict(self, state_dict, mapping=mapping)
 
     @classmethod
     def _get_relevant_submodule_state(
@@ -212,100 +182,6 @@ class TransformerModule(torch.nn.Module):
 
         return state_dict
 
-    @staticmethod
-    def _collect_state_dict(
-        module: torch.nn.Module, state_dict: Optional[StateDictType], recurse: bool = True
-    ) -> StateDictType:
-        """
-        Collect a module's state dict across distributed processes.
-        """
-        # This is the device we'll use for the broadcast operation.
-        device = distributed_device()
-
-        # Gather current state dict and prepare to iterator over it.
-        # We iterate over this state dict instead of `state_dict` so we can be sure
-        # that the order is consistent across processes.
-        # We'll also update this state dict as we go and return it at the end.
-        if recurse:
-            current_state_dict = module.state_dict()
-        else:
-            # Only collect state of direct members, including both parameters and buffers.
-            current_state_dict = OrderedDict(
-                chain(
-                    # Paramaters
-                    ((n, p.data) for (n, p) in module.named_parameters(recurse=False)),
-                    # Buffers
-                    module.named_buffers(recurse=False),
-                )
-            )
-        keys = list(current_state_dict.keys())
-
-        for key in keys:
-            tensor = current_state_dict[key]
-            if is_global_primary():
-                assert state_dict is not None
-                if key in state_dict:
-                    tensor = state_dict[key]
-                else:
-                    logger.warning(
-                        f"Missing key {key} from state_dict (available keys: {list(state_dict.keys())})"
-                    )
-            tensor = tensor.to(device)
-            dist.broadcast(tensor, 0)
-            current_state_dict[key] = tensor
-
-        return current_state_dict
-
-    @staticmethod
-    def _load_state_dict_distributed(
-        module: torch.nn.Module, state_dict: Optional[StateDictType], strict: bool = True
-    ) -> None:
-        """
-        Load a `state_dict` within a distributed process group.
-
-        The `state_dict` may be `None` if the current process group is not the global primary,
-        in which case it will gather the parameters from the global primary one-by-one.
-
-        This is a `@staticmethod` instead of an instance method so that we can call
-        it on modules that do not inherit from `TransformerModule` in case those
-        modules have submodules that are `TransformerModule` instances.
-        """
-        submodules = dict(module.named_children())
-
-        # If we've found a sharded module or there aren't any more submodules of the current module,
-        # we collect the state_dict and load it now instead of recursing further.
-        if getattr(module, "_is_sharded", False) or not submodules:
-            state_dict = TransformerModule._collect_state_dict(module, state_dict)
-            assert state_dict is not None
-            module.load_state_dict(state_dict, strict=strict)
-        else:
-            # We'll recursively call this function on each submodule, but first we need
-            # to collect any parameters that are direct members of this module.
-            direct_member_state_dict = TransformerModule._collect_state_dict(
-                module, state_dict, recurse=False
-            )
-            missing_keys, unexpected_keys = module.load_state_dict(
-                direct_member_state_dict, strict=False
-            )
-            if strict and unexpected_keys:
-                raise ValueError(f"Unexpected keys in state dict: {unexpected_keys}")
-
-            # Okay, now for the recursive part.
-            for name, submodule in submodules.items():
-                submodule_state_dict: Optional[StateDictType] = None
-                if is_global_primary():
-                    assert state_dict is not None
-                    submodule_state_dict = {
-                        key.replace(name + ".", "", 1): value
-                        for key, value in state_dict.items()
-                        if key.startswith(name + ".")
-                    }
-                submodule_state_dict = TransformerModule._collect_state_dict(
-                    submodule, submodule_state_dict
-                )
-                assert submodule_state_dict is not None
-                submodule.load_state_dict(submodule_state_dict, strict=strict)
-
     @classmethod
     def _from_config(cls: Type[_T], config: "PretrainedConfig", **kwargs) -> _T:
         """
@@ -328,7 +204,7 @@ class TransformerModule(torch.nn.Module):
         **kwargs,
     ) -> _T:
         """
-        Initialize this module from a corresponding model from HuggingFace.
+        Initialize this module from a corresponding model on HuggingFace.
 
 
         !!! Note
@@ -415,6 +291,36 @@ class TransformerModule(torch.nn.Module):
                 dist.barrier()
                 # Now load the state dict into the model.
                 logger.info("Loading state_dict into module (MEMORY_EFFICIENT strategy)")
-                TransformerModule._load_state_dict_distributed(model, state_dict, strict=strict)
+                load_state_dict_distributed(model, state_dict, strict=strict)
 
         return model
+
+
+def _get_mapped_state_dict(
+    module: torch.nn.Module,
+    state_dict: StateDictType,
+    mapping: Optional[Dict[str, str]] = None,
+) -> StateDictType:
+    # First fix all top-level keys according to `combined_mapping`.
+    combined_mapping = module._get_mapping(mapping) if isinstance(module, TransformerModule) else {}
+    for hf_key, cls_key in combined_mapping.items():
+        relevant_keys = set([key for key in state_dict.keys() if key.startswith(hf_key)])
+        for key in relevant_keys:
+            new_key = key.replace(hf_key, cls_key, 1)
+            state_dict[new_key] = state_dict.pop(key)
+
+    # Now loop through the submodules, calling this function on each submodule.
+    for name, submodule in module.named_children():
+        # Pull-out the part of the state_dict corresponding to just this submodule.
+        relevant_keys = set([key for key in state_dict.keys() if key.startswith(name + ".")])
+        module_state_dict = {
+            key.replace(name + ".", "", 1): state_dict.pop(key) for key in relevant_keys
+        }
+        # Recursively call this function from the submodule to map this part
+        # of the state_dict.
+        module_state_dict = TransformerModule._get_mapped_state_dict(submodule, module_state_dict)
+        # And then update the full state_dict.
+        for key, value in module_state_dict.items():
+            state_dict[name + "." + key] = value
+
+    return state_dict

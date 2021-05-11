@@ -4,6 +4,7 @@ Assorted utilities for working with neural networks in AllenNLP.
 
 import copy
 from collections import defaultdict, OrderedDict
+from itertools import chain
 import json
 import logging
 from os import PathLike
@@ -16,11 +17,18 @@ import torch
 import torch.distributed as dist
 
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.util import int_to_device, is_distributed
+from allennlp.common.util import int_to_device, is_distributed, is_global_primary
 
 logger = logging.getLogger(__name__)
 
 T = TypeVar("T")
+StateDictType = Union[Dict[str, torch.Tensor], "OrderedDict[str, torch.Tensor]"]
+
+_MODULE_SHARDED_FLAG = "_is_sharded_allennlp"
+"""
+This flag is used to indicate when a module's parameters have been sharded across
+distributed workers.
+"""
 
 
 def move_to_device(obj, device: Union[torch.device, int]):
@@ -2168,3 +2176,91 @@ def dist_reduce_sum(value: _V, **kwargs) -> _V:
     if not is_distributed():
         return value
     return dist_reduce(value, dist.ReduceOp.SUM, **kwargs)
+
+
+def _collect_state_dict(
+    module: torch.nn.Module, state_dict: Optional[StateDictType], recurse: bool = True
+) -> StateDictType:
+    """
+    Collect a module's state dict across distributed processes.
+    """
+    # This is the device we'll use for the broadcast operation.
+    device = distributed_device()
+
+    # Gather current state dict and prepare to iterator over it.
+    # We iterate over this state dict instead of `state_dict` so we can be sure
+    # that the order is consistent across processes.
+    # We'll also update this state dict as we go and return it at the end.
+    if recurse:
+        current_state_dict = module.state_dict()
+    else:
+        # Only collect state of direct members, including both parameters and buffers.
+        current_state_dict = OrderedDict(
+            chain(
+                # Paramaters
+                ((n, p.data) for (n, p) in module.named_parameters(recurse=False)),
+                # Buffers
+                module.named_buffers(recurse=False),
+            )
+        )
+    keys = list(current_state_dict.keys())
+
+    for key in keys:
+        tensor = current_state_dict[key]
+        if is_global_primary():
+            assert state_dict is not None
+            if key in state_dict:
+                tensor = state_dict[key]
+            else:
+                logger.warning(
+                    f"Missing key {key} from state_dict (available keys: {list(state_dict.keys())})"
+                )
+        tensor = tensor.to(device)
+        dist.broadcast(tensor, 0)
+        current_state_dict[key] = tensor
+
+    return current_state_dict
+
+
+def load_state_dict_distributed(
+    module: torch.nn.Module, state_dict: Optional[StateDictType], strict: bool = True
+) -> None:
+    """
+    Load a `state_dict` to the `module` within a distributed process. Only the global
+    primary process requires the `state_dict` to not be `None`. All other processes
+    will have the state tensors broadcasted to them one-by-one.
+    """
+    if is_global_primary():
+        assert state_dict is not None
+    else:
+        assert state_dict is None
+
+    submodules = dict(module.named_children())
+
+    # If we've found a sharded module or there aren't any more submodules of the current module,
+    # we collect the state_dict and load it now instead of recursing further.
+    if getattr(module, _MODULE_SHARDED_FLAG, False) or not submodules:
+        state_dict = _collect_state_dict(module, state_dict)
+        assert state_dict is not None
+        module.load_state_dict(state_dict, strict=strict)
+    else:
+        # We'll recursively call this function on each submodule, but first we need
+        # to collect any parameters that are direct members of this module.
+        direct_member_state_dict = _collect_state_dict(module, state_dict, recurse=False)
+        missing_keys, unexpected_keys = module.load_state_dict(
+            direct_member_state_dict, strict=False
+        )
+        if strict and unexpected_keys:
+            raise ValueError(f"Unexpected keys in state dict: {unexpected_keys}")
+
+        # Okay, now for the recursive part.
+        for name, submodule in submodules.items():
+            submodule_state_dict: Optional[StateDictType] = None
+            if is_global_primary():
+                assert state_dict is not None
+                submodule_state_dict = {
+                    key.replace(name + ".", "", 1): value
+                    for key, value in state_dict.items()
+                    if key.startswith(name + ".")
+                }
+            load_state_dict_distributed(submodule, submodule_state_dict, strict=strict)

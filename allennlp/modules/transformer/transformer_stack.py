@@ -42,7 +42,7 @@ class TransformerStack(TransformerModule, FromParams):
     """
 
     _huggingface_mapping = {"layer": "layers"}
-    _relevant_module = "encoder"
+    _relevant_module = ["encoder", "bert.encoder"]
 
     def __init__(
         self,
@@ -134,15 +134,13 @@ class TransformerStack(TransformerModule, FromParams):
     @classmethod
     def _from_config(cls, config: "PretrainedConfig", **kwargs):
         final_kwargs = {}
-
         final_kwargs["num_hidden_layers"] = config.num_hidden_layers
         final_kwargs["hidden_size"] = config.hidden_size
         final_kwargs["num_attention_heads"] = config.num_attention_heads
+        final_kwargs["add_cross_attention"] = config.add_cross_attention
         final_kwargs["attention_dropout"] = config.attention_probs_dropout_prob
         final_kwargs["hidden_dropout"] = config.hidden_dropout_prob
         final_kwargs["intermediate_size"] = config.intermediate_size
         final_kwargs["activation"] = config.hidden_act
-        final_kwargs["add_cross_attention"] = config.add_cross_attention
-
         final_kwargs.update(**kwargs)
         return cls(**final_kwargs)
