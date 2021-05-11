@@ -119,12 +119,14 @@ class EvaluateBiasMitigation(Subcommand):
 
 def _add(accumulator_dict, append_dict):
     """
-    Adds append_dict to accumulator_dict, concatenating values for duplicate keys.
+    Adds list pairs in append_dict to accumulator_dict,
+    concatenating list values for duplicate keys.
     """
     for k, v in append_dict.items():
-        if k not in accumulator_dict:
-            accumulator_dict[k] = []
-        accumulator_dict[k] += v
+        if isinstance(v, list):
+            if k not in accumulator_dict:
+                accumulator_dict[k] = []
+            accumulator_dict[k] += v
 
 
 def compute_metrics(probs, model, taus):
@@ -140,7 +142,6 @@ def compute_metrics(probs, model, taus):
     of examples whose probability of neutral is above tau
 
     """
-
     metrics = {}
     neutral_label = model.vocab.get_token_index("neutral", "labels")
 
@@ -154,18 +155,14 @@ def compute_metrics(probs, model, taus):
     return metrics
 
 
-def compute_predictions_diff(
-    bias_mitigated_labels, baseline_labels, tokens, bias_mitigated_tokenizer, baseline_tokenizer
-):
+def compute_predictions_diff(bias_mitigated_labels, baseline_labels, tokens, baseline_tokenizer):
     """
     Returns label changes induced by bias mitigation and the corresponding sentence pairs.
     """
     diff = {}
     for idx, label in enumerate(bias_mitigated_labels):
         if label != baseline_labels[idx]:
-            sentence1, sentence2 = tokens[2 * idx : 2 * (idx + 1)]
-            diff["sentence1"] = bias_mitigated_tokenizer.convert_tokens_to_string(sentence1)
-            diff["sentence2"] = baseline_tokenizer.convert_tokens_to_string(sentence2)
+            diff["sentence_pair"] = baseline_tokenizer.convert_tokens_to_string(tokens[idx])
             diff["label_change"] = "{} -> {}".format(baseline_labels[idx], label)
     return diff
 
@@ -240,7 +237,7 @@ def evaluate_from_args(args: argparse.Namespace) -> Tuple[Dict[str, Any], Dict[s
         predictions_output_file=bias_mitigated_filename,
     )
 
-    bias_mitigated_predictions = {}
+    bias_mitigated_predictions: Dict[str, Any] = {}
     with open(bias_mitigated_file, "r") as fd:
         for line in fd:
             _add(bias_mitigated_predictions, json.loads(line))
@@ -263,7 +260,7 @@ def evaluate_from_args(args: argparse.Namespace) -> Tuple[Dict[str, Any], Dict[s
         predictions_output_file=baseline_filename,
     )
 
-    baseline_predictions = {}
+    baseline_predictions: Dict[str, Any] = {}
     with open(baseline_file, "r") as fd:
         for line in fd:
             _add(baseline_predictions, json.loads(line))
@@ -278,14 +275,11 @@ def evaluate_from_args(args: argparse.Namespace) -> Tuple[Dict[str, Any], Dict[s
             fd.write(metrics_json)
     logger.info("Metrics: %s", metrics_json)
 
-    if hasattr(bias_mitigated_dataset_reader, "_tokenizer") and hasattr(
-        baseline_dataset_reader, "_tokenizer"
-    ):
+    if hasattr(baseline_dataset_reader, "_tokenizer"):
         diff = compute_predictions_diff(
             bias_mitigated_predictions["label"],
             baseline_predictions["label"],
             baseline_predictions["tokens"],
-            bias_mitigated_dataset_reader._tokenizer.tokenizer,  # type: ignore
             baseline_dataset_reader._tokenizer.tokenizer,  # type: ignore
         )
         diff_json = json.dumps(diff, indent=2)
