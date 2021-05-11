@@ -135,7 +135,7 @@ def run_tango(
         # produce results
         for name, step in step_graph.items():
             if step.produce_results:
-                _ = step.result(step_cache)
+                step.ensure_result(step_cache)
 
         # symlink everything that has been computed
         for name, step in step_graph.items():

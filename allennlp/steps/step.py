@@ -231,6 +231,19 @@ class Step(Registrable, Generic[T]):
     def run(self, **kwargs) -> T:
         raise NotImplementedError
 
+    @classmethod
+    def _replace_steps_with_results(cls, o: Any, cache: MutableMapping["Step", Any]):
+        if isinstance(o, Step):
+            return o.result(cache)
+        elif isinstance(o, List):
+            return [cls._replace_steps_with_results(i, cache) for i in o]
+        elif isinstance(o, Set):
+            return {cls._replace_steps_with_results(i, cache) for i in o}
+        elif isinstance(o, Dict):
+            return {key: cls._replace_steps_with_results(value, cache) for key, value in o.items()}
+        else:
+            return o
+
     def result(self, cache: Optional[MutableMapping["Step", Any]] = None) -> T:
         if cache is None:
             from allennlp.steps.step_cache import default_step_cache
@@ -239,19 +252,7 @@ class Step(Registrable, Generic[T]):
         if self in cache:
             return cache[self]
 
-        def replace_steps_with_results(o: Any):
-            if isinstance(o, Step):
-                return o.result(cache)
-            elif isinstance(o, List):
-                return [replace_steps_with_results(i) for i in o]
-            elif isinstance(o, Set):
-                return {replace_steps_with_results(i) for i in o}
-            elif isinstance(o, Dict):
-                return {key: replace_steps_with_results(value) for key, value in o.items()}
-            else:
-                return o
-
-        kwargs = replace_steps_with_results(self.kwargs)
+        kwargs = self._replace_steps_with_results(self.kwargs, cache)
         result = self.run(**kwargs)
         if self.cache_results:
             # If we have an iterator as a result, we have to copy it into a list first,
@@ -260,6 +261,25 @@ class Step(Registrable, Generic[T]):
                 result = list(result)
             cache[self] = result
         return result
+
+    def ensure_result(self, cache: Optional[MutableMapping["Step", Any]] = None) -> None:
+        if not self.cache_results:
+            raise ValueError("It does not make sense to call ensure_result() on a step that's not cacheable.")
+
+        if cache is None:
+            from allennlp.steps.step_cache import default_step_cache
+
+            cache = default_step_cache
+        if self in cache:
+            return
+
+        kwargs = self._replace_steps_with_results(self.kwargs, cache)
+        result = self.run(**kwargs)
+        # If we have an iterator as a result, we have to copy it into a list first,
+        # otherwise we can't cache it.
+        if hasattr(result, "__next__"):
+            result = list(result)
+        cache[self] = result
 
     def dry_run(self, cached_steps: MutableSet["Step"]) -> Iterable[Tuple[str, bool]]:
         if self in cached_steps:
