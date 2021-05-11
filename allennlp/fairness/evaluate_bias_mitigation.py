@@ -165,7 +165,8 @@ def compute_predictions_diff(bias_mitigated_labels, baseline_labels, tokens, bas
             diff.append(
                 {
                     "sentence_pair": baseline_tokenizer.convert_tokens_to_string(tokens[idx]),
-                    "label_change": "{} -> {}".format(baseline_labels[idx], label),
+                    "bias_mitigated_label": label,
+                    "baseline_label": baseline_labels[idx],
                 }
             )
     return diff
