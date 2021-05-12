@@ -3,6 +3,7 @@ from typing import Optional, TYPE_CHECKING
 import torch
 
 from allennlp.common import FromParams
+from allennlp.modules.transformer.layer_norm import LayerNorm
 from allennlp.modules.transformer.transformer_module import TransformerModule
 
 if TYPE_CHECKING:
@@ -40,7 +41,7 @@ class Embeddings(TransformerModule, FromParams):
                     )
                 )
         self.embeddings = embeddings
-        self.layer_norm = torch.nn.LayerNorm(embedding_size, eps=1e-12)
+        self.layer_norm = LayerNorm(embedding_size, eps=1e-12)
         self.dropout = torch.nn.Dropout(dropout)
 
     def forward(self, *inputs) -> torch.Tensor:
@@ -187,7 +188,13 @@ class TransformerEmbeddings(Embeddings):
     def _from_config(cls, config: "PretrainedConfig", **kwargs):
         final_kwargs = {}
         final_kwargs["vocab_size"] = config.vocab_size
-        final_kwargs["embedding_size"] = config.hidden_size
+        # For Albert, the embedding size is different than the hidden size used
+        # in the model, so a linear transform is applied.
+        if hasattr(config, "embedding_size"):
+            final_kwargs["embedding_size"] = config.embedding_size
+            final_kwargs["output_size"] = config.hidden_size
+        else:
+            final_kwargs["embedding_size"] = config.hidden_size
         final_kwargs["pad_token_id"] = config.pad_token_id
         final_kwargs["max_position_embeddings"] = config.max_position_embeddings
         final_kwargs["type_vocab_size"] = config.type_vocab_size

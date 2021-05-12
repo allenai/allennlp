@@ -280,7 +280,11 @@ class TransformerModule(torch.nn.Module):
             if not is_distributed() or loading_strategy == DistributedLoadingStrategy.FREE_FOR_ALL:
                 assert state_dict is not None
                 logger.info("Loading state_dict into module")
-                model.load_state_dict(state_dict, strict=strict)
+                missing_keys, unexpected_keys = model.load_state_dict(state_dict, strict=strict)
+                if missing_keys:
+                    logger.warning("Missing keys from pretrained state dict: %s", missing_keys)
+                if unexpected_keys:
+                    logger.warning("Unexpected keys in pretrained state dict: %s", unexpected_keys)
             else:
                 # We're in distributed training. `state_dict` is `None` for all process groups
                 # except the global primary.

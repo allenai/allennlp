@@ -123,8 +123,8 @@ almost = AlmostRegularTransformer()
 ```
 """
 
+from allennlp.modules.transformer.layer_norm import LayerNorm
 from allennlp.modules.transformer.positional_encoding import SinusoidalPositionalEncoding
-
 from allennlp.modules.transformer.transformer_module import (
     TransformerModule,
     DistributedLoadingStrategy,
