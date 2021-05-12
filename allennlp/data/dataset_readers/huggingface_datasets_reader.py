@@ -47,7 +47,7 @@ class HuggingfaceDatasetReader(DatasetReader):
             **kwargs,
         )
 
-        # It would be cleaner to create a separate reader object for diferent dataset
+        # It would be cleaner to create a separate reader object for each different dataset
         if dataset_name not in list_datasets():
             raise ValueError(f"Dataset {dataset_name} not available in huggingface datasets")
         self.dataset: DatasetDict = DatasetDict()
