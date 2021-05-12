@@ -7,6 +7,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Changed
+
+- Use `dist_reduce_sum` in distributed metrics.
+- Allow Google Cloud Storage paths in `cached_path` ("gs://...").
+- Print the first batch to the console by default.
+
+### Added
+
+- Added `TaskSuite` base class and command line functionality for running [`checklist`](https://github.com/marcotcr/checklist) test suites, along with implementations for `SentimentAnalysisSuite`, `QuestionAnsweringSuite`, and `TextualEntailmentSuite`. These can be found in the `allennlp.sanity_checks.task_checklists` module.
+- Added `allennlp diff` command to compute a diff on model checkpoints, analogous to what `git diff` does on two files.
+- Added `allennlp.nn.util.load_state_dict` helper function.
+- Added a way to avoid downloading and loading pretrained weights in modules that wrap transformers
+  such as the `PretrainedTransformerEmbedder` and `PretrainedTransformerMismatchedEmbedder`.
+  You can do this by setting the parameter `load_weights` to `False`.
+  See [PR #5172](https://github.com/allenai/allennlp/pull/5172) for more details.
+- Added `SpanExtractorWithSpanWidthEmbedding`, putting specific span embedding computations into the `_embed_spans` method and leaving the common code in `SpanExtractorWithSpanWidthEmbedding` to unify the arguments, and modified `BidirectionalEndpointSpanExtractor`, `EndpointSpanExtractor` and `SelfAttentiveSpanExtractor` accordingly. Now, `SelfAttentiveSpanExtractor` can also embed span widths.
+
+### Fixed
+
+- When `PretrainedTransformerIndexer` folds long sequences, it no longer loses the information from token type ids.
+- Fixed documentation for `GradientDescentTrainer.cuda_device`.
+
+
+## [v2.4.0](https://github.com/allenai/allennlp/releases/tag/v2.4.0) - 2021-04-22
+
+### Added
+
+- Added a T5 implementation to `modules.transformers`.
+
+### Changed
+
+- Weights & Biases callback can now work in anonymous mode (i.e. without the `WANDB_API_KEY` environment variable).
+
+### Fixed
+
+- The `GradientDescentTrainer` no longer leaves stray model checkpoints around when it runs out of patience.
+- Fixed `cached_path()` for "hf://" files.
+- Improved the error message for the `PolynomialDecay` LR scheduler when `num_steps_per_epoch` is missing.
+
 
 ## [v2.3.1](https://github.com/allenai/allennlp/releases/tag/v2.3.1) - 2021-04-20
 
@@ -18,6 +57,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The test for distributed metrics now takes a parameter specifying how often you want to run it.
 - Created the fairness module and added four fairness metrics: `Independence`, `Separation`, `Sufficiency`, and `DemographicParityWithoutGroundTruth`.
 - Added three bias metrics to the fairness module: `WordEmbeddingAssociationTest`, `EmbeddingCoherenceTest`, and `NaturalLanguageInference`.
+- Added four bias direction methods (`PCABiasDirection`, `PairedPCABiasDirection`, `TwoMeansBiasDirection`, `ClassificationNormalBiasDirection`) and four bias mitigation methods (`LinearBiasMitigator`, `HardBiasMitigator`, `INLPBiasMitigator`, `OSCaRBiasMitigator`).
 
 ### Changed
 
@@ -26,7 +66,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Fixed a bug with the `ShardedDatasetReader` when used with multi-process data loading (https://github.com/allenai/allennlp/issues/5132).
-
 
 ## [v2.3.0](https://github.com/allenai/allennlp/releases/tag/v2.3.0) - 2021-04-14
 
@@ -89,6 +128,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added support for PyTorch version 1.8 and `torchvision` version 0.9 .
 - `Model.get_parameters_for_histogram_tensorboard_logging` is deprecated in favor of
   `Model.get_parameters_for_histogram_logging`.
+
 
 ### Fixed
 

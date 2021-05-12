@@ -19,6 +19,7 @@ from allennlp.common.file_utils import (
     get_from_cache,
     cached_path,
     _split_s3_path,
+    _split_gcs_path,
     open_compressed,
     CacheFile,
     _Meta,
@@ -227,6 +228,17 @@ class TestFileUtils(AllenNlpTestCase):
             _split_s3_path("s3://")
             _split_s3_path("s3://myfile.txt")
             _split_s3_path("myfile.txt")
+
+    def test_split_gcs_path(self):
+        # Test splitting good urls.
+        assert _split_gcs_path("gs://my-bucket/subdir/file.txt") == ("my-bucket", "subdir/file.txt")
+        assert _split_gcs_path("gs://my-bucket/file.txt") == ("my-bucket", "file.txt")
+
+        # Test splitting bad urls.
+        with pytest.raises(ValueError):
+            _split_gcs_path("gs://")
+            _split_gcs_path("gs://myfile.txt")
+            _split_gcs_path("myfile.txt")
 
     @responses.activate
     def test_get_from_cache(self):
@@ -588,3 +600,19 @@ class TestHFHubDownload(AllenNlpTestCase):
     def test_snapshot_download(self):
         predictor = Predictor.from_path("hf://lysandre/test-simple-tagger-tiny")
         assert predictor._dataset_reader._token_indexers["tokens"].namespace == "test_tokens"
+
+    def test_cached_download_no_user_or_org(self):
+        path = cached_path("hf://t5-small/config.json", cache_dir=self.TEST_DIR)
+        assert os.path.isfile(path)
+        assert pathlib.Path(os.path.dirname(path)) == self.TEST_DIR
+        assert os.path.isfile(path + ".json")
+        meta = _Meta.from_path(path + ".json")
+        assert meta.etag is not None
+        assert meta.resource == "hf://t5-small/config.json"
+
+    def test_snapshot_download_no_user_or_org(self):
+        path = cached_path("hf://t5-small")
+        assert os.path.isdir(path)
+        assert os.path.isfile(path + ".json")
+        meta = _Meta.from_path(path + ".json")
+        assert meta.resource == "hf://t5-small"

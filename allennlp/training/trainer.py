@@ -182,10 +182,20 @@ class GradientDescentTrainer(Trainer):
         A `Checkpointer` is responsible for periodically saving model weights.  If none is given
         here, we will construct one with default parameters.
 
-    cuda_device : `int`, optional (default = `-1`)
-        An integer specifying the CUDA device(s) to use for this process. If -1, the CPU is used.
-        Data parallelism is controlled at the allennlp train level, so each trainer will have a single
-        GPU.
+    cuda_device : `Optional[Union[int, torch.device]]`, optional (default = `None`)
+        An integer or `torch.device` specifying the CUDA device to use for this process.
+        If -1, the CPU is used. If `None` and you have a GPU available, that GPU will be used.
+
+        !!! Note
+            If you *don't* intend to use a GPU, but you have one available, you'll need
+            to explicitly set `cuda_device=-1`.
+
+        !!! Note
+            If you intend to use a GPU, your model already needs to be on the correct device,
+            which you can do with `model = model.cuda()`.
+
+        !!! Note
+            Data parallelism is controlled at the allennlp train level, so each trainer will have a single GPU.
 
     grad_norm : `float`, optional, (default = `None`).
         If provided, gradient norms will be rescaled to have a maximum of this value.
@@ -286,7 +296,13 @@ class GradientDescentTrainer(Trainer):
         enable_default_callbacks: bool = True,
         run_sanity_checks: bool = True,
     ) -> None:
-        super().__init__(serialization_dir, cuda_device, distributed, local_rank, world_size)
+        super().__init__(
+            serialization_dir=serialization_dir,
+            cuda_device=cuda_device,
+            distributed=distributed,
+            local_rank=local_rank,
+            world_size=world_size,
+        )
 
         # I am not calling move_to_gpu here, because if the model is
         # not already on the GPU then the optimizer is going to be wrong.
@@ -771,9 +787,9 @@ class GradientDescentTrainer(Trainer):
             epoch_start_time = time.time()
             train_metrics = self._train_epoch(epoch)
 
+            # Back up the model now, in case something goes wrong later with the evaluation
             if self._primary and self._checkpointer is not None:
-                self._checkpointer.save_checkpoint(epoch, self, save_model_only=True)
-
+                self._checkpointer.shelve_model(epoch, self)
             # Wait for the primary process to finish saving the model checkpoint
             if self._distributed:
                 dist.barrier()
@@ -811,9 +827,6 @@ class GradientDescentTrainer(Trainer):
                     # Check validation metric for early stopping
                     this_epoch_val_metric = self._metric_tracker.combined_score(val_metrics)
                     self._metric_tracker.add_metrics(val_metrics)
-                    if self._metric_tracker.should_stop_early():
-                        logger.info("Ran out of patience.  Stopping training.")
-                        break
 
             # Create overall metrics dict
             training_elapsed_time = time.time() - training_start_time
@@ -849,11 +862,12 @@ class GradientDescentTrainer(Trainer):
             if self._momentum_scheduler:
                 self._momentum_scheduler.step(this_epoch_val_metric)
 
+            # The checkpointer saves state from the learning rate scheduler and the momentum
+            # scheduler, so we have to make sure those are updated before we save the checkpoint here.
             if self._primary and self._checkpointer is not None:
                 self._checkpointer.save_checkpoint(
                     epoch, self, is_best_so_far=self._metric_tracker.is_best_so_far()
                 )
-
             # Wait for the primary process to finish saving the checkpoint
             if self._distributed:
                 dist.barrier()
@@ -873,6 +887,10 @@ class GradientDescentTrainer(Trainer):
                 logger.info("Estimated training time remaining: %s", formatted_time)
 
             epochs_trained += 1
+
+            if self._metric_tracker.should_stop_early():
+                logger.info("Ran out of patience. Stopping training.")
+                break
         else:
             epoch = self._num_epochs - 1
 

@@ -172,6 +172,7 @@ class TransformerStack(TransformerModule, FromParams):
         num_hidden_layers: Optional[Union[int, range]] = None,
         source="huggingface",
         mapping: Optional[Dict[str, str]] = None,
+        load_weights: bool = True,
         **kwargs,
     ):
         final_kwargs = {}
@@ -185,4 +186,10 @@ class TransformerStack(TransformerModule, FromParams):
             else:
                 final_kwargs["num_hidden_layers"] = num_hidden_layers
 
-        return super().from_pretrained_module(pretrained_module, source, mapping, **final_kwargs)
+        return super().from_pretrained_module(
+            pretrained_module,
+            source=source,
+            mapping=mapping,
+            load_weights=load_weights,
+            **final_kwargs,
+        )
