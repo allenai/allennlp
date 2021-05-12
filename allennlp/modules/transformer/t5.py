@@ -386,9 +386,12 @@ class T5LayerSelfAttention(TransformerModule, FromParams):
         self_attention: Optional[T5Attention] = None,
         layer_norm: Optional[T5LayerNorm] = None,
         dropout: float = 0.1,
+        has_relative_attention_bias: bool = False,
     ):
         super().__init__()
-        self.self_attention = self_attention or T5Attention()
+        self.self_attention = self_attention or T5Attention(
+            has_relative_attention_bias=has_relative_attention_bias
+        )
         self.layer_norm = layer_norm or T5LayerNorm(hidden_size=self.self_attention.hidden_size)
         self.dropout = nn.Dropout(dropout)
 
@@ -963,6 +966,15 @@ class T5Output:
 
 class T5(TransformerModule, Registrable):
     _huggingface_mapping = {"shared": "token_embeddings"}
+    _tied_weights = {
+        "token_embeddings.weight": [
+            "encoder.token_embeddings.weight",
+            "decoder.token_embeddings.weight",
+            "lm_head.weight",
+        ]
+    }
+    # Don't know why HF has this param in their state_dict. It's not used in their model.
+    _huggingface_ignore = ["decoder.block.0.layer.1.EncDecAttention.relative_attention_bias.weight"]
 
     default_implementation = "default"
 

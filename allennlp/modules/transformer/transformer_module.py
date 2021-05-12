@@ -78,6 +78,17 @@ class TransformerModule(torch.nn.Module):
     The default strategy for loading a state dictionary within a distributed process group.
     """
 
+    _tied_weights: Optional[Dict[str, List[str]]] = None
+    """
+    A mapping that defines any weights that need to be tied. Keys and values are parameter names.
+    The values will be tied to the corresponding key.
+    """
+
+    _huggingface_ignore: Optional[List[str]] = None
+    """
+    An optional list of weights to ignore from a pretrained state_dict.
+    """
+
     @classmethod
     def _get_mapping(
         cls,
@@ -190,6 +201,20 @@ class TransformerModule(torch.nn.Module):
         """
         raise NotImplementedError
 
+    def tie_weights(self) -> None:
+        """
+        Tie weights according to the `_tied_weights` class attribute.
+
+        This should always be called after loading a state dictionary. It will be called
+        automatically within `from_pretrained_module()`.
+        """
+        if self._tied_weights:
+            param_dict = dict(self.named_parameters())
+            param_dict.update(dict(self.named_buffers()))
+            for anchor_name, free_names in self._tied_weights.items():
+                for free_name in free_names:
+                    param_dict[free_name] = param_dict[anchor_name]
+
     @classmethod
     def from_pretrained_module(
         cls: Type[_T],
@@ -274,18 +299,21 @@ class TransformerModule(torch.nn.Module):
                     weights_path=weights_path,
                     relevant_module=relevant_module,
                 )
+                # Remove weights we want to ignore.
+                for key in model._huggingface_ignore or []:
+                    if key in pretrained_state_dict:
+                        del pretrained_state_dict[key]
                 # Now map keys from the HuggingFace state_dict to the corresponding keys from
                 # this class. This is called recursively on each submodule of the current module.
                 state_dict = model._get_mapped_state_dict(pretrained_state_dict, mapping=mapping)
 
+            error_msgs: List[str] = []
+            missing_keys: List[str] = []
+            unexpected_keys: List[str] = []
             if not is_distributed() or loading_strategy == DistributedLoadingStrategy.FREE_FOR_ALL:
                 assert state_dict is not None
                 logger.info("Loading state_dict into module")
-                missing_keys, unexpected_keys = model.load_state_dict(state_dict, strict=strict)
-                if missing_keys:
-                    logger.warning("Missing keys from pretrained state dict: %s", missing_keys)
-                if unexpected_keys:
-                    logger.warning("Unexpected keys in pretrained state dict: %s", unexpected_keys)
+                missing_keys, unexpected_keys = model.load_state_dict(state_dict, strict=False)
             else:
                 # We're in distributed training. `state_dict` is `None` for all process groups
                 # except the global primary.
@@ -295,6 +323,39 @@ class TransformerModule(torch.nn.Module):
                 # Now load the state dict into the model.
                 logger.info("Loading state_dict into module (MEMORY_EFFICIENT strategy)")
                 load_state_dict_distributed(model, state_dict, strict=strict)
+
+            # Allow missing keys in state_dict for params that are going to be tied.
+            for param_names in model._tied_weights.values():
+                for param_name in param_names:
+                    if param_name in missing_keys:
+                        missing_keys.remove(param_name)
+
+            if missing_keys:
+                error_msgs.append(
+                    "Missing key(s) in state_dict: {}".format(
+                        ", ".join(f'"{k}"' for k in missing_keys)
+                    )
+                )
+            if unexpected_keys:
+                error_msgs.append(
+                    "Unexpected key(s) in state_dict: {}".format(
+                        ", ".join(f'"{k}"' for k in unexpected_keys)
+                    )
+                )
+
+            if error_msgs and strict:
+                raise RuntimeError(
+                    "Error(s) in loading state_dict for {}:\n\t{}".format(
+                        cls.__name__, "\n\t".join(error_msgs)
+                    )
+                )
+
+            # If there were error messages but we're not loading in 'strict' mode,
+            # we just issue warnings from the logger.
+            for msg in error_msgs:
+                logger.warning(msg)
+
+        model.tie_weights()
 
         return model
 

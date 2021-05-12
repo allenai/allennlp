@@ -2251,7 +2251,10 @@ def load_state_dict_distributed(
             direct_member_state_dict, strict=False
         )
         if strict and unexpected_keys:
-            raise ValueError(f"Unexpected keys in state dict: {unexpected_keys}")
+            raise RuntimeError(
+                f"Error(s) in loading state_dict for {module.__class__.__name__}:"
+                f"\tUnexpected key(s) in state dict: {unexpected_keys}"
+            )
 
         # Okay, now for the recursive part.
         for name, submodule in submodules.items():
