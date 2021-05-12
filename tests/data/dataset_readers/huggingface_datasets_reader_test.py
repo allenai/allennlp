@@ -8,6 +8,9 @@ from allennlp.data.tokenizers import WhitespaceTokenizer
 # TODO Add test where we compare huggingface wrapped reader with an explicitly coded dataset
 # TODO pab-vmware/Abhishek-P Add test where we load conll2003 and test it
 #  the way tested for conll2003 specific reader
+from datasets import list_datasets, load_dataset
+
+
 class HuggingfaceDatasetReaderTest:
 
     """
@@ -29,13 +32,6 @@ class HuggingfaceDatasetReaderTest:
 
         # Confirm all features were mapped
         assert len(instance.fields) == len(entry)
-
-    def test_read_sequence_nesting(self):
-        dataset = "diplomacy_detection"
-        split = "train"
-        huggingface_reader = HuggingfaceDatasetReader(dataset_name=dataset)
-        instances = list(huggingface_reader.read(split))
-        assert len(instances) == len(huggingface_reader.dataset[split])
 
     def test_read_with_tokenizer(self):
         dataset = "glue"
@@ -161,3 +157,14 @@ class HuggingfaceDatasetReaderTest:
 
         # Confirm all features were mapped
         assert len(instance.fields) == len(entry)
+
+    def test_load_all(self):
+        for dataset_name in list_datasets():
+            try:
+                print("Dataset:", dataset_name)
+                reader = HuggingfaceDatasetReader(dataset_name)
+                reader.read()
+            except Exception as e:
+                print(e)
+
+
