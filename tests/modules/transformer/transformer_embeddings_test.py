@@ -166,15 +166,6 @@ def test_loading_albert():
     """
     transformer_embedding = TransformerEmbeddings.from_pretrained_module(
         "albert-base-v2",
-        mapping={
-            "albert.embeddings.LayerNorm": "layer_norm",
-            "albert.embeddings.LayerNorm": "layer_norm",
-            "albert.embeddings.word_embeddings": "embeddings.word_embeddings",
-            "albert.embeddings.position_embeddings": "embeddings.position_embeddings",
-            "albert.embeddings.token_type_embeddings": "embeddings.token_type_embeddings",
-            "albert.encoder.embedding_hidden_mapping_in": "linear_transform",
-        },
-        strict=False,
     )
     albert = AutoModel.from_pretrained("albert-base-v2")
     assert_allclose(

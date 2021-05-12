@@ -110,7 +110,21 @@ class TransformerEmbeddings(Embeddings):
         "word_embeddings": "embeddings.word_embeddings",
         "position_embeddings": "embeddings.position_embeddings",
         "token_type_embeddings": "embeddings.token_type_embeddings",
+        # Albert is a special case. A linear projection is applied to the embeddings,
+        # but that linear transformation lives in the encoder.
+        "albert.embeddings.LayerNorm": "layer_norm",
+        "albert.embeddings.LayerNorm": "layer_norm",
+        "albert.embeddings.word_embeddings": "embeddings.word_embeddings",
+        "albert.embeddings.position_embeddings": "embeddings.position_embeddings",
+        "albert.embeddings.token_type_embeddings": "embeddings.token_type_embeddings",
+        "albert.encoder.embedding_hidden_mapping_in": "linear_transform",
     }
+    _huggingface_ignore = [
+        # Albert
+        f"^albert\.pooler\..*",
+        f"^albert\.encoder\.albert_layer_groups\..*",
+        f"^predictions\.*",
+    ]
 
     def __init__(
         self,

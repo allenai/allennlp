@@ -974,7 +974,9 @@ class T5(TransformerModule, Registrable):
         ]
     }
     # Don't know why HF has this param in their state_dict. It's not used in their model.
-    _huggingface_ignore = ["decoder.block.0.layer.1.EncDecAttention.relative_attention_bias.weight"]
+    _huggingface_ignore = [
+        r"^decoder\.block\.0\.layer\.1\.EncDecAttention\.relative_attention_bias\.weight$"
+    ]
 
     default_implementation = "default"
 

@@ -86,7 +86,7 @@ class TransformerModule(torch.nn.Module):
 
     _huggingface_ignore: Optional[List[str]] = None
     """
-    An optional list of weights to ignore from a pretrained state_dict.
+    An optional list of regular expressions that define which weights to ignore from a pretrained state_dict.
     """
 
     @classmethod
@@ -186,7 +186,7 @@ class TransformerModule(torch.nn.Module):
 
         # Now load the state dict.
         logger.info("Reading state dict from %s", weights_path)
-        state_dict = read_state_dict(weights_path)
+        state_dict = read_state_dict(weights_path, ignore=cls._huggingface_ignore, strict=False)
 
         # Keep just the relevant_module, remove everything else.
         state_dict = cls._get_relevant_submodule_state(state_dict, relevant_module=relevant_module)
@@ -299,10 +299,6 @@ class TransformerModule(torch.nn.Module):
                     weights_path=weights_path,
                     relevant_module=relevant_module,
                 )
-                # Remove weights we want to ignore.
-                for key in model._huggingface_ignore or []:
-                    if key in pretrained_state_dict:
-                        del pretrained_state_dict[key]
                 # Now map keys from the HuggingFace state_dict to the corresponding keys from
                 # this class. This is called recursively on each submodule of the current module.
                 state_dict = model._get_mapped_state_dict(pretrained_state_dict, mapping=mapping)
@@ -325,7 +321,7 @@ class TransformerModule(torch.nn.Module):
                 load_state_dict_distributed(model, state_dict, strict=strict)
 
             # Allow missing keys in state_dict for params that are going to be tied.
-            for param_names in model._tied_weights.values():
+            for param_names in (model._tied_weights or {}).values():
                 for param_name in param_names:
                     if param_name in missing_keys:
                         missing_keys.remove(param_name)
