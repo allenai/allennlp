@@ -194,6 +194,7 @@ class TransformerModule(torch.nn.Module):
     def from_pretrained_module(
         cls: Type[_T],
         model_name: str,
+        *,
         load_weights: bool = True,
         weights_path: Optional[Union[str, PathLike]] = None,
         auto_config_kwargs: Optional[Dict[str, Any]] = None,
@@ -305,11 +306,21 @@ def _get_mapped_state_dict(
 ) -> StateDictType:
     # First fix all top-level keys according to `combined_mapping`.
     combined_mapping = module._get_mapping(mapping) if isinstance(module, TransformerModule) else {}
-    for hf_key, cls_key in combined_mapping.items():
-        relevant_keys = set([key for key in state_dict.keys() if key.startswith(hf_key)])
+    for hf_key, cls_key in sorted(
+        # Sort by most specific key first.
+        combined_mapping.items(),
+        key=lambda x: x[0].count("."),
+        reverse=True,
+    ):
+        relevant_keys = set(
+            [key for key in state_dict.keys() if (key == hf_key or key.startswith(hf_key + "."))]
+        )
         for key in relevant_keys:
             new_key = key.replace(hf_key, cls_key, 1)
-            state_dict[new_key] = state_dict.pop(key)
+            # We have to be careful not to overwrite an entry that we might have updated
+            # on a previous iteration of this loop due to having a more specific key.
+            if new_key not in state_dict:
+                state_dict[new_key] = state_dict.pop(key)
 
     # Now loop through the submodules, calling this function on each submodule.
     for name, submodule in module.named_children():
