@@ -8,6 +8,7 @@ from overrides import overrides
 from allennlp import __version__
 from allennlp.commands.build_vocab import BuildVocab
 from allennlp.commands.cached_path import CachedPath
+from allennlp.commands.diff import Diff
 from allennlp.commands.evaluate import Evaluate
 from allennlp.commands.find_learning_rate import FindLearningRate
 from allennlp.commands.predict import Predict
@@ -18,6 +19,7 @@ from allennlp.commands.train import Train
 from allennlp.commands.count_instances import CountInstances
 from allennlp.common.plugins import import_plugins
 from allennlp.common.util import import_module_and_submodules
+from allennlp.commands.checklist import CheckList
 
 logger = logging.getLogger(__name__)
 

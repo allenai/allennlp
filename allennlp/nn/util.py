@@ -3,9 +3,11 @@ Assorted utilities for working with neural networks in AllenNLP.
 """
 
 import copy
+from collections import defaultdict, OrderedDict
 import json
 import logging
-from collections import defaultdict
+from os import PathLike
+import re
 from typing import Any, Dict, List, Optional, Sequence, Tuple, TypeVar, Union
 
 import math
@@ -922,6 +924,95 @@ def device_mapping(cuda_device: int):
             return storage
 
     return inner_device_mapping
+
+
+def load_state_dict(
+    path: Union[PathLike, str],
+    strip_prefix: Optional[str] = None,
+    ignore: Optional[List[str]] = None,
+    strict: bool = True,
+    cuda_device: int = -1,
+) -> Dict[str, torch.Tensor]:
+    """
+    Load a PyTorch model state dictionary from a checkpoint at the given `path`.
+
+    # Parameters
+
+    path : `Union[PathLike, str]`, required
+
+    strip_prefix : `Optional[str]`, optional (default = `None`)
+        A prefix to remove from all of the state dict keys.
+
+    ignore : `Optional[List[str]]`, optional (default = `None`)
+        Optional list of regular expressions. Keys that match any of these will be removed
+        from the state dict.
+
+        !!! Note
+            If `strip_prefix` is given, the regular expressions in `ignore` are matched
+            before the prefix is stripped.
+
+    strict : `bool`, optional (default = `True`)
+        If `True` (the default) and `strip_prefix` was never used or any of the regular expressions
+        in `ignore` never matched, a `ValueError` will be raised.
+
+    cuda_device : `int`, optional (default = `-1`)
+        The device to load the parameters onto. Use `-1` (the default) for CPU.
+
+    # Returns
+
+    `Dict[str, torch.Tensor]`
+        An ordered dictionary of the state.
+    """
+    state = torch.load(path, map_location=device_mapping(cuda_device))
+    out: Dict[str, torch.Tensor] = OrderedDict()
+
+    if ignore is not None and not isinstance(ignore, list):
+        # If user accidentally passed in something that is not a list - like a string,
+        # which is easy to do - the user would be confused why the resulting state dict
+        # is empty.
+        raise ValueError("'ignore' parameter should be a list")
+
+    # In 'strict' mode, we need to keep track of whether we've used `strip_prefix`
+    # and which regular expressions in `ignore` we've used.
+    strip_prefix_used: Optional[bool] = None
+    ignore_used: Optional[List[bool]] = None
+    if strict and strip_prefix is not None:
+        strip_prefix_used = False
+    if strict and ignore:
+        ignore_used = [False] * len(ignore)
+
+    for key in state.keys():
+        ignore_key = False
+        if ignore:
+            for i, pattern in enumerate(ignore):
+                if re.match(pattern, key):
+                    if ignore_used:
+                        ignore_used[i] = True
+                    logger.warning("ignoring %s from state dict", key)
+                    ignore_key = True
+                    break
+
+        if ignore_key:
+            continue
+
+        new_key = key
+
+        if strip_prefix and key.startswith(strip_prefix):
+            strip_prefix_used = True
+            new_key = key[len(strip_prefix) :]
+            if not new_key:
+                raise ValueError("'strip_prefix' resulted in an empty string for a key")
+
+        out[new_key] = state[key]
+
+    if strip_prefix_used is False:
+        raise ValueError(f"'strip_prefix' of '{strip_prefix}' was never used")
+    if ignore is not None and ignore_used is not None:
+        for pattern, used in zip(ignore, ignore_used):
+            if not used:
+                raise ValueError(f"'ignore' pattern '{pattern}' didn't have any matches")
+
+    return out
 
 
 def combine_tensors(combination: str, tensors: List[torch.Tensor]) -> torch.Tensor:
@@ -2016,7 +2107,7 @@ def tiny_value_of_dtype(dtype: torch.dtype):
         raise TypeError("Does not support dtype " + str(dtype))
 
 
-_V = TypeVar("_V", int, float)
+_V = TypeVar("_V", int, float, torch.Tensor)
 
 
 def dist_reduce(value: _V, reduce_op, **kwargs) -> _V:
@@ -2046,6 +2137,9 @@ def dist_reduce(value: _V, reduce_op, **kwargs) -> _V:
     device = int_to_device(-1 if dist.get_backend() != "nccl" else torch.cuda.current_device())
     value_tensor = torch.tensor(value, device=device, **kwargs)
     dist.all_reduce(value_tensor, op=reduce_op)
+
+    if isinstance(value, torch.Tensor):
+        return value_tensor
     return value_tensor.item()  # type: ignore[return-value]
 
 
@@ -2062,4 +2156,4 @@ def dist_reduce_sum(value: _V, **kwargs) -> _V:
     # result in an `AttributeError`.
     if not is_distributed():
         return value
-    return dist_reduce(value, dist.ReduceOp.SUM)
+    return dist_reduce(value, dist.ReduceOp.SUM, **kwargs)

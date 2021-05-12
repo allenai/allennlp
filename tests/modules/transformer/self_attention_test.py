@@ -4,10 +4,9 @@ import pytest
 
 from allennlp.common import Params
 from allennlp.common import cached_transformers
-from allennlp.common.testing import assert_equal_parameters
-
+from allennlp.common.testing import assert_equal_parameters, AllenNlpTestCase
 from allennlp.modules.transformer import SelfAttention
-from allennlp.common.testing import AllenNlpTestCase
+from allennlp.nn.util import min_value_of_dtype
 
 from transformers.models.bert.configuration_bert import BertConfig
 from transformers.models.bert.modeling_bert import BertSelfAttention
@@ -82,6 +81,7 @@ class TestSelfAttention(AllenNlpTestCase):
 
         assert self.self_attention.dropout.p == self.params_dict["dropout"]
 
+    @pytest.mark.skip("Takes up too much memory")
     @pytest.mark.parametrize("module_name, hf_module", get_modules(PARAMS_DICT).items())
     def test_forward_against_huggingface_output(self, module_name, hf_module):
         hidden_states = torch.randn(2, 3, 6)
@@ -102,6 +102,7 @@ class TestSelfAttention(AllenNlpTestCase):
 
         assert torch.allclose(output[0], hf_output[0])
 
+    @pytest.mark.skip("Takes up too much memory")
     @pytest.mark.parametrize(
         "pretrained_name",
         [
@@ -160,7 +161,7 @@ class TestSelfAttention(AllenNlpTestCase):
             )[0]
         else:
             # The attn_mask is processed outside the self attention module in HF bert models.
-            attention_mask = (~(attention_mask == 1)) * -10e5
+            attention_mask = (~(attention_mask == 1)) * min_value_of_dtype(hidden_states.dtype)
             torch.manual_seed(1234)
             hf_output = pretrained_module.forward(hidden_states, attention_mask=attention_mask)[0]
 

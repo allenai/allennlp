@@ -1,12 +1,11 @@
 from typing import List, Optional
 
 import torch
-import torch.distributed as dist
 from overrides import overrides
 
-from allennlp.common.util import is_distributed
 from allennlp.training.metrics import FBetaMeasure
 from allennlp.training.metrics.metric import Metric
+from allennlp.nn.util import dist_reduce_sum
 
 
 @Metric.register("fbeta_multi_label")
@@ -95,7 +94,6 @@ class FBetaMultiLabelMeasure(FBetaMeasure):
             A masking tensor the same size as `gold_labels`.
         """
         predictions, gold_labels, mask = self.detach_tensors(predictions, gold_labels, mask)
-        device = gold_labels.device
 
         # Calculate true_positive_sum, true_negative_sum, pred_sum, true_sum
         num_classes = predictions.size(-1)
@@ -149,17 +147,9 @@ class FBetaMultiLabelMeasure(FBetaMeasure):
 
         self._total_sum += mask.expand_as(gold_labels).sum().to(torch.float)
 
-        if is_distributed():
-            true_positive_sum = torch.tensor(true_positive_sum, device=device)
-            pred_sum = torch.tensor(pred_sum, device=device)
-            true_sum = torch.tensor(true_sum, device=device)
-            dist.all_reduce(true_positive_sum, op=dist.ReduceOp.SUM)
-            dist.all_reduce(pred_sum, op=dist.ReduceOp.SUM)
-            dist.all_reduce(true_sum, op=dist.ReduceOp.SUM)
-
-        self._true_positive_sum += true_positive_sum
-        self._pred_sum += pred_sum
-        self._true_sum += true_sum
+        self._true_positive_sum += dist_reduce_sum(true_positive_sum)
+        self._pred_sum += dist_reduce_sum(pred_sum)
+        self._true_sum += dist_reduce_sum(true_sum)
 
     @property
     def _true_negative_sum(self):

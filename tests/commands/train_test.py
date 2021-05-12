@@ -74,6 +74,20 @@ class TrainingDeviceLoggerOnBatchCallback(TrainerCallback):
             _seen_training_devices.add(tensor.device)
 
 
+@TrainerCallback.register("training_primary_check")
+class TrainingPrimaryCheckCallback(TrainerCallback):
+    """
+    Makes sure there is only one primary worker.
+    """
+
+    def on_start(
+        self, trainer: "GradientDescentTrainer", is_primary: bool = True, **kwargs
+    ) -> None:
+        super().on_start(trainer, is_primary=is_primary, **kwargs)
+        if is_primary:
+            assert torch.distributed.get_rank() == 0
+
+
 class TestTrain(AllenNlpTestCase):
     DEFAULT_PARAMS = Params(
         {
@@ -209,7 +223,13 @@ class TestTrain(AllenNlpTestCase):
                 "train_data_path": SEQUENCE_TAGGING_DATA_PATH,
                 "validation_data_path": SEQUENCE_TAGGING_DATA_PATH,
                 "data_loader": {"batch_size": 2},
-                "trainer": {"num_epochs": 2, "optimizer": "adam"},
+                "trainer": {
+                    "num_epochs": 2,
+                    "optimizer": "adam",
+                    # Need to use the fully qualified name here so the distributed workers
+                    # can import it.
+                    "callbacks": ["tests.commands.train_test.TrainingPrimaryCheckCallback"],
+                },
                 "distributed": {"cuda_devices": devices},
             }
         )

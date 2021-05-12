@@ -140,3 +140,4 @@ from allennlp.modules.transformer.output_layer import OutputLayer
 
 from allennlp.modules.transformer.bimodal_attention import BiModalAttention
 from allennlp.modules.transformer.bimodal_encoder import BiModalEncoder
+from allennlp.modules.transformer.t5 import T5
