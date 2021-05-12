@@ -120,7 +120,7 @@ class TransformerEmbeddings(Embeddings):
         "albert.encoder.embedding_hidden_mapping_in": "linear_transform",
     }
     _huggingface_ignore = [
-        # Albert
+        # Ignore these for Albert case.
         f"^albert\.pooler\..*",
         f"^albert\.encoder\.albert_layer_groups\..*",
         f"^predictions\.*",
