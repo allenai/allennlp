@@ -156,4 +156,4 @@ class SelfAttention(TransformerModule, FromParams):
         else:
             final_kwargs["dropout"] = config.attention_probs_dropout_prob
         final_kwargs.update(**kwargs)
-        return final_kwargs
+        return cls(**final_kwargs)
