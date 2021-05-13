@@ -42,6 +42,9 @@ class SinusoidalPositionalEncoding(torch.nn.Module, FromParams):
         self.max_timescale = max_timescale
 
     def forward(self, input_tensor: torch.Tensor):
+        """
+        Adds a positional encoding to `input_tensor`.
+        """
         # TODO: Another option is to specify the expected size in init, so that we can construct
         # the positional encoding beforehand, and simply add it to the input tensor in forward.
         _, timesteps, hidden_dim = input_tensor.size()

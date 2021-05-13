@@ -53,6 +53,8 @@ class AttentionLayer(TransformerModule, FromParams):
         output_attentions: bool = False,
     ):
         """
+        # Parameters
+
         input_tensor : `torch.Tensor`
             Shape `batch_size x seq_len x hidden_dim`
         attention_mask : `torch.BoolTensor`, optional
@@ -166,6 +168,8 @@ class TransformerLayer(TransformerModule, FromParams):
         output_attentions: bool = False,
     ):
         """
+        # Parameters
+
         hidden_states : `torch.Tensor`
             Shape `batch_size x seq_len x hidden_dim`
         attention_mask : `torch.BoolTensor`, optional

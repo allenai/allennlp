@@ -1,5 +1,5 @@
 """
-Adapted from [HuggingFace]
+An implementation of [T5](https://api.semanticscholar.org/CorpusID:204838007), adapted from [HuggingFace]
 (https://github.com/huggingface/transformers/blob/4c32f9f26e6a84f0d9843fec8757e6ce640bb44e/src/transformers/models/t5/modeling_t5.py).
 """  # noqa: E401
 

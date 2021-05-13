@@ -89,6 +89,8 @@ class TransformerStack(TransformerModule, FromParams):
         output_hidden_states: bool = False,
     ):
         """
+        # Parameters
+
         hidden_states : `torch.Tensor`
             Shape `batch_size x seq_len x hidden_dim`
         attention_mask : `torch.BoolTensor`, optional

@@ -279,6 +279,12 @@ class AllenNlpFilterProcessor(Struct):
         "__call__",
         "__iter__",
         "InfluenceInterpreter._calculate_influence_scores",
+        "TransformerModule._from_config",
+        "TransformerModule._huggingface_mapping",
+        "TransformerModule._relevant_module",
+        "TransformerModule._distributed_loading_strategy",
+        "TransformerModule._tied_weights",
+        "TransformerModule._huggingface_ignore",
     }
 
     def process(self, graph, _resolver):

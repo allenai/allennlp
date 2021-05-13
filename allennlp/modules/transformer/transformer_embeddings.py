@@ -166,6 +166,8 @@ class TransformerEmbeddings(Embeddings):
     ) -> torch.Tensor:
 
         """
+        # Parameters
+
         input_ids : `torch.Tensor`
             Shape `batch_size x seq_len`
         token_type_ids : `torch.Tensor`, optional

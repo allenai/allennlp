@@ -94,6 +94,8 @@ class SelfAttention(TransformerModule, FromParams):
         output_attentions: bool = False,
     ):
         """
+        # Parameters
+
         query_states : `torch.Tensor`
             Shape `batch_size x seq_len x hidden_dim`
         key_states : `torch.Tensor`, optional

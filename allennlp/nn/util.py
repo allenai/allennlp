@@ -2278,6 +2278,9 @@ def load_state_dict_distributed(
         If `strict` is `True` and there are missing or unexpected keys.
 
     """
+    if not is_distributed():
+        return module.load_state_dict(state_dict, strict=strict)
+
     if is_global_primary():
         assert state_dict is not None
     else:

@@ -233,7 +233,7 @@ class TransformerModule(torch.nn.Module):
         Initialize this module from a corresponding model on HuggingFace.
 
         !!! Note
-            This method is only available for subclasses that implement `from_config()`.
+            This method is only available for subclasses that implement `_from_config()`.
             Otherwise a `NotImplementedError` will be raised.
 
         # Parameters
@@ -258,7 +258,7 @@ class TransformerModule(torch.nn.Module):
             between this module and the pretrained model from HuggingFace.
             If not given, the class's default is used: `cls._huggingface_mapping`.
 
-        relevant_module : `Optionall[str]`, optional (default = `None`)
+        relevant_module : `Optional[str]`, optional (default = `None`)
             An optional submodule of the HuggingFace module to initialize weights from.
             This is only relevant when `load_weights` is `True`.
             If not given, the class's default is used: `cls._relevant_module`.
@@ -272,7 +272,7 @@ class TransformerModule(torch.nn.Module):
             when `load_weights` is `True`. If not specified, this class's default is used:
             `cls._distributed_loading_strategy`.
 
-        **kwargs : Any
+        **kwargs : `Any`
             Key word arguments to pass to `cls.from_config()` when instantiating the module.
         """  # noqa: E501
         from transformers import AutoConfig
