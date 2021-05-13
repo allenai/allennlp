@@ -14,7 +14,10 @@ from torch.nn import CrossEntropyLoss
 
 from allennlp.common import FromParams, Params, Lazy, Registrable
 from allennlp.common.checks import ConfigurationError
-from allennlp.modules.transformer import TransformerModule
+from allennlp.modules.transformer.transformer_module import (
+    TransformerModule,
+    DistributedLoadingStrategy,
+)
 from allennlp.modules.transformer.util import (
     apply_mask,
     get_extended_attention_mask,
@@ -977,6 +980,7 @@ class T5(TransformerModule, Registrable):
     _pretrained_ignore = [
         r"^decoder\.block\.0\.layer\.1\.EncDecAttention\.relative_attention_bias\.weight$"
     ]
+    _distributed_loading_strategy = DistributedLoadingStrategy.MEMORY_EFFICIENT
 
     default_implementation = "default"
 
