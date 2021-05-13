@@ -7,11 +7,12 @@ This module contains tools to:
 post-processing
 """
 
-from allennlp.fairness.fairness_metrics import (
-    Independence,
-    Separation,
-    Sufficiency,
-    DemographicParityWithoutGroundTruth,
+from allennlp.fairness.fairness_metrics import Independence, Separation, Sufficiency
+from allennlp.fairness.bias_metrics import (
+    WordEmbeddingAssociationTest,
+    EmbeddingCoherenceTest,
+    NaturalLanguageInference,
+    AssociationWithoutGroundTruth,
 )
 from allennlp.fairness.bias_direction import (
     PCABiasDirection,
