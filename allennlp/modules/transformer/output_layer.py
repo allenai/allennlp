@@ -8,7 +8,7 @@ from allennlp.modules.transformer.layer_norm import LayerNorm
 
 class OutputLayer(TransformerModule, FromParams):
 
-    _huggingface_mapping = {"LayerNorm": "layer_norm"}
+    _pretrained_mapping = {"LayerNorm": "layer_norm"}
 
     def __init__(self, input_size: int, hidden_size: int, dropout: float):
         super().__init__()

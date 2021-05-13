@@ -148,14 +148,14 @@ def test_no_token_type_layer(params):
 
 
 @pytest.mark.parametrize(
-    "pretrained_name, relevant_module",
+    "pretrained_name",
     [
-        ("bert-base-cased", "bert.embeddings"),
-        ("epwalsh/bert-xsmall-dummy", None),
+        "bert-base-cased",
+        "epwalsh/bert-xsmall-dummy",
     ],
 )
-def test_loading_from_pretrained_module(pretrained_name, relevant_module):
-    TransformerEmbeddings.from_pretrained_module(pretrained_name, relevant_module=relevant_module)
+def test_loading_from_pretrained_module(pretrained_name):
+    TransformerEmbeddings.from_pretrained_module(pretrained_name)
 
 
 def test_loading_albert():

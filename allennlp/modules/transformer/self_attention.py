@@ -29,8 +29,8 @@ class SelfAttention(TransformerModule, FromParams):
         Eg. `additive`, `linear`, etc. For a complete list, please check :mod:`allennlp.modules.attention`.
     """
 
-    _relevant_module = ["encoder.layers.0.attention.self", "encoder.layers.0.attention"]
-    _huggingface_mapping = {
+    _pretrained_relevant_module = ["encoder.layers.0.attention.self", "encoder.layers.0.attention"]
+    _pretrained_mapping = {
         "layer": "layers",
         "q_lin": "query",
         "k_lin": "key",

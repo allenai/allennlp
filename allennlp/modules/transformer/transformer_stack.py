@@ -41,8 +41,8 @@ class TransformerStack(TransformerModule, FromParams):
         This is helpful when using the `TransformerStack` as a decoder.
     """
 
-    _huggingface_mapping = {"layer": "layers"}
-    _relevant_module = ["encoder", "bert.encoder"]
+    _pretrained_mapping = {"layer": "layers"}
+    _pretrained_relevant_module = ["encoder", "bert.encoder"]
 
     def __init__(
         self,

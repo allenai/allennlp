@@ -20,7 +20,7 @@ class TestTransformerModule(AllenNlpTestCase):
                 return x
 
         class InternalNew(TransformerModule):
-            _huggingface_mapping = {"ff": "linear", "p": "param", "b": "buffer"}
+            _pretrained_mapping = {"ff": "linear", "p": "param", "b": "buffer"}
 
             def __init__(self, inp, out):
                 super().__init__()
@@ -43,7 +43,7 @@ class TestTransformerModule(AllenNlpTestCase):
                 return x
 
         class ExternalNew(TransformerModule):
-            _huggingface_mapping = {"internal": "internal_layer", "p": "param"}
+            _pretrained_mapping = {"internal": "internal_layer", "p": "param"}
 
             def __init__(self, inp, out):
                 super().__init__()

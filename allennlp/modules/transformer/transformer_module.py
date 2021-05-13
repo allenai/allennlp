@@ -3,6 +3,7 @@ import logging
 import os
 from os import PathLike
 from typing import TYPE_CHECKING, Optional, Dict, Union, List, Any, TypeVar, Type
+import re
 import warnings
 
 import torch
@@ -57,18 +58,29 @@ class TransformerModule(torch.nn.Module):
     `from_pretrained_module()`.
     """
 
-    _huggingface_mapping: Dict[str, str] = {}
+    _pretrained_mapping: Dict[str, str] = {}
     """
     An optional mapping for each class that determines any differences in the module
     names between the class modules and the HuggingFace model's modules.
     Keys correspond to HuggingFace submodule names, values correspond to submodules names of this module.
     """
 
-    _relevant_module: Optional[Union[str, List[str]]] = None
+    _pretrained_relevant_module: Optional[Union[str, List[str]]] = None
     """
     An optional string or list of strings which contains the expected name of the module
     in the HuggingFace pretrained model. It can be a list to account for different names in different
     models. The search is carried out in the order of the list.
+    """
+
+    _pretrained_ignore: Optional[List[str]] = None
+    """
+    An optional list of regular expressions that define which weights to ignore from a pretrained state_dict.
+    """
+
+    _pretrained_allow_missing: Optional[List[str]] = None
+    """
+    An optional list of regular expressions that specifies which weights are allowed to be missing
+    from a pretrained state dictionary.
     """
 
     _distributed_loading_strategy: DistributedLoadingStrategy = (
@@ -84,11 +96,6 @@ class TransformerModule(torch.nn.Module):
     The values will be tied to the corresponding key.
     """
 
-    _huggingface_ignore: Optional[List[str]] = None
-    """
-    An optional list of regular expressions that define which weights to ignore from a pretrained state_dict.
-    """
-
     @classmethod
     def _get_mapping(
         cls,
@@ -99,7 +106,7 @@ class TransformerModule(torch.nn.Module):
         and the default module-level mapping.
         """
         combined_mapping = {}
-        combined_mapping.update(cls._huggingface_mapping)
+        combined_mapping.update(cls._pretrained_mapping)
         if mapping is not None:
             combined_mapping.update(mapping)
         return combined_mapping
@@ -129,10 +136,10 @@ class TransformerModule(torch.nn.Module):
             relevant_modules = (
                 [relevant_module] if isinstance(relevant_module, str) else relevant_module
             )
-        elif isinstance(cls._relevant_module, str):
-            relevant_modules = [cls._relevant_module]
-        elif isinstance(cls._relevant_module, list):
-            relevant_modules = cls._relevant_module
+        elif isinstance(cls._pretrained_relevant_module, str):
+            relevant_modules = [cls._pretrained_relevant_module]
+        elif isinstance(cls._pretrained_relevant_module, list):
+            relevant_modules = cls._pretrained_relevant_module
 
         if relevant_modules:
             found = False
@@ -163,6 +170,7 @@ class TransformerModule(torch.nn.Module):
         model_name: str,
         weights_path: Optional[Union[str, PathLike]] = None,
         relevant_module: Optional[Union[str, List[str]]] = None,
+        ignore: Optional[List[str]] = None,
     ) -> StateDictType:
         """
         Get a HuggingFace pretrained `state_dict` corresponding to this module.
@@ -186,7 +194,11 @@ class TransformerModule(torch.nn.Module):
 
         # Now load the state dict.
         logger.info("Reading state dict from %s", weights_path)
-        state_dict = read_state_dict(weights_path, ignore=cls._huggingface_ignore, strict=False)
+        state_dict = read_state_dict(
+            weights_path,
+            ignore=ignore if ignore is not None else cls._pretrained_ignore,
+            strict=False,
+        )
 
         # Keep just the relevant_module, remove everything else.
         state_dict = cls._get_relevant_submodule_state(state_dict, relevant_module=relevant_module)
@@ -225,6 +237,8 @@ class TransformerModule(torch.nn.Module):
         auto_config_kwargs: Optional[Dict[str, Any]] = None,
         mapping: Optional[Dict[str, str]] = None,
         relevant_module: Optional[Union[str, List[str]]] = None,
+        ignore: Optional[List[str]] = None,
+        allow_missing: Optional[List[str]] = None,
         strict: bool = True,
         distributed_loading_strategy: Optional[Union[str, DistributedLoadingStrategy]] = None,
         **kwargs,
@@ -256,12 +270,24 @@ class TransformerModule(torch.nn.Module):
         mapping : `Optional[Dict[str, str]]`, optional (default = `None`)
             Optional mapping that determines any differences in the submodule names
             between this module and the pretrained model from HuggingFace.
-            If not given, the class's default is used: `cls._huggingface_mapping`.
+            If not given, the class's default is used: `cls._pretrained_mapping`.
 
         relevant_module : `Optional[str]`, optional (default = `None`)
             An optional submodule of the HuggingFace module to initialize weights from.
             This is only relevant when `load_weights` is `True`.
-            If not given, the class's default is used: `cls._relevant_module`.
+            If not given, the class's default is used: `cls._pretrained_relevant_module`.
+
+        ignore : `Optional[List[str]]`, optional (default = `None`)
+            An optional list of regular expressions that define which weights to ignore
+            from a pretrained state_dict.
+            This is only relevant when `load_weights` is `True`.
+            If not specified, the class's default is used: `cls._pretrained_ignore`.
+
+        allow_missing: `Optional[List[str]]`, optional (default = `None`)
+            An optional list of regular expressions that specifies which weights are allowed to be missing
+            from the pretrained state dictionary.
+            This is only relevant when `load_weights` is `True`.
+            If not specified, the class's default is used: `cls._pretrained_allow_missing`.
 
         strict : `bool`, optional (default = `True`)
             Whether to load the `state_dict` in "strict" model. This only applies
@@ -297,6 +323,7 @@ class TransformerModule(torch.nn.Module):
                     model_name,
                     weights_path=weights_path,
                     relevant_module=relevant_module,
+                    ignore=ignore,
                 )
                 # Now map keys from the HuggingFace state_dict to the corresponding keys from
                 # this class. This is called recursively on each submodule of the current module.
@@ -320,6 +347,15 @@ class TransformerModule(torch.nn.Module):
                 missing_keys, unexpected_keys = load_state_dict_distributed(
                     model, state_dict, strict=False
                 )
+
+            # Exclude any keys in `missing_keys` that match with the `allow_missing`
+            # regular expressions.
+            if allow_missing is None:
+                allow_missing = cls._pretrained_allow_missing
+            if allow_missing:
+                missing_keys = [
+                    k for k in missing_keys if not any(re.match(p, k) for p in allow_missing)
+                ]
 
             # Allow missing keys in state_dict for params that are going to be tied.
             for param_names in (model._tied_weights or {}).values():

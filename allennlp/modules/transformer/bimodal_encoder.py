@@ -48,8 +48,9 @@ class BiModalEncoder(TransformerModule, FromParams):
     in_batch_pairs: `bool` (default = `False`)
     """
 
-    _huggingface_mapping = {"layer": "layers1"}
-    _relevant_module = "encoder"
+    _pretrained_mapping = {"layer": "layers1"}
+    _pretrained_relevant_module = ["encoder", "bert.encoder"]
+    _pretrained_allow_missing = [r"^layers2\..*", r"^c_layer\..*"]
 
     def __init__(
         self,

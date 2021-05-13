@@ -97,7 +97,7 @@ class T5DenseGatedGeluDense(TransformerModule, FromParams):
 
 
 class T5LayerFF(TransformerModule, FromParams):
-    _huggingface_mapping = {"DenseReluDense": "ff_proj"}
+    _pretrained_mapping = {"DenseReluDense": "ff_proj"}
 
     def __init__(
         self,
@@ -379,7 +379,7 @@ class T5LayerSelfAttentionOutput:
 
 
 class T5LayerSelfAttention(TransformerModule, FromParams):
-    _huggingface_mapping = {"SelfAttention": "self_attention"}
+    _pretrained_mapping = {"SelfAttention": "self_attention"}
 
     def __init__(
         self,
@@ -433,7 +433,7 @@ class T5LayerCrossAttentionOutput:
 
 
 class T5LayerCrossAttention(TransformerModule, FromParams):
-    _huggingface_mapping = {"EncDecAttention": "enc_dec_attention"}
+    _pretrained_mapping = {"EncDecAttention": "enc_dec_attention"}
 
     def __init__(
         self,
@@ -624,7 +624,7 @@ class T5StackOutput:
 
 
 class T5Stack(TransformerModule, FromParams):
-    _huggingface_mapping = {"embed_tokens": "token_embeddings", "block": "blocks"}
+    _pretrained_mapping = {"embed_tokens": "token_embeddings", "block": "blocks"}
 
     def __init__(
         self,
@@ -965,7 +965,7 @@ class T5Output:
 
 
 class T5(TransformerModule, Registrable):
-    _huggingface_mapping = {"shared": "token_embeddings"}
+    _pretrained_mapping = {"shared": "token_embeddings"}
     _tied_weights = {
         "token_embeddings.weight": [
             "encoder.token_embeddings.weight",
@@ -974,7 +974,7 @@ class T5(TransformerModule, Registrable):
         ]
     }
     # Don't know why HF has this param in their state_dict. It's not used in their model.
-    _huggingface_ignore = [
+    _pretrained_ignore = [
         r"^decoder\.block\.0\.layer\.1\.EncDecAttention\.relative_attention_bias\.weight$"
     ]
 

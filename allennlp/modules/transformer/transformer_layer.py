@@ -29,8 +29,8 @@ class AttentionLayer(TransformerModule, FromParams):
         Dropout probability for the `OutputLayer`.
     """
 
-    _relevant_module = "encoder.layer.0.attention"
-    _huggingface_mapping = {"layer": "layers"}
+    _pretrained_relevant_module = "encoder.layer.0.attention"
+    _pretrained_mapping = {"layer": "layers"}
 
     def __init__(
         self,
@@ -114,8 +114,8 @@ class TransformerLayer(TransformerModule, FromParams):
         This is helpful when using the layer in a decoder.
     """
 
-    _relevant_module = "encoder.layer.0"
-    _huggingface_mapping = {
+    _pretrained_relevant_module = "encoder.layer.0"
+    _pretrained_mapping = {
         "layer": "layers",
         "intermediate_act_fn": "act_fn",
         "crossattention": "cross_attention",

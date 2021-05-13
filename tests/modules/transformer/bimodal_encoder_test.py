@@ -75,9 +75,7 @@ def test_loading_from_pretrained_weights(params_dict):
     ]
     kwargs = {key: params_dict[key] for key in required_kwargs}
 
-    module = BiModalEncoder.from_pretrained_module(
-        "bert-base-cased", relevant_module="bert.encoder", strict=False, **kwargs
-    )
+    module = BiModalEncoder.from_pretrained_module("bert-base-cased", **kwargs)
     assert_allclose(
         module.layers1[0].intermediate.dense.weight.data,
         pretrained_module.layer[0].intermediate.dense.weight.data,

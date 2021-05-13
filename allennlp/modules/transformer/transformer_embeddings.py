@@ -104,8 +104,8 @@ class TransformerEmbeddings(Embeddings):
         Optionally apply a linear transform after the dropout, projecting to `output_size`.
     """
 
-    _relevant_module = "embeddings"
-    _huggingface_mapping = {
+    _pretrained_relevant_module = ["embeddings", "bert.embeddings"]
+    _pretrained_mapping = {
         "LayerNorm": "layer_norm",
         "word_embeddings": "embeddings.word_embeddings",
         "position_embeddings": "embeddings.position_embeddings",
@@ -119,7 +119,7 @@ class TransformerEmbeddings(Embeddings):
         "albert.embeddings.token_type_embeddings": "embeddings.token_type_embeddings",
         "albert.encoder.embedding_hidden_mapping_in": "linear_transform",
     }
-    _huggingface_ignore = [
+    _pretrained_ignore = [
         # Ignore these for Albert case.
         r"^albert\.pooler\..*",
         r"^albert\.encoder\.albert_layer_groups\..*",
@@ -167,7 +167,6 @@ class TransformerEmbeddings(Embeddings):
 
         """
         # Parameters
-
         input_ids : `torch.Tensor`
             Shape `batch_size x seq_len`
         token_type_ids : `torch.Tensor`, optional
