@@ -232,7 +232,6 @@ class TransformerModule(torch.nn.Module):
         """
         Initialize this module from a corresponding model on HuggingFace.
 
-
         !!! Note
             This method is only available for subclasses that implement `from_config()`.
             Otherwise a `NotImplementedError` will be raised.

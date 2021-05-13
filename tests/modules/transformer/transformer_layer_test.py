@@ -9,9 +9,13 @@ from transformers.models.roberta.modeling_roberta import RobertaAttention, Rober
 from transformers.models.electra.configuration_electra import ElectraConfig
 from transformers.models.electra.modeling_electra import ElectraAttention, ElectraLayer
 
-from allennlp.common import Params
-from allennlp.common import cached_transformers
-from allennlp.modules.transformer import AttentionLayer, TransformerLayer
+from allennlp.common import Params, cached_transformers
+from allennlp.common.testing import run_distributed_test
+from allennlp.modules.transformer import (
+    AttentionLayer,
+    TransformerLayer,
+    DistributedLoadingStrategy,
+)
 
 
 ATTENTION_PARAMS_DICT = {
@@ -285,3 +289,21 @@ def test_layer_from_pretrained(pretrained_name, relevant_top_level_module):
     hf_output = pretrained_module(hidden_states, attention_mask=attention_mask_hf)[0]
 
     assert torch.allclose(output, hf_output, atol=1e-04)
+
+
+def _load_pretrained(global_rank, world_size, gpu_id):
+    TransformerLayer.from_pretrained_module(
+        "epwalsh/bert-xsmall-dummy",
+    )
+
+
+def _load_pretrained_mem_efficient(global_rank, world_size, gpu_id):
+    TransformerLayer.from_pretrained_module(
+        "epwalsh/bert-xsmall-dummy",
+        distributed_loading_strategy=DistributedLoadingStrategy.MEMORY_EFFICIENT,
+    )
+
+
+@pytest.mark.parametrize("test_func", [_load_pretrained, _load_pretrained_mem_efficient])
+def test_distributed(test_func):
+    run_distributed_test([-1, -1], func=test_func, start_method="spawn")
