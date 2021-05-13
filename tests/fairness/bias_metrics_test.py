@@ -131,10 +131,47 @@ class EmbeddingCoherenceTestTest(AllenNlpTestCase):
 
 
 class NaturalLanguageInferenceTest(AllenNlpTestCase):
+    def test_invalid_dimensions(self):
+        nli_probabilities = torch.ones(3)
+        with pytest.raises(ConfigurationError):
+            NaturalLanguageInference(0)(nli_probabilities)
+
+        nli_probabilities = torch.eye(4)
+        with pytest.raises(ConfigurationError):
+            NaturalLanguageInference(0)(nli_probabilities)
+
     @multi_device
     def test_nli(self, device: str):
-        entailment_predictions = torch.eye(3, device=device).long()
-        assert NaturalLanguageInference()(entailment_predictions, neutral_label=1) == 1 / 3
+        nli_probabilities = 0.6 * torch.eye(3, device=device)
+        nli = NaturalLanguageInference(0)
+        nli(nli_probabilities)
+
+        expected_scores = {
+            "net_neutral": 0.6 / 3,
+            "fraction_neutral": 1 / 3,
+            "threshold_0.5": 1 / 3,
+            "threshold_0.7": 0.0,
+        }
+        assert nli.get_metric(reset=True) == pytest.approx(expected_scores)
+        assert all([v == 0.0 for k, v in nli.get_metric().items()])
+
+    def test_distributed_nli(self):
+        nli_probabilities = 0.6 * torch.eye(3)
+        expected_scores = {
+            "net_neutral": 0.6 / 3,
+            "fraction_neutral": 1 / 3,
+            "threshold_0.5": 1 / 3,
+            "threshold_0.7": 0.0,
+        }
+        metric_kwargs = {"nli_probabilities": [nli_probabilities, nli_probabilities]}
+        run_distributed_test(
+            [-1, -1],
+            global_distributed_metric,
+            NaturalLanguageInference(0),
+            metric_kwargs,
+            expected_scores,
+            exact=False,
+        )
 
 
 class AssociationWithoutGroundTruthTest(AllenNlpTestCase):

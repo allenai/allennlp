@@ -27,7 +27,7 @@ arXiv preprint arXiv:2103.03417.
 
 """
 
-from typing import Optional, Dict, Union
+from typing import Optional, Dict, Union, List
 
 from overrides import overrides
 import torch
@@ -35,6 +35,7 @@ import torch.distributed as dist
 
 from allennlp.common.util import is_distributed
 from allennlp.common.checks import ConfigurationError
+from allennlp.nn.util import dist_reduce_sum
 from allennlp.training.metrics.metric import Metric
 
 
@@ -243,22 +244,41 @@ class EmbeddingCoherenceTest:
         return 1.0 - (upper / down)
 
 
-class NaturalLanguageInference:
+@Metric.register("nli")
+class NaturalLanguageInference(Metric):
     """
-    Natural Language Inference (NLI) score measures the effect biased
-    associations have on decisions made in downstream tasks by predicting,
-    given neutrally-constructed pairs of sentences differing only in
-    the subject, if the second sentence is entailed by, contradicted by, or
-    neutral with respect to the first sentence.
+    Natural language inference scores measure the effect biased associations have on decisions
+    made downstream, given neutrally-constructed pairs of sentences differing only in the subject.
+
+    1. Net Neutral (NN): The average probability of the neutral label
+    across all sentence pairs.
+
+    2. Fraction Neutral (FN): The fraction of sentence pairs predicted neutral.
+
+    3. Threshold:tau (T:tau): A parameterized measure that reports the fraction
+    of examples whose probability of neutral is above tau.
+
+    neutral_label : `int`, optional (default=`2`)
+        The discrete integer label corresponding to a neutral entailment prediction.
+    taus : `List[float]`, optional (default=`[0.5, 0.7]`)
+        All the taus for which to compute Threshold:tau.
 
     Based on: Dev, S., Li, T., Phillips, J.M., & Srikumar, V. (2020). [On Measuring and Mitigating
     Biased Inferences of Word Embeddings](https://api.semanticscholar.org/CorpusID:201670701).
     ArXiv, abs/1908.09369.
     """
 
-    def __call__(
-        self, entailment_predictions: torch.Tensor, neutral_label: int = 2
-    ) -> torch.FloatTensor:
+    def __init__(self, neutral_label: int = 2, taus: List[float] = [0.5, 0.7]):
+        self.neutral_label = neutral_label
+        self.taus = taus
+
+        self._nli_probs_sum = 0.0
+        self._num_neutral_predictions = 0.0
+        self._num_neutral_above_taus = {tau: 0.0 for tau in taus}
+        self._total_predictions = 0
+
+    @overrides
+    def __call__(self, nli_probabilities: torch.Tensor) -> None:
         """
 
         # Parameters
@@ -267,11 +287,11 @@ class NaturalLanguageInference:
             In the examples below, we treat gender identity as binary, which does not accurately
             characterize gender in real life.
 
-        entailment_predictions : `torch.Tensor`, required.
-            A tensor of size (batch_size, ..., dim) containing discrete integer entailment predictions for
-            neutrally-constructed pairs of sentences differing only in the subject. For example,
-            if the concept is gender, entailment_predictions could contain the entailment predictions
-            of:
+        nli_probabilities : `torch.Tensor`, required.
+            A tensor of size (batch_size, ..., 3) containing natural language inference
+            (i.e. entailment, contradiction, and neutral) probabilities for neutrally-constructed
+            pairs of sentences differing only in the subject. For example, if the concept is gender,
+            nli_probabilities could contain the natural language inference probabilities of:
 
             - "The driver owns a cabinet." -> "The man owns a cabinet."
 
@@ -280,18 +300,79 @@ class NaturalLanguageInference:
             - "The doctor eats an apple." -> "The man eats an apple."
 
             - "The doctor eats an apple." -> "The woman eats an apple."
+        """
+        nli_probabilities = nli_probabilities.detach()
 
-        neutral_label : `int`, optional (default=`2`)
-            The discrete integer label corresponding to a neutral entailment prediction.
+        # Some sanity checks
+        if nli_probabilities.dim() < 2:
+            raise ConfigurationError(
+                "nli_probabilities must have at least two dimensions but "
+                "found tensor of shape: {}".format(nli_probabilities.size())
+            )
+        if nli_probabilities.size(-1) != 3:
+            raise ConfigurationError(
+                "Last dimension of nli_probabilities must have dimensionality of 3 but "
+                "found tensor of shape: {}".format(nli_probabilities.size())
+            )
 
+        _nli_neutral_probs = nli_probabilities[..., self.neutral_label]
+
+        self._nli_probs_sum += dist_reduce_sum(_nli_neutral_probs.sum().item())
+        self._num_neutral_predictions += dist_reduce_sum(
+            (nli_probabilities.argmax(dim=-1) == self.neutral_label).float().sum().item()
+        )
+        for tau in self.taus:
+            self._num_neutral_above_taus[tau] += dist_reduce_sum(
+                (_nli_neutral_probs > tau).float().sum().item()
+            )
+        self._total_predictions += dist_reduce_sum(_nli_neutral_probs.numel())
+
+    def get_metric(self, reset: bool = False):
+        """
         # Returns
 
-        nli_score : `torch.FloatTensor`
-            The percentage of sentence pairs predicted as neutral. A percentage
-            closer to 1 suggests lower bias, as bias will result in a higher
+        nli_scores : `Dict[str, float]`
+            Contains the following keys:
+
+            1. "`net_neutral`" : The average probability of the neutral label across
+            all sentence pairs. A value closer to 1 suggests lower bias, as bias will result in a higher
             probability of entailment or contradiction.
+
+            2. "`fraction_neutral`" : The fraction of sentence pairs predicted neutral.
+            A value closer to 1 suggests lower bias, as bias will result in a higher
+            probability of entailment or contradiction.
+
+            3. "`threshold_{taus}`" : For each tau, the fraction of examples whose probability of
+            neutral is above tau. For each tau, a value closer to 1 suggests lower bias, as bias
+            will result in a higher probability of entailment or contradiction.
+
         """
-        return (entailment_predictions == neutral_label).float().mean()
+        if self._total_predictions == 0:
+            nli_scores = {
+                "net_neutral": 0.0,
+                "fraction_neutral": 0.0,
+                **{"threshold_{}".format(tau): 0.0 for tau in self.taus},
+            }
+        else:
+            nli_scores = {
+                "net_neutral": self._nli_probs_sum / self._total_predictions,
+                "fraction_neutral": self._num_neutral_predictions / self._total_predictions,
+                **{
+                    "threshold_{}".format(tau): self._num_neutral_above_taus[tau]
+                    / self._total_predictions
+                    for tau in self.taus
+                },
+            }
+        if reset:
+            self.reset()
+        return nli_scores
+
+    @overrides
+    def reset(self):
+        self._nli_probs_sum = 0.0
+        self._num_neutral_predictions = 0.0
+        self._num_neutral_above_taus = {tau: 0.0 for tau in self.taus}
+        self._total_predictions = 0
 
 
 @Metric.register("association_without_ground_truth")
