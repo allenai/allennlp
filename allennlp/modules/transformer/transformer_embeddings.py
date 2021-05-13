@@ -121,9 +121,9 @@ class TransformerEmbeddings(Embeddings):
     }
     _huggingface_ignore = [
         # Ignore these for Albert case.
-        f"^albert\.pooler\..*",
-        f"^albert\.encoder\.albert_layer_groups\..*",
-        f"^predictions\.*",
+        r"^albert\.pooler\..*",
+        r"^albert\.encoder\.albert_layer_groups\..*",
+        r"^predictions\.*",
     ]
 
     def __init__(

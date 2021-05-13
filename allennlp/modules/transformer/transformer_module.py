@@ -303,9 +303,9 @@ class TransformerModule(torch.nn.Module):
                 # this class. This is called recursively on each submodule of the current module.
                 state_dict = model._get_mapped_state_dict(pretrained_state_dict, mapping=mapping)
 
+            missing_keys: List[str]
+            unexpected_keys: List[str]
             error_msgs: List[str] = []
-            missing_keys: List[str] = []
-            unexpected_keys: List[str] = []
             if not is_distributed() or loading_strategy == DistributedLoadingStrategy.FREE_FOR_ALL:
                 assert state_dict is not None
                 logger.info("Loading state_dict into module")
@@ -318,7 +318,9 @@ class TransformerModule(torch.nn.Module):
                 dist.barrier()
                 # Now load the state dict into the model.
                 logger.info("Loading state_dict into module (MEMORY_EFFICIENT strategy)")
-                load_state_dict_distributed(model, state_dict, strict=strict)
+                missing_keys, unexpected_keys = load_state_dict_distributed(
+                    model, state_dict, strict=False
+                )
 
             # Allow missing keys in state_dict for params that are going to be tied.
             for param_names in (model._tied_weights or {}).values():
