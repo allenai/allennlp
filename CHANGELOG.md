@@ -58,8 +58,8 @@ SNLI-related metrics for a bias-mitigated and baseline model.
 - Add new dimension to the `interpret` module: influence functions via the `InfluenceInterpreter` base class, along with a concrete implementation: `SimpleInfluence`.
 - Added a `quiet` parameter to the `MultiProcessDataLoading` that disables `Tqdm` progress bars.
 - The test for distributed metrics now takes a parameter specifying how often you want to run it.
-- Created the fairness module and added four fairness metrics: `Independence`, `Separation`, and `Sufficiency`.
-- Added three bias metrics to the fairness module: `WordEmbeddingAssociationTest`, `EmbeddingCoherenceTest`, `NaturalLanguageInference`, and `AssociationWithoutGroundTruth`.
+- Created the fairness module and added three fairness metrics: `Independence`, `Separation`, and `Sufficiency`.
+- Added four bias metrics to the fairness module: `WordEmbeddingAssociationTest`, `EmbeddingCoherenceTest`, `NaturalLanguageInference`, and `AssociationWithoutGroundTruth`.
 - Added four bias direction methods (`PCABiasDirection`, `PairedPCABiasDirection`, `TwoMeansBiasDirection`, `ClassificationNormalBiasDirection`) and four bias mitigation methods (`LinearBiasMitigator`, `HardBiasMitigator`, `INLPBiasMitigator`, `OSCaRBiasMitigator`).
 
 ### Changed

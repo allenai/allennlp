@@ -18,6 +18,7 @@ import torch
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common import logging as common_logging
 from allennlp.common.util import prepare_environment
+from allennlp.fairness.bias_metrics import NaturalLanguageInference
 from allennlp.data import DataLoader
 from allennlp.models.archival import load_archive
 from allennlp.training.util import evaluate
@@ -117,44 +118,6 @@ class EvaluateBiasMitigation(Subcommand):
         return subparser
 
 
-def _add(accumulator_dict, append_dict):
-    """
-    Adds list pairs in append_dict to accumulator_dict,
-    concatenating list values for duplicate keys.
-    """
-    for k, v in append_dict.items():
-        if isinstance(v, list):
-            if k not in accumulator_dict:
-                accumulator_dict[k] = []
-            accumulator_dict[k] += v
-
-
-def compute_metrics(probs, model, taus):
-    """
-    Computes the following metrics:
-
-    1. Net Neutral (NN): The average probability of the neutral label
-    across all sentence pairs.
-
-    2. Fraction Neutral (FN): The fraction of sentence pairs predicted neutral.
-
-    3. Threshold:tau (T:tau): A parameterized measure that reports the fraction
-    of examples whose probability of neutral is above tau
-
-    """
-    metrics = {}
-    neutral_label = model.vocab.get_token_index("neutral", "labels")
-
-    metrics["net_neutral"] = probs[..., neutral_label].mean().item()
-    metrics["fraction_neutral"] = (probs.argmax(dim=-1) == neutral_label).float().mean().item()
-    for tau in taus:
-        metrics["threshold_{}".format(tau)] = (
-            (probs[..., neutral_label] > tau).float().mean().item()
-        )
-
-    return metrics
-
-
 def compute_predictions_diff(bias_mitigated_labels, baseline_labels, tokens, baseline_tokenizer):
     """
     Returns label changes induced by bias mitigation and the corresponding sentence pairs.
@@ -242,14 +205,18 @@ def evaluate_from_args(args: argparse.Namespace) -> Tuple[Dict[str, Any], Dict[s
         predictions_output_file=bias_mitigated_filename,
     )
 
-    bias_mitigated_predictions: Dict[str, Any] = {}
+    bias_mitigated_nli = NaturalLanguageInference(
+        neutral_label=bias_mitigated_model.vocab.get_token_index("neutral", "labels"),
+        taus=args.taus,
+    )
     with open(bias_mitigated_file, "r") as fd:
         for line in fd:
-            _add(bias_mitigated_predictions, json.loads(line))
+            bias_mitigated_predictions = json.loads(line)
+            probs = torch.tensor(bias_mitigated_predictions["probs"])
+            bias_mitigated_nli(probs)
 
-    probs = torch.tensor(bias_mitigated_predictions["probs"], device=args.cuda_device)
-    bias_mitigated_metrics = compute_metrics(probs, bias_mitigated_model, args.taus)
-    metrics_json = json.dumps({**bias_mitigated_output_metrics, **bias_mitigated_metrics}, indent=2)
+    bias_mitigated_metrics = {**bias_mitigated_output_metrics, **(bias_mitigated_nli.get_metric())}
+    metrics_json = json.dumps(bias_mitigated_metrics, indent=2)
     if args.bias_mitigated_output_file:
         # write all metrics to output file
         # don't use dump_metrics() because want to log regardless
@@ -265,14 +232,18 @@ def evaluate_from_args(args: argparse.Namespace) -> Tuple[Dict[str, Any], Dict[s
         predictions_output_file=baseline_filename,
     )
 
-    baseline_predictions: Dict[str, Any] = {}
+    baseline_nli = NaturalLanguageInference(
+        neutral_label=baseline_model.vocab.get_token_index("neutral", "labels"),
+        taus=args.taus,
+    )
     with open(baseline_file, "r") as fd:
         for line in fd:
-            _add(baseline_predictions, json.loads(line))
+            baseline_predictions = json.loads(line)
+            probs = torch.tensor(baseline_predictions["probs"])
+            baseline_nli(probs)
 
-    probs = torch.tensor(baseline_predictions["probs"], device=args.cuda_device)
-    baseline_metrics = compute_metrics(probs, baseline_model, args.taus)
-    metrics_json = json.dumps({**baseline_output_metrics, **baseline_metrics}, indent=2)
+    baseline_metrics = {**baseline_output_metrics, **(baseline_nli.get_metric())}
+    metrics_json = json.dumps(baseline_metrics, indent=2)
     if args.baseline_output_file:
         # write all metrics to output file
         # don't use dump_metrics() because want to log regardless
