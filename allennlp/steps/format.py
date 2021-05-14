@@ -5,10 +5,11 @@ import mmap
 import pathlib
 from collections import abc
 from os import PathLike
-from typing import TypeVar, Generic, Union, Optional
+from typing import TypeVar, Generic, Union, Optional, Callable, Dict, Iterable, cast
 
 import dill
 import xxhash
+from typing.io import IO
 
 from allennlp.common import Registrable
 from allennlp.common.checks import ConfigurationError
@@ -56,7 +57,7 @@ class DillFormat(Format):
 
     VERSION = 1
 
-    OPEN_FUNCTIONS = {
+    OPEN_FUNCTIONS: Dict[Optional[str], Callable[[PathLike, str], IO]] = {
         None: open,
         "None": open,
         "none": open,
@@ -90,7 +91,7 @@ class DillFormat(Format):
             pickler.dump(self.VERSION)
             if hasattr(artifact, "__next__"):
                 pickler.dump(True)
-                for item in artifact:
+                for item in cast(Iterable, artifact):
                     pickler.dump(item)
             else:
                 pickler.dump(False)
