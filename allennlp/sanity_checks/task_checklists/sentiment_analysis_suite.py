@@ -3,7 +3,6 @@ import numpy as np
 from overrides import overrides
 from checklist.test_suite import TestSuite
 from checklist.test_types import MFT, INV, DIR, Expect
-from checklist.editor import Editor
 from checklist.perturb import Perturb
 from allennlp.sanity_checks.task_checklists.task_suite import TaskSuite
 from allennlp.sanity_checks.task_checklists import utils
@@ -97,156 +96,153 @@ class SentimentAnalysisSuite(TaskSuite):
         self._default_negation_tests(data, num_test_cases)
 
     def _setup_editor(self):
-        if not hasattr(self, "editor"):
-            self.editor = Editor()
+        super()._setup_editor()
 
-            pos_adj = [
-                "good",
-                "great",
-                "excellent",
-                "amazing",
-                "extraordinary",
-                "beautiful",
-                "fantastic",
-                "nice",
-                "incredible",
-                "exceptional",
-                "awesome",
-                "perfect",
-                "fun",
-                "adorable",
-                "brilliant",
-                "exciting",
-                "sweet",
-                "wonderful",
-            ]
-            neg_adj = [
-                "awful",
-                "bad",
-                "horrible",
-                "weird",
-                "rough",
-                "lousy",
-                "unhappy",
-                "average",
-                "difficult",
-                "poor",
-                "sad",
-                "frustrating",
-                "hard",
-                "lame",
-                "nasty",
-                "annoying",
-                "boring",
-                "creepy",
-                "dreadful",
-                "ridiculous",
-                "terrible",
-                "ugly",
-                "unpleasant",
-            ]
-            self.editor.add_lexicon("pos_adj", pos_adj, overwrite=True)
-            self.editor.add_lexicon("neg_adj", neg_adj, overwrite=True)
+        pos_adj = [
+            "good",
+            "great",
+            "excellent",
+            "amazing",
+            "extraordinary",
+            "beautiful",
+            "fantastic",
+            "nice",
+            "incredible",
+            "exceptional",
+            "awesome",
+            "perfect",
+            "fun",
+            "adorable",
+            "brilliant",
+            "exciting",
+            "sweet",
+            "wonderful",
+        ]
+        neg_adj = [
+            "awful",
+            "bad",
+            "horrible",
+            "weird",
+            "rough",
+            "lousy",
+            "average",
+            "difficult",
+            "poor",
+            "sad",
+            "frustrating",
+            "lame",
+            "nasty",
+            "annoying",
+            "boring",
+            "creepy",
+            "dreadful",
+            "ridiculous",
+            "terrible",
+            "ugly",
+            "unpleasant",
+        ]
+        self.editor.add_lexicon("pos_adj", pos_adj, overwrite=True)
+        self.editor.add_lexicon("neg_adj", neg_adj, overwrite=True)
 
-            pos_verb_present = [
-                "like",
-                "enjoy",
-                "appreciate",
-                "love",
-                "recommend",
-                "admire",
-                "value",
-                "welcome",
-            ]
-            neg_verb_present = ["hate", "dislike", "regret", "abhor", "dread", "despise"]
-            pos_verb_past = [
-                "liked",
-                "enjoyed",
-                "appreciated",
-                "loved",
-                "admired",
-                "valued",
-                "welcomed",
-            ]
-            neg_verb_past = ["hated", "disliked", "regretted", "abhorred", "dreaded", "despised"]
-            self.editor.add_lexicon("pos_verb_present", pos_verb_present, overwrite=True)
-            self.editor.add_lexicon("neg_verb_present", neg_verb_present, overwrite=True)
-            self.editor.add_lexicon("pos_verb_past", pos_verb_past, overwrite=True)
-            self.editor.add_lexicon("neg_verb_past", neg_verb_past, overwrite=True)
-            self.editor.add_lexicon("pos_verb", pos_verb_present + pos_verb_past, overwrite=True)
-            self.editor.add_lexicon("neg_verb", neg_verb_present + neg_verb_past, overwrite=True)
+        pos_verb_present = [
+            "like",
+            "enjoy",
+            "appreciate",
+            "love",
+            "recommend",
+            "admire",
+            "value",
+            "welcome",
+        ]
+        neg_verb_present = ["hate", "dislike", "regret", "abhor", "dread", "despise"]
+        pos_verb_past = [
+            "liked",
+            "enjoyed",
+            "appreciated",
+            "loved",
+            "admired",
+            "valued",
+            "welcomed",
+        ]
+        neg_verb_past = ["hated", "disliked", "regretted", "abhorred", "dreaded", "despised"]
+        self.editor.add_lexicon("pos_verb_present", pos_verb_present, overwrite=True)
+        self.editor.add_lexicon("neg_verb_present", neg_verb_present, overwrite=True)
+        self.editor.add_lexicon("pos_verb_past", pos_verb_past, overwrite=True)
+        self.editor.add_lexicon("neg_verb_past", neg_verb_past, overwrite=True)
+        self.editor.add_lexicon("pos_verb", pos_verb_present + pos_verb_past, overwrite=True)
+        self.editor.add_lexicon("neg_verb", neg_verb_present + neg_verb_past, overwrite=True)
 
-            noun = [
-                "airline",
-                "movie",
-                "product",
-                "customer service",
-                "restaurant",
-                "hotel",
-                "food",
-                "staff",
-                "company",
-                "crew",
-                "service",
-            ]
-            self.editor.add_lexicon("noun", noun, overwrite=True)
+        noun = [
+            "airline",
+            "movie",
+            "product",
+            "customer service",
+            "restaurant",
+            "hotel",
+            "food",
+            "staff",
+            "company",
+            "crew",
+            "service",
+        ]
+        self.editor.add_lexicon("noun", noun, overwrite=True)
 
-            intens_adj = [
-                "very",
-                "really",
-                "absolutely",
-                "truly",
-                "extremely",
-                "quite",
-                "incredibly",
-                "amazingly",
-                "especially",
-                "exceptionally",
-                "unbelievably",
-                "utterly",
-                "exceedingly",
-                "rather",
-                "totally",
-                "particularly",
-            ]
-            intens_verb = [
-                "really",
-                "absolutely",
-                "truly",
-                "extremely",
-                "especially",
-                "utterly",
-                "totally",
-                "particularly",
-                "highly",
-                "definitely",
-                "certainly",
-                "genuinely",
-                "honestly",
-                "strongly",
-                "sure",
-                "sincerely",
-            ]
+        intens_adj = [
+            "very",
+            "really",
+            "absolutely",
+            "truly",
+            "extremely",
+            "quite",
+            "incredibly",
+            "amazingly",
+            "especially",
+            "exceptionally",
+            "unbelievably",
+            "utterly",
+            "exceedingly",
+            "rather",
+            "totally",
+            "particularly",
+        ]
+        intens_verb = [
+            "really",
+            "absolutely",
+            "truly",
+            "extremely",
+            "especially",
+            "utterly",
+            "totally",
+            "particularly",
+            "highly",
+            "definitely",
+            "certainly",
+            "genuinely",
+            "honestly",
+            "strongly",
+            "sure",
+            "sincerely",
+        ]
 
-            self.editor.add_lexicon("intens_adj", intens_adj, overwrite=True)
-            self.editor.add_lexicon("intens_verb", intens_verb, overwrite=True)
+        self.editor.add_lexicon("intens_adj", intens_adj, overwrite=True)
+        self.editor.add_lexicon("intens_verb", intens_verb, overwrite=True)
 
-            reducer_adj = [
-                "somewhat",
-                "kinda",
-                "mostly",
-                "probably",
-                "generally",
-                "reasonably",
-                "a little",
-                "a bit",
-                "slightly",
-            ]
+        reducer_adj = [
+            "somewhat",
+            "kinda",
+            "mostly",
+            "probably",
+            "generally",
+            "reasonably",
+            "a little",
+            "a bit",
+            "slightly",
+        ]
 
-            self.editor.add_lexicon("reducer_adj", reducer_adj, overwrite=True)
+        self.editor.add_lexicon("reducer_adj", reducer_adj, overwrite=True)
 
-            self.monotonic_label = Expect.monotonic(increasing=True, tolerance=0.1)
-            self.monotonic_label_down = Expect.monotonic(increasing=False, tolerance=0.1)
+        self.monotonic_label = Expect.monotonic(increasing=True, tolerance=0.1)
+        self.monotonic_label_down = Expect.monotonic(increasing=False, tolerance=0.1)
 
     def _default_vocabulary_tests(self, data: Optional[Iterable[str]], num_test_cases=100):
 
@@ -371,7 +367,7 @@ class SentimentAnalysisSuite(TaskSuite):
             templates=template.templates,
             name="Intensifiers",
             capability="Vocabulary",
-            description="Test is composed of pairs of sentences (x1, x2), where we add an intensifier"
+            description="Test is composed of pairs of sentences (x1, x2), where we add an intensifier "
             "such as 'really',or 'very' to x2 and expect the confidence to NOT go down "
             "(with tolerance=0.1). e.g.:"
             "x1 = 'That was a good movie'"
@@ -400,7 +396,7 @@ class SentimentAnalysisSuite(TaskSuite):
             templates=template.templates,
             name="Reducers",
             capability="Vocabulary",
-            description="Test is composed of pairs of sentences (x1, x2), where we add a reducer"
+            description="Test is composed of pairs of sentences (x1, x2), where we add a reducer "
             "such as 'somewhat', or 'kinda' to x2 and expect the confidence to NOT go up "
             " (with tolerance=0.1). e.g.:"
             "x1 = 'The staff was good.'"
@@ -555,8 +551,8 @@ class SentimentAnalysisSuite(TaskSuite):
             capability="Temporal",
             description="Have two conflicing statements, one about the past and "
             "one about the present."
-            "Expect the present to carry the sentiment. Examples:"
-            "I used to love this airline, now I hate it -> should be negative"
+            "Expect the present to carry the sentiment. Examples:\n"
+            "I used to love this airline, now I hate it -> should be negative\n"
             "I love this airline, although I used to hate it -> should be positive",
         )
 
@@ -604,13 +600,13 @@ class SentimentAnalysisSuite(TaskSuite):
 
         for p, vals in protected.items():
             template = self.editor.template(
-                ["{male} is %s {mask}." % r for r in vals],
+                ["{male} is %s {profession}." % r for r in vals],
                 return_maps=False,
                 nsamples=num_test_cases,
                 save=True,
             )
             template += self.editor.template(
-                ["{female} is %s {mask}." % r for r in vals],
+                ["{female} is %s {profession}." % r for r in vals],
                 return_maps=False,
                 nsamples=num_test_cases,
                 save=True,

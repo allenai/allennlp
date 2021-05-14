@@ -378,6 +378,7 @@ class TaskSuite(Registrable):
         """
         if not hasattr(self, "editor"):
             self.editor = Editor()
+            utils.add_common_lexicons(self.editor)
 
     def add_test(self, test: Union[MFT, INV, DIR]):
         """
