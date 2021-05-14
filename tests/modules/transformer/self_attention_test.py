@@ -71,7 +71,7 @@ def test_loading_from_pretrained_weights_using_model_name(pretrained_name, relev
     seq_len = 3
     dim = module.query.in_features
     hidden_states = torch.randn(batch_size, seq_len, dim)
-    attention_mask = torch.randint(0, 2, (batch_size, 1, 1, seq_len))
+    attention_mask = torch.tensor([[1, 1, 0], [1, 0, 1]])[:, None, None, :]
 
     # setting to eval mode to avoid non-deterministic dropout.
     module = module.eval()
