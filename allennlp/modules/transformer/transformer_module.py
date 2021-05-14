@@ -1,4 +1,3 @@
-from enum import Enum
 import logging
 import os
 from os import PathLike
@@ -20,34 +19,6 @@ logger = logging.getLogger(__name__)
 
 
 _T = TypeVar("_T", bound="TransformerModule")
-
-
-class DistributedLoadingStrategy(Enum):
-    """
-    Strategy options for loading state dictionaries across distributed processes.
-    """
-
-    FREE_FOR_ALL = "FREE_FOR_ALL"
-    """
-    Each process loads its own state dict from disk.
-    """
-
-    MEMORY_EFFICIENT = "MEMORY_EFFICIENT"
-    """
-    Only the primary process loads the state dict from disk, then it broadcasts
-    each state tensor one-by-one to the other process groups.
-
-    This is particularly useful when you have multiple distributed workers on the same
-    machine (shared CPU memory), and don't have enough memory for each process to load
-    its own copy of the state dict at the same time.
-    """
-
-    @classmethod
-    def from_str(cls, s: str) -> "DistributedLoadingStrategy":
-        for option in cls:
-            if option.value.lower() == s.lower():
-                return option
-        raise ValueError(f"Unknown distributed loading strategy: '{s}'")
 
 
 class TransformerModule(torch.nn.Module):
@@ -81,13 +52,6 @@ class TransformerModule(torch.nn.Module):
     """
     An optional list of regular expressions that specifies which weights are allowed to be missing
     from a pretrained state dictionary.
-    """
-
-    _distributed_loading_strategy: DistributedLoadingStrategy = (
-        DistributedLoadingStrategy.FREE_FOR_ALL
-    )
-    """
-    The default strategy for loading a state dictionary within a distributed process group.
     """
 
     _tied_weights: Optional[Dict[str, List[str]]] = None
@@ -240,7 +204,6 @@ class TransformerModule(torch.nn.Module):
         ignore: Optional[List[str]] = None,
         allow_missing: Optional[List[str]] = None,
         strict: bool = True,
-        distributed_loading_strategy: Optional[Union[str, DistributedLoadingStrategy]] = None,
         **kwargs,
     ) -> _T:
         """
@@ -293,11 +256,6 @@ class TransformerModule(torch.nn.Module):
             Whether to load the `state_dict` in "strict" model. This only applies
             when `load_weights` is `True`.
 
-        distributed_loading_strategy : `Optional[Union[str, DistributedLoadingStrategy]]`, optional (default = `None`)
-            The loading strategy to use within a distributed process group. This only applies
-            when `load_weights` is `True`. If not specified, this class's default is used:
-            `cls._distributed_loading_strategy`.
-
         **kwargs : `Any`
             Key word arguments to pass to `cls.from_config()` when instantiating the module.
         """  # noqa: E501
@@ -307,17 +265,8 @@ class TransformerModule(torch.nn.Module):
         model = cls._from_config(config, **kwargs)
 
         if load_weights:
-            # Resolve the loading strategy to use.
-            loading_strategy: DistributedLoadingStrategy
-            if isinstance(distributed_loading_strategy, DistributedLoadingStrategy):
-                loading_strategy = distributed_loading_strategy
-            elif isinstance(distributed_loading_strategy, str):
-                loading_strategy = DistributedLoadingStrategy.from_str(distributed_loading_strategy)
-            else:
-                loading_strategy = cls._distributed_loading_strategy
-
             state_dict: Optional[StateDictType] = None
-            if is_global_primary() or loading_strategy == DistributedLoadingStrategy.FREE_FOR_ALL:
+            if is_global_primary():
                 # Load the pretrained HuggingFace state_dict.
                 pretrained_state_dict = cls._get_pretrained_state_dict(
                     model_name,
@@ -332,7 +281,7 @@ class TransformerModule(torch.nn.Module):
             missing_keys: List[str]
             unexpected_keys: List[str]
             error_msgs: List[str] = []
-            if not is_distributed() or loading_strategy == DistributedLoadingStrategy.FREE_FOR_ALL:
+            if not is_distributed():
                 assert state_dict is not None
                 logger.info("Loading state_dict into module")
                 missing_keys, unexpected_keys = model.load_state_dict(state_dict, strict=False)

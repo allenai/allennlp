@@ -14,7 +14,6 @@ from allennlp.common.testing import run_distributed_test
 from allennlp.modules.transformer import (
     AttentionLayer,
     TransformerLayer,
-    DistributedLoadingStrategy,
 )
 
 
@@ -297,13 +296,6 @@ def _load_pretrained(global_rank, world_size, gpu_id):
     )
 
 
-def _load_pretrained_mem_efficient(global_rank, world_size, gpu_id):
-    TransformerLayer.from_pretrained_module(
-        "epwalsh/bert-xsmall-dummy",
-        distributed_loading_strategy=DistributedLoadingStrategy.MEMORY_EFFICIENT,
-    )
-
-
-@pytest.mark.parametrize("test_func", [_load_pretrained, _load_pretrained_mem_efficient])
+@pytest.mark.parametrize("test_func", [_load_pretrained])
 def test_distributed(test_func):
     run_distributed_test([-1, -1], func=test_func, start_method="spawn")
