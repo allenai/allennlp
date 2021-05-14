@@ -24,8 +24,6 @@ class ConfigurationError(Exception):
         self.message = message
 
     def __str__(self):
-        # TODO(brendanr): Is there some reason why we need repr here? It
-        # produces horrible output for simple multi-line error messages.
         return self.message
 
 
