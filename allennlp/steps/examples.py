@@ -65,7 +65,7 @@ class Tokenize(Step):
         special_tokens_mask: bool = False,
         offset_mapping: bool = False,
     ) -> AllenNlpDataset:
-        tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
+        tokenizer = cached_transformers.get_tokenizer(tokenizer_name)
         assert tokenizer.pad_token_type_id == 0
 
         field_names_used = set()
