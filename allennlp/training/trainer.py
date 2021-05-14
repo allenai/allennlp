@@ -5,6 +5,7 @@ import os
 import re
 import time
 import traceback
+import warnings
 from contextlib import contextmanager
 from typing import Any, Dict, Iterator, List, Optional, Tuple, Union, Type
 
@@ -23,7 +24,11 @@ from allennlp.common.checks import ConfigurationError, check_for_gpu
 from allennlp.data import DataLoader, TensorDict
 from allennlp.models.model import Model
 from allennlp.training import util as training_util
-from allennlp.training.callbacks import TrainerCallback, SanityChecksCallback, ConsoleLoggerCallback
+from allennlp.training.callbacks import (
+    TrainerCallback,
+    ConfidenceChecksCallback,
+    ConsoleLoggerCallback,
+)
 from allennlp.training.checkpointer import Checkpointer
 from allennlp.training.learning_rate_schedulers import LearningRateScheduler
 from allennlp.training.metric_tracker import MetricTracker
@@ -263,10 +268,13 @@ class GradientDescentTrainer(Trainer):
         addition to any other callbacks listed in the `callbacks` parameter.
         When set to `False`, `DEFAULT_CALLBACKS` are not used.
 
-    run_sanity_checks : `bool`, optional (default = `True`)
-        Determines whether model sanity checks, such as
-        [`NormalizationBiasVerification`](../../sanity_checks/normalization_bias_verification/),
-        are ran.
+    run_confidence_checks : `bool`, optional (default = `True`)
+        Determines whether model confidence checks, such as
+        [`NormalizationBiasVerification`](../../confidence_checks/normalization_bias_verification/),
+        are run.
+
+    run_sanity_checks : `bool`, optional (default = None)
+        This is deprecated. Please use `run_confidence_checks` instead.
 
     """
 
@@ -294,7 +302,8 @@ class GradientDescentTrainer(Trainer):
         num_gradient_accumulation_steps: int = 1,
         use_amp: bool = False,
         enable_default_callbacks: bool = True,
-        run_sanity_checks: bool = True,
+        run_sanity_checks: Optional[bool] = None,
+        run_confidence_checks: bool = True,
     ) -> None:
         super().__init__(
             serialization_dir=serialization_dir,
@@ -303,6 +312,13 @@ class GradientDescentTrainer(Trainer):
             local_rank=local_rank,
             world_size=world_size,
         )
+
+        if run_sanity_checks is not None:
+            warnings.warn(
+                "'run_sanity_checks' is deprecated, please use " "'run_confidence_checks' instead.",
+                DeprecationWarning,
+            )
+            run_confidence_checks = run_sanity_checks
 
         # I am not calling move_to_gpu here, because if the model is
         # not already on the GPU then the optimizer is going to be wrong.
@@ -345,8 +361,9 @@ class GradientDescentTrainer(Trainer):
 
         self._callbacks = callbacks or []
         default_callbacks = list(DEFAULT_CALLBACKS) if enable_default_callbacks else []
-        if run_sanity_checks:
-            default_callbacks.append(SanityChecksCallback)
+
+        if run_confidence_checks:
+            default_callbacks.append(ConfidenceChecksCallback)
         for callback_cls in default_callbacks:
             for callback in self._callbacks:
                 if callback.__class__ == callback_cls:
@@ -1014,7 +1031,8 @@ class GradientDescentTrainer(Trainer):
         checkpointer: Lazy[Checkpointer] = Lazy(Checkpointer),
         callbacks: List[Lazy[TrainerCallback]] = None,
         enable_default_callbacks: bool = True,
-        run_sanity_checks: bool = True,
+        run_sanity_checks: Optional[bool] = None,
+        run_confidence_checks: bool = True,
     ) -> "Trainer":
         """
         This method exists so that we can have a documented method to construct this class using
@@ -1107,6 +1125,7 @@ class GradientDescentTrainer(Trainer):
             use_amp=use_amp,
             enable_default_callbacks=enable_default_callbacks,
             run_sanity_checks=run_sanity_checks,
+            run_confidence_checks=run_confidence_checks,
         )
 
 

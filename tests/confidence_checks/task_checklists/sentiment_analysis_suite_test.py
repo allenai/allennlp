@@ -1,4 +1,6 @@
-from allennlp.sanity_checks.task_checklists.sentiment_analysis_suite import SentimentAnalysisSuite
+from allennlp.confidence_checks.task_checklists.sentiment_analysis_suite import (
+    SentimentAnalysisSuite,
+)
 from allennlp.common.testing import AllenNlpTestCase, requires_gpu
 from allennlp.models.archival import load_archive
 from allennlp.predictors import Predictor
