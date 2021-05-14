@@ -16,7 +16,7 @@ from allennlp.data import DataLoader
 from allennlp.data.batch import Batch
 from allennlp.models import load_archive, Model
 from allennlp.training import GradientDescentTrainer
-from allennlp.sanity_checks.normalization_bias_verification import NormalizationBiasVerification
+from allennlp.confidence_checks.normalization_bias_verification import NormalizationBiasVerification
 
 
 class ModelTestCase(AllenNlpTestCase):

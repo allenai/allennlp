@@ -7,7 +7,7 @@ repository.
 import torch
 from torch import nn as nn
 from typing import Tuple, List, Callable
-from allennlp.sanity_checks.verification_base import VerificationBase
+from allennlp.confidence_checks.verification_base import VerificationBase
 import logging
 
 logger = logging.getLogger(__name__)
