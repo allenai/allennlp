@@ -273,7 +273,7 @@ class GradientDescentTrainer(Trainer):
         [`NormalizationBiasVerification`](../../confidence_checks/normalization_bias_verification/),
         are run.
 
-    run_sanity_checks : `bool`, optional (default = None)
+    run_sanity_checks : `bool`, optional (default = `None`)
         This is deprecated. Please use `run_confidence_checks` instead.
 
     """
