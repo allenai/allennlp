@@ -1,17 +1,40 @@
 import copy
 import dataclasses
 import logging
+import random
 import re
-from typing import Set, Optional, Union, List, Dict, Any, Tuple, Iterable
+from math import floor, ceil
+from typing import (
+    Set,
+    Optional,
+    Union,
+    List,
+    Dict,
+    Any,
+    Tuple,
+    Iterable,
+    Iterator,
+    Sequence,
+)
 
 import datasets
+import more_itertools
 import torch.optim
 from datasets import Dataset
-from transformers import AutoTokenizer
 
-from allennlp.data import DataLoader, Vocabulary
+from allennlp.common import cached_transformers
+from allennlp.data import (
+    DataLoader,
+    Vocabulary,
+    BatchSampler,
+    Instance,
+    allennlp_collate,
+    TensorDict,
+)
+from allennlp.data.fields import LabelField, ListField, IndexField
 from allennlp.data.fields.transformer_text_field import TransformerTextField
 from allennlp.models import Model
+from allennlp.nn.util import move_to_device
 from allennlp.steps.dataset import AllenNlpDataset
 from allennlp.steps.step import Step
 from allennlp.training import Checkpointer, TrainerCallback, GradientDescentTrainer
@@ -169,6 +192,78 @@ class Tokenize(Step):
         return AllenNlpDataset(new_splits, vocab)
 
 
+@Step.register("piqa_instances")
+class PiqaInstances(Step):
+    DETERMINISTIC = True
+    VERSION = "001"
+    CACHEABLE = True
+
+    def run(
+        self,
+        tokenizer_name: str,
+        max_length: int = 512,
+    ) -> AllenNlpDataset:
+        tokenizer = cached_transformers.get_tokenizer(tokenizer_name)
+        assert tokenizer.pad_token_type_id == 0
+
+        dataset = {
+            split_name: [
+                {
+                    "correct_alternative": LabelField(instance["label"]),
+                    "alternatives": [
+                        (instance["goal"], instance["sol1"]),
+                        (instance["goal"], instance["sol2"]),
+                    ],
+                }
+                for instance in instances
+            ]
+            for split_name, instances in datasets.load_dataset("piqa").items()
+        }
+
+        # This thing is so complicated because we want to call `batch_encode_plus` with all
+        # the strings at once.
+        tokenized = {
+            split_name: tokenizer.batch_encode_plus(
+                [alternative for instance in instances for alternative in instance["alternatives"]],
+                add_special_tokens=True,
+                truncation=True,
+                max_length=max_length,
+                return_token_type_ids=True,
+                return_attention_mask=False,
+            )
+            for split_name, instances in dataset.items()
+        }
+
+        result = {}
+        for split_name, instances in dataset.items():
+            tokenized_alts = tokenized["split_name"]
+            results_per_split = []
+            for i, instance in enumerate(instances):
+                alts = ListField(
+                    [
+                        TransformerTextField(
+                            torch.tensor(tokenized_alts["input_ids"][alt_index], dtype=torch.int32),
+                            torch.tensor(
+                                tokenized_alts["token_type_ids"][alt_index], dtype=torch.int32
+                            ),
+                            torch.tensor(
+                                tokenized_alts["attention_mask"][alt_index], dtype=torch.bool
+                            ),
+                        )
+                        for alt_index in [2 * i, 2 * i + 1]
+                    ]
+                )
+                label = IndexField(instance["label"], alts)
+                results_per_split.append(
+                    Instance({"alternatives": alts, "correct_alternative": label})
+                )
+            result[split_name] = results_per_split
+
+        # make vocab
+        vocab = Vocabulary.empty()
+        vocab.add_transformer_vocab(tokenizer, "tokens")
+
+        return AllenNlpDataset(result, vocab)
 @Step.register("training")
 class TrainingStep(Step):
     DETERMINISTIC = True
