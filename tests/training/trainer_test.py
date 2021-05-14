@@ -29,10 +29,10 @@ from allennlp.training.callbacks import (
     TrainerCallback,
     TrackEpochCallback,
     TensorBoardCallback,
-    SanityChecksCallback,
+    ConfidenceChecksCallback,
     ConsoleLoggerCallback,
 )
-from allennlp.training.callbacks.sanity_checks import SanityCheckError
+from allennlp.training.callbacks.confidence_checks import ConfidenceCheckError
 from allennlp.training.learning_rate_schedulers import CosineWithRestarts
 from allennlp.training.learning_rate_schedulers import ExponentialLearningRateScheduler
 from allennlp.training.momentum_schedulers import MomentumScheduler
@@ -49,7 +49,7 @@ from allennlp.data.fields import (
     TensorField,
 )
 from allennlp.training.optimizers import Optimizer
-from allennlp.common.testing.sanity_check_test import (
+from allennlp.common.testing.confidence_check_test import (
     FakeModelForTestingNormalizationBiasVerification,
 )
 
@@ -814,7 +814,7 @@ class TestTrainer(TrainerTestBase):
 
         trainer.train()
 
-    def test_sanity_check_callback(self):
+    def test_confidence_check_callback(self):
         model_with_bias = FakeModelForTestingNormalizationBiasVerification(use_bias=True)
         inst = Instance({"x": TensorField(torch.rand(3, 1, 4))})
         data_loader = SimpleDataLoader([inst, inst], 2)
@@ -824,12 +824,12 @@ class TestTrainer(TrainerTestBase):
             data_loader,
             num_epochs=1,
             serialization_dir=self.TEST_DIR,
-            callbacks=[SanityChecksCallback(serialization_dir=self.TEST_DIR)],
+            callbacks=[ConfidenceChecksCallback(serialization_dir=self.TEST_DIR)],
         )
-        with pytest.raises(SanityCheckError):
+        with pytest.raises(ConfidenceCheckError):
             trainer.train()
 
-    def test_sanity_check_default(self):
+    def test_confidence_check_default(self):
         model_with_bias = FakeModelForTestingNormalizationBiasVerification(use_bias=True)
         inst = Instance({"x": TensorField(torch.rand(3, 1, 4))})
         data_loader = SimpleDataLoader([inst, inst], 2)
@@ -839,7 +839,7 @@ class TestTrainer(TrainerTestBase):
             data_loader=data_loader,
             num_epochs=1,
         )
-        with pytest.raises(SanityCheckError):
+        with pytest.raises(ConfidenceCheckError):
             trainer.train()
 
         trainer = GradientDescentTrainer.from_partial_objects(
@@ -847,7 +847,7 @@ class TestTrainer(TrainerTestBase):
             serialization_dir=self.TEST_DIR,
             data_loader=data_loader,
             num_epochs=1,
-            run_sanity_checks=False,
+            run_confidence_checks=False,
         )
 
         # Check is not run, so no failure.
