@@ -454,11 +454,11 @@ def construct_arg(
                 error_chain = e
 
         # If none of them succeeded, we crash.
-        e = ConfigurationError(
+        config_error = ConfigurationError(
             f"Failed to construct argument {argument_name} with type {annotation}."
         )
-        e.__cause__ = error_chain
-        raise e
+        config_error.__cause__ = error_chain
+        raise config_error
     elif origin == Lazy:
         if popped_params is default:
             return default
