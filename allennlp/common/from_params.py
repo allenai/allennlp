@@ -14,6 +14,7 @@ from typing import (
     Type,
     TypeVar,
     Union,
+    Optional,
 )
 import inspect
 import logging
@@ -433,6 +434,7 @@ def construct_arg(
 
         # We'll try each of the given types in the union sequentially, returning the first one that
         # succeeds.
+        error_chain: Optional[Exception] = None
         for arg_annotation in args:
             try:
                 return construct_arg(
@@ -443,15 +445,20 @@ def construct_arg(
                     default,
                     **extras,
                 )
-            except (ValueError, TypeError, ConfigurationError, AttributeError):
+            except (ValueError, TypeError, ConfigurationError, AttributeError) as e:
                 # Our attempt to construct the argument may have modified popped_params, so we
                 # restore it here.
                 popped_params = deepcopy(backup_params)
+                e.args = (f"While constructing an argument of type {arg_annotation}",) + e.args
+                e.__cause__ = error_chain
+                error_chain = e
 
         # If none of them succeeded, we crash.
-        raise ConfigurationError(
-            f"Failed to construct argument {argument_name} with type {annotation}"
+        e = ConfigurationError(
+            f"Failed to construct argument {argument_name} with type {annotation}."
         )
+        e.__cause__ = error_chain
+        raise e
     elif origin == Lazy:
         if popped_params is default:
             return default
