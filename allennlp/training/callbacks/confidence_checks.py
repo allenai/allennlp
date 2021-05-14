@@ -9,6 +9,8 @@ if TYPE_CHECKING:
     from allennlp.training.trainer import GradientDescentTrainer
 
 
+# `sanity_checks` is deprecated and will be removed.
+@TrainerCallback.register("sanity_checks")
 @TrainerCallback.register("confidence_checks")
 class ConfidenceChecksCallback(TrainerCallback):
     """

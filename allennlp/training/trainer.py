@@ -273,8 +273,8 @@ class GradientDescentTrainer(Trainer):
         [`NormalizationBiasVerification`](../../confidence_checks/normalization_bias_verification/),
         are run.
 
-    run_sanity_checks : `bool`, optional (default = `None`)
-        This is deprecated. Please use `run_confidence_checks` instead.
+    run_sanity_checks : `bool`, optional (default = `True`)
+        This parameter is deprecated. Please use `run_confidence_checks` instead.
 
     """
 
@@ -302,8 +302,8 @@ class GradientDescentTrainer(Trainer):
         num_gradient_accumulation_steps: int = 1,
         use_amp: bool = False,
         enable_default_callbacks: bool = True,
-        run_sanity_checks: Optional[bool] = None,
         run_confidence_checks: bool = True,
+        **kwargs,
     ) -> None:
         super().__init__(
             serialization_dir=serialization_dir,
@@ -313,12 +313,12 @@ class GradientDescentTrainer(Trainer):
             world_size=world_size,
         )
 
-        if run_sanity_checks is not None:
+        if "run_sanity_checks" in kwargs:
             warnings.warn(
-                "'run_sanity_checks' is deprecated, please use " "'run_confidence_checks' instead.",
+                "'run_sanity_checks' is deprecated, please use 'run_confidence_checks' instead.",
                 DeprecationWarning,
             )
-            run_confidence_checks = run_sanity_checks
+            run_confidence_checks = kwargs["run_sanity_checks"]
 
         # I am not calling move_to_gpu here, because if the model is
         # not already on the GPU then the optimizer is going to be wrong.
@@ -1031,8 +1031,8 @@ class GradientDescentTrainer(Trainer):
         checkpointer: Lazy[Checkpointer] = Lazy(Checkpointer),
         callbacks: List[Lazy[TrainerCallback]] = None,
         enable_default_callbacks: bool = True,
-        run_sanity_checks: Optional[bool] = None,
         run_confidence_checks: bool = True,
+        **kwargs,
     ) -> "Trainer":
         """
         This method exists so that we can have a documented method to construct this class using
@@ -1124,8 +1124,8 @@ class GradientDescentTrainer(Trainer):
             num_gradient_accumulation_steps=num_gradient_accumulation_steps,
             use_amp=use_amp,
             enable_default_callbacks=enable_default_callbacks,
-            run_sanity_checks=run_sanity_checks,
             run_confidence_checks=run_confidence_checks,
+            **kwargs,
         )
 
 

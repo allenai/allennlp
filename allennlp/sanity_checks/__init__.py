@@ -4,6 +4,6 @@ from allennlp.confidence_checks.normalization_bias_verification import Normaliza
 import warnings
 
 warnings.warn(
-    "Module 'sanity_checks' is deprecated, please use " "'confidence_checks' instead.",
+    "Module 'sanity_checks' is deprecated, please use 'confidence_checks' instead.",
     DeprecationWarning,
 )
