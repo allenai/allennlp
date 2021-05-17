@@ -465,7 +465,7 @@ class BeamSearch(FromParams):
 
     min_steps : `int`, optional (default = `0`)
         The minimum number of decoding steps to take, i.e. the minimum length of
-        the predicted sequences.
+        the predicted sequences. This does not include the end token.
     """
 
     def __init__(
