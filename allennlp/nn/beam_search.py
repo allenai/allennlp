@@ -431,6 +431,92 @@ class GumbelSampler(Sampler):
         return T - torch.nn.functional.relu(v) - torch.log1p(torch.exp(-v.abs()))
 
 
+class FinalSequenceScorer(Registrable):
+    """
+    An abstract class that can be used to score the final generated sequences found
+    by beam search. Given the predicted sequences and the corresponding log probabilities of
+    those sequences, the class calculates and returns the final score of the sequences.
+
+    The default implementation scores the sequences using the sum of the log probabilities of
+    the sequence, which is passed as input.
+    """
+
+    default_implementation = "sequence-log-prob"
+
+    def score(
+        self, predictions: torch.Tensor, log_probabilities: torch.Tensor, end_index: int
+    ) -> torch.Tensor:
+        """
+        Score the final predictions found by beam search.
+
+        # Parameters
+
+        predictions : `torch.Tensor`
+            A tensor containing the initial predictions with shape `(batch_size, beam_size, max_steps)`.
+
+        log_probabilities : `StateType`
+            A tensor containing the log probabilities of the sequence, defined as the sum
+            of the log probabilities per token, with shape `(batch_size, beam_size)`.
+
+        end_index : `int`
+            The index of the end symbol.
+
+        # Returns
+
+        `torch.Tensor`
+            A tensor of the final sequence scores of shape `(batch_size, beam_size)`.
+        """
+        raise NotImplementedError
+
+
+@FinalSequenceScorer.register("sequence-log-prob")
+class SequenceLogProbabilityScorer(FinalSequenceScorer):
+    """
+    A `FinalSequenceScorer` which scores the sequences by the sum of the log probabilities
+    across the sequence's tokens.
+    """
+
+    @overrides
+    def score(
+        self, predictions: torch.Tensor, log_probabilities: torch.Tensor, end_index: int
+    ) -> torch.Tensor:
+        # The sum of the sequence log probabilities is the input parameter, so just
+        # return it. The tensor is cloned so it does not use the same storage as the input
+        # tensor, as is the case with `LengthNormalizedSequenceLogProbabilityScorer`.
+        return log_probabilities.clone()
+
+
+@FinalSequenceScorer.register("length-normalized-sequence-log-prob")
+class LengthNormalizedSequenceLogProbabilityScorer(FinalSequenceScorer):
+    """
+    A `FinalSequenceScorer` which scores the sequences by the average log probability of the
+    tokens in the sequence. It optionally includes a length penalty which promotes
+    or demotes sequences based on their lengths. The final score for a sequence will
+    be (sequence_log_probability) / (sequence_length ** length_penalty).
+
+    # Parameters
+
+    length_penalty : `float`, optional (default = `1.0`)
+        The length penalty to use. A value of 1.0 means no length penalty is used.
+        A value > 1.0 favors longer sequences, and < 1.0 favors shorter sequences.
+    """
+
+    def __init__(self, length_penalty: float = 1.0):
+        super().__init__()
+        self.length_penalty = length_penalty
+
+    @overrides
+    def score(
+        self, predictions: torch.Tensor, log_probabilities: torch.Tensor, end_index: int
+    ) -> torch.Tensor:
+        # shape: (batch_size, beam_size)
+        lengths = (predictions != end_index).long().sum(dim=2)
+
+        # shape: (batch_size, beam_size)
+        average_log_probs = log_probabilities / (lengths ** self.length_penalty)
+        return average_log_probs
+
+
 class BeamSearch(FromParams):
     """
     Implements the beam search algorithm for decoding the most likely sequences.
@@ -462,6 +548,12 @@ class BeamSearch(FromParams):
 
         Using the [`GumbelSampler`](#gumbelsampler), on the other hand, will give you
         [Stochastic Beam Search](https://api.semanticscholar.org/CorpusID:76662039).
+
+    final_sequence_scorer : `FinalSequenceScorer`, optional (default = `None`)
+        An optional `FinalSequenceScorer` which is used to score the final generated sequences.
+        The output from this module is what is returned by the `search` method. If not
+        specified, `SequenceLogProbabilityScorer` will be used, which scores the sequences
+        by the sum of the token log probabilities.
     """
 
     def __init__(
@@ -471,6 +563,7 @@ class BeamSearch(FromParams):
         beam_size: int = 10,
         per_node_beam_size: int = None,
         sampler: Sampler = None,
+        final_sequence_scorer: FinalSequenceScorer = None,
     ) -> None:
         if not max_steps > 0:
             raise ValueError("max_steps must be positive")
@@ -484,6 +577,7 @@ class BeamSearch(FromParams):
         self.beam_size = beam_size
         self.per_node_beam_size = per_node_beam_size or beam_size
         self.sampler = sampler or DeterministicSampler()
+        self.final_sequence_scorer = final_sequence_scorer or SequenceLogProbabilityScorer()
 
     @staticmethod
     def _reconstruct_sequences(predictions, backpointers):
@@ -568,8 +662,8 @@ class BeamSearch(FromParams):
         # Returns
 
         `Tuple[torch.Tensor, torch.Tensor]`
-            Tuple of `(predictions, log_probabilities)`, where `predictions`
-            has shape `(batch_size, beam_size, max_steps)` and `log_probabilities`
+            Tuple of `(predictions, final_scores)`, where `predictions`
+            has shape `(batch_size, beam_size, max_steps)` and `final_scores`
             has shape `(batch_size, beam_size)`.
         """
         step_signature = signature(step)
@@ -763,7 +857,12 @@ class BeamSearch(FromParams):
         # shape: (batch_size, beam_size, max_steps)
         all_predictions = torch.cat(list(reversed(reconstructed_predictions)), 2)
 
-        return all_predictions, last_log_probabilities
+        # Calculate the final sequence scores
+        final_scores = self.final_sequence_scorer.score(
+            all_predictions, last_log_probabilities, self._end_index
+        )
+
+        return all_predictions, final_scores
 
     @staticmethod
     def _is_multilayer_rnn_decoder(key: str, state_tensor: torch.Tensor) -> bool:

@@ -12,6 +12,8 @@ from allennlp.nn.beam_search import (
     TopKSampler,
     TopPSampler,
     GumbelSampler,
+    SequenceLogProbabilityScorer,
+    LengthNormalizedSequenceLogProbabilityScorer,
 )
 from allennlp.common.params import Params
 
@@ -445,3 +447,26 @@ class BeamSearchTest(AllenNlpTestCase):
 
         assert all([x >= 0 and x < 4 for x in indices[0]])
         assert all([x > 1 and x <= 5 for x in indices[1]])
+
+    def test_sequence_log_prob_scorer(self):
+        # SequenceLogProbabilityScorer is the default, so manually setting the
+        # sequence scorer shouldn't actually change anything
+        self.beam_search.sequence_scorer = SequenceLogProbabilityScorer()
+
+    def test_length_normalized_sequence_log_prob_scorer(self):
+        self.beam_search.final_sequence_scorer = LengthNormalizedSequenceLogProbabilityScorer()
+        expected_log_probs = np.log(np.array([0.4, 0.3, 0.2]))
+        length_normalization = np.array([4, 3, 2])
+        expected_scores = expected_log_probs / length_normalization
+        self._check_results(expected_log_probs=expected_scores)
+
+        length_penalty = 2.0
+        self.beam_search.final_sequence_scorer = LengthNormalizedSequenceLogProbabilityScorer(
+            length_penalty=length_penalty
+        )
+        expected_log_probs = np.log(np.array([0.4, 0.3, 0.2]))
+        length_normalization = np.array(
+            [4 ** length_penalty, 3 ** length_penalty, 2 ** length_penalty]
+        )
+        expected_scores = expected_log_probs / length_normalization
+        self._check_results(expected_log_probs=expected_scores)
