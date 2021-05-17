@@ -19,7 +19,7 @@ import torch
 
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common.file_utils import cached_path
-from allennlp.nn.util import load_state_dict
+from allennlp.nn.util import read_state_dict
 
 
 logger = logging.getLogger(__name__)
@@ -249,10 +249,10 @@ def _get_checkpoint_path(checkpoint: str) -> str:
 def _diff(args: argparse.Namespace):
     checkpoint_1_path = _get_checkpoint_path(args.checkpoint1)
     checkpoint_2_path = _get_checkpoint_path(args.checkpoint2)
-    checkpoint_1 = load_state_dict(
+    checkpoint_1 = read_state_dict(
         checkpoint_1_path, strip_prefix=args.strip_prefix_1, strict=False
     )
-    checkpoint_2 = load_state_dict(
+    checkpoint_2 = read_state_dict(
         checkpoint_2_path, strip_prefix=args.strip_prefix_2, strict=False
     )
     for step in checkpoint_diff(checkpoint_1, checkpoint_2, args.scale, args.threshold):
