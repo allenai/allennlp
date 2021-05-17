@@ -489,7 +489,4 @@ class BeamSearchTest(AllenNlpTestCase):
             [4 ** length_penalty, 4 ** length_penalty, 3 ** length_penalty]
         )
         expected_scores = expected_log_probs / length_normalization
-        self._check_results(
-            expected_top_k=expected_top_k,
-            expected_log_probs=expected_scores
-        )
+        self._check_results(expected_top_k=expected_top_k, expected_log_probs=expected_scores)
