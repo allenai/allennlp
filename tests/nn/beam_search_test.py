@@ -27,6 +27,18 @@ transition_probabilities = torch.tensor(
     ]  # end token -> jth token
 )
 
+# A transition matrix that favors shorter sequences over longer ones
+short_sequence_transition_probabilities = torch.tensor(
+    [
+        [0.0, 0.1, 0.0, 0.0, 0.0, 0.9],  # start token -> jth token
+        [0.0, 0.0, 0.1, 0.0, 0.0, 0.9],  # 1st token -> jth token
+        [0.0, 0.0, 0.0, 0.1, 0.0, 0.9],  # 2nd token -> jth token
+        [0.0, 0.0, 0.0, 0.0, 0.1, 0.9],  # ...
+        [0.0, 0.0, 0.0, 0.0, 0.0, 1.0],  # ...
+        [0.2, 0.1, 0.2, 0.2, 0.2, 0.3],
+    ]  # end token -> jth token
+)
+
 log_probabilities = torch.log(
     torch.tensor([[0.1, 0.3, 0.3, 0.3, 0.0, 0.0], [0.0, 0.0, 0.4, 0.3, 0.2, 0.1]])
 )
@@ -60,6 +72,25 @@ def take_step_with_timestep(
     timestep: int,
 ) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
     return take_step_no_timestep(last_predictions, state)
+
+
+def take_short_sequence_step(
+    last_predictions: torch.Tensor,
+    state: Dict[str, torch.Tensor],
+    timestep: int,
+) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
+    """
+    Take decoding step.
+
+    This method is the same as `take_step_no_timestep` except it uses the
+    `short_sequence_transition_probabilities` transitions instead of `transition_probabilities`
+    """
+    log_probs_list = []
+    for last_token in last_predictions:
+        log_probs = torch.log(short_sequence_transition_probabilities[last_token.item()])
+        log_probs_list.append(log_probs)
+
+    return torch.stack(log_probs_list), state
 
 
 class BeamSearchTest(AllenNlpTestCase):
@@ -101,7 +132,7 @@ class BeamSearchTest(AllenNlpTestCase):
 
         # log_probs should be shape `(batch_size, beam_size, max_predicted_length)`.
         assert list(log_probs.size()) == [batch_size, beam_size]
-        np.testing.assert_allclose(log_probs[0].numpy(), expected_log_probs)
+        np.testing.assert_allclose(log_probs[0].numpy(), expected_log_probs, rtol=1e-6)
 
     @pytest.mark.parametrize("step_function", [take_step_with_timestep, take_step_no_timestep])
     def test_search(self, step_function):
@@ -209,6 +240,72 @@ class BeamSearchTest(AllenNlpTestCase):
             expected_top_k=expected_top_k,
             expected_log_probs=expected_log_probs,
             beam_search=beam_search,
+        )
+
+    def test_take_short_sequence_step(self):
+        """
+        Tests to ensure the top-k from the short_sequence_transition_probabilities
+        transition matrix is expected
+        """
+        self.beam_search.beam_size = 5
+        expected_top_k = np.array([
+            [5, 5, 5, 5, 5],
+            [1, 5, 5, 5, 5],
+            [1, 2, 5, 5, 5],
+            [1, 2, 3, 5, 5],
+            [1, 2, 3, 4, 5]
+        ])
+        expected_log_probs = np.log(np.array([0.9, 0.09, 0.009, 0.0009, 0.0001]))
+        self._check_results(
+            expected_top_k=expected_top_k,
+            expected_log_probs=expected_log_probs,
+            take_step=take_short_sequence_step,
+        )
+
+    def test_min_steps(self):
+        """
+        Tests to ensure all output sequences are greater than a specified minimum length.
+        It uses the `take_short_sequence_step` step function, which favors shorter sequences.
+        See `test_take_short_sequence_step`.
+        """
+        self.beam_search.beam_size = 1
+
+        # An empty sequence is allowed under this step function
+        self.beam_search.min_steps = 0
+        expected_top_k = np.array([[5]])
+        expected_log_probs = np.log(np.array([0.9]))
+        self._check_results(
+            expected_top_k=expected_top_k,
+            expected_log_probs=expected_log_probs,
+            take_step=take_short_sequence_step,
+        )
+
+        self.beam_search.min_steps = 1
+        expected_top_k = np.array([[1, 5]])
+        expected_log_probs = np.log(np.array([0.09]))
+        self._check_results(
+            expected_top_k=expected_top_k,
+            expected_log_probs=expected_log_probs,
+            take_step=take_short_sequence_step,
+        )
+
+        self.beam_search.min_steps = 2
+        expected_top_k = np.array([[1, 2, 5]])
+        expected_log_probs = np.log(np.array([0.009]))
+        self._check_results(
+            expected_top_k=expected_top_k,
+            expected_log_probs=expected_log_probs,
+            take_step=take_short_sequence_step,
+        )
+
+        self.beam_search.beam_size = 3
+        self.beam_search.min_steps = 2
+        expected_top_k = np.array([[1, 2, 5, 5, 5], [1, 2, 3, 5, 5], [1, 2, 3, 4, 5]])
+        expected_log_probs = np.log(np.array([0.009, 0.0009, 0.0001]))
+        self._check_results(
+            expected_top_k=expected_top_k,
+            expected_log_probs=expected_log_probs,
+            take_step=take_short_sequence_step,
         )
 
     def test_different_per_node_beam_size(self):
