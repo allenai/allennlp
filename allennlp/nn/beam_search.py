@@ -492,7 +492,8 @@ class LengthNormalizedSequenceLogProbabilityScorer(FinalSequenceScorer):
     A `FinalSequenceScorer` which scores the sequences by the average log probability of the
     tokens in the sequence. It optionally includes a length penalty which promotes
     or demotes sequences based on their lengths. The final score for a sequence will
-    be (sequence_log_probability) / (sequence_length ** length_penalty).
+    be (sequence_log_probability) / (sequence_length ** length_penalty). The sequence length
+    here includes the end token.
 
     # Parameters
 
@@ -511,6 +512,13 @@ class LengthNormalizedSequenceLogProbabilityScorer(FinalSequenceScorer):
     ) -> torch.Tensor:
         # shape: (batch_size, beam_size)
         lengths = (predictions != end_index).long().sum(dim=2)
+
+        # If the sequence ended during beam search, the `log_probabilities` will include
+        # the transition to the end token. Therefore, in such situations, `lengths` is
+        # actually off by 1. This corrects for that.
+        # shape: (batch_size, beam_size)
+        is_end_token = predictions[:, :, -1] == end_index
+        lengths += is_end_token.long()
 
         # shape: (batch_size, beam_size)
         average_log_probs = log_probabilities / (lengths ** self.length_penalty)

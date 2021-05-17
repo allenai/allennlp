@@ -454,19 +454,42 @@ class BeamSearchTest(AllenNlpTestCase):
         self.beam_search.sequence_scorer = SequenceLogProbabilityScorer()
 
     def test_length_normalized_sequence_log_prob_scorer(self):
+        """
+        Tests to ensure the sequences are normalized by the correct values. The end token is
+        included in the length. The start token is not.
+        """
         self.beam_search.final_sequence_scorer = LengthNormalizedSequenceLogProbabilityScorer()
         expected_log_probs = np.log(np.array([0.4, 0.3, 0.2]))
-        length_normalization = np.array([4, 3, 2])
+        length_normalization = np.array([5, 4, 3])
         expected_scores = expected_log_probs / length_normalization
         self._check_results(expected_log_probs=expected_scores)
 
+        # Introduce a length penalty
         length_penalty = 2.0
         self.beam_search.final_sequence_scorer = LengthNormalizedSequenceLogProbabilityScorer(
             length_penalty=length_penalty
         )
         expected_log_probs = np.log(np.array([0.4, 0.3, 0.2]))
         length_normalization = np.array(
-            [4 ** length_penalty, 3 ** length_penalty, 2 ** length_penalty]
+            [5 ** length_penalty, 4 ** length_penalty, 3 ** length_penalty]
         )
         expected_scores = expected_log_probs / length_normalization
         self._check_results(expected_log_probs=expected_scores)
+
+        # Here, we set the max_steps = 4. This prevents the first sequence from finishing,
+        # so its length does not include the end token, whereas the other sequences do.
+        length_penalty = 2.0
+        self.beam_search.max_steps = 4
+        self.beam_search.final_sequence_scorer = LengthNormalizedSequenceLogProbabilityScorer(
+            length_penalty=length_penalty
+        )
+        expected_top_k = np.array([[1, 2, 3, 4], [2, 3, 4, 5], [3, 4, 5, 5]])
+        expected_log_probs = np.log(np.array([0.4, 0.3, 0.2]))
+        length_normalization = np.array(
+            [4 ** length_penalty, 4 ** length_penalty, 3 ** length_penalty]
+        )
+        expected_scores = expected_log_probs / length_normalization
+        self._check_results(
+            expected_top_k=expected_top_k,
+            expected_log_probs=expected_scores
+        )
