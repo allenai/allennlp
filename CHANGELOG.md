@@ -28,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   You can do this by setting the parameter `load_weights` to `False`.
   See [PR #5172](https://github.com/allenai/allennlp/pull/5172) for more details.
 - Added `SpanExtractorWithSpanWidthEmbedding`, putting specific span embedding computations into the `_embed_spans` method and leaving the common code in `SpanExtractorWithSpanWidthEmbedding` to unify the arguments, and modified `BidirectionalEndpointSpanExtractor`, `EndpointSpanExtractor` and `SelfAttentiveSpanExtractor` accordingly. Now, `SelfAttentiveSpanExtractor` can also embed span widths.
+- Added a `min_steps` parameter to `BeamSearch` to set a minimum length for the predicted sequences.
 
 ### Fixed
 

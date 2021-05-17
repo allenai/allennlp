@@ -1,5 +1,5 @@
 from inspect import signature
-from typing import List, Callable, Tuple, Dict, cast, TypeVar
+from typing import List, Callable, Tuple, Dict, cast, TypeVar, Optional
 import warnings
 
 from overrides import overrides
@@ -462,6 +462,11 @@ class BeamSearch(FromParams):
 
         Using the [`GumbelSampler`](#gumbelsampler), on the other hand, will give you
         [Stochastic Beam Search](https://api.semanticscholar.org/CorpusID:76662039).
+
+    min_steps : `int`, optional (default = `None`)
+        The minimum number of decoding steps to take, i.e. the minimum length of
+        the predicted sequences. This does not include the start or end tokens. If `None`,
+        no minimum is enforced.
     """
 
     def __init__(
@@ -471,6 +476,7 @@ class BeamSearch(FromParams):
         beam_size: int = 10,
         per_node_beam_size: int = None,
         sampler: Sampler = None,
+        min_steps: Optional[int] = None,
     ) -> None:
         if not max_steps > 0:
             raise ValueError("max_steps must be positive")
@@ -478,12 +484,18 @@ class BeamSearch(FromParams):
             raise ValueError("beam_size must be positive")
         if per_node_beam_size is not None and not per_node_beam_size > 0:
             raise ValueError("per_node_beam_size must be positive")
+        if min_steps is not None:
+            if not min_steps >= 0:
+                raise ValueError("min_steps must be non-negative")
+            if not min_steps <= max_steps:
+                raise ValueError("min_steps must be less than or equal to max_steps")
 
         self._end_index = end_index
         self.max_steps = max_steps
         self.beam_size = beam_size
         self.per_node_beam_size = per_node_beam_size or beam_size
         self.sampler = sampler or DeterministicSampler()
+        self.min_steps = min_steps or 0
 
     @staticmethod
     def _reconstruct_sequences(predictions, backpointers):
@@ -629,6 +641,10 @@ class BeamSearch(FromParams):
             start_class_log_probabilities, batch_size, num_classes
         )
 
+        # Prevent selecting the end symbol if there is any min_steps constraint
+        if self.min_steps >= 1:
+            start_class_log_probabilities[:, self._end_index] = float("-inf")
+
         # Get the initial predicted classed and their log probabilities.
         # shape: (batch_size, beam_size), (batch_size, beam_size)
         (
@@ -674,6 +690,13 @@ class BeamSearch(FromParams):
             # and updates the state.
             # shape: (batch_size * beam_size, num_classes)
             class_log_probabilities, state = step(last_predictions, state, timestep + 1)
+
+            # The `timestep`-th iteration of the for loop is generating the `timestep + 2`-th token
+            # of the sequence (because `timestep` is 0-indexed and we generated the first token
+            # before the for loop). Here we block the end index if the search is not allowed to
+            # terminate on this iteration.
+            if timestep + 2 <= self.min_steps:
+                class_log_probabilities[:, self._end_index] = float("-inf")
 
             # shape: (batch_size * beam_size, num_classes)
             last_predictions_expanded = last_predictions.unsqueeze(-1).expand(
