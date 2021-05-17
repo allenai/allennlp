@@ -3,16 +3,17 @@ import torch
 from allennlp.common import FromParams
 
 from allennlp.modules.transformer.transformer_module import TransformerModule
+from allennlp.modules.transformer.layer_norm import LayerNorm
 
 
 class OutputLayer(TransformerModule, FromParams):
 
-    _huggingface_mapping = {"LayerNorm": "layer_norm"}
+    _pretrained_mapping = {"LayerNorm": "layer_norm"}
 
     def __init__(self, input_size: int, hidden_size: int, dropout: float):
         super().__init__()
         self.dense = torch.nn.Linear(input_size, hidden_size)
-        self.layer_norm = torch.nn.LayerNorm(hidden_size, eps=1e-12)
+        self.layer_norm = LayerNorm(hidden_size, eps=1e-12)
         self.dropout = torch.nn.Dropout(dropout)
 
     def forward(self, hidden_states, input_tensor):
