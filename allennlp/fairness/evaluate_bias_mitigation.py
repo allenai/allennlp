@@ -118,21 +118,26 @@ class EvaluateBiasMitigation(Subcommand):
         return subparser
 
 
-def compute_predictions_diff(bias_mitigated_labels, baseline_labels, tokens, baseline_tokenizer):
-    """
-    Returns label changes induced by bias mitigation and the corresponding sentence pairs.
-    """
-    diff = []
-    for idx, label in enumerate(bias_mitigated_labels):
-        if label != baseline_labels[idx]:
-            diff.append(
-                {
-                    "sentence_pair": baseline_tokenizer.convert_tokens_to_string(tokens[idx]),
-                    "bias_mitigated_label": label,
-                    "baseline_label": baseline_labels[idx],
-                }
-            )
-    return diff
+class SNLIPredictionsDiff:
+    def __init__(self):
+        self.diff = []
+
+    def __call__(self, bias_mitigated_labels, baseline_labels, original_tokens, tokenizer):
+        """
+        Returns label changes induced by bias mitigation and the corresponding sentence pairs.
+        """
+        for idx, label in enumerate(bias_mitigated_labels):
+            if label != baseline_labels[idx]:
+                self.diff.append(
+                    {
+                        "sentence_pair": tokenizer.convert_tokens_to_string(original_tokens[idx]),
+                        "bias_mitigated_label": label,
+                        "baseline_label": baseline_labels[idx],
+                    }
+                )
+
+    def get_diff(self):
+        return self.diff
 
 
 # TODO: allow bias mitigation and baseline evaluations to run simultaneously on
@@ -205,15 +210,44 @@ def evaluate_from_args(args: argparse.Namespace) -> Tuple[Dict[str, Any], Dict[s
         predictions_output_file=bias_mitigated_filename,
     )
 
+    baseline_file, baseline_filename = tempfile.mkstemp()
+    baseline_output_metrics = evaluate(
+        baseline_model,
+        baseline_data_loader,
+        args.cuda_device,
+        predictions_output_file=baseline_filename,
+    )
+
+    create_diff = hasattr(baseline_dataset_reader, "_tokenizer")
+    if create_diff:
+        diff_tool = SNLIPredictionsDiff()
     bias_mitigated_nli = NaturalLanguageInference(
         neutral_label=bias_mitigated_model.vocab.get_token_index("neutral", "labels"),
         taus=args.taus,
     )
-    with open(bias_mitigated_file, "r") as fd:
-        for line in fd:
-            bias_mitigated_predictions = json.loads(line)
+    baseline_nli = NaturalLanguageInference(
+        neutral_label=baseline_model.vocab.get_token_index("neutral", "labels"),
+        taus=args.taus,
+    )
+    with open(bias_mitigated_file, "r") as bias_mitigated_fd, open(
+        baseline_file, "r"
+    ) as baseline_fd:
+        for bias_mitigated_line, baseline_line in zip(bias_mitigated_fd, baseline_fd):
+            bias_mitigated_predictions = json.loads(bias_mitigated_line)
             probs = torch.tensor(bias_mitigated_predictions["probs"])
             bias_mitigated_nli(probs)
+
+            baseline_predictions = json.loads(baseline_line)
+            probs = torch.tensor(baseline_predictions["probs"])
+            baseline_nli(probs)
+
+            if create_diff:
+                diff_tool(
+                    bias_mitigated_predictions["label"],
+                    baseline_predictions["label"],
+                    baseline_predictions["tokens"],
+                    baseline_dataset_reader._tokenizer.tokenizer,  # type: ignore
+                )
 
     bias_mitigated_metrics = {**bias_mitigated_output_metrics, **(bias_mitigated_nli.get_metric())}
     metrics_json = json.dumps(bias_mitigated_metrics, indent=2)
@@ -224,24 +258,6 @@ def evaluate_from_args(args: argparse.Namespace) -> Tuple[Dict[str, Any], Dict[s
             fd.write(metrics_json)
     logger.info("Metrics: %s", metrics_json)
 
-    baseline_file, baseline_filename = tempfile.mkstemp()
-    baseline_output_metrics = evaluate(
-        baseline_model,
-        baseline_data_loader,
-        args.cuda_device,
-        predictions_output_file=baseline_filename,
-    )
-
-    baseline_nli = NaturalLanguageInference(
-        neutral_label=baseline_model.vocab.get_token_index("neutral", "labels"),
-        taus=args.taus,
-    )
-    with open(baseline_file, "r") as fd:
-        for line in fd:
-            baseline_predictions = json.loads(line)
-            probs = torch.tensor(baseline_predictions["probs"])
-            baseline_nli(probs)
-
     baseline_metrics = {**baseline_output_metrics, **(baseline_nli.get_metric())}
     metrics_json = json.dumps(baseline_metrics, indent=2)
     if args.baseline_output_file:
@@ -251,13 +267,8 @@ def evaluate_from_args(args: argparse.Namespace) -> Tuple[Dict[str, Any], Dict[s
             fd.write(metrics_json)
     logger.info("Metrics: %s", metrics_json)
 
-    if hasattr(baseline_dataset_reader, "_tokenizer"):
-        diff = compute_predictions_diff(
-            bias_mitigated_predictions["label"],
-            baseline_predictions["label"],
-            baseline_predictions["tokens"],
-            baseline_dataset_reader._tokenizer.tokenizer,  # type: ignore
-        )
+    if create_diff:
+        diff = diff_tool.get_diff()
         diff_json = json.dumps(diff, indent=2)
         if args.predictions_diff_output_file:
             with open(args.predictions_diff_output_file, "w") as fd:
