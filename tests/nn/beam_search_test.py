@@ -248,13 +248,9 @@ class BeamSearchTest(AllenNlpTestCase):
         transition matrix is expected
         """
         self.beam_search.beam_size = 5
-        expected_top_k = np.array([
-            [5, 5, 5, 5, 5],
-            [1, 5, 5, 5, 5],
-            [1, 2, 5, 5, 5],
-            [1, 2, 3, 5, 5],
-            [1, 2, 3, 4, 5]
-        ])
+        expected_top_k = np.array(
+            [[5, 5, 5, 5, 5], [1, 5, 5, 5, 5], [1, 2, 5, 5, 5], [1, 2, 3, 5, 5], [1, 2, 3, 4, 5]]
+        )
         expected_log_probs = np.log(np.array([0.9, 0.09, 0.009, 0.0009, 0.0001]))
         self._check_results(
             expected_top_k=expected_top_k,
