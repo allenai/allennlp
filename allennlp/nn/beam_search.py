@@ -454,7 +454,7 @@ class FinalSequenceScorer(Registrable):
         predictions : `torch.Tensor`
             A tensor containing the initial predictions with shape `(batch_size, beam_size, max_steps)`.
 
-        log_probabilities : `StateType`
+        log_probabilities : `torch.Tensor`
             A tensor containing the log probabilities of the sequence, defined as the sum
             of the log probabilities per token, with shape `(batch_size, beam_size)`.
 
@@ -481,9 +481,8 @@ class SequenceLogProbabilityScorer(FinalSequenceScorer):
         self, predictions: torch.Tensor, log_probabilities: torch.Tensor, end_index: int
     ) -> torch.Tensor:
         # The sum of the sequence log probabilities is the input parameter, so just
-        # return it. The tensor is cloned so it does not use the same storage as the input
-        # tensor, as is the case with `LengthNormalizedSequenceLogProbabilityScorer`.
-        return log_probabilities.clone()
+        # return it.
+        return log_probabilities
 
 
 @FinalSequenceScorer.register("length-normalized-sequence-log-prob")
@@ -492,7 +491,7 @@ class LengthNormalizedSequenceLogProbabilityScorer(FinalSequenceScorer):
     A `FinalSequenceScorer` which scores the sequences by the average log probability of the
     tokens in the sequence. It optionally includes a length penalty which promotes
     or demotes sequences based on their lengths. The final score for a sequence will
-    be (sequence_log_probability) / (sequence_length ** length_penalty). The sequence length
+    be `(sequence_log_probability) / (sequence_length ** length_penalty)`. The sequence length
     here includes the end token.
 
     # Parameters
