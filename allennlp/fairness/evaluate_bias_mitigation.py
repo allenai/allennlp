@@ -1,14 +1,10 @@
 """
-The `evaluate-bias-mitigation` subcommand can be used to
+The `evaluate_bias_mitigation` subcommand can be used to
 compare a bias-mitigated trained model with a baseline
 against an SNLI dataset following the format in [On Measuring
 and Mitigating Biased Inferences of Word Embeddings]
 (https://arxiv.org/pdf/1908.09369.pdf) and reports the
 Net Neutral, Fraction Neutral, and Threshold:tau metrics.
-
-!!! Note
-    By default, `evaluate-bias-mitigation` uses the DatasetReader
-    and DataLoader params in the `bias_mitigated_archive_file`.
 """
 
 import argparse
@@ -18,6 +14,7 @@ from typing import Any, Dict, Tuple
 from overrides import overrides
 import tempfile
 import torch
+import os
 
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common import logging as common_logging
@@ -53,6 +50,8 @@ class EvaluateBiasMitigation(Subcommand):
             "input_file", type=str, help="path to the file containing the SNLI evaluation data"
         )
 
+        subparser.add_argument("batch_size", type=int, help="batch size to use during evaluation")
+
         subparser.add_argument(
             "--bias-mitigated-output-file",
             type=str,
@@ -66,9 +65,21 @@ class EvaluateBiasMitigation(Subcommand):
         )
 
         subparser.add_argument(
+            "--bias-mitigated-predictions-file",
+            type=str,
+            help="optional path to write bias-mitigated predictions to as JSON",
+        )
+
+        subparser.add_argument(
+            "--baseline-predictions-file",
+            type=str,
+            help="optional path to write baseline predictions to as JSON",
+        )
+
+        subparser.add_argument(
             "--predictions-diff-output-file",
             type=str,
-            help="optional path to write diff of bias-mitigated and baseline predictions to as JSON lines",
+            help="optional path to write diff of bias-mitigated and baseline predictions to as JSON",
         )
 
         subparser.add_argument(
@@ -104,10 +115,6 @@ class EvaluateBiasMitigation(Subcommand):
                 "'{\"iterator.batch_size\": 16}'.  Nested parameters can be specified either"
                 " with nested dictionaries or with dot syntax."
             ),
-        )
-
-        subparser.add_argument(
-            "--batch-size", type=int, help="If non-empty, the batch size to use during evaluation."
         )
 
         subparser.add_argument(
@@ -175,36 +182,60 @@ def evaluate_from_args(args: argparse.Namespace) -> Tuple[Dict[str, Any], Dict[s
     baseline_model.eval()
 
     # Load the evaluation data
-
-    dataset_reader = bias_mitigated_archive.validation_dataset_reader
+    bias_mitigated_dataset_reader = bias_mitigated_archive.validation_dataset_reader
+    baseline_dataset_reader = baseline_archive.validation_dataset_reader
 
     evaluation_data_path = args.input_file
     logger.info("Reading evaluation data from %s", evaluation_data_path)
 
-    data_loader_params = bias_mitigated_config.pop("validation_data_loader", None)
-    if data_loader_params is None:
-        data_loader_params = bias_mitigated_config.pop("data_loader")
-    if args.batch_size:
-        data_loader_params["batch_size"] = args.batch_size
-    data_loader = DataLoader.from_params(
-        params=data_loader_params,
-        reader=dataset_reader,
+    bias_mitigated_data_loader_params = bias_mitigated_config.pop("validation_data_loader", None)
+    if bias_mitigated_data_loader_params is None:
+        bias_mitigated_data_loader_params = bias_mitigated_config.pop("data_loader")
+    # override batch sampler if exists
+    if "batch_sampler" in bias_mitigated_data_loader_params:
+        del bias_mitigated_data_loader_params["batch_sampler"]
+    bias_mitigated_data_loader_params["batch_size"] = args.batch_size
+    bias_mitigated_data_loader = DataLoader.from_params(
+        params=bias_mitigated_data_loader_params,
+        reader=bias_mitigated_dataset_reader,
         data_path=evaluation_data_path,
     )
-    data_loader.index_with(bias_mitigated_model.vocab)
+    bias_mitigated_data_loader.index_with(bias_mitigated_model.vocab)
 
-    bias_mitigated_file, bias_mitigated_filename = tempfile.mkstemp()
+    baseline_data_loader_params = baseline_config.pop("validation_data_loader", None)
+    if baseline_data_loader_params is None:
+        baseline_data_loader_params = baseline_config.pop("data_loader")
+    # override batch sampler if exists
+    if "batch_sampler" in baseline_data_loader_params:
+        del baseline_data_loader_params["batch_sampler"]
+    baseline_data_loader_params["batch_size"] = args.batch_size
+    baseline_data_loader = DataLoader.from_params(
+        params=baseline_data_loader_params,
+        reader=baseline_dataset_reader,
+        data_path=evaluation_data_path,
+    )
+    baseline_data_loader.index_with(baseline_model.vocab)
+
+    if args.bias_mitigated_predictions_file:
+        bias_mitigated_filename = args.bias_mitigated_predictions_file
+        bias_mitigated_file = os.open(bias_mitigated_filename, os.O_RDWR)
+    else:
+        bias_mitigated_file, bias_mitigated_filename = tempfile.mkstemp()
     bias_mitigated_output_metrics = evaluate(
         bias_mitigated_model,
-        data_loader,
+        bias_mitigated_data_loader,
         args.cuda_device,
         predictions_output_file=bias_mitigated_filename,
     )
 
-    baseline_file, baseline_filename = tempfile.mkstemp()
+    if args.baseline_predictions_file:
+        baseline_filename = args.baseline_predictions_file
+        baseline_file = os.open(baseline_filename, os.O_RDWR)
+    else:
+        baseline_file, baseline_filename = tempfile.mkstemp()
     baseline_output_metrics = evaluate(
         baseline_model,
-        data_loader,
+        baseline_data_loader,
         args.cuda_device,
         predictions_output_file=baseline_filename,
     )
