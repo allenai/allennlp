@@ -15,10 +15,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   norm is never even calculated. `True` means the gradients are still not rescaled but the gradient
   norm is calculated and passed on to callbacks. A `float` value means gradients are rescaled.
 - Allow Google Cloud Storage paths in `cached_path` ("gs://...").
+- Renamed `nn.util.load_state_dict()` to `read_state_dict` to avoid confusion with `torch.nn.Module.load_state_dict()`.
+- `TransformerModule.from_pretrained_module` now only accepts a pretrained model ID (e.g. "bert-base-case") instead of
+  an actual `torch.nn.Module`. Other parameters to this method have changed as well.
+- Print the first batch to the console by default.
+- Renamed `sanity_checks` to `confidence_checks` (`sanity_checks` is deprecated and will be removed in AllenNLP 3.0).
 
 ### Added
 
-- Added `TaskSuite` base class and command line functionality for running [`checklist`](https://github.com/marcotcr/checklist) test suites, along with implementations for `SentimentAnalysisSuite`, `QuestionAnsweringSuite`, and `TextualEntailmentSuite`. These can be found in the `allennlp.sanity_checks.task_checklists` module.
+- Added `TaskSuite` base class and command line functionality for running [`checklist`](https://github.com/marcotcr/checklist) test suites, along with implementations for `SentimentAnalysisSuite`, `QuestionAnsweringSuite`, and `TextualEntailmentSuite`. These can be found in the `allennlp.confidence_checks.task_checklists` module.
+- Added `allennlp diff` command to compute a diff on model checkpoints, analogous to what `git diff` does on two files.
+- Added `nn.util.distributed_device()` helper function.
+- Added `allennlp.nn.util.load_state_dict` helper function.
 - Added a module `allennlp.training.data_parallel` with a new base class, `DdpWrapper`, which generalizes
   PyTorch's `DistributedDataParallel` wrapper to support other implementations. Two implementations of
   this class are provided. The default is `TorchDdpWrapper`, which is just a thin wrapper around
@@ -29,13 +37,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   such as the `PretrainedTransformerEmbedder` and `PretrainedTransformerMismatchedEmbedder`.
   You can do this by setting the parameter `load_weights` to `False`.
   See [PR #5172](https://github.com/allenai/allennlp/pull/5172) for more details.
-
-
-## Unreleased
+- Added `SpanExtractorWithSpanWidthEmbedding`, putting specific span embedding computations into the `_embed_spans` method and leaving the common code in `SpanExtractorWithSpanWidthEmbedding` to unify the arguments, and modified `BidirectionalEndpointSpanExtractor`, `EndpointSpanExtractor` and `SelfAttentiveSpanExtractor` accordingly. Now, `SelfAttentiveSpanExtractor` can also embed span widths.
+- Added a `min_steps` parameter to `BeamSearch` to set a minimum length for the predicted sequences.
+- Added the `FinalSequenceScorer` abstraction to calculate the final scores of the generated sequences in `BeamSearch`. 
 
 ### Fixed
 
 - When `PretrainedTransformerIndexer` folds long sequences, it no longer loses the information from token type ids.
+- Fixed documentation for `GradientDescentTrainer.cuda_device`.
 
 
 ## [v2.4.0](https://github.com/allenai/allennlp/releases/tag/v2.4.0) - 2021-04-22
@@ -63,7 +72,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add new dimension to the `interpret` module: influence functions via the `InfluenceInterpreter` base class, along with a concrete implementation: `SimpleInfluence`.
 - Added a `quiet` parameter to the `MultiProcessDataLoading` that disables `Tqdm` progress bars.
 - The test for distributed metrics now takes a parameter specifying how often you want to run it.
-- Created the fairness module and added four fairness metrics: `Independence`, `Separation`, `Sufficiency`, and `DemographicParityWithoutGroundTruth`.
+- Created the fairness module and added four fairness metrics: `Independence`, `Separation`, and `Sufficiency`.
+- Added three bias metrics to the fairness module: `WordEmbeddingAssociationTest`, `EmbeddingCoherenceTest`, `NaturalLanguageInference`, and `AssociationWithoutGroundTruth`.
+- Added four bias direction methods (`PCABiasDirection`, `PairedPCABiasDirection`, `TwoMeansBiasDirection`, `ClassificationNormalBiasDirection`) and four bias mitigation methods (`LinearBiasMitigator`, `HardBiasMitigator`, `INLPBiasMitigator`, `OSCaRBiasMitigator`).
 
 ### Changed
 

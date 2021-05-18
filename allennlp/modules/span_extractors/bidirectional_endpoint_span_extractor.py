@@ -1,17 +1,16 @@
-from typing import Optional
-
 import torch
-from overrides import overrides
 from torch.nn.parameter import Parameter
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.modules.span_extractors.span_extractor import SpanExtractor
-from allennlp.modules.token_embedders.embedding import Embedding
+from allennlp.modules.span_extractors.span_extractor_with_span_width_embedding import (
+    SpanExtractorWithSpanWidthEmbedding,
+)
 from allennlp.nn import util
 
 
 @SpanExtractor.register("bidirectional_endpoint")
-class BidirectionalEndpointSpanExtractor(SpanExtractor):
+class BidirectionalEndpointSpanExtractor(SpanExtractorWithSpanWidthEmbedding):
     """
     Represents spans from a bidirectional encoder as a concatenation of two different
     representations of the span endpoints, one for the forward direction of the encoder
@@ -79,12 +78,14 @@ class BidirectionalEndpointSpanExtractor(SpanExtractor):
         bucket_widths: bool = False,
         use_sentinels: bool = True,
     ) -> None:
-        super().__init__()
-        self._input_dim = input_dim
+        super().__init__(
+            input_dim=input_dim,
+            num_width_embeddings=num_width_embeddings,
+            span_width_embedding_dim=span_width_embedding_dim,
+            bucket_widths=bucket_widths,
+        )
         self._forward_combination = forward_combination
         self._backward_combination = backward_combination
-        self._num_width_embeddings = num_width_embeddings
-        self._bucket_widths = bucket_widths
 
         if self._input_dim % 2 != 0:
             raise ConfigurationError(
@@ -93,24 +94,10 @@ class BidirectionalEndpointSpanExtractor(SpanExtractor):
                 "is bidirectional (and hence divisible by 2)."
             )
 
-        self._span_width_embedding: Optional[Embedding] = None
-        if num_width_embeddings is not None and span_width_embedding_dim is not None:
-            self._span_width_embedding = Embedding(
-                num_embeddings=num_width_embeddings, embedding_dim=span_width_embedding_dim
-            )
-        elif num_width_embeddings is not None or span_width_embedding_dim is not None:
-            raise ConfigurationError(
-                "To use a span width embedding representation, you must"
-                "specify both num_width_buckets and span_width_embedding_dim."
-            )
-
         self._use_sentinels = use_sentinels
         if use_sentinels:
             self._start_sentinel = Parameter(torch.randn([1, 1, int(input_dim / 2)]))
             self._end_sentinel = Parameter(torch.randn([1, 1, int(input_dim / 2)]))
-
-    def get_input_dim(self) -> int:
-        return self._input_dim
 
     def get_output_dim(self) -> int:
         unidirectional_dim = int(self._input_dim / 2)
@@ -128,8 +115,7 @@ class BidirectionalEndpointSpanExtractor(SpanExtractor):
             )
         return forward_combined_dim + backward_combined_dim
 
-    @overrides
-    def forward(
+    def _embed_spans(
         self,
         sequence_tensor: torch.FloatTensor,
         span_indices: torch.LongTensor,
@@ -238,18 +224,4 @@ class BidirectionalEndpointSpanExtractor(SpanExtractor):
         # Shape (batch_size, num_spans, forward_combination_dim + backward_combination_dim)
         span_embeddings = torch.cat([forward_spans, backward_spans], -1)
 
-        if self._span_width_embedding is not None:
-            # Embed the span widths and concatenate to the rest of the representations.
-            if self._bucket_widths:
-                span_widths = util.bucket_values(
-                    span_ends - span_starts, num_total_buckets=self._num_width_embeddings  # type: ignore
-                )
-            else:
-                span_widths = span_ends - span_starts
-
-            span_width_embeddings = self._span_width_embedding(span_widths)
-            return torch.cat([span_embeddings, span_width_embeddings], -1)
-
-        if span_indices_mask is not None:
-            return span_embeddings * span_indices_mask.unsqueeze(-1)
         return span_embeddings

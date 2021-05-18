@@ -335,7 +335,7 @@ class Model(torch.nn.Module, Registrable):
 
         # Load state dict. We pass `strict=False` so PyTorch doesn't raise a RuntimeError
         # if the state dict is missing keys because we handle this case below.
-        model_state = torch.load(weights_file, map_location=util.device_mapping(cuda_device))
+        model_state = util.read_state_dict(weights_file, cuda_device=cuda_device)
         missing_keys, unexpected_keys = model.load_state_dict(model_state, strict=False)
 
         # Modules might define a class variable called `authorized_missing_keys`,

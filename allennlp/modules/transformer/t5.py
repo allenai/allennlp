@@ -1,11 +1,11 @@
 """
-Adapted from [HuggingFace]
+An implementation of [T5](https://api.semanticscholar.org/CorpusID:204838007), adapted from [HuggingFace]
 (https://github.com/huggingface/transformers/blob/4c32f9f26e6a84f0d9843fec8757e6ce640bb44e/src/transformers/models/t5/modeling_t5.py).
 """  # noqa: E401
 
 import math
 from dataclasses import dataclass
-from typing import Optional, Tuple, List, Union, Dict, Any
+from typing import Optional, Tuple, List, Union, Dict, TYPE_CHECKING
 
 import torch
 from torch import nn
@@ -14,13 +14,18 @@ from torch.nn import CrossEntropyLoss
 
 from allennlp.common import FromParams, Params, Lazy, Registrable
 from allennlp.common.checks import ConfigurationError
-from allennlp.modules.transformer import TransformerModule
+from allennlp.modules.transformer.transformer_module import (
+    TransformerModule,
+)
 from allennlp.modules.transformer.util import (
     apply_mask,
     get_extended_attention_mask,
 )
 from allennlp.nn.beam_search import BeamSearch
 from allennlp.nn.parallel import DdpWrapper, NoOpDdpWrapper
+
+if TYPE_CHECKING:
+    from transformers.configuration_utils import PretrainedConfig
 
 # Unfortunately mypy is insane, so I have to wrap these in unions.
 FloatT = Union[torch.FloatTensor]
@@ -95,7 +100,7 @@ class T5DenseGatedGeluDense(TransformerModule, FromParams):
 
 
 class T5LayerFF(TransformerModule, FromParams):
-    _huggingface_mapping = {"DenseReluDense": "ff_proj"}
+    _pretrained_mapping = {"DenseReluDense": "ff_proj"}
 
     def __init__(
         self,
@@ -377,16 +382,19 @@ class T5LayerSelfAttentionOutput:
 
 
 class T5LayerSelfAttention(TransformerModule, FromParams):
-    _huggingface_mapping = {"SelfAttention": "self_attention"}
+    _pretrained_mapping = {"SelfAttention": "self_attention"}
 
     def __init__(
         self,
         self_attention: Optional[T5Attention] = None,
         layer_norm: Optional[T5LayerNorm] = None,
         dropout: float = 0.1,
+        has_relative_attention_bias: bool = False,
     ):
         super().__init__()
-        self.self_attention = self_attention or T5Attention()
+        self.self_attention = self_attention or T5Attention(
+            has_relative_attention_bias=has_relative_attention_bias
+        )
         self.layer_norm = layer_norm or T5LayerNorm(hidden_size=self.self_attention.hidden_size)
         self.dropout = nn.Dropout(dropout)
 
@@ -428,7 +436,7 @@ class T5LayerCrossAttentionOutput:
 
 
 class T5LayerCrossAttention(TransformerModule, FromParams):
-    _huggingface_mapping = {"EncDecAttention": "enc_dec_attention"}
+    _pretrained_mapping = {"EncDecAttention": "enc_dec_attention"}
 
     def __init__(
         self,
@@ -619,7 +627,7 @@ class T5StackOutput:
 
 
 class T5Stack(TransformerModule, FromParams):
-    _huggingface_mapping = {"embed_tokens": "token_embeddings", "block": "blocks"}
+    _pretrained_mapping = {"embed_tokens": "token_embeddings", "block": "blocks"}
 
     def __init__(
         self,
@@ -972,7 +980,18 @@ class T5Output:
 
 
 class T5(TransformerModule, Registrable):
-    _huggingface_mapping = {"shared": "token_embeddings"}
+    _pretrained_mapping = {"shared": "token_embeddings"}
+    _tied_weights = {
+        "token_embeddings.weight": [
+            "encoder.token_embeddings.weight",
+            "decoder.token_embeddings.weight",
+            "lm_head.weight",
+        ]
+    }
+    # Don't know why HF has this param in their state_dict. It's not used in their model.
+    _pretrained_ignore = [
+        r"^decoder\.block\.0\.layer\.1\.EncDecAttention\.relative_attention_bias\.weight$"
+    ]
 
     default_implementation = "default"
 
@@ -1024,16 +1043,7 @@ class T5(TransformerModule, Registrable):
         )
 
     @classmethod
-    def _get_input_arguments(
-        cls,
-        pretrained_module: torch.nn.Module,
-        source: str = "huggingface",
-        mapping: Optional[Dict[str, str]] = None,
-        **kwargs,
-    ) -> Dict[str, Any]:
-        from transformers.models.t5 import T5Config
-
-        config: T5Config = pretrained_module.config
+    def _from_config(cls, config: "PretrainedConfig", **kwargs):
         attention_kwargs = {
             "hidden_size": config.d_model,
             "key_value_proj_dim": config.d_kv,
@@ -1060,8 +1070,8 @@ class T5(TransformerModule, Registrable):
                 }
             ),
         )
-        return {
-            "encoder": Lazy(
+        return cls(
+            encoder=Lazy(
                 T5EncoderStack.basic_encoder,
                 contructor_extras={
                     "num_blocks": config.num_layers,
@@ -1071,7 +1081,7 @@ class T5(TransformerModule, Registrable):
                     "dropout": config.dropout_rate,
                 },
             ),
-            "decoder": Lazy(
+            decoder=Lazy(
                 T5DecoderStack.basic_decoder,
                 contructor_extras={
                     "num_blocks": config.num_decoder_layers,
@@ -1082,12 +1092,12 @@ class T5(TransformerModule, Registrable):
                     "dropout": config.dropout_rate,
                 },
             ),
-            "decoder_start_token_id": config.decoder_start_token_id,
-            "pad_token_id": config.pad_token_id,
-            "eos_token_id": config.eos_token_id,
-            "vocab_size": config.vocab_size,
-            "model_dim": config.d_model,
-        }
+            decoder_start_token_id=config.decoder_start_token_id,
+            pad_token_id=config.pad_token_id,
+            eos_token_id=config.eos_token_id,
+            vocab_size=config.vocab_size,
+            model_dim=config.d_model,
+        )
 
     def _shift_right(self, input_ids, start_value: int):
         # shift inputs to the right

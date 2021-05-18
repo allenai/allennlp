@@ -19,7 +19,7 @@ class ConsoleLoggerCallback(TrainerCallback):
     def __init__(
         self,
         serialization_dir: str,
-        should_log_inputs: bool = False,
+        should_log_inputs: bool = True,
     ) -> None:
         super().__init__(serialization_dir)
         self._should_log_inputs = should_log_inputs
