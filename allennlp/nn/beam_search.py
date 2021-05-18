@@ -865,11 +865,19 @@ class BeamSearch(FromParams):
         all_predictions = torch.cat(list(reversed(reconstructed_predictions)), 2)
 
         # Calculate the final sequence scores
+        # shape: (batch_size, beam_size)
         final_scores = self.final_sequence_scorer.score(
             all_predictions, last_log_probabilities, self._end_index
         )
 
-        return all_predictions, final_scores
+        # Sort the sequences based on the final scores so the best scoring
+        # sequence is at index 0
+        sorted_final_scores, sorted_indices = torch.sort(final_scores, dim=1, descending=True)
+        sorted_all_predictions = torch.gather(
+            all_predictions, 1, sorted_indices.unsqueeze(-1).expand_as(all_predictions)
+        )
+
+        return sorted_all_predictions, sorted_final_scores
 
     @staticmethod
     def _is_multilayer_rnn_decoder(key: str, state_tensor: torch.Tensor) -> bool:

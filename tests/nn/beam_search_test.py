@@ -476,6 +476,19 @@ class BeamSearchTest(AllenNlpTestCase):
         expected_scores = expected_log_probs / length_normalization
         self._check_results(expected_log_probs=expected_scores)
 
+        # Pick a length penalty so extreme that the order of the sequences is reversed
+        length_penalty = -2.0
+        self.beam_search.final_sequence_scorer = LengthNormalizedSequenceLogProbabilityScorer(
+            length_penalty=length_penalty
+        )
+        expected_top_k = np.array([[3, 4, 5, 5, 5], [2, 3, 4, 5, 5], [1, 2, 3, 4, 5]])
+        expected_log_probs = np.log(np.array([0.2, 0.3, 0.4]))
+        length_normalization = np.array(
+            [3 ** length_penalty, 4 ** length_penalty, 5 ** length_penalty]
+        )
+        expected_scores = expected_log_probs / length_normalization
+        self._check_results(expected_top_k=expected_top_k, expected_log_probs=expected_scores)
+
         # Here, we set the max_steps = 4. This prevents the first sequence from finishing,
         # so its length does not include the end token, whereas the other sequences do.
         length_penalty = 2.0
