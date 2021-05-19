@@ -4,6 +4,7 @@ Subcommand for running Tango experiments
 
 import argparse
 import logging
+import os
 from os import PathLike
 from pathlib import Path
 from typing import Union, Dict, Any, List, Optional
@@ -133,6 +134,17 @@ def run_tango(
                     else:
                         print(f"Computing {step_name}")
     else:
+        # remove symlinks to old results
+        for filename in serialization_dir.glob("*"):
+            if filename.is_symlink():
+                relative_target = os.readlink(filename)
+                if not relative_target.startswith("step_cache/"):
+                    continue
+                logger.info(
+                    f"Removing symlink '{filename.name}' to previous result {relative_target}"
+                )
+                filename.unlink()
+
         # produce results
         for name, step in step_graph.items():
             if step.produce_results:
