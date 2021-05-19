@@ -57,6 +57,10 @@ class BucketBatchSampler(BatchSampler):
         If `True`, the sampler will drop the last batch if
         its size would be less than batch_size`.
 
+    shuffle : `bool`, (default = `True`)
+        If `False`, the sampler won't shuffle the batches. padding_noise will be ignored and set
+        to `0.0`.
+
     """
 
     def __init__(
@@ -65,11 +69,15 @@ class BucketBatchSampler(BatchSampler):
         sorting_keys: List[str] = None,
         padding_noise: float = 0.1,
         drop_last: bool = False,
+        shuffle: bool = True,
     ):
         self.sorting_keys = sorting_keys
         self.padding_noise = padding_noise
         self.batch_size = batch_size
         self.drop_last = drop_last
+        self.shuffle = shuffle
+        if not shuffle:
+            self.padding_noise = 0.0
 
     def _argsort_by_padding(
         self, instances: Iterable[Instance]
@@ -113,7 +121,8 @@ class BucketBatchSampler(BatchSampler):
             if self.drop_last and len(batch_indices) < self.batch_size:
                 continue
             batches.append(batch_indices)
-        random.shuffle(batches)
+        if self.shuffle:
+            random.shuffle(batches)
         for batch in batches:
             yield batch
 
