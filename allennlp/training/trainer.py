@@ -269,7 +269,7 @@ class GradientDescentTrainer(Trainer):
         validation_metric: Union[str, List[str]] = "-loss",
         validation_data_loader: DataLoader = None,
         num_epochs: int = 20,
-        serialization_dir: Optional[str] = None,
+        serialization_dir: Optional[Union[str, os.PathLike]] = None,
         checkpointer: Checkpointer = None,
         cuda_device: Optional[Union[int, torch.device]] = None,
         grad_norm: Optional[float] = None,

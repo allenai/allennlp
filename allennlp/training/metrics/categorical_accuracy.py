@@ -100,7 +100,7 @@ class CategoricalAccuracy(Metric):
         self.correct_count += dist_reduce_sum(_correct_count).item()
         self.total_count += dist_reduce_sum(_total_count).item()
 
-    def get_metric(self, reset: bool = False):
+    def get_metric(self, reset: bool = False) -> float:
         """
         # Returns
 

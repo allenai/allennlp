@@ -48,7 +48,7 @@ class Checkpointer(Registrable):
 
     def __init__(
         self,
-        serialization_dir: str,
+        serialization_dir: Optional[Union[str, os.PathLike]],
         keep_serialized_model_every_num_seconds: int = None,
         num_serialized_models_to_keep: int = 2,
         model_save_interval: float = None,
