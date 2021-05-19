@@ -144,6 +144,7 @@ class TransformerEmbeddings(Embeddings):
     def forward(  # type: ignore
         self,
         input_ids: torch.Tensor,
+        attention_mask: Optional[torch.Tensor] = None,
         token_type_ids: Optional[torch.Tensor] = None,
         position_ids: Optional[torch.Tensor] = None,
     ) -> torch.Tensor:
@@ -151,6 +152,8 @@ class TransformerEmbeddings(Embeddings):
         """
         input_ids : `torch.Tensor`
             Shape `batch_size x seq_len`
+        attention_mask : `torch.Tensor`
+            Shape `batch_size x seq_len`. This parameter is ignored, but it is here for compatibility.
         token_type_ids : `torch.Tensor`, optional
             Shape `batch_size x seq_len`
         position_ids : `torch.Tensor`, optional
