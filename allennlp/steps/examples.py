@@ -25,6 +25,7 @@ from allennlp.data import (
     Vocabulary,
     Instance,
     TensorDict,
+    Field,
 )
 from allennlp.data.fields import ListField, IndexField
 from allennlp.data.fields.transformer_text_field import TransformerTextField
@@ -249,7 +250,7 @@ class PiqaInstances(Step):
                         for alt_index in [2 * i, 2 * i + 1]
                     ]
                 )
-                fields = {"alternatives": alts}
+                fields: Dict[str, Field] = {"alternatives": alts}
                 if instance["correct_alternative"] >= 0:
                     fields["correct_alternative"] = IndexField(
                         instance["correct_alternative"], alts

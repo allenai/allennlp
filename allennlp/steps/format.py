@@ -117,6 +117,7 @@ class DillFormatIterator(abc.Iterator):
     """This class is used so we can return an iterator from `DillFormat.read()`."""
 
     def __init__(self, filename: Union[str, PathLike]):
+        filename = str(filename)
         if filename.endswith(".gz"):
             open_fn = gzip.open
         elif filename.endswith(".bz2"):

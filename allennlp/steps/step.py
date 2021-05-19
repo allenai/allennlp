@@ -52,9 +52,11 @@ class StepCache(MutableMapping["Step", Any], Registrable):
     def __iter__(self):
         raise ValueError("Step caches are not iterable.")
 
-    def __contains__(self, step: "Step") -> bool:
+    def __contains__(self, step: object) -> bool:
         """This is a generic implementation of __contains__. If you are writing your own
         `StepCache`, you might want to write a faster one yourself."""
+        if not isinstance(step, Step):
+            return False
         try:
             self.__getitem__(step)
             return True
@@ -85,8 +87,11 @@ class MemoryStepCache(StepCache):
         else:
             logger.warning("Tried to cache step %s despite being marked as uncacheable.", step.name)
 
-    def __contains__(self, step: "Step"):
-        return step.unique_id() in self.cache
+    def __contains__(self, step: object):
+        if isinstance(step, Step):
+            return step.unique_id() in self.cache
+        else:
+            return False
 
     def __len__(self) -> int:
         return len(self.cache)
@@ -103,13 +108,16 @@ class DirectoryStepCache(StepCache):
 
         # We keep an in-memory cache as well so we don't have to de-serialize stuff
         # we happen to have in memory already.
-        self.cache = weakref.WeakValueDictionary()
+        self.cache: MutableMapping[str, Any] = weakref.WeakValueDictionary()
 
-    def __contains__(self, step: "Step") -> bool:
-        if step.unique_id() in self.cache:
-            return True
-        metadata_file = self.path_for_step(step) / "metadata.json"
-        return metadata_file.exists()
+    def __contains__(self, step: object) -> bool:
+        if isinstance(step, Step):
+            if step.unique_id() in self.cache:
+                return True
+            metadata_file = self.path_for_step(step) / "metadata.json"
+            return metadata_file.exists()
+        else:
+            return False
 
     def __getitem__(self, step: "Step") -> Any:
         try:
