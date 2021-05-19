@@ -11,18 +11,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Use `dist_reduce_sum` in distributed metrics.
 - Allow Google Cloud Storage paths in `cached_path` ("gs://...").
+- Renamed `nn.util.load_state_dict()` to `read_state_dict` to avoid confusion with `torch.nn.Module.load_state_dict()`.
+- `TransformerModule.from_pretrained_module` now only accepts a pretrained model ID (e.g. "bert-base-case") instead of
+  an actual `torch.nn.Module`. Other parameters to this method have changed as well.
 - Print the first batch to the console by default.
+- Renamed `sanity_checks` to `confidence_checks` (`sanity_checks` is deprecated and will be removed in AllenNLP 3.0).
 
 ### Added
 - Added `HuggingfaceDatasetReader` for using huggingface datasets in AllenNLP
-- Added `TaskSuite` base class and command line functionality for running [`checklist`](https://github.com/marcotcr/checklist) test suites, along with implementations for `SentimentAnalysisSuite`, `QuestionAnsweringSuite`, and `TextualEntailmentSuite`. These can be found in the `allennlp.sanity_checks.task_checklists` module.
+- Added `TaskSuite` base class and command line functionality for running [`checklist`](https://github.com/marcotcr/checklist) test suites, along with implementations for `SentimentAnalysisSuite`, `QuestionAnsweringSuite`, and `TextualEntailmentSuite`. These can be found in the `allennlp.confidence_checks.task_checklists` module.
 - Added `allennlp diff` command to compute a diff on model checkpoints, analogous to what `git diff` does on two files.
+- Meta data defined by the class `allennlp.common.meta.Meta` is now saved in the serialization directory and archive file
+  when training models from the command line. This is also now part of the `Archive` named tuple that's returned from `load_archive()`.
+- Added `nn.util.distributed_device()` helper function.
 - Added `allennlp.nn.util.load_state_dict` helper function.
 - Added a way to avoid downloading and loading pretrained weights in modules that wrap transformers
   such as the `PretrainedTransformerEmbedder` and `PretrainedTransformerMismatchedEmbedder`.
   You can do this by setting the parameter `load_weights` to `False`.
   See [PR #5172](https://github.com/allenai/allennlp/pull/5172) for more details.
 - Added `SpanExtractorWithSpanWidthEmbedding`, putting specific span embedding computations into the `_embed_spans` method and leaving the common code in `SpanExtractorWithSpanWidthEmbedding` to unify the arguments, and modified `BidirectionalEndpointSpanExtractor`, `EndpointSpanExtractor` and `SelfAttentiveSpanExtractor` accordingly. Now, `SelfAttentiveSpanExtractor` can also embed span widths.
+- Added a `min_steps` parameter to `BeamSearch` to set a minimum length for the predicted sequences.
+- Added the `FinalSequenceScorer` abstraction to calculate the final scores of the generated sequences in `BeamSearch`. 
+- Added `shuffle` argument to `BucketBatchSampler` which allows for disabling shuffling.
 
 ### Fixed
 

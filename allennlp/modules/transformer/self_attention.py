@@ -1,10 +1,14 @@
-from typing import Optional, Dict
+from typing import Optional, TYPE_CHECKING
+
 import torch
 
 from allennlp.common import FromParams
 from allennlp.modules.attention import Attention
 from allennlp.modules.transformer.transformer_module import TransformerModule
 from allennlp.modules.transformer.util import apply_mask
+
+if TYPE_CHECKING:
+    from transformers.configuration_utils import PretrainedConfig
 
 
 class SelfAttention(TransformerModule, FromParams):
@@ -25,8 +29,15 @@ class SelfAttention(TransformerModule, FromParams):
         Eg. `additive`, `linear`, etc. For a complete list, please check :mod:`allennlp.modules.attention`.
     """
 
-    _relevant_module = ["encoder.layers.0.attention.self", "encoder.layers.0.attention"]
-    _huggingface_mapping = {"layer": "layers"}
+    _pretrained_relevant_module = ["encoder.layers.0.attention.self", "encoder.layers.0.attention"]
+    _pretrained_mapping = {
+        "layer": "layers",
+        "q_lin": "query",
+        "k_lin": "key",
+        "v_lin": "value",
+        "out_lin": "output",
+        "transformer": "encoder",
+    }
 
     def __init__(
         self,
@@ -83,6 +94,8 @@ class SelfAttention(TransformerModule, FromParams):
         output_attentions: bool = False,
     ):
         """
+        # Parameters
+
         query_states : `torch.Tensor`
             Shape `batch_size x seq_len x hidden_dim`
         key_states : `torch.Tensor`, optional
@@ -133,47 +146,16 @@ class SelfAttention(TransformerModule, FromParams):
         return outputs
 
     @classmethod
-    def _get_mapping(
-        cls, pretrained_module=None, source="huggingface", mapping: Optional[Dict[str, str]] = None
-    ):
-        combined_mapping = {}
-        if "huggingface" in source:
-            combined_mapping.update(cls._huggingface_mapping)
-        if mapping is not None:
-            combined_mapping.update(mapping)
-        if pretrained_module is not None:
-            for name, _ in pretrained_module.named_modules():
-                if "q_lin" in name:
-                    combined_mapping["q_lin"] = "query"
-                    combined_mapping["k_lin"] = "key"
-                    combined_mapping["v_lin"] = "value"
-                    combined_mapping["out_lin"] = "output"
-                    combined_mapping["transformer"] = "encoder"
-                    break
-        return combined_mapping
-
-    @classmethod
-    def _get_input_arguments(
-        cls,
-        pretrained_module: torch.nn.Module,
-        source="huggingface",
-        mapping: Optional[Dict[str, str]] = None,
-        **kwargs,
-    ):
-        submodules = cls._get_mapped_submodules(pretrained_module, source, mapping)
+    def _from_config(cls, config: "PretrainedConfig", **kwargs):
         final_kwargs = {}
-
-        final_kwargs["hidden_size"] = submodules["query"].in_features
-        if hasattr(submodules[""], "num_attention_heads"):
-            final_kwargs["num_attention_heads"] = submodules[""].num_attention_heads
-        elif hasattr(submodules[""], "n_heads"):
-            final_kwargs["num_attention_heads"] = submodules[""].n_heads
-            final_kwargs["output_linear"] = True  # Since this is the distilbert case.
+        final_kwargs["hidden_size"] = config.hidden_size
+        final_kwargs["num_attention_heads"] = config.num_attention_heads
+        final_kwargs["output_linear"] = hasattr(
+            config, "n_heads"
+        )  # Since this is the distilbert case.
+        if hasattr(config, "attention_dropout"):
+            final_kwargs["dropout"] = config.attention_dropout
         else:
-            raise AttributeError("Cannot find a relevant attribute for number of heads.")
-
-        final_kwargs["dropout"] = submodules["dropout"].p
-
+            final_kwargs["dropout"] = config.attention_probs_dropout_prob
         final_kwargs.update(**kwargs)
-
-        return final_kwargs
+        return cls(**final_kwargs)

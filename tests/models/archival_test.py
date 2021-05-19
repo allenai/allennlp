@@ -6,12 +6,19 @@ import tarfile
 import pytest
 import torch
 
+from allennlp.version import _MAJOR, _MINOR
 from allennlp.commands.train import train_model
 from allennlp.common import Params
+from allennlp.common.meta import Meta
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.dataset_readers import DatasetReader
-from allennlp.models.archival import archive_model, load_archive, CONFIG_NAME
+from allennlp.models.archival import (
+    archive_model,
+    load_archive,
+    CONFIG_NAME,
+    _check_version_compatibility,
+)
 
 
 def assert_models_equal(model, model2):
@@ -30,6 +37,16 @@ def assert_models_equal(model, model2):
 
     assert vocab._token_to_index == vocab2._token_to_index
     assert vocab._index_to_token == vocab2._index_to_token
+
+
+def _test_check_version_compatibility():
+    meta = Meta(version=f"{_MAJOR}.{int(_MINOR) + 1}.0")
+    with pytest.warns(UserWarning, match="trained on a newer version"):
+        _check_version_compatibility("model.tar.gz", meta)
+
+    meta = Meta(version="1.2.0")
+    with pytest.warns(UserWarning, match="trained on version"):
+        _check_version_compatibility("model.tar.gz", meta)
 
 
 class ArchivalTest(AllenNlpTestCase):

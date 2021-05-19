@@ -118,10 +118,12 @@ class BiModalAttention(TransformerModule, FromParams):
         input_tensor2,
         attention_mask1=None,
         attention_mask2=None,
-        co_attention_mask=None,
+        co_attention_mask=None,  # TODO: is this flag necessary?
         use_co_attention_mask=False,
     ):
         """
+        # Parameters
+
         input_tensor1 : `torch.Tensor`
             Shape `batch_size x seq_len1 x hidden_dim1`
             where `seq_len1` can be the sequence length
@@ -143,7 +145,6 @@ class BiModalAttention(TransformerModule, FromParams):
             if you know which words correspond to which regions in the image,
             this mask can be applied to limit the attention given the bias.
         use_co_attention_mask : `bool`
-            # TODO: is this flag necessary?
             Whether to use co_attention_mask or not, default = `False`.
         """
 

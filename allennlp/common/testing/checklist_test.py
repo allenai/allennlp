@@ -1,7 +1,7 @@
 from typing import Optional
 from checklist.test_suite import TestSuite
 from checklist.test_types import MFT as MinimumFunctionalityTest
-from allennlp.sanity_checks.task_checklists.task_suite import TaskSuite
+from allennlp.confidence_checks.task_checklists.task_suite import TaskSuite
 
 
 @TaskSuite.register("fake-task-suite")

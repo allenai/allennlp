@@ -1,14 +1,15 @@
-from typing import Union, Optional, Dict
+from typing import Union, Optional, TYPE_CHECKING
 
 import torch
 
 from allennlp.common import FromParams
-
 from allennlp.modules.transformer.transformer_module import TransformerModule
-
 from allennlp.modules.transformer.activation_layer import ActivationLayer
 from allennlp.modules.transformer.self_attention import SelfAttention
 from allennlp.modules.transformer.output_layer import OutputLayer
+
+if TYPE_CHECKING:
+    from transformers.configuration_utils import PretrainedConfig
 
 
 class AttentionLayer(TransformerModule, FromParams):
@@ -28,8 +29,8 @@ class AttentionLayer(TransformerModule, FromParams):
         Dropout probability for the `OutputLayer`.
     """
 
-    _relevant_module = "encoder.layers.0.attention"
-    _huggingface_mapping = {"layer": "layers"}
+    _pretrained_relevant_module = "encoder.layer.0.attention"
+    _pretrained_mapping = {"layer": "layers"}
 
     def __init__(
         self,
@@ -52,6 +53,8 @@ class AttentionLayer(TransformerModule, FromParams):
         output_attentions: bool = False,
     ):
         """
+        # Parameters
+
         input_tensor : `torch.Tensor`
             Shape `batch_size x seq_len x hidden_dim`
         attention_mask : `torch.BoolTensor`, optional
@@ -77,25 +80,16 @@ class AttentionLayer(TransformerModule, FromParams):
         return outputs
 
     @classmethod
-    def _get_input_arguments(
-        cls,
-        pretrained_module: torch.nn.Module,
-        source="huggingface",
-        mapping: Optional[Dict[str, str]] = None,
-        **kwargs,
-    ):
-        submodules = cls._get_mapped_submodules(pretrained_module, source, mapping)
-
+    def _from_config(cls, config: "PretrainedConfig", **kwargs):
         final_kwargs = {}
 
-        final_kwargs["hidden_size"] = submodules["self.query"].in_features
-        final_kwargs["num_attention_heads"] = submodules["self"].num_attention_heads
-        final_kwargs["attention_dropout"] = submodules["self.dropout"].p
-        final_kwargs["hidden_dropout"] = submodules["output.dropout"].p
+        final_kwargs["hidden_size"] = config.hidden_size
+        final_kwargs["num_attention_heads"] = config.num_attention_heads
+        final_kwargs["attention_dropout"] = config.attention_probs_dropout_prob
+        final_kwargs["hidden_dropout"] = config.hidden_dropout_prob
 
         final_kwargs.update(**kwargs)
-
-        return final_kwargs
+        return cls(**final_kwargs)
 
 
 class TransformerLayer(TransformerModule, FromParams):
@@ -120,8 +114,8 @@ class TransformerLayer(TransformerModule, FromParams):
         This is helpful when using the layer in a decoder.
     """
 
-    _relevant_module = "encoder.layers.0"
-    _huggingface_mapping = {
+    _pretrained_relevant_module = "encoder.layer.0"
+    _pretrained_mapping = {
         "layer": "layers",
         "intermediate_act_fn": "act_fn",
         "crossattention": "cross_attention",
@@ -174,6 +168,8 @@ class TransformerLayer(TransformerModule, FromParams):
         output_attentions: bool = False,
     ):
         """
+        # Parameters
+
         hidden_states : `torch.Tensor`
             Shape `batch_size x seq_len x hidden_dim`
         attention_mask : `torch.BoolTensor`, optional
@@ -218,32 +214,14 @@ class TransformerLayer(TransformerModule, FromParams):
         return outputs
 
     @classmethod
-    def _get_input_arguments(
-        cls,
-        pretrained_module: torch.nn.Module,
-        source="huggingface",
-        mapping: Optional[Dict[str, str]] = None,
-        **kwargs,
-    ):
-        submodules = cls._get_mapped_submodules(pretrained_module, source, mapping)
-
+    def _from_config(cls, config: "PretrainedConfig", **kwargs):
         final_kwargs = {}
-
-        final_kwargs["hidden_size"] = submodules["attention.self.query"].in_features
-        final_kwargs["num_attention_heads"] = submodules["attention.self"].num_attention_heads
-        final_kwargs["attention_dropout"] = submodules["attention.self.dropout"].p
-        final_kwargs["hidden_dropout"] = submodules["attention.output.dropout"].p
-        final_kwargs["intermediate_size"] = submodules["intermediate.dense"].out_features
-
-        # We require the if block as `act_fn` is a function rather than a module,
-        # so `_get_mapped_submodules` does not automatically fix this.
-        if source == "huggingface":
-            final_kwargs["activation"] = getattr(submodules["intermediate"], "intermediate_act_fn")
-        else:
-            final_kwargs["activation"] = getattr(submodules["intermediate"], "act_fn")
-
-        final_kwargs["add_cross_attention"] = "cross_attention" in submodules
-
+        final_kwargs["hidden_size"] = config.hidden_size
+        final_kwargs["num_attention_heads"] = config.num_attention_heads
+        final_kwargs["attention_dropout"] = config.attention_probs_dropout_prob
+        final_kwargs["hidden_dropout"] = config.hidden_dropout_prob
+        final_kwargs["intermediate_size"] = config.intermediate_size
+        final_kwargs["activation"] = config.hidden_act
+        final_kwargs["add_cross_attention"] = config.add_cross_attention
         final_kwargs.update(**kwargs)
-
-        return final_kwargs
+        return cls(**final_kwargs)
