@@ -72,7 +72,13 @@ class TransformerTextField(Field[torch.Tensor]):
 
     @overrides
     def batch_tensors(self, tensor_list: List[Dict[str, torch.Tensor]]) -> Dict[str, torch.Tensor]:
-        return util.batch_tensor_dicts(tensor_list)
+        result: Dict[str, torch.Tensor] = util.batch_tensor_dicts(tensor_list)
+        # Transformer models need LongTensors for indices, just in case we have more than 2 billion
+        # different tokens. To save space, we make the switch as late as possible, i.e., here.
+        result = {
+            name: t.to(torch.int64) if t.dtype == torch.int32 else t for name, t in result.items()
+        }
+        return result
 
     def human_readable_repr(self) -> Dict[str, Any]:
         def readable_tensor(t: torch.Tensor) -> str:
