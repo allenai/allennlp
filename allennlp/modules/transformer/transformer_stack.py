@@ -122,6 +122,7 @@ class TransformerStack(TransformerModule, FromParams):
         if output_hidden_states:
             all_hidden_states = all_hidden_states + (hidden_states,)  # type: ignore
 
+        # TODO: return a named tuple here
         return tuple(
             v
             for v in [hidden_states, all_hidden_states, all_attentions, all_cross_attentions]
