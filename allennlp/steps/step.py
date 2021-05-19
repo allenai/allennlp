@@ -45,13 +45,7 @@ _version_re = re.compile("""^[a-zA-Z0-9]+$""")
 T = TypeVar("T")
 
 
-class StepCache(MutableMapping["Step", Any], Registrable):
-    def __delitem__(self, key: "Step"):
-        raise ValueError("Cached results are forever.")
-
-    def __iter__(self):
-        raise ValueError("Step caches are not iterable.")
-
+class StepCache(Registrable):
     def __contains__(self, step: object) -> bool:
         """This is a generic implementation of __contains__. If you are writing your own
         `StepCache`, you might want to write a faster one yourself."""
@@ -408,8 +402,6 @@ class Step(Registrable, Generic[T]):
 
     def result(self, cache: Optional[StepCache] = None) -> T:
         if cache is None:
-            from allennlp.steps.step_cache import default_step_cache
-
             cache = default_step_cache
         if self in cache:
             return cache[self]
@@ -431,8 +423,6 @@ class Step(Registrable, Generic[T]):
             )
 
         if cache is None:
-            from allennlp.steps.step_cache import default_step_cache
-
             cache = default_step_cache
         if self in cache:
             return
