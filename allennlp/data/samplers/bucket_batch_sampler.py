@@ -58,7 +58,7 @@ class BucketBatchSampler(BatchSampler):
         its size would be less than batch_size`.
 
     shuffle : `bool`, (default = `True`)
-        If `False`, the sampler won't shuffle the batches. padding_noise will be ignored and set
+        If `False`, the sampler won't shuffle the batches. `padding_noise` will be ignored and set
         to `0.0`.
 
     """
