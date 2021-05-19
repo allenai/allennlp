@@ -1,9 +1,14 @@
 import copy
 import inspect
 import itertools
+import json
 import logging
 import random
 import re
+import weakref
+from os import PathLike
+from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import (
     Optional,
     Any,
@@ -18,8 +23,10 @@ from typing import (
     Generic,
     Iterable,
     Tuple,
-    MutableMapping,
     MutableSet,
+    get_origin,
+    get_args,
+    MutableMapping,
 )
 
 from allennlp.common import Registrable, Params
@@ -36,6 +43,112 @@ logger = logging.getLogger(__name__)
 _version_re = re.compile("""^[a-zA-Z0-9]+$""")
 
 T = TypeVar("T")
+
+
+class StepCache(MutableMapping["Step", Any], Registrable):
+    def __delitem__(self, key: "Step"):
+        raise ValueError("Cached results are forever.")
+
+    def __iter__(self):
+        raise ValueError("Step caches are not iterable.")
+
+    def __contains__(self, step: "Step") -> bool:
+        """This is a generic implementation of __contains__. If you are writing your own
+        `StepCache`, you might want to write a faster one yourself."""
+        try:
+            self.__getitem__(step)
+            return True
+        except KeyError:
+            return False
+
+    def __getitem__(self, step: "Step") -> Any:
+        raise NotImplementedError()
+
+    def __setitem__(self, step: "Step", value: Any) -> None:
+        raise NotImplementedError()
+
+    def path_for_step(self, step: "Step") -> Optional[Path]:
+        return None
+
+
+@StepCache.register("memory")
+class MemoryStepCache(StepCache):
+    def __init__(self):
+        self.cache: Dict[str, Any] = {}
+
+    def __getitem__(self, step: "Step") -> Any:
+        return self.cache[step.unique_id()]
+
+    def __setitem__(self, step: "Step", value: Any) -> None:
+        if step.cache_results:
+            self.cache[step.unique_id()] = value
+        else:
+            logger.warning("Tried to cache step %s despite being marked as uncacheable.", step.name)
+
+    def __contains__(self, step: "Step"):
+        return step.unique_id() in self.cache
+
+    def __len__(self) -> int:
+        return len(self.cache)
+
+
+default_step_cache = MemoryStepCache()
+
+
+@StepCache.register("directory")
+class DirectoryStepCache(StepCache):
+    def __init__(self, dir: Union[str, PathLike]):
+        self.dir = Path(dir)
+        self.dir.mkdir(parents=True, exist_ok=True)
+
+        # We keep an in-memory cache as well so we don't have to de-serialize stuff
+        # we happen to have in memory already.
+        self.cache = weakref.WeakValueDictionary()
+
+    def __contains__(self, step: "Step") -> bool:
+        if step.unique_id() in self.cache:
+            return True
+        metadata_file = self.path_for_step(step) / "metadata.json"
+        return metadata_file.exists()
+
+    def __getitem__(self, step: "Step") -> Any:
+        try:
+            return self.cache[step.unique_id()]
+        except KeyError:
+            if step not in self:
+                raise KeyError(step)
+            result = step.format.read(self.path_for_step(step))
+            self.cache[step.unique_id()] = result
+            return result
+
+    def __setitem__(self, step: "Step", value: Any) -> None:
+        location = self.path_for_step(step)
+        location.mkdir(parents=True, exist_ok=True)
+
+        metadata_location = location / "metadata.json"
+        if metadata_location.exists():
+            raise ValueError(f"{metadata_location} already exists! Will not overwrite.")
+        temp_metadata_location = metadata_location.with_suffix(".temp")
+
+        try:
+            step.format.write(value, location)
+            metadata = {
+                "step": step.unique_id(),
+                "checksum": step.format.checksum(location),
+            }
+            with temp_metadata_location.open("wt") as f:
+                json.dump(metadata, f)
+            self.cache[step.unique_id()] = value
+            temp_metadata_location.rename(metadata_location)
+        except:  # noqa: E722
+            temp_metadata_location.unlink(missing_ok=True)
+            raise
+
+    def __len__(self) -> int:
+        return sum(1 for _ in self.dir.glob("*/metadata.json"))
+
+    def path_for_step(self, step: "Step") -> Path:
+        return self.dir / step.unique_id()
 
 
 class Step(Registrable, Generic[T]):
@@ -116,6 +229,10 @@ class Step(Registrable, Generic[T]):
                 f"Step {step_name}'s cache_results parameter is set to an invalid value."
             )
 
+        self.temp_dir_for_run: Optional[
+            PathLike
+        ] = None  # This is set only while the run() method runs.
+
     @classmethod
     def from_params(
         cls: Type["Step"],
@@ -188,9 +305,17 @@ class Step(Registrable, Generic[T]):
                 subclass.__name__, param_name, annotation, param.default, params, **extras
             )
 
-            if isinstance(constructed_arg, str) and not issubclass(  # we found a string
-                param.annotation, str
-            ):  # we didn't want a string
+            def annotation_could_be_str(a) -> bool:
+                if a == str:
+                    return True
+                if a == Any:
+                    return True
+                if get_origin(a) == Union:
+                    return any(annotation_could_be_str(o) for o in get_args(a))
+                return False
+
+            if isinstance(constructed_arg, str) and not annotation_could_be_str(param.annotation):
+                # We found a string, but we did not want a string.
                 if constructed_arg in existing_steps:  # the string matches an existing task
                     constructed_arg = existing_steps[constructed_arg]
                 else:
@@ -233,10 +358,35 @@ class Step(Registrable, Generic[T]):
         return subclass(**kwargs)
 
     def run(self, **kwargs) -> T:
-        raise NotImplementedError
+        raise NotImplementedError()
+
+    def _run_with_temp_dir(self, cache: StepCache, **kwargs) -> T:
+        if self.temp_dir_for_run is not None:
+            raise ValueError("You can only run a Step's run() method once at a time.")
+        step_dir = cache.path_for_step(self)
+        if step_dir is None:
+            temp_dir = TemporaryDirectory(prefix=self.unique_id() + "-", suffix=".temp")
+            self.temp_dir_for_run = Path(temp_dir.name)
+            try:
+                return self.run(**kwargs)
+            finally:
+                self.temp_dir_for_run = None
+                temp_dir.cleanup()
+        else:
+            self.temp_dir_for_run = step_dir / "run"
+            try:
+                self.temp_dir_for_run.mkdir(exist_ok=True, parents=True)
+                return self.run(**kwargs)
+            finally:
+                # No cleanup, as we want to keep the directory for restarts or serialization.
+                self.temp_dir_for_run = None
+
+    def temp_dir(self) -> PathLike:
+        """Returns a temporary directory that a step can use while its `run()` method runs."""
+        return self.temp_dir_for_run
 
     @classmethod
-    def _replace_steps_with_results(cls, o: Any, cache: MutableMapping["Step", Any]):
+    def _replace_steps_with_results(cls, o: Any, cache: StepCache):
         if isinstance(o, Step):
             return o.result(cache)
         elif isinstance(o, List):
@@ -248,7 +398,7 @@ class Step(Registrable, Generic[T]):
         else:
             return o
 
-    def result(self, cache: Optional[MutableMapping["Step", Any]] = None) -> T:
+    def result(self, cache: Optional[StepCache] = None) -> T:
         if cache is None:
             from allennlp.steps.step_cache import default_step_cache
 
@@ -257,7 +407,7 @@ class Step(Registrable, Generic[T]):
             return cache[self]
 
         kwargs = self._replace_steps_with_results(self.kwargs, cache)
-        result = self.run(**kwargs)
+        result = self._run_with_temp_dir(cache, **kwargs)
         if self.cache_results:
             # If we have an iterator as a result, we have to copy it into a list first,
             # otherwise we can't cache it.
@@ -266,7 +416,7 @@ class Step(Registrable, Generic[T]):
             cache[self] = result
         return result
 
-    def ensure_result(self, cache: Optional[MutableMapping["Step", Any]] = None) -> None:
+    def ensure_result(self, cache: Optional[StepCache] = None) -> None:
         if not self.cache_results:
             raise ValueError(
                 "It does not make sense to call ensure_result() on a step that's not cacheable."
@@ -280,7 +430,7 @@ class Step(Registrable, Generic[T]):
             return
 
         kwargs = self._replace_steps_with_results(self.kwargs, cache)
-        result = self.run(**kwargs)
+        result = self._run_with_temp_dir(cache, **kwargs)
         # If we have an iterator as a result, we have to copy it into a list first,
         # otherwise we can't cache it.
         if hasattr(result, "__next__"):

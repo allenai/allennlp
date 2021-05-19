@@ -1,9 +1,7 @@
 import copy
 import dataclasses
 import logging
-import random
 import re
-from math import floor, ceil
 from typing import (
     Set,
     Optional,
@@ -14,33 +12,32 @@ from typing import (
     Tuple,
     Iterable,
     Iterator,
-    Sequence,
 )
 
 import datasets
-import more_itertools
 import torch.optim
 from datasets import Dataset
 
-from allennlp.common import cached_transformers
+from allennlp.common import cached_transformers, Lazy
+from allennlp.common.util import log_frozen_and_tunable_parameter_names
 from allennlp.data import (
     DataLoader,
     Vocabulary,
-    BatchSampler,
     Instance,
-    allennlp_collate,
     TensorDict,
 )
-from allennlp.data.fields import LabelField, ListField, IndexField
+from allennlp.data.fields import ListField, IndexField
 from allennlp.data.fields.transformer_text_field import TransformerTextField
 from allennlp.models import Model
 from allennlp.nn.util import move_to_device
+from allennlp.steps.dataloader import TangoDataLoader, MaxBatchesDataLoader
 from allennlp.steps.dataset import AllenNlpDataset
 from allennlp.steps.step import Step
 from allennlp.training import Checkpointer, TrainerCallback, GradientDescentTrainer
 from allennlp.training.learning_rate_schedulers import LearningRateScheduler
 from allennlp.training.momentum_schedulers import MomentumScheduler
 from allennlp.training.moving_average import MovingAverage
+from allennlp.training.optimizers import Optimizer
 
 
 @Step.register("hf_dataset")
@@ -197,7 +194,7 @@ class Tokenize(Step):
 @Step.register("piqa_instances")
 class PiqaInstances(Step):
     DETERMINISTIC = True
-    VERSION = "001"
+    VERSION = "002"
     CACHEABLE = True
 
     def run(
@@ -211,7 +208,7 @@ class PiqaInstances(Step):
         dataset = {
             split_name: [
                 {
-                    "correct_alternative": LabelField(instance["label"]),
+                    "correct_alternative": instance["label"],
                     "alternatives": [
                         (instance["goal"], instance["sol1"]),
                         (instance["goal"], instance["sol2"]),
@@ -238,7 +235,7 @@ class PiqaInstances(Step):
 
         result = {}
         for split_name, instances in dataset.items():
-            tokenized_alts = tokenized["split_name"]
+            tokenized_alts = tokenized[split_name]
             results_per_split = []
             for i, instance in enumerate(instances):
                 alts = ListField(
@@ -248,17 +245,16 @@ class PiqaInstances(Step):
                             torch.tensor(
                                 tokenized_alts["token_type_ids"][alt_index], dtype=torch.int32
                             ),
-                            torch.tensor(
-                                tokenized_alts["attention_mask"][alt_index], dtype=torch.bool
-                            ),
                         )
                         for alt_index in [2 * i, 2 * i + 1]
                     ]
                 )
-                label = IndexField(instance["label"], alts)
-                results_per_split.append(
-                    Instance({"alternatives": alts, "correct_alternative": label})
-                )
+                fields = {"alternatives": alts}
+                if instance["correct_alternative"] >= 0:
+                    fields["correct_alternative"] = IndexField(
+                        instance["correct_alternative"], alts
+                    )
+                results_per_split.append(Instance(fields))
             result[split_name] = results_per_split
 
         # make vocab
@@ -268,141 +264,15 @@ class PiqaInstances(Step):
         return AllenNlpDataset(result, vocab)
 
 
-class TangoDataLoader:
-    def num_batches_per_epoch(self) -> Optional[int]:
-        """If the dataloader produces epochs of similar length, this is how you get the length."""
-        raise NotImplementedError()
-
-    def __iter__(self) -> Iterator[TensorDict]:
-        raise NotImplementedError()
-
-    def __len__(self) -> Optional[int]:
-        logging.warning(
-            "This function is deprecated because it's unclear which length you get back. Please call "
-            "TangoDataLoader.num_batches_per_epoch() instead."
-        )
-        return self.num_batches_per_epoch()
-
-
-@Step.register("make_data_loaders")
-class MakeDataLoadersStep(Step):
-    DETERMINISTIC = True
-    VERSION = "001"
-    CACHEABLE = False
-
-    class BatchSizeDataLoader(TangoDataLoader):
-        def __init__(
-            self,
-            instances: Sequence[Instance],
-            batch_size: int,
-            drop_last: bool = False,
-            shuffle: bool = True,
-        ):
-            self.instances = instances
-            self.batch_size = batch_size
-            self.drop_last = drop_last
-            self.shuffle = shuffle
-
-        def num_batches_per_epoch(self) -> Optional[int]:
-            batch_count = len(self.instances) / self.batch_size
-            if self.drop_last:
-                return floor(batch_count)
-            else:
-                return ceil(batch_count)
-
-        def __iter__(self) -> Iterator[TensorDict]:
-            if self.shuffle:
-                instances = list(
-                    self.instances
-                )  # make a new list pointing to the same instance objects
-                random.shuffle(instances)
-            else:
-                instances = self.instances
-
-            for batch in more_itertools.chunked(instances, self.batch_size):
-                if not self.drop_last or len(batch) >= self.batch_size:
-                    yield allennlp_collate(batch)
-
-    class SamplerDataLoader(TangoDataLoader):
-        def __init__(self, instances: Sequence[Instance], batch_sampler: BatchSampler):
-            self.instances = instances
-            self.batch_sampler = batch_sampler
-
-        def num_batches_per_epoch(self) -> Optional[int]:
-            return self.batch_sampler.get_num_batches(self.instances)
-
-        def __iter__(self) -> Iterator[TensorDict]:
-            for batch_indices in self.batch_sampler.get_batch_indices(self.instances):
-                yield allennlp_collate([self.instances[i] for i in batch_indices])
-
-    class BatchesPerEpochDataLoader(TangoDataLoader):
-        def __init__(self, inner: TangoDataLoader, batches_per_epoch: int):
-            self.inner = inner
-            self.iter = iter(inner)
-            self.batches_per_epoch = batches_per_epoch
-
-        def num_batches_per_epoch(self) -> Optional[int]:
-            return self.batches_per_epoch
-
-        def __iter__(self) -> Iterator[TensorDict]:
-            batches_yielded = 0
-            while batches_yielded < self.batches_per_epoch:
-                try:
-                    yield next(self.iter)
-                    batches_yielded += 1
-                except StopIteration:
-                    self.iter = iter(self.inner)
-
-    def run(
-        self,
-        dataset: AllenNlpDataset,
-        batch_size: int = None,
-        drop_last: bool = False,
-        shuffle: bool = False,
-        batch_sampler: Optional[BatchSampler] = None,
-        batches_per_epoch: Optional[int] = None,
-    ) -> Dict[str, TangoDataLoader]:
-        if batch_size is not None and batch_size < 1:
-            raise ValueError("batch_size must be at least 1.")
-
-        if batch_sampler is not None:
-            if batch_size is not None:
-                raise ValueError("batch_sampler option is mutually exclusive with batch_size.")
-
-            if drop_last:
-                raise ValueError("batch_sampler option is mutually exclusive with drop_last.")
-
-            if shuffle:
-                raise ValueError("batch_sampler option is mutually exclusive with shuffle.")
-        elif batch_size is None:
-            raise ValueError("batch_size is required when batch_sampler is not supplied.")
-
-        if batches_per_epoch is not None and batches_per_epoch < 1:
-            raise ValueError("batches_per_epoch must be at least 1.")
-
-        split_to_loader = {}
-        for split_name, instances in dataset.splits.items():
-            if batch_sampler is not None:
-                loader = self.SamplerDataLoader(instances, batch_sampler)
-            else:
-                assert batch_size is not None
-                loader = self.BatchSizeDataLoader(instances, batch_size, drop_last, shuffle)
-            if batches_per_epoch is not None:
-                loader = self.BatchesPerEpochDataLoader(loader, batches_per_epoch)
-            split_to_loader[split_name] = loader
-
-        return split_to_loader
-
-
 @Step.register("training")
 class TrainingStep(Step):
     DETERMINISTIC = True
-    VERSION = "001"
+    VERSION = "002"
 
     # TODO: distributed training
     # TODO: recovery of failed jobs
 
-    class DataLoaderAdapter(DataLoader):
+    class _DataLoaderAdapter(DataLoader):
         """Adapts a TangoDataLoader to an old-school AllenNLP DataLoader."""
 
         def __init__(self, tango_data_loader: TangoDataLoader):
@@ -443,43 +313,93 @@ class TrainingStep(Step):
 
     def run(
         self,
-        model: Model,
-        data_loaders: Dict[str, TangoDataLoader],
-        validation_data_loaders: Optional[Dict[str, TangoDataLoader]],
-        training_split: str,
-        validation_split: Optional[str],
-        optimizer: torch.optim.Optimizer,
+        model: Lazy[Model],
+        dataset: AllenNlpDataset,
+        data_loader: Lazy[TangoDataLoader],
+        optimizer: Lazy[Optimizer],
+        validation_data_loader: Optional[Lazy[TangoDataLoader]] = None,
+        training_split: str = "train",
+        validation_split: Optional[str] = None,
         patience: Optional[int] = None,
         validation_metric: Union[str, List[str]] = "-loss",
         num_epochs: int = 20,
-        checkpointer: Checkpointer = None,
+        checkpointer: Optional[Lazy[Checkpointer]] = None,
         grad_norm: Optional[float] = None,
         grad_clipping: Optional[float] = None,
-        learning_rate_scheduler: Optional[LearningRateScheduler] = None,
-        momentum_scheduler: Optional[MomentumScheduler] = None,
-        moving_average: Optional[MovingAverage] = None,
-        callbacks: List[TrainerCallback] = None,
+        learning_rate_scheduler: Optional[Lazy[LearningRateScheduler]] = None,
+        momentum_scheduler: Optional[Lazy[MomentumScheduler]] = None,
+        moving_average: Optional[Lazy[MovingAverage]] = None,
+        callbacks: List[Lazy[TrainerCallback]] = None,
         num_gradient_accumulation_steps: int = 1,
         use_amp: bool = False,
         enable_default_callbacks: bool = True,
         run_sanity_checks: bool = True,
+        no_grad: Optional[List[str]] = None,
+        limit_batches_per_epoch: Optional[int] = None,
     ) -> Model:
-        if validation_data_loaders is None:
-            validation_data_loaders = data_loaders
+        serialization_dir = self.temp_dir()
+
+        if validation_data_loader is None:
+            validation_data_loader = data_loader
         if validation_split is None:
             validation_loader = None
         else:
-            validation_loader = self.DataLoaderAdapter(validation_data_loaders[validation_split])
+            validation_data_loader = validation_data_loader.construct(
+                instances=dataset.splits[validation_split]
+            )
+            if limit_batches_per_epoch is not None:
+                validation_data_loader = MaxBatchesDataLoader(
+                    validation_data_loader, limit_batches_per_epoch
+                )
+            validation_loader = self._DataLoaderAdapter(validation_data_loader)
+
+        data_loader = data_loader.construct(instances=dataset.splits[training_split])
+        if limit_batches_per_epoch is not None:
+            data_loader = MaxBatchesDataLoader(data_loader, limit_batches_per_epoch)
+        loader = self._DataLoaderAdapter(data_loader)
+
+        model = model.construct(vocab=dataset.vocab)
+        if no_grad:
+            for name, parameter in model.named_parameters():
+                if any(re.search(regex, name) for regex in no_grad):
+                    parameter.requires_grad_(False)
+        parameters = [[n, p] for n, p in model.named_parameters() if p.requires_grad]
+        optimizer = optimizer.construct(model_parameters=parameters)
+        log_frozen_and_tunable_parameter_names(model)
+        moving_average = (
+            None if moving_average is None else moving_average.construct(parameters=parameters)
+        )
+        learning_rate_scheduler = (
+            None
+            if learning_rate_scheduler is None
+            else learning_rate_scheduler.construct(
+                optimizer=optimizer,
+                num_epochs=num_epochs,
+                num_steps_per_epoch=data_loader.num_batches_per_epoch(),
+            )
+        )
+        momentum_scheduler = (
+            None
+            if momentum_scheduler is None
+            else momentum_scheduler.construct(optimizer=optimizer)
+        )
+        if checkpointer is not None:
+            checkpointer = checkpointer.construct(serialization_dir=serialization_dir)
+        else:
+            checkpointer = Checkpointer(serialization_dir)
+        callbacks: List[TrainerCallback] = [
+            cb.construct(serialization_dir=serialization_dir) for cb in callbacks or []
+        ]
 
         trainer = GradientDescentTrainer(
             model,
             optimizer=optimizer,
-            data_loader=self.DataLoaderAdapter(data_loaders[training_split]),
+            data_loader=loader,
             patience=patience,
             validation_metric=validation_metric,
             validation_data_loader=validation_loader,
             num_epochs=num_epochs,
-            serialization_dir=None,
+            serialization_dir=serialization_dir,
             checkpointer=checkpointer,
             grad_norm=grad_norm,
             grad_clipping=grad_clipping,
@@ -494,4 +414,4 @@ class TrainingStep(Step):
         )
         trainer.train()
 
-        return model
+        return trainer.model

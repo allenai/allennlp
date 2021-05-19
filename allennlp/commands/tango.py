@@ -15,7 +15,7 @@ from allennlp.common.params import Params
 from allennlp.common import logging as common_logging
 from allennlp.common import util as common_util
 from allennlp.steps.step import step_graph_from_params
-from allennlp.steps.step_cache import DirectoryStepCache
+from allennlp.steps.step import DirectoryStepCache
 
 logger = logging.getLogger(__name__)
 
