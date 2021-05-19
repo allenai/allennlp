@@ -922,7 +922,7 @@ class GradientDescentTrainer(Trainer):
     @contextmanager
     def get_checkpoint_state(self) -> Iterator[Tuple[Dict[str, Any], Dict[str, Any]]]:
         if self._moving_average is not None:
-            # Assigning average value to model parameters.  The checkpointer will call
+            # Assigning average value to model parameters. The checkpointer will call
             # `restore_state_after_checkpointing` when it is done to put this back to what it was.
             self._moving_average.assign_average_value()
 
