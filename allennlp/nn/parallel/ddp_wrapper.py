@@ -1,4 +1,4 @@
-from typing import Union, Tuple, OrderedDict, Dict, NamedTuple, List, Optional
+from typing import Union, Tuple, OrderedDict, Dict, NamedTuple, List, Optional, Any
 
 from overrides import overrides
 import torch
@@ -18,7 +18,12 @@ class LoadStateDictReturnType(NamedTuple):
 
 
 class DdpWrappedModel:
-    def __init__(self, model: torch.nn.Module, local_rank: int = 0, world_size: int = 1) -> None:
+    def __init__(
+        self,
+        model: torch.nn.Module,
+        local_rank: int = 0,
+        world_size: int = 1,
+    ) -> None:
         self.model = model
 
     def load_local_state_dict(
@@ -51,6 +56,9 @@ class DdpWrapper(Registrable):
 
     In a typical AllenNLP configuration file, `local_rank`, `world_size`, and `cuda_device`
     should not be specified.
+
+    !!! Warning
+        This API is experimental and may change in the future.
     """
 
     default_implementation = "torch"
@@ -70,7 +78,7 @@ class DdpWrapper(Registrable):
         """
         raise NotImplementedError
 
-    def wrap_module(self, module: torch.nn.Module, recursive: bool = False) -> torch.nn.Module:
+    def wrap_module(self, module: torch.nn.Module) -> torch.nn.Module:
         """
         Wrap an individual module. By default this just returns the module,
         but some subclass implementations such as `FairScaleFsdpWrapper` do more.
@@ -100,8 +108,15 @@ class TorchDdpWrapper(DdpWrapper):
             device_ids=None if self.cuda_device == torch.device("cpu") else [self.cuda_device],
             **self._ddp_kwargs,
         )
+        # Add hooks to remove the 'module.' prefix from all keys in the state dict returned
+        # from the DistrubtedDataParallel model's `state_dict()` method,
+        # and add it back on when loading a state dict.
+        wrapped_model._register_state_dict_hook(_remove_torch_ddp_prefix)
+        wrapped_model._register_load_state_dict_pre_hook(_add_torch_ddp_prefix)
         return model, DdpWrappedModel(
-            wrapped_model, local_rank=self.local_rank, world_size=self.world_size
+            wrapped_model,
+            local_rank=self.local_rank,
+            world_size=self.world_size,
         )
 
 
@@ -119,3 +134,23 @@ class NoOpDdpWrapper(DdpWrapper):
         if self.cuda_device != torch.device("cpu"):
             model = model.cuda(self.cuda_device)
         return model, DdpWrappedModel(model)
+
+
+def _add_torch_ddp_prefix(state_dict: StateDictType, prefix: str, *args: Any) -> None:
+    for key in list(state_dict.keys()):
+        if key.startswith(prefix + "module."):
+            continue
+        new_key = prefix + "module." + key
+        state_dict[new_key] = state_dict[key]
+        del state_dict[key]
+
+
+def _remove_torch_ddp_prefix(
+    module: torch.nn.Module, state_dict: StateDictType, prefix: str, *args: Any
+) -> None:
+    for key in list(state_dict.keys()):
+        if not key.startswith(prefix + "module."):
+            continue
+        new_key = key.replace(prefix + "module.", "", 1)
+        state_dict[new_key] = state_dict[key]
+        del state_dict[key]

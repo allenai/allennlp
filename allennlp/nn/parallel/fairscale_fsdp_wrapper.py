@@ -1,10 +1,11 @@
-from typing import Tuple, Union, Optional
+from typing import Tuple, Union, Optional, Dict, Any
 
 from fairscale.nn import FullyShardedDataParallel as FSDP
-from fairscale.nn.wrap import enable_wrap, auto_wrap, wrap
+from fairscale.nn.wrap import enable_wrap, auto_wrap, default_auto_wrap_policy
 from overrides import overrides
 import torch
 
+from allennlp.nn.util import _MODULE_SHARDED_FLAG
 from allennlp.nn.parallel.ddp_wrapper import (
     DdpWrapper,
     DdpWrappedModel,
@@ -17,6 +18,8 @@ from allennlp.models import Model
 class FairScaleFsdpWrappedModel(DdpWrappedModel):
     def __init__(self, model: torch.nn.Module, **kwargs) -> None:
         super().__init__(model, **kwargs)
+        setattr(self, _MODULE_SHARDED_FLAG, True)
+        setattr(self.model, _MODULE_SHARDED_FLAG, True)
 
     @overrides
     def load_local_state_dict(
@@ -46,9 +49,11 @@ class FairScaleFsdpWrapper(DdpWrapper):
         reshard_after_forward: bool = True,
         cpu_offload: bool = False,
         flatten_parameters: bool = True,
+        auto_wrap_policy_kwargs: Dict[str, Any] = None,
         **kwargs,
     ) -> None:
         super().__init__(**kwargs)
+        self._auto_wrap_policy_kwargs = auto_wrap_policy_kwargs or {}
         self._fsdp_kwargs = {
             "compute_device": self.cuda_device,
             "mixed_precision": mixed_precision,
@@ -65,15 +70,30 @@ class FairScaleFsdpWrapper(DdpWrapper):
         )
         if self.cuda_device != torch.device("cpu"):
             wrapped_model = wrapped_model.cuda()
+        # `FSDP._lazy_init()` may have been called already on submodules that were wrapped
+        # (through `wrap_module()`), leading those submodules to think they are root submodules.
+        # So we need to call `FSDP._reset_lazy_init()` on any of these now.
+        for module in wrapped_model.modules():
+            if isinstance(module, FSDP):
+                module._reset_lazy_init()
         return model, FairScaleFsdpWrappedModel(
             wrapped_model, local_rank=self.local_rank, world_size=self.world_size
         )
 
     @overrides
-    def wrap_module(self, module: torch.nn.Module, recursive: bool = False) -> torch.nn.Module:
-        with enable_wrap(wrapper_cls=FSDP, **self._fsdp_kwargs):
-            if recursive:
-                wrapped_module = auto_wrap(module)
-            else:
-                wrapped_module = wrap(module)
+    def wrap_module(self, module: torch.nn.Module) -> torch.nn.Module:
+        with enable_wrap(
+            auto_wrap_policy=self.auto_wrap_policy, wrapper_cls=FSDP, **self._fsdp_kwargs
+        ):
+            wrapped_module = auto_wrap(module)
+        for module in wrapped_module.modules():
+            if isinstance(module, FSDP):
+                setattr(module, _MODULE_SHARDED_FLAG, True)
         return wrapped_module
+
+    def auto_wrap_policy(
+        self, module: torch.nn.Module, recurse: bool, unwrapped_params: int
+    ) -> bool:
+        return default_auto_wrap_policy(
+            module, recurse, unwrapped_params, **self._auto_wrap_policy_kwargs
+        )

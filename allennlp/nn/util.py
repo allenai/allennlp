@@ -2207,8 +2207,11 @@ def _collect_state_dict(
     # We iterate over this state dict instead of `state_dict` so we can be sure
     # that the order is consistent across processes.
     # We'll also update this state dict as we go and return it at the end.
+
+    _state_dict = module.state_dict()
+
     if recurse:
-        current_state_dict = module.state_dict()
+        current_state_dict = _state_dict
     else:
         # Only collect state of direct members, including both parameters and buffers.
         current_state_dict = OrderedDict(
@@ -2225,7 +2228,7 @@ def _collect_state_dict(
     # Gather unexpected_keys.
     if is_global_primary():
         assert state_dict is not None
-        module_keys = set(module.state_dict().keys())
+        module_keys = set(_state_dict.keys())
         for key in state_dict:
             if key not in module_keys:
                 unexpected_keys.append(key)

@@ -840,7 +840,6 @@ class T5EncoderStack(T5Stack, FromParams):
                     cross_attention=None,
                     ff=block_ff.construct(),
                 ),
-                recursive=True,
             )
             for i in range(num_blocks)
         ]
@@ -895,7 +894,6 @@ class T5DecoderStack(T5Stack, FromParams):
                     ),
                     ff=block_ff.construct(),
                 ),
-                recursive=True,
             )
             for i in range(num_blocks)
         ]
