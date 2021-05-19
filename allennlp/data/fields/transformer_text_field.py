@@ -15,7 +15,7 @@ class TransformerTextField(Field[torch.Tensor]):
     """
 
     __slots__ = [
-        "token_ids",
+        "input_ids",
         "token_type_ids",
         "attention_mask",
         "special_tokens_mask",
@@ -25,14 +25,15 @@ class TransformerTextField(Field[torch.Tensor]):
 
     def __init__(
         self,
-        token_ids: torch.Tensor,
+        input_ids: torch.Tensor,
+        # I wish input_ids were called `token_ids` for clarity, but we want to be compatible with huggingface.
         token_type_ids: Optional[torch.Tensor] = None,
         attention_mask: Optional[torch.Tensor] = None,
         special_tokens_mask: Optional[torch.Tensor] = None,
         offsets_mapping: Optional[torch.Tensor] = None,
         padding_token_id: int = 0,
     ) -> None:
-        self.token_ids = token_ids
+        self.input_ids = input_ids
         self.token_type_ids = token_type_ids
         self.attention_mask = attention_mask
         self.special_tokens_mask = special_tokens_mask
