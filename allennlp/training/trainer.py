@@ -504,7 +504,6 @@ class GradientDescentTrainer(Trainer):
 
             batches_this_epoch += 1
             self._batch_num_total += 1
-            batch_num_total = self._batch_num_total
 
             # Zero gradients.
             # NOTE: this is actually more efficient than calling `self.optimizer.zero_grad()`
@@ -564,9 +563,9 @@ class GradientDescentTrainer(Trainer):
             # This does nothing if batch_num_total is None or you are using a
             # scheduler which doesn't update per batch.
             if self._learning_rate_scheduler:
-                self._learning_rate_scheduler.step_batch(batch_num_total)
+                self._learning_rate_scheduler.step_batch(self._batch_num_total)
             if self._momentum_scheduler:
-                self._momentum_scheduler.step_batch(batch_num_total)
+                self._momentum_scheduler.step_batch(self._batch_num_total)
 
             if self._scaler is not None:
                 self._scaler.step(self.optimizer)
@@ -576,7 +575,7 @@ class GradientDescentTrainer(Trainer):
 
             # Update moving averages
             if self._moving_average is not None:
-                self._moving_average.apply(batch_num_total)
+                self._moving_average.apply(self._batch_num_total)
 
             # Update the description with the latest metrics
             metrics = training_util.get_metrics(
