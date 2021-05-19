@@ -425,7 +425,6 @@ class GradientDescentTrainer(Trainer):
         regularization_penalty = self.model.get_regularization_penalty()
 
         train_loss = 0.0
-        batch_loss = 0.0
         train_reg_loss = None if regularization_penalty is None else 0.0
         batch_reg_loss = None if regularization_penalty is None else 0.0
 
@@ -749,7 +748,7 @@ class GradientDescentTrainer(Trainer):
         except RuntimeError:
             traceback.print_exc()
             raise ConfigurationError(
-                "Could not recover training from the checkpoint.  Did you mean to output to "
+                "Could not recover training from the checkpoint. Did you mean to output to "
                 "a different serialization directory or delete the existing serialization "
                 "directory?"
             )

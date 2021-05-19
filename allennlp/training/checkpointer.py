@@ -68,11 +68,11 @@ class Checkpointer(Registrable):
         """
         Given amount of time lapsed between the last save and now (tracked internally), the
         current epoch, and the number of batches seen so far this epoch, this method decides whether
-        to save a checkpoint or not.  If we decide to save a checkpoint, we grab whatever state we
+        to save a checkpoint or not. If we decide to save a checkpoint, we grab whatever state we
         need out of the `Trainer` and save it.
 
         This function is intended to be called at the end of each batch in an epoch (perhaps because
-        your data is large enough that you don't really have "epochs").  The default implementation
+        your data is large enough that you don't really have "epochs"). The default implementation
         only looks at time, not batch or epoch number, though those parameters are available to you
         if you want to customize the behavior of this function.
         """
