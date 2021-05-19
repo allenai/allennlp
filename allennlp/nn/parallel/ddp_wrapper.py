@@ -1,4 +1,14 @@
-from typing import Union, Tuple, OrderedDict, Dict, NamedTuple, List, Optional, Any
+from typing import (
+    Union,
+    Tuple,
+    OrderedDict,
+    Dict,
+    NamedTuple,
+    List,
+    Optional,
+    Any,
+    TYPE_CHECKING,
+)
 
 from overrides import overrides
 import torch
@@ -6,7 +16,10 @@ from torch.nn.utils import clip_grad_norm_
 
 from allennlp.common import Registrable
 from allennlp.common.util import int_to_device
-from allennlp.models import Model
+
+if TYPE_CHECKING:
+    # To prevent circular imports
+    from allennlp.models import Model
 
 
 StateDictType = Union[Dict[str, torch.Tensor], OrderedDict[str, torch.Tensor]]
@@ -29,12 +42,12 @@ class DdpWrappedModel:
     def load_local_state_dict(
         self, state_dict: StateDictType, strict: bool = True
     ) -> LoadStateDictReturnType:
-        return self.model.load_state_dict(state_dict, strict=strict)
+        return self.model.load_state_dict(state_dict, strict=strict)  # type: ignore[arg-type]
 
     def load_state_dict(
         self, state_dict: StateDictType, strict: bool = True
     ) -> LoadStateDictReturnType:
-        return self.model.load_state_dict(state_dict, strict=strict)
+        return self.model.load_state_dict(state_dict, strict=strict)  # type: ignore[arg-type]
 
     def local_state_dict(self, *args, **kwargs) -> Optional[StateDictType]:
         return None
@@ -71,7 +84,7 @@ class DdpWrapper(Registrable):
         self.primary = local_rank == 0
         self.cuda_device = int_to_device(cuda_device)
 
-    def wrap_model(self, model: Model) -> Tuple[Model, DdpWrappedModel]:
+    def wrap_model(self, model: "Model") -> Tuple["Model", DdpWrappedModel]:
         """
         Wrap the AllenNLP `Model`, returning the original model (possibly on a different device)
         and the wrapper.
@@ -100,7 +113,7 @@ class TorchDdpWrapper(DdpWrapper):
         }
 
     @overrides
-    def wrap_model(self, model: Model) -> Tuple[Model, DdpWrappedModel]:
+    def wrap_model(self, model: "Model") -> Tuple["Model", DdpWrappedModel]:
         if self.cuda_device != torch.device("cpu"):
             model = model.cuda(self.cuda_device)
         wrapped_model = torch.nn.parallel.DistributedDataParallel(
@@ -130,7 +143,7 @@ class NoOpDdpWrapper(DdpWrapper):
     """
 
     @overrides
-    def wrap_model(self, model: Model) -> Tuple[Model, DdpWrappedModel]:
+    def wrap_model(self, model: "Model") -> Tuple["Model", DdpWrappedModel]:
         if self.cuda_device != torch.device("cpu"):
             model = model.cuda(self.cuda_device)
         return model, DdpWrappedModel(model)

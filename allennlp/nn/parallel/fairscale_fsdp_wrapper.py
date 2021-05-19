@@ -1,4 +1,4 @@
-from typing import Tuple, Union, Optional, Dict, Any
+from typing import Tuple, Union, Optional, Dict, Any, TYPE_CHECKING
 
 from fairscale.nn import FullyShardedDataParallel as FSDP
 from fairscale.nn.wrap import enable_wrap, auto_wrap, default_auto_wrap_policy
@@ -12,7 +12,10 @@ from allennlp.nn.parallel.ddp_wrapper import (
     StateDictType,
     LoadStateDictReturnType,
 )
-from allennlp.models import Model
+
+if TYPE_CHECKING:
+    # To prevent circular imports
+    from allennlp.models import Model
 
 
 class FairScaleFsdpWrappedModel(DdpWrappedModel):
@@ -25,15 +28,15 @@ class FairScaleFsdpWrappedModel(DdpWrappedModel):
     def load_local_state_dict(
         self, state_dict: StateDictType, strict: bool = True
     ) -> LoadStateDictReturnType:
-        return self.model.load_local_state_dict(state_dict, strict=strict)
+        return self.model.load_local_state_dict(state_dict, strict=strict)  # type: ignore[operator]
 
     @overrides
     def local_state_dict(self, *args, **kwargs) -> Optional[StateDictType]:
-        return self.model.local_state_dict(*args, **kwargs)
+        return self.model.local_state_dict(*args, **kwargs)  # type: ignore[operator]
 
     @overrides
     def clip_grad_norm_(self, max_norm: Union[float, int]) -> torch.Tensor:
-        return self.model.clip_grad_norm_(max_norm)
+        return self.model.clip_grad_norm_(max_norm)  # type: ignore[operator]
 
 
 @DdpWrapper.register("fairscale_fsdp")
@@ -63,7 +66,7 @@ class FairScaleFsdpWrapper(DdpWrapper):
         }
 
     @overrides
-    def wrap_model(self, model: Model) -> Tuple[Model, DdpWrappedModel]:
+    def wrap_model(self, model: "Model") -> Tuple["Model", DdpWrappedModel]:
         wrapped_model = FSDP(
             model,
             **self._fsdp_kwargs,
