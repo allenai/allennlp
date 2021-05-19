@@ -177,7 +177,7 @@ class Optimizer(torch.optim.Optimizer, Registrable):
     we want to use those classes.  To make things easy, we just inherit from those classes, using
     multiple inheritance to also inherit from `Optimizer`.  The only reason we do this is to make
     type inference on parameters possible, so we can construct these objects using our configuration
-    framework.  If you are writing your own script, you can safely ignore these classes and just use
+    framework. If you are writing your own script, you can safely ignore these classes and just use
     the `torch.optim` classes directly.
 
     If you are implementing one of these classes, the `model_parameters` and `parameter_groups`
@@ -188,7 +188,7 @@ class Optimizer(torch.optim.Optimizer, Registrable):
     inconsistent.
 
     Most subclasses of `Optimizer` take both a `model_parameters` and a `parameter_groups`
-    constructor argument.  The `model_parameters` argument does not get an entry in a typical
+    constructor argument. The `model_parameters` argument does not get an entry in a typical
     AllenNLP configuration file, but the `parameter_groups` argument does (if you want a non-default
     value).  See the documentation for the `make_parameter_groups` function for more information on
     how the `parameter_groups` argument should be specified.
