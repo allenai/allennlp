@@ -32,8 +32,6 @@ class HuggingfaceDatasetReader(DatasetReader):
         This is useful since text in allennlp is dealt with as a series of tokens.
     """
 
-    SUPPORTED_SPLITS = [Split.TRAIN, Split.TEST, Split.VALIDATION]
-
     def __init__(
         self,
         dataset_name: str = None,
@@ -55,17 +53,13 @@ class HuggingfaceDatasetReader(DatasetReader):
         self.config_name = config_name
         self.tokenizer = tokenizer
 
+        self.features = None
+
     def load_dataset_split(self, split: str):
-        # TODO add support for datasets.split.NamedSplit
-        if split in self.SUPPORTED_SPLITS:
-            if self.config_name is not None:
-                self.dataset[split] = load_dataset(self.dataset_name, self.config_name, split=split)
-            else:
-                self.dataset[split] = load_dataset(self.dataset_name, split=split)
+        if self.config_name is not None:
+            self.dataset[split] = load_dataset(self.dataset_name, self.config_name, split=split)
         else:
-            raise ValueError(
-                f"Only default splits:{self.SUPPORTED_SPLITS} are currently supported."
-            )
+            self.dataset[split] = load_dataset(self.dataset_name, split=split)
 
     def _read(self, file_path: str) -> Iterable[Instance]:
         """
@@ -77,6 +71,8 @@ class HuggingfaceDatasetReader(DatasetReader):
         # If split is not loaded, load the specific split
         if file_path not in self.dataset:
             self.load_dataset_split(file_path)
+            if self.features is None:
+                self.features = self.dataset[file_path].features
 
         # TODO see if use of Dataset.select() is better
         dataset_split = self.dataset[file_path]
@@ -86,7 +82,7 @@ class HuggingfaceDatasetReader(DatasetReader):
     def raise_feature_not_supported_value_error(value):
         raise ValueError(f"Datasets feature type {type(value)} is not supported yet.")
 
-    def text_to_instance(self, *inputs) -> Instance:
+    def text_to_instance(self, split: str, entry) -> Instance:  # type: ignore
         """
         Takes care of converting dataset entry into AllenNLP friendly instance
 
@@ -106,7 +102,6 @@ class HuggingfaceDatasetReader(DatasetReader):
         # e.g. In a Sentiment dataset an entry could have one feature (of type text/string) indicating the text
         # and another indicate the sentiment (of type int32/ClassLabel)
 
-        split = inputs[0]
         features: Dict[str, FeatureType] = self.dataset[split].features
         fields: Dict[str, Field] = dict()
 
@@ -117,7 +112,7 @@ class HuggingfaceDatasetReader(DatasetReader):
             field_list: list
             feature_type = features[feature_name]
 
-            fields_to_be_added = _map_Feature(feature_name, inputs[1], feature_type, self.tokenizer)
+            fields_to_be_added = _map_Feature(feature_name, entry, feature_type, self.tokenizer)
             for field_key in fields_to_be_added:
                 fields[field_key] = fields_to_be_added[field_key]
 
@@ -178,9 +173,10 @@ def _map_Value(
 
 def _map_Sequence(
     feature_name, value: Sequence, item_feature_type, tokenizer: Optional[Tokenizer]
-) -> Field:
+) -> Union[ListField]:
     field_list: List[Field] = list()
-    field: ListField = None
+    field: ListField
+    item_field: Field
     if isinstance(item_feature_type, Value):
         for item in value:
             # If tokenizer is provided we will use it to split it to tokens
@@ -201,7 +197,7 @@ def _map_Sequence(
 
     elif isinstance(item_feature_type, Sequence):
         for item in value:
-            item_field = _map_Sequence(value.feature, item, tokenizer)
+            item_field = _map_Sequence(value.feature, item, item_feature_type.feature, tokenizer)
             field_list.append(item_field)
 
         if len(field_list) > 0:

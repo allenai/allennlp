@@ -1,16 +1,14 @@
 import pytest
+from allennlp.common.testing import AllenNlpTestCase
+from allennlp.common.util import ensure_list
 from allennlp.data import Tokenizer
+from allennlp.data.dataset_readers import Conll2003DatasetReader
 
 from allennlp.data.dataset_readers.huggingface_datasets_reader import HuggingfaceDatasetReader
 from allennlp.data.tokenizers import WhitespaceTokenizer
 
 
 # TODO Add test where we compare huggingface wrapped reader with an explicitly coded dataset
-# TODO pab-vmware/Abhishek-P Add test where we load conll2003 and test it
-#  the way tested for conll2003 specific reader
-from datasets import list_datasets
-
-
 class HuggingfaceDatasetReaderTest:
 
     """
@@ -158,11 +156,20 @@ class HuggingfaceDatasetReaderTest:
         # Confirm all features were mapped
         assert len(instance.fields) == len(entry)
 
-    def test_load_all(self):
-        for dataset_name in list_datasets():
-            try:
-                print("Dataset:", dataset_name)
-                reader = HuggingfaceDatasetReader(dataset_name)
-                reader.read()
-            except Exception as e:
-                print(e)
+    def test_read_from_file_with_deprecated_parameter(self):
+        conll_reader = HuggingfaceDatasetReader("conll2003")
+        instances = ensure_list(
+            conll_reader.read(AllenNlpTestCase.FIXTURES_ROOT / "data" / "conll2003.txt")
+        )
+
+        expected_labels = ["I-ORG", "O", "I-PER", "O", "O", "I-LOC", "O"]
+
+        fields = instances[0].fields
+        tokens = [t.text for t in fields["tokens"].tokens]
+        assert tokens == ["U.N.", "official", "Ekeus", "heads", "for", "Baghdad", "."]
+        assert fields["tags"].labels == expected_labels
+
+        fields = instances[1].fields
+        tokens = [t.text for t in fields["tokens"].tokens]
+        assert tokens == ["AI2", "engineer", "Joel", "lives", "in", "Seattle", "."]
+        assert fields["tags"].labels == expected_labels
