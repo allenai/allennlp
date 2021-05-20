@@ -77,5 +77,11 @@ class TrainerCallback(Registrable):
         """
         pass
 
+    def state_dict(self) -> Dict[str, Any]:
+        return {}
+
+    def load_state_dict(self, state_dict: Dict[str, Any]) -> None:
+        pass
+
 
 TrainerCallback.register("null")(TrainerCallback)
