@@ -1,5 +1,6 @@
 from inspect import signature
-from typing import List, Callable, Tuple, Dict, cast, TypeVar, Optional
+from typing import Any, List, Callable, Tuple, Dict, cast, TypeVar, Optional
+import copy
 import warnings
 
 from overrides import overrides
@@ -25,6 +26,8 @@ The type of step function that can be passed to [`BeamSearch.search`](#search).
 This can either be [`StepFunctionTypeWithTimestep`](#stepfunctiontypewithtimestep)
 or [`StepFunctionTypeNoTimestep`](#stepfunctiontypenotimestep).
 """
+
+ConstraintStateType = List[List[Dict[str, Any]]]
 
 
 class Sampler(Registrable):
@@ -431,6 +434,145 @@ class GumbelSampler(Sampler):
         return T - torch.nn.functional.relu(v) - torch.log1p(torch.exp(-v.abs()))
 
 
+class Constraint(Registrable):
+    """
+    An abstract class that can be used to enforce constraints on the output predictions
+    by manipulate the class log probabilities during beam search.
+
+    A `Constraint` just has three methods, `init_state()`, `apply()` and `update_state()`.
+
+    `init_state()` takes one argument:
+
+    - the batch size, an int
+
+    It returns a constraint state, which is a nested list of dictionaries, with any state needed for subsequent
+    calls to `apply()` and `update_state()`. The length of the outer list should be equal to `batch_size`.
+    Each inner list should be of length 1.
+
+    `apply()` takes two arguments:
+
+    - the constraint state, which is a nested list of dictionaries. The length of the outer list is `batch_size`
+    and the length of each inner list is `beam_size` except on the first time `apply()` is called when it is 1.
+    - `class_log_probabilities`, a tensor of shape `(batch_size, beam_size, num_classes)` that contains the
+    log probabilities for the classes during search. The first time `apply()` is called, `beam_size = 1`.
+
+    The `apply()` method should manipulate the `class_log_probabilities` in place to enforce the constraint
+    for this step of beam search. For instance, it may prevent a specific class from being selected by setting
+    the corresponding log probability to `-inf`.
+
+    `update_state()` takes three arguments:
+
+    - the constraint state, again, a nested list of dictionaries of length `batch_size`. Each inner list is
+    length `beam_size` except on the first call of `update_state()` when it is 1.
+    - predictions, a list of tensors containing the predictions thus far, each of shape `(batch_size, beam_size)`
+    - backpointers, a list of tensors containing the beam indices of the parent beams for `predictions`, each
+    of size `(batch_size, beam_size)`
+
+    The `update_state()` method should create a new constraint state that reflects the latest predictions made
+    during beam search.
+
+    `update_state()` should return a new constraint state: a nested list of dictionaries of length `batch_size`
+    and inner list length of `beam_size`.
+
+    """
+
+    def init_state(
+        self,
+        batch_size: int,
+    ) -> ConstraintStateType:
+        raise NotImplementedError
+
+    def apply(
+        self,
+        state: ConstraintStateType,
+        class_log_probabilities: torch.Tensor,
+    ) -> None:
+        raise NotImplementedError
+
+    def update_state(
+        self,
+        state: ConstraintStateType,
+        predictions: List[torch.Tensor],
+        backpointers: List[torch.Tensor],
+    ) -> ConstraintStateType:
+        raise NotImplementedError
+
+
+@Constraint.register("ngram-blocking")
+class NGramBlockingConstraint(Constraint):
+    def __init__(self, ngram_size: int) -> None:
+        super().__init__()
+        self.ngram_size = ngram_size
+
+    @overrides
+    def init_state(
+        self,
+        batch_size: int,
+    ) -> ConstraintStateType:
+        return [[{"seen_ngrams": {}, "current_prefix": []}] for _ in range(batch_size)]
+
+    @overrides
+    def apply(
+        self,
+        state: ConstraintStateType,
+        class_log_probabilities: torch.Tensor,
+    ) -> None:
+        for i, batch in enumerate(state):
+            for j, beam in enumerate(batch):
+                current_prefix = tuple(state[i][j]["current_prefix"])
+                seen_ngrams = state[i][j]["seen_ngrams"]
+                try:
+                    disallowed_indices = seen_ngrams[current_prefix]
+                    class_log_probabilities[i, j, disallowed_indices] = float("-inf")
+                except KeyError:
+                    # We have not seen this prefix before, so there is no index
+                    # that needs to be blocked
+                    pass
+
+    @overrides
+    def update_state(
+        self,
+        state: ConstraintStateType,
+        predictions: List[torch.Tensor],
+        backpointers: List[torch.Tensor],
+    ) -> ConstraintStateType:
+        last_prediction = predictions[-1]
+        batch_size, beam_size = last_prediction.size()
+        new_state = [[{} for _ in range(beam_size)] for _ in range(batch_size)]
+
+        for i in range(batch_size):
+            for j in range(beam_size):
+                prediction = last_prediction[i, j].item()
+
+                if len(backpointers) == 0:
+                    # This is the first prediction, so the backpointer is 0
+                    backpointer = 0
+                else:
+                    backpointer = backpointers[-1][i, j].item()
+
+                # Make a copy of the prefix and seen_ngrams map. They will be
+                # edited, and the edits are specific to this prediction sequence. The
+                # `seen_ngrams` must be a deep copy so the inner lists of indices to
+                # block gets copied as well instead of just its reference
+                prefix = copy.copy(state[i][backpointer]["current_prefix"])
+                seen_ngrams = copy.deepcopy(state[i][backpointer]["seen_ngrams"])
+
+                if len(prefix) == self.ngram_size - 1:
+                    # This is a new ngram that we have to remember
+                    if tuple(prefix) not in seen_ngrams:
+                        seen_ngrams[tuple(prefix)] = []
+                    seen_ngrams[tuple(prefix)].append(prediction)
+
+                # Create the new prefix, removing the oldest index if the prefix
+                # is too long
+                prefix.append(prediction)
+                if len(prefix) == self.ngram_size:
+                    prefix.pop(0)
+
+                new_state[i][j] = {"current_prefix": prefix, "seen_ngrams": seen_ngrams}
+        return new_state
+
+
 class BeamSearch(FromParams):
     """
     Implements the beam search algorithm for decoding the most likely sequences.
@@ -477,6 +619,7 @@ class BeamSearch(FromParams):
         per_node_beam_size: int = None,
         sampler: Sampler = None,
         min_steps: Optional[int] = None,
+        constraints: Optional[List[Constraint]] = None,
     ) -> None:
         if not max_steps > 0:
             raise ValueError("max_steps must be positive")
@@ -496,6 +639,7 @@ class BeamSearch(FromParams):
         self.per_node_beam_size = per_node_beam_size or beam_size
         self.sampler = sampler or DeterministicSampler()
         self.min_steps = min_steps or 0
+        self.constraints = constraints or []
 
     @staticmethod
     def _reconstruct_sequences(predictions, backpointers):
@@ -618,6 +762,8 @@ class BeamSearch(FromParams):
         # predictions[t-1][i][n], that it came from.
         backpointers: List[torch.Tensor] = []
 
+        constraint_states = [constraint.init_state(batch_size) for constraint in self.constraints]
+
         # Calculate the first timestep. This is done outside the main loop
         # because we are going from a single decoder input (the output from the
         # encoder) to the top `beam_size` decoder outputs. On the other hand,
@@ -640,6 +786,12 @@ class BeamSearch(FromParams):
         sampler_state = self.sampler.init_state(
             start_class_log_probabilities, batch_size, num_classes
         )
+
+        for constraint, constraint_state in zip(self.constraints, constraint_states):
+            # shape: (batch_size, 1, num_classes)
+            expanded_start_class_log_probabilities = start_class_log_probabilities.unsqueeze(1)
+
+            constraint.apply(constraint_state, expanded_start_class_log_probabilities)
 
         # Prevent selecting the end symbol if there is any min_steps constraint
         if self.min_steps >= 1:
@@ -678,6 +830,11 @@ class BeamSearch(FromParams):
         # Set the same state for each element in the beam.
         self._update_initial_state(state, batch_size)
 
+        for i, constraint in enumerate(self.constraints):
+            constraint_states[i] = constraint.update_state(
+                constraint_states[i], predictions, backpointers
+            )
+
         for timestep in range(self.max_steps - 1):
             # shape: (batch_size * beam_size,)
             last_predictions = predictions[-1].reshape(batch_size * self.beam_size)
@@ -690,6 +847,13 @@ class BeamSearch(FromParams):
             # and updates the state.
             # shape: (batch_size * beam_size, num_classes)
             class_log_probabilities, state = step(last_predictions, state, timestep + 1)
+
+            for constraint, constraint_state in zip(self.constraints, constraint_states):
+                # shape: (batch_size, beam_size, num_classes)
+                reshaped_class_log_probabilities = class_log_probabilities.view(
+                    batch_size, self.beam_size, -1
+                )
+                constraint.apply(constraint_state, reshaped_class_log_probabilities)
 
             # The `timestep`-th iteration of the for loop is generating the `timestep + 2`-th token
             # of the sequence (because `timestep` is 0-indexed and we generated the first token
@@ -772,6 +936,11 @@ class BeamSearch(FromParams):
             # Keep only the pieces of the state tensors corresponding to the
             # ancestors created this iteration.
             self._update_state(state, backpointer)
+
+            for i, constraint in enumerate(self.constraints):
+                constraint_states[i] = constraint.update_state(
+                    constraint_states[i], predictions, backpointers
+                )
 
         if not torch.isfinite(last_log_probabilities).all():
             warnings.warn(

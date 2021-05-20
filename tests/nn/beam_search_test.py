@@ -12,6 +12,7 @@ from allennlp.nn.beam_search import (
     TopKSampler,
     TopPSampler,
     GumbelSampler,
+    NGramBlockingConstraint,
 )
 from allennlp.common.params import Params
 
@@ -538,3 +539,83 @@ class BeamSearchTest(AllenNlpTestCase):
 
         assert all([x >= 0 and x < 4 for x in indices[0]])
         assert all([x > 1 and x <= 5 for x in indices[1]])
+
+    def test_ngram_blocking_constraint_init_state(self):
+        ngram_size = 3
+        batch_size = 2
+        constraint = NGramBlockingConstraint(ngram_size)
+
+        state = constraint.init_state(batch_size)
+        assert len(state) == batch_size
+        for beam_states in state:
+            assert len(beam_states) == 1
+            beam_state = beam_states[0]
+            assert len(beam_state.keys()) == 2
+            assert len(beam_state["current_prefix"]) == 0
+            assert len(beam_state["seen_ngrams"]) == 0
+
+    def test_ngram_blocking_constraint_apply(self):
+        ngram_size = 3
+        batch_size = 2
+        beam_size = 2
+        num_classes = 10
+        constraint = NGramBlockingConstraint(ngram_size)
+
+        state = [
+            [
+                {"current_prefix": [0, 1], "seen_ngrams": {}},
+                {"current_prefix": [2, 3], "seen_ngrams": {(2, 3): [4]}},
+            ],
+            [
+                {"current_prefix": [4, 5], "seen_ngrams": {(8, 9): []}},
+                {"current_prefix": [6, 7], "seen_ngrams": {(6, 7): [0, 1, 2]}},
+            ],
+        ]
+        log_probabilities = torch.rand(batch_size, beam_size, num_classes)
+        constraint.apply(state, log_probabilities)
+
+        disallowed_locations = torch.nonzero(log_probabilities == float("-inf")).tolist()
+        assert len(disallowed_locations) == 4
+        assert [0, 1, 4] in disallowed_locations
+        assert [1, 1, 0] in disallowed_locations
+        assert [1, 1, 1] in disallowed_locations
+        assert [1, 1, 2] in disallowed_locations
+
+    def test_ngram_blocking_constraint_update_state(self):
+        ngram_size = 3
+        constraint = NGramBlockingConstraint(ngram_size)
+
+        # We will have [2, 3] -> {5, 6} from batch index 0 and [4, 5] -> {0} and [6, 7] -> {3}
+        # from batch index
+        state = [
+            [
+                {"current_prefix": [0, 1], "seen_ngrams": {}},
+                {"current_prefix": [2, 3], "seen_ngrams": {(2, 3): [4]}},
+            ],
+            [
+                {"current_prefix": [4, 5], "seen_ngrams": {(8, 9): []}},
+                {"current_prefix": [6, 7], "seen_ngrams": {(6, 7): [0, 1, 2]}},
+            ],
+        ]
+        predictions = [
+            torch.LongTensor(
+                [
+                    [5, 6],
+                    [0, 3],
+                ]
+            )
+        ]
+        backpointers = [torch.LongTensor([[1, 1], [0, 1]])]
+
+        expected_state = [
+            [
+                {"current_prefix": [3, 5], "seen_ngrams": {(2, 3): [4, 5]}},
+                {"current_prefix": [3, 6], "seen_ngrams": {(2, 3): [4, 6]}},
+            ],
+            [
+                {"current_prefix": [5, 0], "seen_ngrams": {(8, 9): [], (4, 5): [0]}},
+                {"current_prefix": [7, 3], "seen_ngrams": {(6, 7): [0, 1, 2, 3]}},
+            ],
+        ]
+        updated_state = constraint.update_state(state, predictions, backpointers)
+        assert updated_state == expected_state
