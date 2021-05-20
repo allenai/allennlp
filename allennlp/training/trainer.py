@@ -653,108 +653,108 @@ class GradientDescentTrainer(Trainer):
         # Replace parameter values with the shadow values from the moving averages.
         if self._moving_average is not None:
             self._moving_average.assign_average_value()
-
-        if self._validation_data_loader is not None:
-            validation_data_loader = self._validation_data_loader
-        else:
-            raise ConfigurationError(
-                "Validation results cannot be calculated without a validation_data_loader"
-            )
-
-        regularization_penalty = self.model.get_regularization_penalty()
-
-        # Having multiple tqdm bars in case of distributed training will be a mess. Hence only the primary's
-        # progress is shown
-        if self._primary:
-            val_generator_tqdm = Tqdm.tqdm(validation_data_loader)
-        else:
-            val_generator_tqdm = validation_data_loader
-
-        batches_this_epoch = 0
-        val_loss = 0.0
-        val_batch_loss = 0.0
-        val_reg_loss = None if regularization_penalty is None else 0.0
-        val_batch_reg_loss = None if regularization_penalty is None else 0.0
-        done_early = False
-        for batch in val_generator_tqdm:
-            if self._distributed:
-                # Check whether the other workers have stopped already (due to differing amounts of
-                # data in each). If so, we can't proceed because we would hang when we hit the
-                # barrier implicit in Model.forward. We use a IntTensor instead a BoolTensor
-                # here because NCCL process groups apparently don't support BoolTensor.
-                done = torch.tensor(0, device=self.cuda_device)
-                torch.distributed.all_reduce(done, torch.distributed.ReduceOp.SUM)
-                if done.item() > 0:
-                    done_early = True
-                    logger.warning(
-                        f"Worker {torch.distributed.get_rank()} finishing validation early! "
-                        "This implies that there is an imbalance in your validation "
-                        "data across the workers and that some amount of it will be "
-                        "ignored. A small amount of this is fine, but a major imbalance "
-                        "should be avoided. Note: This warning will appear unless your "
-                        "data is perfectly balanced."
-                    )
-                    break
-
-            with amp.autocast(self._use_amp):
-                batch_outputs = self.batch_outputs(batch, for_training=False)
-                loss = batch_outputs.get("loss")
-                reg_loss = batch_outputs.get("reg_loss")
-                if loss is not None:
-                    # You shouldn't necessarily have to compute a loss for validation, so we allow for
-                    # `loss` to be None.  We need to be careful, though - `batches_this_epoch` is
-                    # currently only used as the divisor for the loss function, so we can safely only
-                    # count those batches for which we actually have a loss.  If this variable ever
-                    # gets used for something else, we might need to change things around a bit.
-                    batches_this_epoch += 1
-                    val_batch_loss = loss.item()
-                    val_loss += val_batch_loss
-                    if reg_loss is not None:
-                        val_batch_reg_loss = reg_loss.item()
-                        val_reg_loss += val_batch_reg_loss  # type: ignore
-
-            # Update the description with the latest metrics
-            val_metrics = training_util.get_metrics(
-                self.model,
-                val_loss,
-                val_reg_loss,
-                val_batch_loss,
-                val_batch_reg_loss,
-                batches_this_epoch,
-                world_size=self._world_size,
-                cuda_device=self.cuda_device,
-            )
-
-            description = training_util.description_from_metrics(val_metrics)
-            if self._primary:
-                val_generator_tqdm.set_description(description, refresh=False)
-
-            for callback in self._callbacks:
-                callback.on_batch(
-                    self,
-                    [batch],
-                    [batch_outputs],
-                    val_metrics,
-                    epoch,
-                    batches_this_epoch,
-                    is_training=False,
-                    is_primary=self._primary,
+        try:
+            if self._validation_data_loader is not None:
+                validation_data_loader = self._validation_data_loader
+            else:
+                raise ConfigurationError(
+                    "Validation results cannot be calculated without a validation_data_loader"
                 )
 
-        if self._distributed and not done_early:
-            logger.warning(
-                f"Worker {torch.distributed.get_rank()} completed its entire epoch (validation)."
-            )
-            # Indicate that we're done so that any workers that have remaining data stop validation early.
-            done = torch.tensor(1, device=self.cuda_device)
-            torch.distributed.all_reduce(done, torch.distributed.ReduceOp.SUM)
-            assert done.item()
+            regularization_penalty = self.model.get_regularization_penalty()
 
-        # Now restore the original parameter values.
-        if self._moving_average is not None:
-            self._moving_average.restore()
+            # Having multiple tqdm bars in case of distributed training will be a mess. Hence only the primary's
+            # progress is shown
+            if self._primary:
+                val_generator_tqdm = Tqdm.tqdm(validation_data_loader)
+            else:
+                val_generator_tqdm = validation_data_loader
 
-        return val_loss, val_reg_loss, batches_this_epoch
+            batches_this_epoch = 0
+            val_loss = 0.0
+            val_batch_loss = 0.0
+            val_reg_loss = None if regularization_penalty is None else 0.0
+            val_batch_reg_loss = None if regularization_penalty is None else 0.0
+            done_early = False
+            for batch in val_generator_tqdm:
+                if self._distributed:
+                    # Check whether the other workers have stopped already (due to differing amounts of
+                    # data in each). If so, we can't proceed because we would hang when we hit the
+                    # barrier implicit in Model.forward. We use a IntTensor instead a BoolTensor
+                    # here because NCCL process groups apparently don't support BoolTensor.
+                    done = torch.tensor(0, device=self.cuda_device)
+                    torch.distributed.all_reduce(done, torch.distributed.ReduceOp.SUM)
+                    if done.item() > 0:
+                        done_early = True
+                        logger.warning(
+                            f"Worker {torch.distributed.get_rank()} finishing validation early! "
+                            "This implies that there is an imbalance in your validation "
+                            "data across the workers and that some amount of it will be "
+                            "ignored. A small amount of this is fine, but a major imbalance "
+                            "should be avoided. Note: This warning will appear unless your "
+                            "data is perfectly balanced."
+                        )
+                        break
+
+                with amp.autocast(self._use_amp):
+                    batch_outputs = self.batch_outputs(batch, for_training=False)
+                    loss = batch_outputs.get("loss")
+                    reg_loss = batch_outputs.get("reg_loss")
+                    if loss is not None:
+                        # You shouldn't necessarily have to compute a loss for validation, so we allow for
+                        # `loss` to be None.  We need to be careful, though - `batches_this_epoch` is
+                        # currently only used as the divisor for the loss function, so we can safely only
+                        # count those batches for which we actually have a loss.  If this variable ever
+                        # gets used for something else, we might need to change things around a bit.
+                        batches_this_epoch += 1
+                        val_batch_loss = loss.item()
+                        val_loss += val_batch_loss
+                        if reg_loss is not None:
+                            val_batch_reg_loss = reg_loss.item()
+                            val_reg_loss += val_batch_reg_loss  # type: ignore
+
+                # Update the description with the latest metrics
+                val_metrics = training_util.get_metrics(
+                    self.model,
+                    val_loss,
+                    val_reg_loss,
+                    val_batch_loss,
+                    val_batch_reg_loss,
+                    batches_this_epoch,
+                    world_size=self._world_size,
+                    cuda_device=self.cuda_device,
+                )
+
+                description = training_util.description_from_metrics(val_metrics)
+                if self._primary:
+                    val_generator_tqdm.set_description(description, refresh=False)
+
+                for callback in self._callbacks:
+                    callback.on_batch(
+                        self,
+                        [batch],
+                        [batch_outputs],
+                        val_metrics,
+                        epoch,
+                        batches_this_epoch,
+                        is_training=False,
+                        is_primary=self._primary,
+                    )
+
+            if self._distributed and not done_early:
+                logger.warning(
+                    f"Worker {torch.distributed.get_rank()} completed its entire epoch (validation)."
+                )
+                # Indicate that we're done so that any workers that have remaining data stop validation early.
+                done = torch.tensor(1, device=self.cuda_device)
+                torch.distributed.all_reduce(done, torch.distributed.ReduceOp.SUM)
+                assert done.item()
+
+            return val_loss, val_reg_loss, batches_this_epoch
+        finally:
+            # Now restore the original parameter values.
+            if self._moving_average is not None:
+                self._moving_average.restore()
 
     def train(self) -> Dict[str, Any]:
         """
