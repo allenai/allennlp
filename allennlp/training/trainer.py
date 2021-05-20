@@ -77,7 +77,7 @@ class Trainer(Registrable):
 
         if isinstance(cuda_device, list):
             raise ConfigurationError(
-                "In allennlp 1.0, the Trainer can only be assigned a single `cuda_device`. "
+                "In AllenNLP 1.0, the Trainer can only be assigned a single `cuda_device`. "
                 "Instead, we use torch's DistributedDataParallel at the command level, meaning "
                 "our Trainer always uses a single GPU per process."
             )
