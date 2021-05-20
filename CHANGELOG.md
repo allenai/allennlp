@@ -25,6 +25,8 @@ on a downstream task.
 - Added `EvaluateBiasMitigation`, which evaluates the effectiveness of bias mitigation by computing
 SNLI-related metrics for a bias-mitigated and baseline model.
 - Added `allennlp diff` command to compute a diff on model checkpoints, analogous to what `git diff` does on two files.
+- Meta data defined by the class `allennlp.common.meta.Meta` is now saved in the serialization directory and archive file
+  when training models from the command line. This is also now part of the `Archive` named tuple that's returned from `load_archive()`.
 - Added `nn.util.distributed_device()` helper function.
 - Added `allennlp.nn.util.load_state_dict` helper function.
 - Added a way to avoid downloading and loading pretrained weights in modules that wrap transformers
@@ -34,6 +36,7 @@ SNLI-related metrics for a bias-mitigated and baseline model.
 - Added `SpanExtractorWithSpanWidthEmbedding`, putting specific span embedding computations into the `_embed_spans` method and leaving the common code in `SpanExtractorWithSpanWidthEmbedding` to unify the arguments, and modified `BidirectionalEndpointSpanExtractor`, `EndpointSpanExtractor` and `SelfAttentiveSpanExtractor` accordingly. Now, `SelfAttentiveSpanExtractor` can also embed span widths.
 - Added a `min_steps` parameter to `BeamSearch` to set a minimum length for the predicted sequences.
 - Added the `FinalSequenceScorer` abstraction to calculate the final scores of the generated sequences in `BeamSearch`. 
+- Added `shuffle` argument to `BucketBatchSampler` which allows for disabling shuffling.
 
 ### Fixed
 
