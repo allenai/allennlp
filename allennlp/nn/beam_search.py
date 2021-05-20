@@ -708,6 +708,10 @@ class BeamSearch(FromParams):
         The output from this module is what is returned by the `search` method. If not
         specified, `SequenceLogProbabilityScorer` will be used, which scores the sequences
         by the sum of the token log probabilities.
+
+    constraints: `List[Constraint]`, optional (default = `None`)
+        An optional list of `Constraint`s which should be applied during beam search. If not
+        provided, no constraints will be enforced.
     """
 
     def __init__(
