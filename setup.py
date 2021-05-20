@@ -21,7 +21,7 @@ with open("allennlp/version.py", "r") as version_file:
     exec(version_file.read(), VERSION)
 
 
-EXTRAS: Dict[str, List[str]] = {"fairscale": ["fairscale>=0.3.6,<0.4.0"]}
+EXTRAS: Dict[str, List[str]] = {"fairscale": ["fairscale>=0.3.7,<0.4.0"]}
 
 
 def add_all_extras():
