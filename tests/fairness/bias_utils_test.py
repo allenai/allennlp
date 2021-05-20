@@ -3,6 +3,7 @@ import torch
 
 from allennlp.fairness.bias_utils import load_words, load_word_pairs
 
+from allennlp.common.file_utils import cached_path
 from allennlp.common.testing.test_case import AllenNlpTestCase
 from allennlp.data import Instance, Token
 from allennlp.data.batch import Batch
@@ -16,8 +17,11 @@ class BiasUtilsTest(AllenNlpTestCase):
     def setup_method(self):
         token_indexer = SingleIdTokenIndexer("tokens")
 
-        self.pairs_fname = str(self.FIXTURES_ROOT / "fairness" / "definitional_pairs.json")
-        with open(self.pairs_fname) as f:
+        self.pairs_fname = (
+            "https://raw.githubusercontent.com/tolga-b/debiaswe/"
+            "4c3fa843ffff45115c43fe112d4283c91d225c09/data/definitional_pairs.json"
+        )
+        with open(cached_path(self.pairs_fname)) as f:
             pairs_list = []
             [
                 pairs_list.extend(
@@ -35,8 +39,11 @@ class BiasUtilsTest(AllenNlpTestCase):
         self.pairs_vocab = Vocabulary.from_instances(dataset)
         self.num_pairs = len(set(pairs_list))
 
-        self.singles_fname = str(self.FIXTURES_ROOT / "fairness" / "gender_specific_full.json")
-        with open(self.singles_fname) as f:
+        self.singles_fname = (
+            "https://raw.githubusercontent.com/tolga-b/debiaswe/"
+            "4c3fa843ffff45115c43fe112d4283c91d225c09/data/gender_specific_full.json"
+        )
+        with open(cached_path(self.singles_fname)) as f:
             singles_list = json.load(f)
 
         text_field = TextField(

@@ -3,6 +3,7 @@ import json
 from os import PathLike
 from typing import List, Tuple, Union
 
+from allennlp.common.file_utils import cached_path
 from allennlp.data import Vocabulary
 from allennlp.data.tokenizers.tokenizer import Tokenizer
 
@@ -57,7 +58,7 @@ def load_words(
         each word in the file.
     """
     word_ids = []
-    with open(fname) as f:
+    with open(cached_path(fname)) as f:
         words = json.load(f)
         for w in words:
             word_ids.extend(_convert_word_to_ids_tensor(w, tokenizer, vocab, namespace, all_cases))
@@ -98,7 +99,7 @@ def load_word_pairs(
     """
     word_ids1 = []
     word_ids2 = []
-    with open(fname) as f:
+    with open(cached_path(fname)) as f:
         words = json.load(f)
         for w1, w2 in words:
             word_ids1.extend(

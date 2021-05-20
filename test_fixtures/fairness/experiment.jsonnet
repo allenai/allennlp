@@ -50,14 +50,14 @@ local transformer_dim = 20;
       "type": "hard",
       "bias_direction": {
         "type": "paired_pca",
-        "seed_word_pairs_file": "test_fixtures/fairness/definitional_pairs.json",
+        "seed_word_pairs_file": "https://raw.githubusercontent.com/tolga-b/debiaswe/4c3fa843ffff45115c43fe112d4283c91d225c09/data/definitional_pairs.json",
         "tokenizer": {
           "type": "pretrained_transformer",
           "model_name": transformer_model,
           "max_length": 512
         }
       },
-      "equalize_word_pairs_file": "test_fixtures/fairness/equalize_pairs.json",
+      "equalize_word_pairs_file": "https://raw.githubusercontent.com/tolga-b/debiaswe/4c3fa843ffff45115c43fe112d4283c91d225c09/data/equalize_pairs.json",
       "tokenizer": {
         "type": "pretrained_transformer",
         "model_name": transformer_model,
