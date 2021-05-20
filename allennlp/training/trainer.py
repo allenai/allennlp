@@ -948,7 +948,7 @@ class GradientDescentTrainer(Trainer):
         from model parameters. This function should only be used to continue training -
         if you wish to load a model for inference/load parts of a model into a new
         computation graph, you should use the native Pytorch functions:
-        ` model.load_state_dict(torch.load("/path/to/model/weights.th"))`
+        `model.load_state_dict(torch.load("/path/to/model/weights.pt"))`
 
         If `self._serialization_dir` does not exist or does not contain any checkpointed weights,
         this function will do nothing and return 0.
