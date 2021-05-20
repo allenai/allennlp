@@ -8,7 +8,7 @@ from allennlp.data.tokenizers import WhitespaceTokenizer
 # TODO Add test where we compare huggingface wrapped reader with an explicitly coded dataset
 # TODO pab-vmware/Abhishek-P Add test where we load conll2003 and test it
 #  the way tested for conll2003 specific reader
-from datasets import list_datasets, load_dataset
+from datasets import list_datasets
 
 
 class HuggingfaceDatasetReaderTest:
@@ -166,5 +166,3 @@ class HuggingfaceDatasetReaderTest:
                 reader.read()
             except Exception as e:
                 print(e)
-
-

@@ -133,16 +133,24 @@ def _map_Feature(
         fields_to_be_added[feature_name] = _map_ClassLabel(feature_name, entry[feature_name])
     # datasets Value can be of different types
     elif isinstance(feature_type, Value):
-        fields_to_be_added[feature_name] = _map_Value(feature_name, entry[feature_name], feature_type, tokenizer)
+        fields_to_be_added[feature_name] = _map_Value(
+            feature_name, entry[feature_name], feature_type, tokenizer
+        )
 
     elif isinstance(feature_type, Sequence):
-        fields_to_be_added[feature_name] = _map_Sequence(feature_name, entry, feature_type.feature, tokenizer)
+        fields_to_be_added[feature_name] = _map_Sequence(
+            feature_name, entry, feature_type.feature, tokenizer
+        )
 
     elif isinstance(feature_type, Translation):
-        fields_to_be_added = _map_Translation(feature_name, entry[feature_name], feature_type, tokenizer)
+        fields_to_be_added = _map_Translation(
+            feature_name, entry[feature_name], feature_type, tokenizer
+        )
 
     elif isinstance(feature_type, TranslationVariableLanguages):
-        fields_to_be_added = _map_TranslationVariableLanguages(feature_name, entry[feature_name], feature_type, tokenizer)
+        fields_to_be_added = _map_TranslationVariableLanguages(
+            feature_name, entry[feature_name], feature_type, tokenizer
+        )
 
     else:
         raise ValueError(f"Datasets feature type {type(feature_type)} is not supported yet.")
@@ -163,12 +171,14 @@ def _map_Value(
         # If tokenizer is provided we will use it to split it to tokens
         # Else put whole text as a single token
         field = _map_String(value, tokenizer)
-
     else:
         field = LabelField(value, label_namespace=feature_name, skip_indexing=True)
     return field
 
-def _map_Sequence(feature_name, value:Sequence, item_feature_type, tokenizer:Optional[Tokenizer]) -> Field:
+
+def _map_Sequence(
+    feature_name, value: Sequence, item_feature_type, tokenizer: Optional[Tokenizer]
+) -> Field:
     field_list: List[Field] = list()
     field: ListField = None
     if isinstance(item_feature_type, Value):
@@ -178,7 +188,7 @@ def _map_Sequence(feature_name, value:Sequence, item_feature_type, tokenizer:Opt
             item_field = _map_Value(value.feature, item, item.value, tokenizer)
             field_list.append(item_field)
         if len(field_list) > 0:
-             field = ListField(field_list)
+            field = ListField(field_list)
 
     # datasets Sequence of strings to ListField of LabelField
     elif isinstance(item_feature_type, ClassLabel):
@@ -202,6 +212,7 @@ def _map_Sequence(feature_name, value:Sequence, item_feature_type, tokenizer:Opt
 
     return field
 
+
 def _map_Translation(
     feature_name: str, value: Translation, feature_type, tokenizer: Optional[Tokenizer]
 ) -> Dict[str, Field]:
@@ -219,7 +230,10 @@ def _map_Translation(
             texts.append(TextField(tokens))
 
         fields[feature_name + "-languages"] = ListField(
-            [_map_to_Label(feature_name + "-languages", lang, skip_indexing=False) for lang in langs]
+            [
+                _map_to_Label(feature_name + "-languages", lang, skip_indexing=False)
+                for lang in langs
+            ]
         )
         fields[feature_name + "-texts"] = ListField(texts)
 
@@ -230,7 +244,10 @@ def _map_Translation(
 
 
 def _map_TranslationVariableLanguages(
-    feature_name: str, value: TranslationVariableLanguages, feature_type, tokenizer: Optional[Tokenizer]
+    feature_name: str,
+    value: TranslationVariableLanguages,
+    feature_type,
+    tokenizer: Optional[Tokenizer],
 ) -> Dict[str, Field]:
     fields: Dict[str, Field] = dict()
     if feature_type.dtype == "dict":
