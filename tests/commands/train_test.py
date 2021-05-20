@@ -13,6 +13,7 @@ from typing import Optional, List, Dict, Any
 import pytest
 import torch
 
+from allennlp.version import VERSION
 from allennlp.commands.train import Train, train_model, train_model_from_args, TrainModel
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
@@ -74,6 +75,20 @@ class TrainingDeviceLoggerOnBatchCallback(TrainerCallback):
             _seen_training_devices.add(tensor.device)
 
 
+@TrainerCallback.register("training_primary_check")
+class TrainingPrimaryCheckCallback(TrainerCallback):
+    """
+    Makes sure there is only one primary worker.
+    """
+
+    def on_start(
+        self, trainer: "GradientDescentTrainer", is_primary: bool = True, **kwargs
+    ) -> None:
+        super().on_start(trainer, is_primary=is_primary, **kwargs)
+        if is_primary:
+            assert torch.distributed.get_rank() == 0
+
+
 class TestTrain(AllenNlpTestCase):
     DEFAULT_PARAMS = Params(
         {
@@ -95,7 +110,11 @@ class TestTrain(AllenNlpTestCase):
     def test_train_model(self):
         params = lambda: copy.deepcopy(self.DEFAULT_PARAMS)
 
-        train_model(params(), serialization_dir=os.path.join(self.TEST_DIR, "test_train_model"))
+        serialization_dir = os.path.join(self.TEST_DIR, "test_train_model")
+        train_model(params(), serialization_dir=serialization_dir)
+        archive = load_archive(os.path.join(serialization_dir, "model.tar.gz"))
+        assert archive.meta is not None
+        assert archive.meta.version == VERSION
 
         # It's OK if serialization dir exists but is empty:
         serialization_dir2 = os.path.join(self.TEST_DIR, "empty_directory")
@@ -209,7 +228,13 @@ class TestTrain(AllenNlpTestCase):
                 "train_data_path": SEQUENCE_TAGGING_DATA_PATH,
                 "validation_data_path": SEQUENCE_TAGGING_DATA_PATH,
                 "data_loader": {"batch_size": 2},
-                "trainer": {"num_epochs": 2, "optimizer": "adam"},
+                "trainer": {
+                    "num_epochs": 2,
+                    "optimizer": "adam",
+                    # Need to use the fully qualified name here so the distributed workers
+                    # can import it.
+                    "callbacks": ["tests.commands.train_test.TrainingPrimaryCheckCallback"],
+                },
                 "distributed": {"cuda_devices": devices},
             }
         )

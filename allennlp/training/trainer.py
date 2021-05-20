@@ -5,6 +5,7 @@ import os
 import re
 import time
 import traceback
+import warnings
 from contextlib import contextmanager
 from typing import Any, Dict, Iterator, List, Optional, Tuple, Union, Type
 
@@ -23,7 +24,11 @@ from allennlp.common.checks import ConfigurationError, check_for_gpu
 from allennlp.data import DataLoader, TensorDict
 from allennlp.models.model import Model
 from allennlp.training import util as training_util
-from allennlp.training.callbacks import TrainerCallback, SanityChecksCallback, ConsoleLoggerCallback
+from allennlp.training.callbacks import (
+    TrainerCallback,
+    ConfidenceChecksCallback,
+    ConsoleLoggerCallback,
+)
 from allennlp.training.checkpointer import Checkpointer
 from allennlp.training.learning_rate_schedulers import LearningRateScheduler
 from allennlp.training.metric_tracker import MetricTracker
@@ -182,10 +187,20 @@ class GradientDescentTrainer(Trainer):
         A `Checkpointer` is responsible for periodically saving model weights.  If none is given
         here, we will construct one with default parameters.
 
-    cuda_device : `int`, optional (default = `-1`)
-        An integer specifying the CUDA device(s) to use for this process. If -1, the CPU is used.
-        Data parallelism is controlled at the allennlp train level, so each trainer will have a single
-        GPU.
+    cuda_device : `Optional[Union[int, torch.device]]`, optional (default = `None`)
+        An integer or `torch.device` specifying the CUDA device to use for this process.
+        If -1, the CPU is used. If `None` and you have a GPU available, that GPU will be used.
+
+        !!! Note
+            If you *don't* intend to use a GPU, but you have one available, you'll need
+            to explicitly set `cuda_device=-1`.
+
+        !!! Note
+            If you intend to use a GPU, your model already needs to be on the correct device,
+            which you can do with `model = model.cuda()`.
+
+        !!! Note
+            Data parallelism is controlled at the allennlp train level, so each trainer will have a single GPU.
 
     grad_norm : `float`, optional, (default = `None`).
         If provided, gradient norms will be rescaled to have a maximum of this value.
@@ -253,10 +268,13 @@ class GradientDescentTrainer(Trainer):
         addition to any other callbacks listed in the `callbacks` parameter.
         When set to `False`, `DEFAULT_CALLBACKS` are not used.
 
+    run_confidence_checks : `bool`, optional (default = `True`)
+        Determines whether model confidence checks, such as
+        [`NormalizationBiasVerification`](../../confidence_checks/normalization_bias_verification/),
+        are run.
+
     run_sanity_checks : `bool`, optional (default = `True`)
-        Determines whether model sanity checks, such as
-        [`NormalizationBiasVerification`](../../sanity_checks/normalization_bias_verification/),
-        are ran.
+        This parameter is deprecated. Please use `run_confidence_checks` instead.
 
     """
 
@@ -284,9 +302,23 @@ class GradientDescentTrainer(Trainer):
         num_gradient_accumulation_steps: int = 1,
         use_amp: bool = False,
         enable_default_callbacks: bool = True,
-        run_sanity_checks: bool = True,
+        run_confidence_checks: bool = True,
+        **kwargs,
     ) -> None:
-        super().__init__(serialization_dir, cuda_device, distributed, local_rank, world_size)
+        super().__init__(
+            serialization_dir=serialization_dir,
+            cuda_device=cuda_device,
+            distributed=distributed,
+            local_rank=local_rank,
+            world_size=world_size,
+        )
+
+        if "run_sanity_checks" in kwargs:
+            warnings.warn(
+                "'run_sanity_checks' is deprecated, please use 'run_confidence_checks' instead.",
+                DeprecationWarning,
+            )
+            run_confidence_checks = kwargs["run_sanity_checks"]
 
         # I am not calling move_to_gpu here, because if the model is
         # not already on the GPU then the optimizer is going to be wrong.
@@ -329,8 +361,9 @@ class GradientDescentTrainer(Trainer):
 
         self._callbacks = callbacks or []
         default_callbacks = list(DEFAULT_CALLBACKS) if enable_default_callbacks else []
-        if run_sanity_checks:
-            default_callbacks.append(SanityChecksCallback)
+
+        if run_confidence_checks:
+            default_callbacks.append(ConfidenceChecksCallback)
         for callback_cls in default_callbacks:
             for callback in self._callbacks:
                 if callback.__class__ == callback_cls:
@@ -998,7 +1031,8 @@ class GradientDescentTrainer(Trainer):
         checkpointer: Lazy[Checkpointer] = Lazy(Checkpointer),
         callbacks: List[Lazy[TrainerCallback]] = None,
         enable_default_callbacks: bool = True,
-        run_sanity_checks: bool = True,
+        run_confidence_checks: bool = True,
+        **kwargs,
     ) -> "Trainer":
         """
         This method exists so that we can have a documented method to construct this class using
@@ -1090,7 +1124,8 @@ class GradientDescentTrainer(Trainer):
             num_gradient_accumulation_steps=num_gradient_accumulation_steps,
             use_amp=use_amp,
             enable_default_callbacks=enable_default_callbacks,
-            run_sanity_checks=run_sanity_checks,
+            run_confidence_checks=run_confidence_checks,
+            **kwargs,
         )
 
 

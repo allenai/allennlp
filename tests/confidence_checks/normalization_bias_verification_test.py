@@ -1,10 +1,10 @@
 import torch
 
 from allennlp.common.testing import AllenNlpTestCase
-from allennlp.common.testing.sanity_check_test import (
+from allennlp.common.testing.confidence_check_test import (
     FakeModelForTestingNormalizationBiasVerification,
 )
-from allennlp.sanity_checks.normalization_bias_verification import NormalizationBiasVerification
+from allennlp.confidence_checks.normalization_bias_verification import NormalizationBiasVerification
 
 
 class TestNormalizationBiasVerification(AllenNlpTestCase):

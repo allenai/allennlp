@@ -1,19 +1,21 @@
 import copy
+
 import torch
 import pytest
-
-from allennlp.common import Params
-from allennlp.common import cached_transformers
-from allennlp.common.testing import assert_equal_parameters
-from allennlp.modules.transformer import AttentionLayer, TransformerLayer
-from allennlp.common.testing import AllenNlpTestCase
-
 from transformers.models.bert.configuration_bert import BertConfig
 from transformers.models.bert.modeling_bert import BertAttention, BertLayer
 from transformers.models.roberta.configuration_roberta import RobertaConfig
 from transformers.models.roberta.modeling_roberta import RobertaAttention, RobertaLayer
 from transformers.models.electra.configuration_electra import ElectraConfig
 from transformers.models.electra.modeling_electra import ElectraAttention, ElectraLayer
+
+from allennlp.common import Params, cached_transformers
+from allennlp.common.testing import run_distributed_test
+from allennlp.modules.transformer import (
+    AttentionLayer,
+    TransformerLayer,
+)
+
 
 ATTENTION_PARAMS_DICT = {
     "hidden_size": 6,
@@ -23,141 +25,113 @@ ATTENTION_PARAMS_DICT = {
 }
 
 
-def get_attention_modules(params_dict):
-    modules = {}
-    params = copy.deepcopy(params_dict)
+@pytest.fixture
+def attention_params():
+    return Params(copy.deepcopy(ATTENTION_PARAMS_DICT))
+
+
+def test_attention(attention_params):
+    attention_layer = AttentionLayer.from_params(attention_params.duplicate()).eval()
+
+    assert attention_layer.self.num_attention_heads == attention_params["num_attention_heads"]
+    assert attention_layer.self.attention_head_size == int(
+        attention_params["hidden_size"] / attention_params["num_attention_heads"]
+    )
+    assert (
+        attention_layer.self.all_head_size
+        == attention_params["num_attention_heads"] * attention_layer.self.attention_head_size
+    )
+    assert attention_layer.self.query.in_features == attention_params["hidden_size"]
+    assert attention_layer.self.key.in_features == attention_params["hidden_size"]
+    assert attention_layer.self.value.in_features == attention_params["hidden_size"]
+    assert attention_layer.self.dropout.p == attention_params["attention_dropout"]
+
+    assert attention_layer.output.dense.in_features == attention_params["hidden_size"]
+    assert attention_layer.output.dense.out_features == attention_params["hidden_size"]
+    assert attention_layer.output.layer_norm.normalized_shape[0] == attention_params["hidden_size"]
+    assert attention_layer.output.dropout.p == attention_params["hidden_dropout"]
+
+    attention_mask = torch.tensor([[0, 1, 0], [1, 1, 0]])
+    attention_layer(torch.randn(2, 3, 6), attention_mask=attention_mask)
+
+
+def get_attention_modules():
+    params = copy.deepcopy(ATTENTION_PARAMS_DICT)
     params["attention_probs_dropout_prob"] = params.pop("attention_dropout")
     params["hidden_dropout_prob"] = params.pop("hidden_dropout")
 
     torch.manual_seed(1234)
-    hf_module = BertAttention(BertConfig(**params))
-    modules["bert"] = hf_module
+    yield "bert", BertAttention(BertConfig(**params)).eval()
 
     torch.manual_seed(1234)
-    hf_module = RobertaAttention(RobertaConfig(**params))
-    modules["roberta"] = hf_module
+    yield "roberta", RobertaAttention(RobertaConfig(**params)).eval()
 
     torch.manual_seed(1234)
-    hf_module = ElectraAttention(ElectraConfig(**params))
-    modules["electra"] = hf_module
-
-    return modules
+    yield "electra", ElectraAttention(ElectraConfig(**params)).eval()
 
 
-class TestAttentionLayer(AllenNlpTestCase):
-    def setup_method(self):
-        super().setup_method()
+@pytest.mark.parametrize("module_name, hf_module", get_attention_modules())
+def test_attention_matches_huggingface(attention_params, module_name, hf_module):
+    hidden_states = torch.randn(2, 3, 6)
+    attention_mask = torch.tensor([[0, 1, 0], [1, 1, 0]])
 
-        self.params_dict = {
-            "hidden_size": 6,
-            "num_attention_heads": 2,
-            "attention_dropout": 0.1,
-            "hidden_dropout": 0.2,
-        }
+    attention = AttentionLayer.from_params(attention_params).eval()
+    state_dict = attention._get_mapped_state_dict(hf_module.state_dict())
+    attention.load_state_dict(state_dict)
 
-        params = Params(copy.deepcopy(self.params_dict))
+    torch.manual_seed(1234)
+    output = attention(hidden_states, attention_mask=attention_mask)
+    # We do this because bert, roberta, electra process the attention_mask at the model level.
+    attention_mask_hf = (attention_mask == 0).view((2, 1, 1, 3)).expand(2, 2, 3, 3) * -10e5
 
-        self.attention_layer = AttentionLayer.from_params(params)
+    torch.manual_seed(1234)
+    hf_output = hf_module(hidden_states, attention_mask=attention_mask_hf)
 
-    def test_can_construct_from_params(self):
+    assert torch.allclose(output[0], hf_output[0])
 
-        attention_layer = self.attention_layer
 
-        assert attention_layer.self.num_attention_heads == self.params_dict["num_attention_heads"]
-        assert attention_layer.self.attention_head_size == int(
-            self.params_dict["hidden_size"] / self.params_dict["num_attention_heads"]
-        )
-        assert (
-            attention_layer.self.all_head_size
-            == self.params_dict["num_attention_heads"] * attention_layer.self.attention_head_size
-        )
-        assert attention_layer.self.query.in_features == self.params_dict["hidden_size"]
-        assert attention_layer.self.key.in_features == self.params_dict["hidden_size"]
-        assert attention_layer.self.value.in_features == self.params_dict["hidden_size"]
-        assert attention_layer.self.dropout.p == self.params_dict["attention_dropout"]
+@pytest.mark.parametrize(
+    "pretrained_name, relevant_top_level_module",
+    [
+        ("bert-base-cased", "bert"),
+        ("epwalsh/bert-xsmall-dummy", None),
+    ],
+)
+def test_attention_from_pretrained(pretrained_name, relevant_top_level_module):
+    torch.manual_seed(1234)
+    pretrained = cached_transformers.get(pretrained_name, False).eval()
 
-        assert attention_layer.output.dense.in_features == self.params_dict["hidden_size"]
-        assert attention_layer.output.dense.out_features == self.params_dict["hidden_size"]
-        assert (
-            attention_layer.output.layer_norm.normalized_shape[0] == self.params_dict["hidden_size"]
-        )
-        assert attention_layer.output.dropout.p == self.params_dict["hidden_dropout"]
+    if "distilbert" in pretrained_name:
+        encoder = pretrained.transformer
+    else:
+        encoder = pretrained.encoder
+    # Hacky way to get a bert layer.
+    pretrained_module = list(encoder.layer.modules())[1].attention
 
-    def test_forward_runs(self):
-        attention_mask = torch.tensor([[0, 1, 0], [1, 1, 0]])
-        self.attention_layer.forward(torch.randn(2, 3, 6), attention_mask=attention_mask)
+    torch.manual_seed(1234)
+    module = AttentionLayer.from_pretrained_module(
+        pretrained_name,
+        relevant_module=None
+        if relevant_top_level_module is None
+        else f"{relevant_top_level_module}.encoder.layer.0.attention",
+    ).eval()
 
-    @pytest.mark.parametrize(
-        "module_name, hf_module", get_attention_modules(ATTENTION_PARAMS_DICT).items()
-    )
-    def test_forward_against_huggingface_outputs(self, module_name, hf_module):
-        hidden_states = torch.randn(2, 3, 6)
-        attention_mask = torch.tensor([[0, 1, 0], [1, 1, 0]])
+    batch_size = 2
+    seq_length = 15
+    hidden_size = module.self.query.in_features
 
-        attention = AttentionLayer.from_pretrained_module(hf_module)
+    hidden_states = torch.randn(batch_size, seq_length, hidden_size)
+    attention_mask = torch.randint(0, 2, (batch_size, seq_length))
+    attention_mask_hf = attention_mask[:, None, None, :]
+    attention_mask_hf = (1.0 - attention_mask_hf) * -10e5
 
-        torch.manual_seed(1234)
-        output = attention.forward(hidden_states, attention_mask=attention_mask)
-        # We do this because bert, roberta, electra process the attention_mask at the model level.
-        attention_mask_hf = (attention_mask == 0).view((2, 1, 1, 3)).expand(2, 2, 3, 3) * -10e5
-        torch.manual_seed(1234)
-        hf_output = hf_module.forward(hidden_states, attention_mask=attention_mask_hf)
+    torch.manual_seed(1234)
+    output = module(hidden_states, attention_mask=attention_mask.squeeze())[0]
 
-        assert torch.allclose(output[0], hf_output[0])
+    torch.manual_seed(1234)
+    hf_output = pretrained_module(hidden_states, attention_mask=attention_mask_hf)[0]
 
-    @pytest.mark.parametrize(
-        "pretrained_name",
-        [
-            "bert-base-uncased",
-            "roberta-base",
-        ],
-    )
-    def test_loading_from_pretrained_weights_using_model_name(self, pretrained_name):
-
-        torch.manual_seed(1234)
-        pretrained = cached_transformers.get(pretrained_name, False)
-
-        if "distilbert" in pretrained_name:
-            encoder = pretrained.transformer
-        else:
-            encoder = pretrained.encoder
-        # Hacky way to get a bert layer.
-        for i, pretrained_module in enumerate(encoder.layer.modules()):
-            if i == 1:
-                break
-
-        pretrained_module = pretrained_module.attention
-
-        torch.manual_seed(1234)
-        module = AttentionLayer.from_pretrained_module(pretrained_name)
-        mapping = {
-            val: key
-            for key, val in module._construct_default_mapping(
-                pretrained_module, "huggingface", {}
-            ).items()
-        }
-        assert_equal_parameters(pretrained_module, module, mapping=mapping)
-
-        batch_size = 2
-        seq_len = 768
-        dim = module.self.query.in_features
-        hidden_states = torch.randn(batch_size, seq_len, dim)
-        attention_mask = torch.randint(0, 2, (batch_size, seq_len))
-        mask_reshp = (batch_size, 1, 1, dim)
-        attention_mask_hf = (attention_mask == 0).view(mask_reshp).expand(
-            batch_size, 12, seq_len, seq_len
-        ) * -10e5
-
-        # setting to eval mode to avoid non-deterministic dropout.
-        module = module.eval()
-        pretrained_module = pretrained_module.eval()
-
-        torch.manual_seed(1234)
-        output = module.forward(hidden_states, attention_mask=attention_mask.squeeze())[0]
-        torch.manual_seed(1234)
-        hf_output = pretrained_module.forward(hidden_states, attention_mask=attention_mask_hf)[0]
-
-        assert torch.allclose(output, hf_output, atol=1e-04)
+    assert torch.allclose(output, hf_output, atol=1e-04)
 
 
 LAYER_PARAMS_DICT = {
@@ -170,213 +144,158 @@ LAYER_PARAMS_DICT = {
 }
 
 
-def get_layer_modules(params_dict):
-    modules = {}
-    params = copy.deepcopy(params_dict)
-    params["attention_probs_dropout_prob"] = params.pop("attention_dropout")
-    params["hidden_dropout_prob"] = params.pop("hidden_dropout")
-
-    # bert, roberta, electra, layoutlm self attentions have the same code.
-
-    torch.manual_seed(1234)
-    hf_module = BertLayer(BertConfig(**params))
-    modules["bert"] = hf_module
-
-    torch.manual_seed(1234)
-    hf_module = RobertaLayer(RobertaConfig(**params))
-    modules["roberta"] = hf_module
-
-    torch.manual_seed(1234)
-    hf_module = ElectraLayer(ElectraConfig(**params))
-    modules["electra"] = hf_module
-
-    return modules
+@pytest.fixture
+def layer_params():
+    return Params(copy.deepcopy(LAYER_PARAMS_DICT))
 
 
-class TestTransformerLayer(AllenNlpTestCase):
-    def setup_method(self):
-        super().setup_method()
+def test_layer(layer_params):
+    transformer_layer = TransformerLayer.from_params(layer_params.duplicate()).eval()
 
-        self.params_dict = {
-            "hidden_size": 6,
-            "intermediate_size": 3,
-            "num_attention_heads": 2,
-            "attention_dropout": 0.1,
-            "hidden_dropout": 0.2,
-            "activation": "relu",
-        }
+    assert (
+        transformer_layer.attention.self.num_attention_heads == layer_params["num_attention_heads"]
+    )
+    assert transformer_layer.attention.self.attention_head_size == int(
+        layer_params["hidden_size"] / layer_params["num_attention_heads"]
+    )
+    assert (
+        transformer_layer.attention.self.all_head_size
+        == layer_params["num_attention_heads"]
+        * transformer_layer.attention.self.attention_head_size
+    )
+    assert transformer_layer.attention.self.query.in_features == layer_params["hidden_size"]
+    assert transformer_layer.attention.self.key.in_features == layer_params["hidden_size"]
+    assert transformer_layer.attention.self.value.in_features == layer_params["hidden_size"]
+    assert transformer_layer.attention.self.dropout.p == layer_params["attention_dropout"]
 
-        params = Params(copy.deepcopy(self.params_dict))
+    assert transformer_layer.attention.output.dense.in_features == layer_params["hidden_size"]
+    assert transformer_layer.attention.output.dense.out_features == layer_params["hidden_size"]
+    assert (
+        transformer_layer.attention.output.layer_norm.normalized_shape[0]
+        == layer_params["hidden_size"]
+    )
+    assert transformer_layer.attention.output.dropout.p == layer_params["hidden_dropout"]
 
-        self.transformer_layer = TransformerLayer.from_params(params)
-        self.pretrained_name = "bert-base-uncased"
+    assert transformer_layer.intermediate.dense.in_features == layer_params["hidden_size"]
+    assert transformer_layer.intermediate.dense.out_features == layer_params["intermediate_size"]
 
-        self.pretrained = cached_transformers.get(self.pretrained_name, False)
+    assert transformer_layer.output.dense.in_features == layer_params["intermediate_size"]
+    assert transformer_layer.output.dense.out_features == layer_params["hidden_size"]
 
-    def test_can_construct_from_params(self):
+    assert transformer_layer.output.layer_norm.normalized_shape[0] == layer_params["hidden_size"]
 
-        transformer_layer = self.transformer_layer
+    assert transformer_layer.output.dropout.p == layer_params["hidden_dropout"]
 
-        assert (
-            transformer_layer.attention.self.num_attention_heads
-            == self.params_dict["num_attention_heads"]
-        )
-        assert transformer_layer.attention.self.attention_head_size == int(
-            self.params_dict["hidden_size"] / self.params_dict["num_attention_heads"]
-        )
-        assert (
-            transformer_layer.attention.self.all_head_size
-            == self.params_dict["num_attention_heads"]
-            * transformer_layer.attention.self.attention_head_size
-        )
-        assert transformer_layer.attention.self.query.in_features == self.params_dict["hidden_size"]
-        assert transformer_layer.attention.self.key.in_features == self.params_dict["hidden_size"]
-        assert transformer_layer.attention.self.value.in_features == self.params_dict["hidden_size"]
-        assert transformer_layer.attention.self.dropout.p == self.params_dict["attention_dropout"]
+    attention_mask = torch.tensor([[0, 1, 0], [1, 1, 0]])
+    transformer_layer(torch.randn(2, 3, 6), attention_mask=attention_mask)
 
-        assert (
-            transformer_layer.attention.output.dense.in_features == self.params_dict["hidden_size"]
-        )
-        assert (
-            transformer_layer.attention.output.dense.out_features == self.params_dict["hidden_size"]
-        )
-        assert (
-            transformer_layer.attention.output.layer_norm.normalized_shape[0]
-            == self.params_dict["hidden_size"]
-        )
-        assert transformer_layer.attention.output.dropout.p == self.params_dict["hidden_dropout"]
-
-        assert transformer_layer.intermediate.dense.in_features == self.params_dict["hidden_size"]
-        assert (
-            transformer_layer.intermediate.dense.out_features
-            == self.params_dict["intermediate_size"]
-        )
-
-        assert transformer_layer.output.dense.in_features == self.params_dict["intermediate_size"]
-        assert transformer_layer.output.dense.out_features == self.params_dict["hidden_size"]
-
-        assert (
-            transformer_layer.output.layer_norm.normalized_shape[0]
-            == self.params_dict["hidden_size"]
-        )
-
-        assert transformer_layer.output.dropout.p == self.params_dict["hidden_dropout"]
-
-    def test_forward_runs(self):
-        attention_mask = torch.tensor([[0, 1, 0], [1, 1, 0]])
-        self.transformer_layer.forward(torch.randn(2, 3, 6), attention_mask=attention_mask)
-
-        with pytest.raises(AssertionError):
-            self.transformer_layer.forward(
-                torch.randn(2, 3, 6),
-                attention_mask=attention_mask,
-                encoder_hidden_states=torch.randn(2, 3, 6),
-            )
-
-    def test_cross_attention(self):
-        params = copy.deepcopy(self.params_dict)
-        params["add_cross_attention"] = True
-
-        params = Params(params)
-
-        transformer_layer = TransformerLayer.from_params(params)
-        assert hasattr(transformer_layer, "cross_attention")
-
-        attention_mask = torch.tensor([[0, 1, 0], [1, 1, 0]])
-        transformer_layer.forward(
+    with pytest.raises(AssertionError):
+        transformer_layer(
             torch.randn(2, 3, 6),
             attention_mask=attention_mask,
             encoder_hidden_states=torch.randn(2, 3, 6),
         )
 
-        transformer_layer_new = TransformerLayer.from_pretrained_module(
-            transformer_layer, source="allennlp"
-        )
 
-        assert hasattr(transformer_layer_new, "cross_attention")
+def test_layer_with_cross_attention(layer_params):
+    layer_params["add_cross_attention"] = True
 
-    def test_loading_from_pretrained_weights(self):
+    transformer_layer = TransformerLayer.from_params(layer_params).eval()
+    assert hasattr(transformer_layer, "cross_attention")
 
-        # Hacky way to get a bert layer.
-        for i, pretrained_module in enumerate(self.pretrained.encoder.layer.modules()):
-            if i == 1:
-                break
-
-        module = TransformerLayer.from_pretrained_module(pretrained_module)
-        mapping = {
-            val: key
-            for key, val in module._construct_default_mapping(
-                pretrained_module, "huggingface", {}
-            ).items()
-        }
-        assert_equal_parameters(pretrained_module, module, mapping=mapping)
-
-    @pytest.mark.parametrize("module_name, hf_module", get_layer_modules(LAYER_PARAMS_DICT).items())
-    def test_forward_against_huggingface_outputs(self, module_name, hf_module):
-        hidden_states = torch.randn(2, 3, 6)
-        attention_mask = torch.tensor([[0, 1, 0], [1, 1, 0]])
-
-        layer = TransformerLayer.from_pretrained_module(hf_module)
-
-        torch.manual_seed(1234)
-        output = layer.forward(hidden_states, attention_mask=attention_mask)
-        # We do this because bert, roberta, electra process the attention_mask at the model level.
-        attention_mask_hf = (attention_mask == 0).view((2, 1, 1, 3)).expand(2, 2, 3, 3) * -10e5
-        torch.manual_seed(1234)
-        hf_output = hf_module.forward(hidden_states, attention_mask=attention_mask_hf)
-
-        assert torch.allclose(output[0], hf_output[0])
-
-    @pytest.mark.parametrize(
-        "pretrained_name",
-        [
-            "bert-base-uncased",
-            "roberta-base",
-        ],
+    attention_mask = torch.tensor([[0, 1, 0], [1, 1, 0]])
+    transformer_layer(
+        torch.randn(2, 3, 6),
+        attention_mask=attention_mask,
+        encoder_hidden_states=torch.randn(2, 3, 6),
     )
-    def test_loading_from_pretrained_weights_using_model_name(self, pretrained_name):
 
-        torch.manual_seed(1234)
-        pretrained = cached_transformers.get(pretrained_name, False)
 
-        if "distilbert" in pretrained_name:
-            encoder = pretrained.transformer
-        else:
-            encoder = pretrained.encoder
-        # Hacky way to get a bert layer.
-        for i, pretrained_module in enumerate(encoder.layer.modules()):
-            if i == 1:
-                break
+def get_layer_modules():
+    params = copy.deepcopy(LAYER_PARAMS_DICT)
+    params["attention_probs_dropout_prob"] = params.pop("attention_dropout")
+    params["hidden_dropout_prob"] = params.pop("hidden_dropout")
+    params["hidden_act"] = params.pop("activation")
 
-        pretrained_module = pretrained_module
+    torch.manual_seed(1234)
+    yield "bert", BertLayer(BertConfig(**params)).eval()
 
-        torch.manual_seed(1234)
-        module = TransformerLayer.from_pretrained_module(pretrained_name)
-        mapping = {
-            val: key
-            for key, val in module._construct_default_mapping(
-                pretrained_module, "huggingface", {}
-            ).items()
-        }
-        assert_equal_parameters(pretrained_module, module, mapping=mapping)
+    torch.manual_seed(1234)
+    yield "roberta", RobertaLayer(RobertaConfig(**params)).eval()
 
-        batch_size = 2
-        seq_len = 768
-        dim = module.attention.self.query.in_features
-        hidden_states = torch.randn(batch_size, seq_len, dim)
-        attention_mask = torch.randint(0, 2, (batch_size, seq_len))
-        mask_reshp = (batch_size, 1, 1, dim)
-        attention_mask_hf = (attention_mask == 0).view(mask_reshp).expand(
-            batch_size, 12, seq_len, seq_len
-        ) * -10e5
+    torch.manual_seed(1234)
+    yield "electra", ElectraLayer(ElectraConfig(**params)).eval()
 
-        # setting to eval mode to avoid non-deterministic dropout.
-        module = module.eval()
-        pretrained_module = pretrained_module.eval()
 
-        torch.manual_seed(1234)
-        output = module.forward(hidden_states, attention_mask=attention_mask.squeeze())[0]
-        torch.manual_seed(1234)
-        hf_output = pretrained_module.forward(hidden_states, attention_mask=attention_mask_hf)[0]
+@pytest.mark.parametrize("module_name, hf_module", get_layer_modules())
+def test_layer_matches_huggingface(layer_params, module_name, hf_module):
+    layer = TransformerLayer.from_params(layer_params).eval()
+    state_dict = layer._get_mapped_state_dict(hf_module.state_dict())
+    layer.load_state_dict(state_dict)
 
-        assert torch.allclose(output, hf_output, atol=1e-04)
+    hidden_states = torch.randn(2, 3, 6)
+    attention_mask = torch.tensor([[0, 1, 0], [1, 1, 0]])
+
+    torch.manual_seed(1234)
+    output = layer(hidden_states, attention_mask=attention_mask)
+    # We do this because bert, roberta, electra process the attention_mask at the model level.
+    attention_mask_hf = (attention_mask == 0).view((2, 1, 1, 3)).expand(2, 2, 3, 3) * -10e5
+    torch.manual_seed(1234)
+    hf_output = hf_module(hidden_states, attention_mask=attention_mask_hf)
+
+    assert torch.allclose(output[0], hf_output[0])
+
+
+@pytest.mark.parametrize(
+    "pretrained_name, relevant_top_level_module",
+    [
+        ("bert-base-cased", "bert"),
+        ("epwalsh/bert-xsmall-dummy", None),
+    ],
+)
+def test_layer_from_pretrained(pretrained_name, relevant_top_level_module):
+    torch.manual_seed(1234)
+    pretrained = cached_transformers.get(pretrained_name, False).eval()
+
+    if "distilbert" in pretrained_name:
+        encoder = pretrained.transformer
+    else:
+        encoder = pretrained.encoder
+    # Hacky way to get a bert layer.
+    pretrained_module = list(encoder.layer.modules())[1]
+
+    torch.manual_seed(1234)
+    module = TransformerLayer.from_pretrained_module(
+        pretrained_name,
+        relevant_module=None
+        if relevant_top_level_module is None
+        else f"{relevant_top_level_module}.encoder.layer.0",
+    ).eval()
+
+    batch_size = 2
+    seq_length = 15
+    hidden_size = module.attention.self.query.in_features
+
+    hidden_states = torch.randn(batch_size, seq_length, hidden_size)
+    attention_mask = torch.randint(0, 2, (batch_size, seq_length))
+    attention_mask_hf = attention_mask[:, None, None, :]
+    attention_mask_hf = (1.0 - attention_mask_hf) * -10e5
+
+    torch.manual_seed(1234)
+    output = module(hidden_states, attention_mask=attention_mask.squeeze())[0]
+
+    torch.manual_seed(1234)
+    hf_output = pretrained_module(hidden_states, attention_mask=attention_mask_hf)[0]
+
+    assert torch.allclose(output, hf_output, atol=1e-04)
+
+
+def _load_pretrained(global_rank, world_size, gpu_id):
+    TransformerLayer.from_pretrained_module(
+        "epwalsh/bert-xsmall-dummy",
+    )
+
+
+@pytest.mark.parametrize("test_func", [_load_pretrained])
+def test_distributed(test_func):
+    run_distributed_test([-1, -1], func=test_func, start_method="spawn")

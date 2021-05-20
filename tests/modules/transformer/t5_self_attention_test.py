@@ -2,15 +2,16 @@ import copy
 import torch
 import pytest
 
+from transformers import AutoModel
+
 from allennlp.common import Params
-from allennlp.common import cached_transformers
-from allennlp.common.testing import assert_equal_parameters, AllenNlpTestCase
 
 # from allennlp.modules.transformer.t5 import T5Attention
 from allennlp.modules.transformer.general_attention import T5Attention
 
 from transformers.models.t5.configuration_t5 import T5Config
 from transformers.models.t5.modeling_t5 import T5Attention as HFT5Attention
+from allennlp.nn.util import min_value_of_dtype
 
 PARAMS_DICT = {
     "hidden_size": 6,
@@ -21,82 +22,106 @@ PARAMS_DICT = {
 }
 
 
-class TestT5Attention(AllenNlpTestCase):
-    def test_can_construct_from_params(self):
+@pytest.fixture
+def params_dict():
+    return copy.deepcopy(PARAMS_DICT)
 
-        params_dict = {key: val for key, val in PARAMS_DICT.items()}
 
-        params = Params(copy.deepcopy(params_dict))
+@pytest.fixture
+def params(params_dict):
+    return Params(params_dict)
 
-        t5_attention = T5Attention.from_params(params)
 
-        assert t5_attention.num_attention_heads == params_dict["num_heads"]
-        assert t5_attention.attention_head_size == params_dict["key_value_proj_dim"]
+@pytest.fixture
+def t5_attention(params):
+    return T5Attention.from_params(params.duplicate())
 
-        assert (
-            t5_attention.all_head_size
-            == params_dict["num_heads"] * params_dict["key_value_proj_dim"]
-        )
 
-        assert t5_attention.query.in_features == params_dict["hidden_size"]
-        assert t5_attention.key.in_features == params_dict["hidden_size"]
-        assert t5_attention.value.in_features == params_dict["hidden_size"]
-        assert t5_attention.output.in_features == params_dict["hidden_size"]
+def test_can_construct_from_params(t5_attention, params_dict):
 
-        assert t5_attention.dropout == params_dict["dropout"]
+    assert t5_attention.num_attention_heads == params_dict["num_heads"]
+    assert t5_attention.attention_head_size == params_dict["key_value_proj_dim"]
 
-    def test_forward_against_huggingface_output(self):
-        hidden_states = torch.randn(2, 3, 6)
-        attention_mask = torch.tensor([[0, 1, 0], [1, 1, 0]])
-
-        hf_kwargs = {
-            "d_model": PARAMS_DICT["hidden_size"],
-            "d_kv": PARAMS_DICT["key_value_proj_dim"],
-            "num_heads": PARAMS_DICT["num_heads"],
-            "relative_attention_num_buckets": PARAMS_DICT["relative_attention_num_buckets"],
-            "dropout_rate": PARAMS_DICT["dropout"],
-        }
-
-        torch.manual_seed(1234)
-        hf_module = HFT5Attention(T5Config(**hf_kwargs), has_relative_attention_bias=False)
-
-        torch.manual_seed(1234)
-
-        params = copy.deepcopy(PARAMS_DICT)
-        params["normalize"] = False  # only for this test.
-        t5_attention = T5Attention(**params)
-
-        # setting to eval mode to avoid non-deterministic dropout.
-        t5_attention = t5_attention.eval()
-        hf_module = hf_module.eval()
-
-        output = t5_attention.forward(hidden_states, mask=attention_mask)
-        attention_mask_hf = (attention_mask == 0).view((2, 1, 1, 3)).expand(2, 2, 3, 3) * -10e5
-        hf_output = hf_module.forward(hidden_states, mask=attention_mask_hf)
-
-        hs = output.hidden_states
-
-        assert torch.allclose(hs, hf_output[0])
-
-    @pytest.mark.parametrize(
-        "pretrained_name",
-        [
-            "t5-small",
-        ],
+    assert (
+        t5_attention.all_head_size == params_dict["num_heads"] * params_dict["key_value_proj_dim"]
     )
-    def test_loading_from_pretrained_weights_using_model_name(self, pretrained_name):
 
-        torch.manual_seed(1234)
-        pretrained = cached_transformers.get(pretrained_name, False)
+    assert t5_attention.query.in_features == params_dict["hidden_size"]
+    assert t5_attention.key.in_features == params_dict["hidden_size"]
+    assert t5_attention.value.in_features == params_dict["hidden_size"]
+    assert t5_attention.output.in_features == params_dict["hidden_size"]
 
-        pretrained_module = pretrained.encoder.block[0].layer[0].SelfAttention
+    assert t5_attention.dropout == params_dict["dropout"]
 
-        module = T5Attention.from_pretrained_module(pretrained_name)
 
-        mapping = {
-            val: key
-            for key, val in module._construct_default_mapping(
-                pretrained_module, "huggingface", {}
-            ).items()
-        }
-        assert_equal_parameters(pretrained_module, module, mapping=mapping)
+def test_forward_against_huggingface_output(params_dict):
+    hidden_states = torch.randn(2, 3, 6)
+    attention_mask = torch.tensor([[0, 1, 0], [1, 1, 0]])
+
+    hf_kwargs = {
+        "d_model": params_dict["hidden_size"],
+        "d_kv": params_dict["key_value_proj_dim"],
+        "num_heads": params_dict["num_heads"],
+        "relative_attention_num_buckets": params_dict["relative_attention_num_buckets"],
+        "dropout_rate": params_dict["dropout"],
+    }
+
+    torch.manual_seed(1234)
+    hf_module = HFT5Attention(T5Config(**hf_kwargs), has_relative_attention_bias=False)
+
+    torch.manual_seed(1234)
+
+    params = copy.deepcopy(params_dict)
+    params["normalize"] = False  # only for this test, as HF does not normalize.
+    t5_attention = T5Attention(**params)
+
+    # setting to eval mode to avoid non-deterministic dropout.
+    t5_attention = t5_attention.eval()
+    hf_module = hf_module.eval()
+
+    output = t5_attention.forward(hidden_states, mask=attention_mask)
+    attention_mask_hf = (attention_mask == 0).view((2, 1, 1, 3)).expand(
+        2, 2, 3, 3
+    ) * min_value_of_dtype(hidden_states.dtype)
+    hf_output = hf_module.forward(hidden_states, mask=attention_mask_hf)
+
+    hs = output.hidden_states
+
+    assert torch.allclose(hs, hf_output[0])
+
+
+@pytest.mark.parametrize(
+    "pretrained_name, relevant_module",
+    [
+        ("t5-small", "encoder.block.0.layer.0.SelfAttention"),
+    ],
+)
+def test_loading_from_pretrained_weights_using_model_name(pretrained_name, relevant_module):
+
+    torch.manual_seed(1234)
+    module = T5Attention.from_pretrained_module(pretrained_name, relevant_module=relevant_module)
+
+    torch.manual_seed(1234)
+    pretrained_module = dict(AutoModel.from_pretrained(pretrained_name).named_modules())[
+        relevant_module
+    ]
+
+    batch_size = 2
+    seq_len = 3
+    dim = module.query.in_features
+    hidden_states = torch.randn(batch_size, seq_len, dim)
+    attention_mask = torch.tensor([[1, 1, 0], [1, 0, 1]])[:, None, None, :]
+
+    # setting to eval mode to avoid non-deterministic dropout.
+    module = module.eval()
+    pretrained_module = pretrained_module.eval()
+
+    torch.manual_seed(1234)
+    output = module(hidden_states, mask=attention_mask.squeeze()).hidden_states
+
+    # The attn_mask is processed outside the self attention module in HF bert models.
+    attention_mask = (~(attention_mask == 1)) * min_value_of_dtype(hidden_states.dtype)
+    torch.manual_seed(1234)
+    hf_output = pretrained_module(hidden_states, mask=attention_mask)[0]
+
+    assert torch.allclose(output, hf_output)

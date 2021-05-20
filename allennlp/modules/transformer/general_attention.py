@@ -1,5 +1,5 @@
 import math
-from typing import Optional, Dict, Union, Tuple
+from typing import Optional, Union, Tuple, TYPE_CHECKING
 from dataclasses import dataclass
 import torch
 import torch.nn.functional as F
@@ -8,6 +8,9 @@ from allennlp.common import FromParams
 from allennlp.modules.attention import Attention
 from allennlp.modules.transformer.transformer_module import TransformerModule
 from allennlp.modules.transformer.util import apply_mask
+
+if TYPE_CHECKING:
+    from transformers.configuration_utils import PretrainedConfig
 
 # Unfortunately mypy is insane, so we have to wrap these in unions.
 FloatT = Union[torch.FloatTensor]
@@ -439,8 +442,8 @@ class GeneralAttention(TransformerModule, FromParams):
 
 class T5Attention(GeneralAttention):
 
-    _relevant_module = ["encoder.block.0.layer.0.SelfAttention"]
-    _huggingface_mapping = {
+    _pretrained_relevant_module = ["encoder.block.0.layer.0.SelfAttention"]
+    _pretrained_mapping = {
         "q": "query",
         "k": "key",
         "v": "value",
@@ -519,66 +522,24 @@ class T5Attention(GeneralAttention):
         return outputs
 
     @classmethod
-    def _get_input_arguments(
-        cls,
-        pretrained_module: torch.nn.Module,
-        source="huggingface",
-        mapping: Optional[Dict[str, str]] = None,
-        **kwargs,
-    ):
-        submodules = cls._get_mapped_submodules(pretrained_module, source, mapping)
+    def _from_config(cls, config: "PretrainedConfig", **kwargs):
         final_kwargs = {}
+        final_kwargs["hidden_size"] = config.hidden_size
+        final_kwargs["key_value_proj_dim"] = config.d_kv
 
-        final_kwargs["hidden_size"] = submodules["query"].in_features
-
-        if hasattr(submodules[""], "num_attention_heads"):
-            final_kwargs["num_heads"] = submodules[""].num_attention_heads
-        elif hasattr(submodules[""], "n_heads"):
-            final_kwargs["num_heads"] = submodules[""].n_heads
-        else:
-            raise AttributeError("Cannot find a relevant attribute for number of heads.")
-
-        final_kwargs["key_value_proj_dim"] = int(
-            submodules["query"].out_features / final_kwargs["num_heads"]
+        final_kwargs["is_decoder"] = getattr(config, "is_decoder", False)
+        final_kwargs["has_relative_attention_bias"] = getattr(
+            config, "has_relative_attention_bias", True
         )
+        final_kwargs["normalize"] = getattr(config, "normalize", True)
+        final_kwargs["is_cross_attention"] = getattr(config, "is_cross_attention", False)
 
-        final_kwargs["dropout"] = pretrained_module.dropout
-        final_kwargs["has_relative_attention_bias"] = pretrained_module.has_relative_attention_bias
-        final_kwargs[
-            "relative_attention_num_buckets"
-        ] = pretrained_module.relative_attention_num_buckets
-        final_kwargs["is_decoder"] = pretrained_module.is_decoder
+        final_kwargs["relative_attention_num_buckets"] = config.relative_attention_num_buckets
+        final_kwargs["num_heads"] = config.num_attention_heads
 
+        final_kwargs["dropout"] = config.dropout_rate
         final_kwargs.update(**kwargs)
-
-        return final_kwargs
-
-    @classmethod
-    def _get_mapped_submodules(
-        cls,
-        pretrained_module: torch.nn.Module,
-        source: str = "huggingface",
-        mapping: Optional[Dict[str, str]] = None,
-    ):
-        """
-        Subclasses overload this method, and provide appropriate name mapping based on the source.
-        """
-        submodules = dict(pretrained_module.named_modules())
-        # combined_mapping = cls._get_mapping(pretrained_module, source, mapping)
-        for name, module in pretrained_module.named_modules():
-            newname = name
-            if name in ["q", "q.weight"]:
-                newname = newname.replace("q", "query")
-            elif name in ["k", "k.weight"]:
-                newname = newname.replace("k", "key")
-            elif name in ["v", "v.weight"]:
-                newname = newname.replace("v", "value")
-            elif name in ["o", "o.weight"]:
-                newname = newname.replace("o", "output")
-            else:
-                pass
-            submodules[newname] = submodules.pop(name)
-        return submodules
+        return cls(**final_kwargs)
 
 
 class SelfAttention(GeneralAttention):
@@ -599,8 +560,15 @@ class SelfAttention(GeneralAttention):
         Eg. `additive`, `linear`, etc. For a complete list, please check :mod:`allennlp.modules.attention`.
     """
 
-    _relevant_module = ["encoder.layers.0.attention.self", "encoder.layers.0.attention"]
-    _huggingface_mapping = {"layer": "layers"}
+    _pretrained_relevant_module = ["encoder.layers.0.attention.self", "encoder.layers.0.attention"]
+    _pretrained_mapping = {
+        "layer": "layers",
+        "q_lin": "query",
+        "k_lin": "key",
+        "v_lin": "value",
+        "out_lin": "output",
+        "transformer": "encoder",
+    }
 
     def __init__(
         self,
@@ -630,47 +598,16 @@ class SelfAttention(GeneralAttention):
         return (outputs.hidden_states,)
 
     @classmethod
-    def _get_mapping(
-        cls, pretrained_module=None, source="huggingface", mapping: Optional[Dict[str, str]] = None
-    ):
-        combined_mapping = {}
-        if "huggingface" in source:
-            combined_mapping.update(cls._huggingface_mapping)
-        if mapping is not None:
-            combined_mapping.update(mapping)
-        if pretrained_module is not None:
-            for name, _ in pretrained_module.named_modules():
-                if "q_lin" in name:
-                    combined_mapping["q_lin"] = "query"
-                    combined_mapping["k_lin"] = "key"
-                    combined_mapping["v_lin"] = "value"
-                    combined_mapping["out_lin"] = "output"
-                    combined_mapping["transformer"] = "encoder"
-                    break
-        return combined_mapping
-
-    @classmethod
-    def _get_input_arguments(
-        cls,
-        pretrained_module: torch.nn.Module,
-        source="huggingface",
-        mapping: Optional[Dict[str, str]] = None,
-        **kwargs,
-    ):
-        submodules = cls._get_mapped_submodules(pretrained_module, source, mapping)
+    def _from_config(cls, config: "PretrainedConfig", **kwargs):
         final_kwargs = {}
-
-        final_kwargs["hidden_size"] = submodules["query"].in_features
-        if hasattr(submodules[""], "num_attention_heads"):
-            final_kwargs["num_attention_heads"] = submodules[""].num_attention_heads
-        elif hasattr(submodules[""], "n_heads"):
-            final_kwargs["num_attention_heads"] = submodules[""].n_heads
-            final_kwargs["output_linear"] = True  # Since this is the distilbert case.
+        final_kwargs["hidden_size"] = config.hidden_size
+        final_kwargs["num_attention_heads"] = config.num_attention_heads
+        final_kwargs["output_linear"] = hasattr(
+            config, "n_heads"
+        )  # Since this is the distilbert case.
+        if hasattr(config, "attention_dropout"):
+            final_kwargs["dropout"] = config.attention_dropout
         else:
-            raise AttributeError("Cannot find a relevant attribute for number of heads.")
-
-        final_kwargs["dropout"] = submodules["dropout"].p
-
+            final_kwargs["dropout"] = config.attention_probs_dropout_prob
         final_kwargs.update(**kwargs)
-
-        return final_kwargs
+        return cls(**final_kwargs)
