@@ -12,6 +12,8 @@ from allennlp.nn.beam_search import (
     TopKSampler,
     TopPSampler,
     GumbelSampler,
+    SequenceLogProbabilityScorer,
+    LengthNormalizedSequenceLogProbabilityScorer,
     NGramBlockingConstraint,
 )
 from allennlp.common.params import Params
@@ -539,6 +541,62 @@ class BeamSearchTest(AllenNlpTestCase):
 
         assert all([x >= 0 and x < 4 for x in indices[0]])
         assert all([x > 1 and x <= 5 for x in indices[1]])
+
+    def test_sequence_log_prob_scorer(self):
+        # SequenceLogProbabilityScorer is the default, so manually setting the
+        # sequence scorer shouldn't actually change anything
+        self.beam_search.sequence_scorer = SequenceLogProbabilityScorer()
+
+    def test_length_normalized_sequence_log_prob_scorer(self):
+        """
+        Tests to ensure the sequences are normalized by the correct values. The end token is
+        included in the length. The start token is not.
+        """
+        self.beam_search.final_sequence_scorer = LengthNormalizedSequenceLogProbabilityScorer()
+        expected_log_probs = np.log(np.array([0.4, 0.3, 0.2]))
+        length_normalization = np.array([5, 4, 3])
+        expected_scores = expected_log_probs / length_normalization
+        self._check_results(expected_log_probs=expected_scores)
+
+        # Introduce a length penalty
+        length_penalty = 2.0
+        self.beam_search.final_sequence_scorer = LengthNormalizedSequenceLogProbabilityScorer(
+            length_penalty=length_penalty
+        )
+        expected_log_probs = np.log(np.array([0.4, 0.3, 0.2]))
+        length_normalization = np.array(
+            [5 ** length_penalty, 4 ** length_penalty, 3 ** length_penalty]
+        )
+        expected_scores = expected_log_probs / length_normalization
+        self._check_results(expected_log_probs=expected_scores)
+
+        # Pick a length penalty so extreme that the order of the sequences is reversed
+        length_penalty = -2.0
+        self.beam_search.final_sequence_scorer = LengthNormalizedSequenceLogProbabilityScorer(
+            length_penalty=length_penalty
+        )
+        expected_top_k = np.array([[3, 4, 5, 5, 5], [2, 3, 4, 5, 5], [1, 2, 3, 4, 5]])
+        expected_log_probs = np.log(np.array([0.2, 0.3, 0.4]))
+        length_normalization = np.array(
+            [3 ** length_penalty, 4 ** length_penalty, 5 ** length_penalty]
+        )
+        expected_scores = expected_log_probs / length_normalization
+        self._check_results(expected_top_k=expected_top_k, expected_log_probs=expected_scores)
+
+        # Here, we set the max_steps = 4. This prevents the first sequence from finishing,
+        # so its length does not include the end token, whereas the other sequences do.
+        length_penalty = 2.0
+        self.beam_search.max_steps = 4
+        self.beam_search.final_sequence_scorer = LengthNormalizedSequenceLogProbabilityScorer(
+            length_penalty=length_penalty
+        )
+        expected_top_k = np.array([[1, 2, 3, 4], [2, 3, 4, 5], [3, 4, 5, 5]])
+        expected_log_probs = np.log(np.array([0.4, 0.3, 0.2]))
+        length_normalization = np.array(
+            [4 ** length_penalty, 4 ** length_penalty, 3 ** length_penalty]
+        )
+        expected_scores = expected_log_probs / length_normalization
+        self._check_results(expected_top_k=expected_top_k, expected_log_probs=expected_scores)
 
     def test_ngram_blocking_constraint_init_state(self):
         ngram_size = 3
