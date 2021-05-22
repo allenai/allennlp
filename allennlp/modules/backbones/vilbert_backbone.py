@@ -131,6 +131,7 @@ class VilbertBackbone(Backbone):
             num_boxes = sizes[-2]
             feature_size = sizes[-1]
             other_dimensions = sizes[1:-2]
+            token_ids = token_ids.repeat_interleave(prod(other_dimensions), 0)
             token_type_ids = token_type_ids.repeat_interleave(prod(other_dimensions), 0)
             attention_mask = attention_mask.repeat_interleave(prod(other_dimensions), 0)
 
