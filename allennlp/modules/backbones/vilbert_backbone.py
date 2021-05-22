@@ -198,7 +198,7 @@ class VilbertBackbone(Backbone):
         pooled_output_v = self.v_pooler(sequence_output_v)
 
         if change_dimensions:
-            some_dimensions = [batch_size] + other_dimensions
+            some_dimensions = [batch_size] + list(other_dimensions)
             sequence_output_t.view(
                 some_dimensions + [sequence_output_t.shape[-2], sequence_output_t.shape[-1]]
             )
