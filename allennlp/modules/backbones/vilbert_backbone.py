@@ -3,6 +3,7 @@ from typing import Dict, List
 
 import torch
 from overrides import overrides
+from math import prod
 
 from allennlp.data.fields.text_field import TextFieldTensors
 from allennlp.data.vocabulary import Vocabulary
@@ -111,8 +112,6 @@ class VilbertBackbone(Backbone):
         box_mask: torch.Tensor,
         text: TextFieldTensors,
     ) -> Dict[str, torch.Tensor]:
-        batch_size, _, feature_size = box_features.size()
-
         if "token_ids" in text["tokens"]:
             token_ids = text["tokens"]["token_ids"]
         else:
@@ -123,7 +122,37 @@ class VilbertBackbone(Backbone):
         # Shape: (batch_size, num_tokens)
         attention_mask = text["tokens"].get("mask")
 
-        # Shape: (batch_size, num_tokens, embedding_dim)
+        # TODO: clean this up
+        change_dimensions = False
+        if len(box_features.shape) > 3:
+            change_dimensions = True
+            sizes = box_features.shape
+            batch_size = sizes[0]
+            num_boxes = sizes[-2]
+            feature_size = sizes[-1]
+            other_dimensions = sizes[1:-2]
+            token_type_ids = token_type_ids.repeat_interleave(prod(other_dimensions), 0)
+            attention_mask = attention_mask.repeat_interleave(prod(other_dimensions), 0)
+
+            # box_features = box_features.view(batch_size * num_images, num_boxes, feature_dimension)
+            # box_coordinates = box_coordinates.view(
+            #     batch_size * num_images, box_coordinates.shape[2], box_coordinates.shape[3]
+            # )
+            # box_mask = box_mask.view(batch_size * num_images, box_mask.shape[2])
+            box_features = box_features.view(
+                batch_size * prod(other_dimensions), num_boxes, feature_size
+            )
+            box_coordinates = box_coordinates.view(
+                batch_size * prod(other_dimensions),
+                box_coordinates.shape[2],
+                box_coordinates.shape[3],
+            )
+            box_mask = box_mask.view(batch_size * prod(other_dimensions), box_mask.shape[2])
+        else:
+            batch_size, _, feature_size = box_features.size()
+        # end TODO: clean this up
+
+        # Shape: (batch_size *  prod(other_dimensions), num_tokens, embedding_dim)
         embedding_output = self.text_embeddings(token_ids, token_type_ids)
         num_tokens = embedding_output.size(1)
 
@@ -137,16 +166,16 @@ class VilbertBackbone(Backbone):
 
         extended_image_attention_mask = box_mask
 
-        # Shape: (batch_size, feature_size, num_tokens)
+        # Shape: (batch_size * prod(other_dimensions), feature_size, num_tokens)
         # TODO (epwalsh): Why all zeros?? This doesn't seem right.
         extended_co_attention_mask = torch.zeros(
-            batch_size,
+            batch_size * prod(other_dimensions),
             feature_size,
             num_tokens,
             dtype=extended_image_attention_mask.dtype,
         )
 
-        # Shape: (batch_size, num_boxes, image_embedding_dim)
+        # Shape: (batch_size * prod(other_dimensions), num_boxes, image_embedding_dim)
         v_embedding_output = self.image_embeddings(box_features, box_coordinates)
 
         encoded_layers_t, encoded_layers_v = self.encoder(
@@ -157,15 +186,30 @@ class VilbertBackbone(Backbone):
             extended_co_attention_mask,
         )
 
-        # Shape: (batch_size, num_tokens, embedding_dim)
+        # Shape: (batch_size * prod(other_dimensions), num_tokens, embedding_dim)
         sequence_output_t = encoded_layers_t[:, :, :, -1]
-        # Shape: (batch_size, num_boxes, image_embedding_dim)
+        # Shape: (batch_size * prod(other_dimensions), num_boxes, image_embedding_dim)
         sequence_output_v = encoded_layers_v[:, :, :, -1]
 
-        # Shape: (batch_size, pooled_output_dim)
+        # Shape: (batch_size * prod(other_dimensions), pooled_output_dim)
         pooled_output_t = self.t_pooler(sequence_output_t)
-        # Shape: (batch_size, pooled_output_dim)
+        # Shape: (batch_size * prod(other_dimensions), pooled_output_dim)
         pooled_output_v = self.v_pooler(sequence_output_v)
+
+        if change_dimensions:
+            some_dimensions = [batch_size] + other_dimensions
+            sequence_output_t.view(
+                some_dimensions + [sequence_output_t.shape[-2], sequence_output_t.shape[-1]]
+            )
+            sequence_output_v.view(
+                some_dimensions + [sequence_output_v.shape[-2], sequence_output_v.shape[-1]]
+            )
+            pooled_output_t.view(
+                some_dimensions + [pooled_output_t.shape[-1]]
+            )
+            pooled_output_v.view(
+                some_dimensions + [pooled_output_v.shape[-1]]
+            )
 
         if self.fusion_method == "sum":
             pooled_output = self.dropout(pooled_output_t + pooled_output_v)
