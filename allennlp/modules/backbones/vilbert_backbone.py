@@ -199,18 +199,14 @@ class VilbertBackbone(Backbone):
 
         if change_dimensions:
             some_dimensions = [batch_size] + list(other_dimensions)
-            sequence_output_t.view(
+            sequence_output_t = sequence_output_t.view(
                 some_dimensions + [sequence_output_t.shape[-2], sequence_output_t.shape[-1]]
             )
-            sequence_output_v.view(
+            sequence_output_v = sequence_output_v.view(
                 some_dimensions + [sequence_output_v.shape[-2], sequence_output_v.shape[-1]]
             )
-            pooled_output_t.view(
-                some_dimensions + [pooled_output_t.shape[-1]]
-            )
-            pooled_output_v.view(
-                some_dimensions + [pooled_output_v.shape[-1]]
-            )
+            pooled_output_t = pooled_output_t.view(some_dimensions + [pooled_output_t.shape[-1]])
+            pooled_output_v = pooled_output_v.view(some_dimensions + [pooled_output_v.shape[-1]])
 
         if self.fusion_method == "sum":
             pooled_output = self.dropout(pooled_output_t + pooled_output_v)
