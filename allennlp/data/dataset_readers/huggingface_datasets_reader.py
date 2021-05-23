@@ -1,7 +1,7 @@
 from allennlp.data import DatasetReader, Token, Field, Tokenizer
 from allennlp.data.fields import TextField, LabelField, ListField
 from allennlp.data.instance import Instance
-from datasets import load_dataset, DatasetDict, Split, list_datasets
+from datasets import load_dataset, DatasetDict, list_datasets
 from datasets.features import (
     ClassLabel,
     Sequence,

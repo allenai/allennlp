@@ -2,7 +2,6 @@ import pytest
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.common.util import ensure_list
 from allennlp.data import Tokenizer
-from allennlp.data.dataset_readers import Conll2003DatasetReader
 
 from allennlp.data.dataset_readers.huggingface_datasets_reader import HuggingfaceDatasetReader
 from allennlp.data.tokenizers import WhitespaceTokenizer
