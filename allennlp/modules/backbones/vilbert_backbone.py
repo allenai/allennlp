@@ -179,6 +179,12 @@ class VilbertBackbone(Backbone):
         # Shape: (batch_size * prod(other_dimensions), num_boxes, image_embedding_dim)
         v_embedding_output = self.image_embeddings(box_features, box_coordinates)
 
+        logger.info("shapes:")
+        logger.info(embedding_output.shape)
+        logger.info(v_embedding_output.shape)
+        logger.info(extended_attention_mask.shape)
+        logger.info(extended_image_attention_mask.shape)
+        logger.info(extended_co_attention_mask.shape)
         encoded_layers_t, encoded_layers_v = self.encoder(
             embedding_output,
             v_embedding_output,
