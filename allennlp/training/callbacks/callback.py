@@ -5,7 +5,7 @@ from allennlp.data import TensorDict
 
 
 if TYPE_CHECKING:
-    from allennlp.training.trainer import GradientDescentTrainer
+    from allennlp.training.gradient_descent_trainer import GradientDescentTrainer
 
 
 class TrainerCallback(Registrable):

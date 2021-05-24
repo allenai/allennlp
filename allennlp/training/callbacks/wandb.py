@@ -11,7 +11,7 @@ from allennlp.training.callbacks.log_writer import LogWriterCallback
 
 
 if TYPE_CHECKING:
-    from allennlp.training.trainer import GradientDescentTrainer
+    from allennlp.training.gradient_descent_trainer import GradientDescentTrainer
 
 
 logger = logging.getLogger(__name__)

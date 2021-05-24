@@ -10,7 +10,7 @@ from allennlp.training.callbacks.callback import TrainerCallback
 from allennlp.training.util import get_train_and_validation_metrics, get_batch_size
 
 if TYPE_CHECKING:
-    from allennlp.training.trainer import GradientDescentTrainer
+    from allennlp.training.gradient_descent_trainer import GradientDescentTrainer
 
 
 logger = logging.getLogger(__name__)

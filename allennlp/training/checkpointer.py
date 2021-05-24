@@ -8,9 +8,9 @@ import time
 
 import torch
 
-import allennlp
 from allennlp.common import Registrable
 from allennlp.nn import util as nn_util
+from allennlp.training.trainer import Trainer
 
 logger = logging.getLogger(__name__)
 
@@ -97,7 +97,7 @@ class Checkpointer(Registrable):
 
     def maybe_save_checkpoint(
         self,
-        trainer: "allennlp.training.trainer.Trainer",
+        trainer: Trainer,
         num_epochs_completed: int,
         num_batches_in_epoch_completed: int,
     ) -> None:
@@ -132,7 +132,7 @@ class Checkpointer(Registrable):
 
     def save_checkpoint(
         self,
-        trainer: "allennlp.training.trainer.Trainer",
+        trainer: Trainer,
     ) -> None:
         if self._serialization_dir is None:
             return
