@@ -4,10 +4,9 @@ import math
 import os
 import re
 import time
-import traceback
 import warnings
-from contextlib import contextmanager
-from typing import Any, Dict, Iterator, List, Optional, Tuple, Union, Type
+from dataclasses import dataclass
+from typing import Any, Dict, List, Optional, Tuple, Union, Type
 
 from allennlp.common.util import int_to_device
 
@@ -37,6 +36,12 @@ from allennlp.training.moving_average import MovingAverage
 from allennlp.training.optimizers import Optimizer
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class TrainerCheckpoint:
+    model_state: Dict[str, Any]
+    trainer_state: Dict[str, Any]
 
 
 class Trainer(Registrable):
@@ -101,15 +106,10 @@ class Trainer(Registrable):
         """
         raise NotImplementedError
 
-    @contextmanager
-    def get_checkpoint_state(self) -> Iterator[Tuple[Dict[str, Any], Dict[str, Any]]]:
+    def get_checkpoint_state(self) -> TrainerCheckpoint:
         """
         Returns a tuple of (model state, training state), where training state could have several
         internal components (e.g., for an, optimizer, learning rate scheduler, etc.).
-
-        This is a context manager, and should be called as `with trainer.get_checkpoint_state() as
-        state:`, so that the trainer has the opportunity to change and restore its internal state
-        for checkpointing.  This is used, e.g., for moving averages of model weights.
         """
         raise NotImplementedError
 
@@ -371,7 +371,6 @@ class GradientDescentTrainer(Trainer):
             else:
                 self._callbacks.append(callback_cls(self._serialization_dir))
 
-        self._batch_num_total = 0
         self._last_log = 0.0  # time of last logging
         self._num_gradient_accumulation_steps = num_gradient_accumulation_steps
 
@@ -398,6 +397,17 @@ class GradientDescentTrainer(Trainer):
             )
         else:
             self._pytorch_model = self.model
+
+        # training state management
+        self._epochs_completed = 0
+        self._start_after_epochs_completed = 0
+        self._batches_in_epoch_completed = 0
+        self._start_after_batches_in_epoch_completed = 0
+        self._best_model_filename: Optional[str] = None
+
+        # This is a kind of training state, but it is not serialized with the trainer state, because we can
+        # re-create it with `epochs_completed` and `batches_in_epoch_completed`.
+        self._total_batches_completed = 0
 
     def rescale_gradients(self) -> float:
         """
@@ -492,17 +502,15 @@ class GradientDescentTrainer(Trainer):
 
         self._last_log = time.time()
 
-        batches_this_epoch = 0
-        if self._batch_num_total is None:
-            self._batch_num_total = 0
-
         done_early = False
         for batch_group in batch_group_generator_tqdm:
             if done_early:
                 break
 
-            batches_this_epoch += 1
-            self._batch_num_total += 1
+            if self._batches_in_epoch_completed < self._start_after_batches_in_epoch_completed:
+                self._batches_in_epoch_completed += 1
+                self._total_batches_completed += 1
+                continue
 
             self.optimizer.zero_grad()
 
@@ -554,12 +562,10 @@ class GradientDescentTrainer(Trainer):
 
             batch_grad_norm = self.rescale_gradients()
 
-            # This does nothing if batch_num_total is None or you are using a
-            # scheduler which doesn't update per batch.
             if self._learning_rate_scheduler:
-                self._learning_rate_scheduler.step_batch(self._batch_num_total)
+                self._learning_rate_scheduler.step_batch(self._total_batches_completed + 1)
             if self._momentum_scheduler:
-                self._momentum_scheduler.step_batch(self._batch_num_total)
+                self._momentum_scheduler.step_batch(self._total_batches_completed + 1)
 
             if self._scaler is not None:
                 self._scaler.step(self.optimizer)
@@ -569,7 +575,10 @@ class GradientDescentTrainer(Trainer):
 
             # Update moving averages
             if self._moving_average is not None:
-                self._moving_average.apply(self._batch_num_total)
+                self._moving_average.apply(self._total_batches_completed + 1)
+
+            self._batches_in_epoch_completed += 1
+            self._total_batches_completed += 1
 
             # Update the description with the latest metrics
             metrics = training_util.get_metrics(
@@ -578,18 +587,10 @@ class GradientDescentTrainer(Trainer):
                 train_reg_loss,
                 batch_loss,
                 batch_reg_loss,
-                batches_this_epoch,
+                self._batches_in_epoch_completed,
                 world_size=self._world_size,
                 cuda_device=self.cuda_device,
             )
-
-            if self._primary:
-                # Updating tqdm only for the primary as the trainers wouldn't have one
-                description = training_util.description_from_metrics(metrics)
-                batch_group_generator_tqdm.set_description(description, refresh=False)
-
-                if self._checkpointer is not None:
-                    self._checkpointer.maybe_save_checkpoint(self, epoch, batches_this_epoch)
 
             for callback in self._callbacks:
                 callback.on_batch(
@@ -598,11 +599,22 @@ class GradientDescentTrainer(Trainer):
                     batch_group_outputs,
                     metrics,
                     epoch,
-                    batches_this_epoch,
+                    self._batches_in_epoch_completed,
                     is_training=True,
                     is_primary=self._primary,
                     batch_grad_norm=batch_grad_norm,
                 )
+
+            if self._primary:
+                # Updating tqdm only for the primary as the trainers wouldn't have one
+                description = training_util.description_from_metrics(metrics)
+                batch_group_generator_tqdm.set_description(description, refresh=False)
+
+                if self._checkpointer is not None:
+                    self._checkpointer.maybe_save_checkpoint(
+                        self,
+                        self._epochs_completed,
+                        self._batches_in_epoch_completed)
 
         if self._distributed and not done_early:
             logger.warning(
@@ -624,7 +636,7 @@ class GradientDescentTrainer(Trainer):
             train_reg_loss,
             batch_loss=None,
             batch_reg_loss=None,
-            num_batches=batches_this_epoch,
+            num_batches=self._batches_in_epoch_completed,
             reset=True,
             world_size=self._world_size,
             cuda_device=self.cuda_device,
@@ -754,9 +766,20 @@ class GradientDescentTrainer(Trainer):
         """
         Trains the supplied model with the supplied parameters.
         """
+        try:
+            self._restore_checkpoint()
+        except RuntimeError as e:
+            configuration_error = ConfigurationError(
+                "Could not recover training from the checkpoint. Did you mean to output to "
+                "a different serialization directory or delete the existing serialization "
+                "directory?"
+            )
+            configuration_error.__cause__ = e
+            raise configuration_error
 
-        for callback in self._callbacks:
-            callback.on_start(self, is_primary=self._primary)
+        if self._start_after_epochs_completed == 0 and self._start_after_batches_in_epoch_completed == 0:
+            for callback in self._callbacks:
+                callback.on_start(self, is_primary=self._primary)
 
         # Set default values in case of failure
         epoch = None
@@ -770,39 +793,38 @@ class GradientDescentTrainer(Trainer):
                 callback.on_end(self, metrics=metrics, epoch=epoch, is_primary=self._primary)
 
     def _try_train(self) -> Tuple[Dict[str, Any], int]:
-        try:
-            epoch_counter = self._restore_checkpoint()
-        except RuntimeError:
-            traceback.print_exc()
-            raise ConfigurationError(
-                "Could not recover training from the checkpoint.  Did you mean to output to "
-                "a different serialization directory or delete the existing serialization "
-                "directory?"
-            )
-
         training_util.enable_gradient_clipping(self.model, self._grad_clipping)
 
         logger.info("Beginning training.")
 
         val_metrics: Dict[str, float] = {}
         metrics: Dict[str, Any] = {}
-        epochs_trained = 0
-        training_start_time = time.time()
+        training_start_time = None
+        epochs_skipped = 0
 
         metrics["best_epoch"] = self._metric_tracker.best_epoch
         for key, value in self._metric_tracker.best_epoch_metrics.items():
             metrics["best_validation_" + key] = value
 
-        for epoch in range(epoch_counter, self._num_epochs):
+        for epoch in range(self._num_epochs):
             epoch_start_time = time.time()
+            assert self._batches_in_epoch_completed == 0
             train_metrics = self._train_epoch(epoch)
 
+            if self._epochs_completed < self._start_after_epochs_completed:
+                # We're still catching up with the checkpoint, so we do nothing.
+                # Note that we have to call _train_epoch() even when we know the epoch is skipped. We have to
+                # read from the data loader, because the data loader and dataset readers might use randomness,
+                # and we have to make sure we consume exactly the same instances in exactly the same way every
+                # time we train, even when starting from a checkpoint, so that we update the randomness
+                # generators in the same way each time.
+                epochs_skipped += 1
+                continue
+            if training_start_time is None:
+                training_start_time = epoch_start_time
+
             # Back up the model now, in case something goes wrong later with the evaluation
-            if self._primary and self._checkpointer is not None:
-                self._checkpointer.shelve_model(epoch, self)
-            # Wait for the primary process to finish saving the model checkpoint
-            if self._distributed:
-                dist.barrier()
+            # TODO: actually do this
 
             # get peak of memory usage
             for key, value in train_metrics.items():
@@ -841,8 +863,6 @@ class GradientDescentTrainer(Trainer):
             # Create overall metrics dict
             training_elapsed_time = time.time() - training_start_time
             metrics["training_duration"] = str(datetime.timedelta(seconds=training_elapsed_time))
-            metrics["training_start_epoch"] = epoch_counter
-            metrics["training_epochs"] = epochs_trained
             metrics["epoch"] = epoch
 
             for key, value in train_metrics.items():
@@ -871,132 +891,135 @@ class GradientDescentTrainer(Trainer):
                 self._learning_rate_scheduler.step(this_epoch_val_metric)
             if self._momentum_scheduler:
                 self._momentum_scheduler.step(this_epoch_val_metric)
+            for callback in self._callbacks:
+                callback.on_epoch(self, metrics=metrics, epoch=epoch, is_primary=self._primary)
 
-            # The checkpointer saves state from the learning rate scheduler and the momentum
-            # scheduler, so we have to make sure those are updated before we save the checkpoint here.
+            self._epochs_completed += 1
+            self._batches_in_epoch_completed = 0
+
+            # The checkpointer saves state from the learning rate scheduler, momentum scheduler, moving
+            # average, and callbacks, so we have to make sure those are updated before we save the
+            # checkpoint here.
             if self._primary and self._checkpointer is not None:
-                self._checkpointer.save_checkpoint(
-                    epoch, self, is_best_so_far=self._metric_tracker.is_best_so_far()
-                )
+                self._checkpointer.maybe_save_checkpoint(self, self._epochs_completed, self._batches_in_epoch_completed)
             # Wait for the primary process to finish saving the checkpoint
             if self._distributed:
                 dist.barrier()
 
-            for callback in self._callbacks:
-                callback.on_epoch(self, metrics=metrics, epoch=epoch, is_primary=self._primary)
+            if self._primary and self._serialization_dir and self._metric_tracker.is_best_so_far():
+                self._best_model_filename = os.path.join(self._serialization_dir, "best.th")
+                if self._moving_average is None:
+                    torch.save(self.model.state_dict(), self._best_model_filename)
+                else:
+                    self._moving_average.assign_average_value()
+                    try:
+                        torch.save(self.model.state_dict(), self._best_model_filename)
+                    finally:
+                        self._moving_average.restore()
+            # Wait for the primary process to finish saving the best
+            if self._distributed:
+                dist.barrier()
 
             epoch_elapsed_time = time.time() - epoch_start_time
             logger.info("Epoch duration: %s", datetime.timedelta(seconds=epoch_elapsed_time))
 
-            if epoch < self._num_epochs - 1:
-                training_elapsed_time = time.time() - training_start_time
-                estimated_time_remaining = training_elapsed_time * (
-                    (self._num_epochs - epoch_counter) / float(epoch - epoch_counter + 1) - 1
-                )
-                formatted_time = str(datetime.timedelta(seconds=int(estimated_time_remaining)))
-                logger.info("Estimated training time remaining: %s", formatted_time)
-
-            epochs_trained += 1
-
             if self._metric_tracker.should_stop_early():
                 logger.info("Ran out of patience. Stopping training.")
                 break
+
+            if epoch < self._num_epochs - 1:
+                time_per_epoch = training_elapsed_time / ((epoch + 1) - epochs_skipped)
+                # Note: If the first non-skipped epoch is half skipped (because it was checkpointed half-way
+                # through), then this estimate is going to be optimistic.
+                estimated_time_remaining = (
+                    time_per_epoch * self._num_epochs
+                ) - training_elapsed_time
+                formatted_time = str(datetime.timedelta(seconds=int(estimated_time_remaining)))
+                logger.info("Estimated training time remaining: %s", formatted_time)
         else:
             epoch = self._num_epochs - 1
 
         # Load the best model state before returning
-        best_model_state = (
-            None if self._checkpointer is None else self._checkpointer.best_model_state()
-        )
-        if best_model_state:
-            self.model.load_state_dict(best_model_state)
+        if self._best_model_filename is None:
+            self._finalize_model()
+        elif not self._metric_tracker.is_best_so_far():
+            self.model.load_state_dict(torch.load(self._best_model_filename))
 
         return metrics, epoch
 
-    @contextmanager
-    def get_checkpoint_state(self) -> Iterator[Tuple[Dict[str, Any], Dict[str, Any]]]:
+    def _finalize_model(self) -> None:
+        """If we have a moving average, we have to finalize the model at the end of training."""
         if self._moving_average is not None:
-            # Assigning average value to model parameters. The checkpointer will call
-            # `restore_state_after_checkpointing` when it is done to put this back to what it was.
             self._moving_average.assign_average_value()
 
+    def get_checkpoint_state(self) -> TrainerCheckpoint:
         model_state = self.model.state_dict()
 
         # These are the training states we need to persist.
         training_states = {
+            "version": 1,
             "metric_tracker": self._metric_tracker.state_dict(),
             "optimizer": self.optimizer.state_dict(),
-            "batch_num_total": self._batch_num_total,
+            "callbacks": [cb.state_dict() for cb in self._callbacks],
+            "epochs_completed": self._epochs_completed,
+            "batches_in_epoch_completed": self._batches_in_epoch_completed,
+            "best_model_filename": self._best_model_filename,
         }
 
-        # If we have a learning rate or momentum scheduler, we should persist them too.
+        # If we have any of these optional objects, we should persist them too.
         if self._learning_rate_scheduler is not None:
             training_states["learning_rate_scheduler"] = self._learning_rate_scheduler.state_dict()
         if self._momentum_scheduler is not None:
             training_states["momentum_scheduler"] = self._momentum_scheduler.state_dict()
+        if self._moving_average is not None:
+            training_states["moving_average"] = self._moving_average.state_dict()
 
-        try:
-            yield model_state, training_states
-        finally:
-            if self._moving_average is not None:
-                self._moving_average.restore()
+        return TrainerCheckpoint(model_state, training_states)
 
-    def _restore_checkpoint(self) -> int:
+    def _restore_checkpoint(self) -> None:
         """
         Restores the model and training state from the last saved checkpoint.
         This includes an epoch count and optimizer state, which is serialized separately
         from model parameters. This function should only be used to continue training -
         if you wish to load a model for inference/load parts of a model into a new
         computation graph, you should use the native Pytorch functions:
-        `model.load_state_dict(torch.load("/path/to/model/weights.pt"))`
+        `model.load_state_dict(torch.load("/path/to/model/weights.th"))`
 
         If `self._serialization_dir` does not exist or does not contain any checkpointed weights,
-        this function will do nothing and return 0.
-
-        # Returns
-
-        epoch: `int`
-            The epoch at which to resume training, which should be one after the epoch
-            in the saved training state.
+        this function will do nothing.
         """
         if self._checkpointer is None:
-            return 0
+            return
 
-        model_state, training_state = self._checkpointer.restore_checkpoint()
-
-        if not training_state:
-            # No checkpoint to restore, start at 0
-            return 0
+        model_state, training_state = self._checkpointer.load_checkpoint()
+        if len(model_state) <= 0 and len(training_state) <= 0:
+            self._start_after_epochs_completed = 0
+            self._start_after_batches_in_epoch_completed = 0
+            self._best_model_filename = None
+            return
+        if training_state["version"] != 1:
+            raise ValueError(
+                f"This version of {self.__class__.__name__} only supports checkpoints of version 1. "
+                f"Found version {training_state['version']}"
+            )
 
         self.model.load_state_dict(model_state)
+        self._metric_tracker.load_state_dict(training_state["metric_tracker"])
         self.optimizer.load_state_dict(training_state["optimizer"])
-        if (
-            self._learning_rate_scheduler is not None
-            and "learning_rate_scheduler" in training_state
-        ):
+
+        for cb, state_dict in zip(self._callbacks, training_state["callbacks"]):
+            cb.load_state_dict(state_dict)
+
+        if self._learning_rate_scheduler is not None:
             self._learning_rate_scheduler.load_state_dict(training_state["learning_rate_scheduler"])
-        if self._momentum_scheduler is not None and "momentum_scheduler" in training_state:
+        if self._momentum_scheduler is not None:
             self._momentum_scheduler.load_state_dict(training_state["momentum_scheduler"])
-        training_util.move_optimizer_to_cuda(self.optimizer)
+        if self._moving_average is not None:
+            self._moving_average.load_state_dict(training_state["moving_average"])
 
-        # Currently the `training_state` contains a serialized `MetricTracker`.
-        if "metric_tracker" in training_state:
-            self._metric_tracker.load_state_dict(training_state["metric_tracker"])
-        else:
-            self._metric_tracker.clear()
-
-        if isinstance(training_state["epoch"], int):
-            epoch_to_return = training_state["epoch"] + 1
-        else:
-            epoch_to_return = int(training_state["epoch"].split(".")[0]) + 1
-
-        # For older checkpoints with batch_num_total missing, default to old behavior where
-        # it is unchanged.
-        batch_num_total = training_state.get("batch_num_total")
-        if batch_num_total is not None:
-            self._batch_num_total = batch_num_total
-
-        return epoch_to_return
+        self._start_after_epochs_completed = training_state["epochs_completed"]
+        self._start_after_batches_in_epoch_completed = training_state["batches_in_epoch_completed"]
+        self._best_model_filename = training_state["best_model_filename"]
 
     @classmethod
     def from_partial_objects(
