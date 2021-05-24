@@ -425,7 +425,10 @@ class GradientDescentTrainer(Trainer):
             if done_early:
                 break
 
-            if self._batches_in_epoch_completed < self._start_after_batches_in_epoch_completed:
+            if (
+                self._epochs_completed < self._start_after_epochs_completed
+                or self._batches_in_epoch_completed < self._start_after_batches_in_epoch_completed
+            ):
                 self._batches_in_epoch_completed += 1
                 self._total_batches_completed += 1
                 continue
@@ -694,12 +697,9 @@ class GradientDescentTrainer(Trainer):
             configuration_error.__cause__ = e
             raise configuration_error
 
-        if (
-            self._start_after_epochs_completed == 0
-            and self._start_after_batches_in_epoch_completed == 0
-        ):
-            for callback in self._callbacks:
-                callback.on_start(self, is_primary=self._primary)
+        # Callbacks get their `on_start` call even when we're starting from a checkpoint.
+        for callback in self._callbacks:
+            callback.on_start(self, is_primary=self._primary)
 
         # Set default values in case of failure
         epoch = None
@@ -720,7 +720,6 @@ class GradientDescentTrainer(Trainer):
         val_metrics: Dict[str, float] = {}
         metrics: Dict[str, Any] = {}
         training_start_time = None
-        epochs_skipped = 0
 
         metrics["best_epoch"] = self._metric_tracker.best_epoch
         for key, value in self._metric_tracker.best_epoch_metrics.items():
@@ -728,7 +727,6 @@ class GradientDescentTrainer(Trainer):
 
         for epoch in range(self._num_epochs):
             epoch_start_time = time.time()
-            assert self._batches_in_epoch_completed == 0
             train_metrics = self._train_epoch(epoch)
 
             if self._epochs_completed < self._start_after_epochs_completed:
@@ -738,13 +736,11 @@ class GradientDescentTrainer(Trainer):
                 # and we have to make sure we consume exactly the same instances in exactly the same way every
                 # time we train, even when starting from a checkpoint, so that we update the randomness
                 # generators in the same way each time.
-                epochs_skipped += 1
+                self._epochs_completed += 1
+                self._batches_in_epoch_completed = 0
                 continue
             if training_start_time is None:
                 training_start_time = epoch_start_time
-
-            # Back up the model now, in case something goes wrong later with the evaluation
-            # TODO: actually do this
 
             # get peak of memory usage
             for key, value in train_metrics.items():
@@ -850,7 +846,9 @@ class GradientDescentTrainer(Trainer):
                 break
 
             if epoch < self._num_epochs - 1:
-                time_per_epoch = training_elapsed_time / ((epoch + 1) - epochs_skipped)
+                time_per_epoch = training_elapsed_time / (
+                    (epoch + 1) - self._start_after_epochs_completed
+                )
                 # Note: If the first non-skipped epoch is half skipped (because it was checkpointed half-way
                 # through), then this estimate is going to be optimistic.
                 estimated_time_remaining = (
