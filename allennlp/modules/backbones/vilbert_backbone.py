@@ -112,6 +112,20 @@ class VilbertBackbone(Backbone):
         box_mask: torch.Tensor,
         text: TextFieldTensors,
     ) -> Dict[str, torch.Tensor]:
+    if self.training:
+        return self.forward_helper(box_features, box_coordinates, box_mask, text)
+    else:
+        with torch.no_grad():
+            return self.forward_helper(box_features, box_coordinates, box_mask, text)
+
+
+    def forward_helper(
+        self,  # type: ignore
+        box_features: torch.Tensor,
+        box_coordinates: torch.Tensor,
+        box_mask: torch.Tensor,
+        text: TextFieldTensors,
+    ) -> Dict[str, torch.Tensor]:
         if "token_ids" in text["tokens"]:
             token_ids = text["tokens"]["token_ids"]
         else:
