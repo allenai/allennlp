@@ -65,12 +65,14 @@ class Checkpointer(Registrable):
     def _model_state_path(self, epochs_completed: int, batches_in_epoch_completed: int) -> str:
         return os.path.join(
             self._serialization_dir,
-            f"model_state_e{epochs_completed}_b{batches_in_epoch_completed}.th")
+            f"model_state_e{epochs_completed}_b{batches_in_epoch_completed}.th",
+        )
 
     def _training_state_path(self, epochs_completed: int, batches_in_epoch_completed: int) -> str:
         return os.path.join(
             self._serialization_dir,
-            f"training_state_e{epochs_completed}_b{batches_in_epoch_completed}.th")
+            f"training_state_e{epochs_completed}_b{batches_in_epoch_completed}.th",
+        )
 
     _model_state_file_re = re.compile(r".*/model_state_e(\d+)_b(\d+)\.th$")
     _training_state_file_re = re.compile(r".*/training_state_e(\d+)_b(\d+)\.th$")
@@ -104,7 +106,9 @@ class Checkpointer(Registrable):
         """
         end_of_epoch = num_batches_in_epoch_completed == 0
         if num_epochs_completed == self._last_save_num_epochs_completed:
-            last_save_num_batches_in_epoch_completed = self._last_save_num_batches_in_epoch_completed
+            last_save_num_batches_in_epoch_completed = (
+                self._last_save_num_batches_in_epoch_completed
+            )
         else:
             last_save_num_batches_in_epoch_completed = 0
 

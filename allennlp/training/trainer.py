@@ -612,9 +612,8 @@ class GradientDescentTrainer(Trainer):
 
                 if self._checkpointer is not None:
                     self._checkpointer.maybe_save_checkpoint(
-                        self,
-                        self._epochs_completed,
-                        self._batches_in_epoch_completed)
+                        self, self._epochs_completed, self._batches_in_epoch_completed
+                    )
 
         if self._distributed and not done_early:
             logger.warning(
@@ -777,7 +776,10 @@ class GradientDescentTrainer(Trainer):
             configuration_error.__cause__ = e
             raise configuration_error
 
-        if self._start_after_epochs_completed == 0 and self._start_after_batches_in_epoch_completed == 0:
+        if (
+            self._start_after_epochs_completed == 0
+            and self._start_after_batches_in_epoch_completed == 0
+        ):
             for callback in self._callbacks:
                 callback.on_start(self, is_primary=self._primary)
 
@@ -901,7 +903,9 @@ class GradientDescentTrainer(Trainer):
             # average, and callbacks, so we have to make sure those are updated before we save the
             # checkpoint here.
             if self._primary and self._checkpointer is not None:
-                self._checkpointer.maybe_save_checkpoint(self, self._epochs_completed, self._batches_in_epoch_completed)
+                self._checkpointer.maybe_save_checkpoint(
+                    self, self._epochs_completed, self._batches_in_epoch_completed
+                )
             # Wait for the primary process to finish saving the checkpoint
             if self._distributed:
                 dist.barrier()
