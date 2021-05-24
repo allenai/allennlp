@@ -32,4 +32,6 @@ class NoOpTrainer(Trainer):
         return {}
 
     def get_checkpoint_state(self) -> TrainerCheckpoint:
-        return TrainerCheckpoint(self.model.state_dict(), {})
+        return TrainerCheckpoint(
+            self.model.state_dict(), {"epochs_completed": 0, "batches_in_epoch_completed": 0}
+        )
