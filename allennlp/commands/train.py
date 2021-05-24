@@ -475,7 +475,11 @@ def _train_worker(
                 "Training interrupted by the user. Attempting to create "
                 "a model archive using the current best epoch weights."
             )
-            archive_model(serialization_dir, include_in_archive=include_in_archive)
+            archive_model(
+                serialization_dir,
+                weights=train_loop.trainer.get_best_weights_path(),
+                include_in_archive=include_in_archive,
+            )
         raise
 
     if primary:

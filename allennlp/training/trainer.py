@@ -86,3 +86,7 @@ class Trainer(Registrable):
         internal components (e.g., for an, optimizer, learning rate scheduler, etc.).
         """
         raise NotImplementedError
+
+    def get_best_weights_path(self) -> Optional[str]:
+        """Returns the path to file containing the current best weights."""
+        return None

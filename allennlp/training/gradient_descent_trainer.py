@@ -1064,6 +1064,9 @@ class GradientDescentTrainer(Trainer):
             **kwargs,
         )
 
+    def get_best_weights_path(self) -> Optional[str]:
+        return self._best_model_filename
+
 
 DEFAULT_CALLBACKS: Tuple[Type[TrainerCallback]] = (ConsoleLoggerCallback,)
 """
