@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   an actual `torch.nn.Module`. Other parameters to this method have changed as well.
 - Print the first batch to the console by default.
 - Renamed `sanity_checks` to `confidence_checks` (`sanity_checks` is deprecated and will be removed in AllenNLP 3.0).
+- Trainer callbacks can now store and restore state in case a training run gets interrupted.
 
 ### Added
 
@@ -38,6 +39,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - When `PretrainedTransformerIndexer` folds long sequences, it no longer loses the information from token type ids.
 - Fixed documentation for `GradientDescentTrainer.cuda_device`.
+- Re-starting a training run from a checkpoint in the middle of an epoch now works correctly.
+- When using the "moving average" weights smoothing feature of the trainer, training checkpoints would also get smoothed, with strange results for resuming a training job. This has been fixed.
+- When re-starting an interrupted training job, the trainer will now read out the data loader even for epochs and batches that can be skipped. This ensures that any random number generators used by the reader or data loader are in the same state as they were the first time the training job ran.
 
 
 ## [v2.4.0](https://github.com/allenai/allennlp/releases/tag/v2.4.0) - 2021-04-22
