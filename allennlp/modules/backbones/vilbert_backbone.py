@@ -233,6 +233,7 @@ class VilbertBackbone(Backbone):
                 "pooled_boxes_and_text": pooled_output,
             }
         else:
+            self.eval()
             with torch.no_grad():
                 logger.info("eval")
                 if "token_ids" in text["tokens"]:
@@ -345,6 +346,7 @@ class VilbertBackbone(Backbone):
                 else:
                     raise ValueError(f"Fusion method '{self.fusion_method}' not supported")
 
+                self.train()
                 return {
                     "encoded_boxes": sequence_output_v,
                     "encoded_boxes_mask": box_mask,
