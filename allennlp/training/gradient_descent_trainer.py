@@ -316,15 +316,15 @@ class GradientDescentTrainer(Trainer):
             self._pytorch_model = self.model
 
         # training state management
-        self._epochs_completed = 0
-        self._start_after_epochs_completed = 0
-        self._batches_in_epoch_completed = 0
-        self._start_after_batches_in_epoch_completed = 0
+        self._epochs_completed: int = 0
+        self._start_after_epochs_completed: int = 0
+        self._batches_in_epoch_completed: int = 0
+        self._start_after_batches_in_epoch_completed: int = 0
         self._best_model_filename: Optional[str] = None
 
         # This is a kind of training state, but it is not serialized with the trainer state, because we can
         # re-create it with `epochs_completed` and `batches_in_epoch_completed`.
-        self._total_batches_completed = 0
+        self._total_batches_completed: int = 0
 
     def rescale_gradients(self) -> float:
         """
