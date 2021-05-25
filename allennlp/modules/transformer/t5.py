@@ -21,16 +21,14 @@ from allennlp.modules.transformer.attention_module import (
 )
 from allennlp.modules.transformer.util import (
     get_extended_attention_mask,
+    FloatT,
+    IntT,
+    BoolT,
 )
 from allennlp.nn.beam_search import BeamSearch
 
 if TYPE_CHECKING:
     from transformers.configuration_utils import PretrainedConfig
-
-# Unfortunately mypy is insane, so I have to wrap these in unions.
-FloatT = Union[torch.FloatTensor]
-IntT = Union[torch.IntTensor]
-BoolT = Union[torch.BoolTensor]
 
 
 class T5LayerNorm(TransformerModule, FromParams):
@@ -155,7 +153,9 @@ class T5LayerSelfAttention(TransformerModule, FromParams):
         use_cache: bool = False,
         output_attentions: bool = False,
     ) -> T5LayerSelfAttentionOutput:
+
         normed_hidden_states = self.layer_norm(hidden_states)
+
         attention_output: AttentionOutput = self.self_attention(
             normed_hidden_states,
             mask=attention_mask,
@@ -165,13 +165,9 @@ class T5LayerSelfAttention(TransformerModule, FromParams):
             use_cache=use_cache,
             output_attentions=output_attentions,
         )
+
         hidden_states = hidden_states + self.dropout(attention_output.hidden_states)
-        # return T5LayerSelfAttentionOutput(
-        #     hidden_states,
-        #     attention_output.key_value_state,
-        #     attention_output.position_bias,
-        #     attention_output.attn_weights,
-        # )
+
         return T5LayerSelfAttentionOutput(
             hidden_states,
             attention_output.key_value_state,
@@ -231,12 +227,6 @@ class T5LayerCrossAttention(TransformerModule, FromParams):
             output_attentions=output_attentions,
         )
         layer_output = hidden_states + self.dropout(attention_output.hidden_states)
-        # return T5LayerCrossAttentionOutput(
-        #     layer_output,
-        #     attention_output.key_value_state,
-        #     attention_output.position_bias,
-        #     attention_output.attn_weights,
-        # )
 
         return T5LayerCrossAttentionOutput(
             layer_output,

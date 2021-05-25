@@ -7,15 +7,10 @@ import torch.nn.functional as F
 from allennlp.common import FromParams
 from allennlp.modules.attention import Attention
 from allennlp.modules.transformer.transformer_module import TransformerModule
-from allennlp.modules.transformer.util import apply_mask
+from allennlp.modules.transformer.util import apply_mask, FloatT, IntT, BoolT
 
 if TYPE_CHECKING:
     from transformers.configuration_utils import PretrainedConfig
-
-# Unfortunately mypy is insane, so we have to wrap these in unions.
-FloatT = Union[torch.FloatTensor]
-IntT = Union[torch.IntTensor]
-BoolT = Union[torch.BoolTensor]
 
 
 @dataclass
@@ -596,12 +591,6 @@ class SelfAttention(AttentionModule):
             is_decoder=is_decoder,
             is_cross_attention=is_cross_attention,
         )
-
-    def forward(self, *args, **kwargs):
-        outputs = super().forward(*args, **kwargs)
-        if outputs.attention_probs is not None:
-            return (outputs.hidden_states, outputs.attention_probs)
-        return (outputs.hidden_states,)
 
     @classmethod
     def _from_config(cls, config: "PretrainedConfig", **kwargs):

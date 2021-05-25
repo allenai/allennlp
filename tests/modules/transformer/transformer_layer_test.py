@@ -87,7 +87,7 @@ def test_attention_matches_huggingface(attention_params, module_name, hf_module)
     torch.manual_seed(1234)
     hf_output = hf_module(hidden_states, attention_mask=attention_mask_hf)
 
-    assert torch.allclose(output[0], hf_output[0])
+    assert torch.allclose(output.hidden_states, hf_output[0])
 
 
 @pytest.mark.parametrize(
@@ -126,7 +126,7 @@ def test_attention_from_pretrained(pretrained_name, relevant_top_level_module):
     attention_mask_hf = (1.0 - attention_mask_hf) * -10e5
 
     torch.manual_seed(1234)
-    output = module(hidden_states, attention_mask=attention_mask.squeeze())[0]
+    output = module(hidden_states, attention_mask=attention_mask.squeeze()).hidden_states
 
     torch.manual_seed(1234)
     hf_output = pretrained_module(hidden_states, attention_mask=attention_mask_hf)[0]
@@ -207,7 +207,7 @@ def test_layer_with_cross_attention(layer_params):
     transformer_layer(
         torch.randn(2, 3, 6),
         attention_mask=attention_mask,
-        encoder_hidden_states=torch.randn(2, 2, 3, 3),
+        encoder_hidden_states=torch.randn(2, 3, 6),
     )
 
 
