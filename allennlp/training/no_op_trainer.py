@@ -34,7 +34,7 @@ class NoOpTrainer(Trainer):
         checkpointer.save_checkpoint(self)
 
         best_model_filename = os.path.join(self._serialization_dir, "best.th")
-        torch.save(self.model, best_model_filename)
+        torch.save(self.model.state_dict(), best_model_filename)
         self._best_model_filename = best_model_filename
 
         return {}
