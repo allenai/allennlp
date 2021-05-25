@@ -898,12 +898,12 @@ class TestTrainer(TrainerTestBase):
                 os.remove(trainer._checkpointer._training_state_path(*checkpoint))
         os.remove(os.path.join(self.TEST_DIR, "best.th"))
 
-        restore_trainer = GradientDescentTrainer(
+        restored_trainer = GradientDescentTrainer(
             self.model,
             self.optimizer,
             self.data_loader,
             validation_data_loader=data_loader,
-            num_epochs=2,
+            num_epochs=num_epochs,
             serialization_dir=self.TEST_DIR,
             checkpointer=Checkpointer(
                 serialization_dir=self.TEST_DIR,
@@ -911,7 +911,7 @@ class TestTrainer(TrainerTestBase):
                 keep_most_recent_by_count=10,
             ),
         )
-        restored_metrics = restore_trainer.train()
+        restored_metrics = restored_trainer.train()
 
         assert original_metrics["best_validation_loss"] == restored_metrics["best_validation_loss"]
 
