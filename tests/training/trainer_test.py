@@ -2,7 +2,6 @@ import copy
 import glob
 import json
 import os
-import re
 import time
 from typing import Any, Dict, List, Optional
 
@@ -217,11 +216,11 @@ class TestTrainer(TrainerTestBase):
             num_epochs=num_epochs,
             serialization_dir=self.TEST_DIR,
         )
-        assert trainer._batch_num_total == 0
+        assert trainer._total_batches_completed == 0
         metrics = trainer.train()
         epoch = metrics["epoch"]
         assert epoch == num_epochs - 1
-        assert trainer._batch_num_total == num_epochs * 2
+        assert trainer._total_batches_completed == num_epochs * 2
 
     def test_data_loader_lazy_epoch_size_correct_custom_epoch_size(self):
         self.data_loader_lazy.batches_per_epoch = 3
@@ -234,11 +233,11 @@ class TestTrainer(TrainerTestBase):
             num_epochs=num_epochs,
             serialization_dir=self.TEST_DIR,
         )
-        assert trainer._batch_num_total == 0
+        assert trainer._total_batches_completed == 0
         metrics = trainer.train()
         epoch = metrics["epoch"]
         assert epoch == num_epochs - 1
-        assert trainer._batch_num_total == num_epochs * 3
+        assert trainer._total_batches_completed == num_epochs * 3
 
     def test_trainer_respects_epoch_size_equals_total(self):
         batches_per_epoch = 4
@@ -256,11 +255,11 @@ class TestTrainer(TrainerTestBase):
             num_epochs=num_epochs,
             serialization_dir=self.TEST_DIR,
         )
-        assert trainer._batch_num_total == 0
+        assert trainer._total_batches_completed == 0
         metrics = trainer.train()
         epoch = metrics["epoch"]
         assert epoch == num_epochs - 1
-        assert trainer._batch_num_total == num_epochs * batches_per_epoch
+        assert trainer._total_batches_completed == num_epochs * batches_per_epoch
 
     def test_trainer_respects_epoch_size_larger_tnan_total(self):
         batches_per_epoch = 7
@@ -278,11 +277,11 @@ class TestTrainer(TrainerTestBase):
             num_epochs=num_epochs,
             serialization_dir=self.TEST_DIR,
         )
-        assert trainer._batch_num_total == 0
+        assert trainer._total_batches_completed == 0
         metrics = trainer.train()
         epoch = metrics["epoch"]
         assert epoch == num_epochs - 1
-        assert trainer._batch_num_total == num_epochs * batches_per_epoch
+        assert trainer._total_batches_completed == num_epochs * batches_per_epoch
 
     def test_trainer_respects_epoch_size_smaller_tnan_total(self):
         batches_per_epoch = 1
@@ -300,11 +299,11 @@ class TestTrainer(TrainerTestBase):
             num_epochs=num_epochs,
             serialization_dir=self.TEST_DIR,
         )
-        assert trainer._batch_num_total == 0
+        assert trainer._total_batches_completed == 0
         metrics = trainer.train()
         epoch = metrics["epoch"]
         assert epoch == num_epochs - 1
-        assert trainer._batch_num_total == num_epochs * batches_per_epoch
+        assert trainer._total_batches_completed == num_epochs * batches_per_epoch
 
     def test_trainer_can_resume_training(self):
         trainer = GradientDescentTrainer(
@@ -316,6 +315,7 @@ class TestTrainer(TrainerTestBase):
             serialization_dir=self.TEST_DIR,
         )
         trainer.train()
+
         new_trainer = GradientDescentTrainer(
             self.model,
             self.optimizer,
@@ -324,9 +324,9 @@ class TestTrainer(TrainerTestBase):
             num_epochs=3,
             serialization_dir=self.TEST_DIR,
         )
+        new_trainer._restore_checkpoint()
 
-        epoch = new_trainer._restore_checkpoint()
-        assert epoch == 1
+        assert new_trainer._start_after_epochs_completed == 1
 
         tracker = trainer._metric_tracker
         assert tracker.is_best_so_far()
@@ -359,8 +359,8 @@ class TestTrainer(TrainerTestBase):
             moving_average=new_moving_average,
         )
 
-        epoch = new_trainer._restore_checkpoint()
-        assert epoch == 1
+        new_trainer._restore_checkpoint()
+        assert new_trainer._start_after_epochs_completed == 1
 
         tracker = trainer._metric_tracker
         assert tracker.is_best_so_far()
@@ -605,8 +605,8 @@ class TestTrainer(TrainerTestBase):
             num_epochs=6,
             serialization_dir=self.TEST_DIR,
         )
-        epoch = new_trainer._restore_checkpoint()
-        assert epoch == 4
+        new_trainer._restore_checkpoint()
+        new_trainer._start_after_epochs_completed = 4
         assert new_trainer._momentum_scheduler.last_epoch == 3
         new_trainer.train()
 
@@ -672,8 +672,8 @@ class TestTrainer(TrainerTestBase):
             num_epochs=4,
             serialization_dir=self.TEST_DIR,
         )
-        epoch = new_trainer._restore_checkpoint()
-        assert epoch == 2
+        new_trainer._restore_checkpoint()
+        assert new_trainer._start_after_epochs_completed == 2
         assert new_trainer._learning_rate_scheduler.last_epoch == 1
         new_trainer.train()
 
@@ -719,17 +719,20 @@ class TestTrainer(TrainerTestBase):
             self.data_loader,
             num_epochs=5,
             serialization_dir=self.TEST_DIR,
-            checkpointer=Checkpointer(
-                serialization_dir=self.TEST_DIR, num_serialized_models_to_keep=3
-            ),
+            checkpointer=Checkpointer(serialization_dir=self.TEST_DIR, keep_most_recent_by_count=3),
         )
         trainer.train()
 
         # Now check the serialized files
-        for prefix in ["model_state_epoch_*", "training_state_epoch_*"]:
-            file_names = glob.glob(os.path.join(self.TEST_DIR, prefix))
-            epochs = [int(re.search(r"_([0-9])\.th", fname).group(1)) for fname in file_names]
-            assert sorted(epochs) == [2, 3, 4]
+        expected = [(3, 0), (4, 0), (5, 0)]
+
+        file_names = glob.glob(os.path.join(self.TEST_DIR, "model_state_e*_b*"))
+        epochs = [Checkpointer._parse_model_state_path(fname) for fname in file_names]
+        assert sorted(epochs) == expected
+
+        file_names = glob.glob(os.path.join(self.TEST_DIR, "training_state_e*_b*"))
+        epochs = [Checkpointer._parse_training_state_path(fname) for fname in file_names]
+        assert sorted(epochs) == expected
 
     def test_trainer_saves_metrics_every_epoch(self):
         trainer = GradientDescentTrainer(
@@ -739,9 +742,7 @@ class TestTrainer(TrainerTestBase):
             validation_data_loader=self.validation_data_loader,
             num_epochs=5,
             serialization_dir=self.TEST_DIR,
-            checkpointer=Checkpointer(
-                serialization_dir=self.TEST_DIR, num_serialized_models_to_keep=3
-            ),
+            checkpointer=Checkpointer(serialization_dir=self.TEST_DIR, keep_most_recent_by_count=3),
         )
         trainer.train()
 
@@ -757,9 +758,6 @@ class TestTrainer(TrainerTestBase):
         # To test:
         #   Create an fake data loader that sleeps for 2.5 second per epoch, so the total
         #   training time for one epoch is slightly greater then 2.5 seconds.
-        #   Run for 6 epochs, keeping the last 2 models, models also kept every 5 seconds.
-        #   Check the resulting checkpoints.  Should then have models at epochs
-        #       2, 4, plus the last two at 5 and 6.
 
         class SlowDataLoader:
             data_loader = SimpleDataLoader(self.instances, batch_size=2)
@@ -781,19 +779,24 @@ class TestTrainer(TrainerTestBase):
             num_epochs=6,
             serialization_dir=self.TEST_DIR,
             checkpointer=Checkpointer(
+                save_completed_epochs=False,
                 serialization_dir=self.TEST_DIR,
-                num_serialized_models_to_keep=2,
-                keep_serialized_model_every_num_seconds=5,
+                keep_most_recent_by_count=4,
+                save_every_num_seconds=5,
             ),
         )
         trainer.train()
 
         # Now check the serialized files
-        for prefix in ["model_state_epoch_*", "training_state_epoch_*"]:
-            file_names = glob.glob(os.path.join(self.TEST_DIR, prefix))
-            epochs = [int(re.search(r"_([0-9])\.th", fname).group(1)) for fname in file_names]
-            # epoch N has N-1 in file name
-            assert sorted(epochs) == [1, 3, 4, 5]
+        expected = [(1, 1), (3, 1), (5, 1)]
+
+        file_names = glob.glob(os.path.join(self.TEST_DIR, "model_state_e*_b*"))
+        epochs = [Checkpointer._parse_model_state_path(fname) for fname in file_names]
+        assert sorted(epochs) == expected
+
+        file_names = glob.glob(os.path.join(self.TEST_DIR, "training_state_e*_b*"))
+        epochs = [Checkpointer._parse_training_state_path(fname) for fname in file_names]
+        assert sorted(epochs) == expected
 
     def test_trainer_can_log_learning_rates_tensorboard(self):
         data_loader = SimpleDataLoader(self.instances, 4)
@@ -853,54 +856,64 @@ class TestTrainer(TrainerTestBase):
         # Check is not run, so no failure.
         trainer.train()
 
-    def test_trainer_saves_models_at_specified_interval(self):
-        data_loader = SimpleDataLoader(self.instances, 4)
+    @pytest.mark.parametrize("checkpoint_to_keep", range(20))
+    def test_trainer_restores_and_makes_same_results(self, checkpoint_to_keep: int):
+        batch_size = 2
+        data_loader = SimpleDataLoader(self.instances, batch_size)
+        num_epochs = 10
+        num_batches = len(self.instances) // batch_size
 
         trainer = GradientDescentTrainer(
             self.model,
             self.optimizer,
             data_loader,
-            num_epochs=2,
+            validation_data_loader=data_loader,
+            num_epochs=num_epochs,
             serialization_dir=self.TEST_DIR,
             checkpointer=Checkpointer(
                 serialization_dir=self.TEST_DIR,
-                model_save_interval=0.0001,
-                num_serialized_models_to_keep=10,
+                save_every_num_seconds=0.0001,
+                keep_most_recent_by_count=20,
             ),
         )
 
-        trainer.train()
+        original_metrics = trainer.train()
 
         # Now check the serialized files for models saved during the epoch.
-        prefix = "model_state_epoch_*"
-        file_names = sorted(glob.glob(os.path.join(self.TEST_DIR, prefix)))
-        epochs = [re.search(r"_([0-9\.\-]+)\.th", fname).group(1) for fname in file_names]
-        # We should have checkpoints at the end of each epoch and during each, e.g.
-        # [0.timestamp, 0, 1.timestamp, 1]
-        assert len(epochs) == 4
-        assert epochs[3] == "1"
-        assert "." in epochs[0]
+        file_names = glob.glob(os.path.join(self.TEST_DIR, "model_state_e*_b*"))
+        checkpoints = [Checkpointer._parse_model_state_path(fname) for fname in file_names]
+        checkpoints.sort()
 
-        # Now make certain we can restore from timestamped checkpoint.
-        # To do so, remove the checkpoint from the end of epoch 1&2, so
-        # that we are forced to restore from the timestamped checkpoints.
-        for k in range(2):
-            os.remove(os.path.join(self.TEST_DIR, "model_state_epoch_{}.th".format(k)))
-            os.remove(os.path.join(self.TEST_DIR, "training_state_epoch_{}.th".format(k)))
+        expected = [(e, b) for e in range(num_epochs) for b in range(num_batches + 1)]
+        del expected[0]
+        expected.append((num_epochs, 0))
+        expected = expected[-20:]
+        assert checkpoints == expected
+
+        # Now make certain we can restore from checkpoint in the middle of an epoch.
+        # To do so, remove the checkpoint at the end of epochs.
+        for i, checkpoint in enumerate(checkpoints):
+            if i != checkpoint_to_keep:
+                os.remove(trainer._checkpointer._model_state_path(*checkpoint))
+                os.remove(trainer._checkpointer._training_state_path(*checkpoint))
         os.remove(os.path.join(self.TEST_DIR, "best.th"))
 
         restore_trainer = GradientDescentTrainer(
             self.model,
             self.optimizer,
             self.data_loader,
+            validation_data_loader=data_loader,
             num_epochs=2,
             serialization_dir=self.TEST_DIR,
-            checkpointer=Checkpointer(serialization_dir=self.TEST_DIR, model_save_interval=0.0001),
+            checkpointer=Checkpointer(
+                serialization_dir=self.TEST_DIR,
+                save_every_num_seconds=0.0001,
+                keep_most_recent_by_count=10,
+            ),
         )
-        epoch = restore_trainer._restore_checkpoint()
-        assert epoch == 2
-        # One batch per epoch.
-        assert restore_trainer._batch_num_total == 2
+        restored_metrics = restore_trainer.train()
+
+        assert original_metrics["best_validation_loss"] == restored_metrics["best_validation_loss"]
 
     def test_trainer_saves_and_loads_best_validation_metrics_correctly_1(self):
         # Use -loss and run 1 epoch of original-training, and one of restored-training
@@ -1033,9 +1046,11 @@ class TestTrainer(TrainerTestBase):
         )
         assert trainer._num_gradient_accumulation_steps == steps_to_accumulate
 
-        metrics = trainer.train()
+        trainer.train()
 
-        num_batches_trained_per_epoch = trainer._batch_num_total // (metrics["training_epochs"] + 1)
+        num_batches_trained_per_epoch = (
+            trainer._total_batches_completed // trainer._epochs_completed
+        )
         num_batches_expected = math.ceil(
             math.ceil(len(instances) / self.data_loader.batch_size) / steps_to_accumulate
         )
