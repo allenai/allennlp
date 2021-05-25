@@ -1,7 +1,6 @@
 from typing import List, Tuple
 
 import torch
-from transformers import AutoTokenizer
 from transformers.data.data_collator import DataCollatorForLanguageModeling
 
 from allennlp.common import Registrable

@@ -7,7 +7,8 @@ import torch
 
 from allennlp.common.util import lazy_groups_of
 from allennlp.common.tqdm import Tqdm
-from allennlp.data.data_loaders.data_loader import DataLoader, allennlp_collate, TensorDict
+from allennlp.data.data_loaders.data_loader import DataLoader, TensorDict
+from allennlp.data.data_loaders.data_collator import  DefaultDataCollator
 from allennlp.data.dataset_readers import DatasetReader
 from allennlp.data.instance import Instance
 from allennlp.data.vocabulary import Vocabulary
@@ -60,7 +61,7 @@ class SimpleDataLoader(DataLoader):
         if self.shuffle:
             random.shuffle(self.instances)
         for batch in lazy_groups_of(self.iter_instances(), self.batch_size):
-            tensor_dict = allennlp_collate(batch)
+            tensor_dict = DefaultDataCollator(batch)
             if self.cuda_device is not None:
                 tensor_dict = nn_util.move_to_device(tensor_dict, self.cuda_device)
             yield tensor_dict
