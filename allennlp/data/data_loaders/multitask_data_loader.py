@@ -36,13 +36,17 @@ class MultiTaskDataLoader(DataLoader):
     you want.  Both of these are designed to be used in conjunction with trainer `Callbacks`, if
     desired, to have the sampling and/or scheduling behavior be dependent on the current state of
     training.
+
     While it is not necessarily required, this `DatasetReader` was designed to be used alongside a
     `MultiTaskModel`, which can handle instances coming from different datasets.  If your datasets
     are similar enough (say, they are all reading comprehension datasets with the same format), or
     your model is flexible enough, then you could feasibly use this `DataLoader` with a normal,
     non-multitask `Model`.
+
     Registered as a `DataLoader` with name "multitask".
+
     # Parameters
+
     reader: `MultiTaskDatasetReader`
     data_path: `Dict[str, str]`
         One file per underlying dataset reader in the `MultiTaskDatasetReader`, which will be passed
@@ -88,6 +92,7 @@ class MultiTaskDataLoader(DataLoader):
         You almost certainly never want to use this except when debugging.
     cuda_device: `Optional[Union[int, str, torch.device]]`, optional (default = `None`)
         If given, batches will automatically be put on this device.
+
         !!! Note
             This should typically not be set in an AllenNLP configuration file. The `Trainer`
             will automatically call [`set_target_device()`](#set_target_device) before iterating
