@@ -289,7 +289,6 @@ class GradientDescentTrainer(Trainer):
             else:
                 self._callbacks.append(callback_cls(self._serialization_dir))
 
-        self._last_log = 0.0  # time of last logging
         self._num_gradient_accumulation_steps = num_gradient_accumulation_steps
 
         # Enable automatic mixed precision training.
@@ -417,8 +416,6 @@ class GradientDescentTrainer(Trainer):
             )
         else:
             batch_group_generator_tqdm = batch_group_generator
-
-        self._last_log = time.time()
 
         done_early = False
         for batch_group in batch_group_generator_tqdm:
