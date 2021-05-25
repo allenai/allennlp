@@ -612,8 +612,8 @@ class RepeatedNGramBlockingConstraint(Constraint):
     ) -> None:
         for i, batch in enumerate(state):
             for j, beam in enumerate(batch):
-                current_prefix = tuple(state[i][j]["current_prefix"])
-                seen_ngrams = state[i][j]["seen_ngrams"]
+                current_prefix = tuple(beam["current_prefix"])
+                seen_ngrams = beam["seen_ngrams"]
                 try:
                     disallowed_indices = seen_ngrams[current_prefix]
                     class_log_probabilities[i, j, disallowed_indices] = min_value_of_dtype(class_log_probabilities.dtype)
