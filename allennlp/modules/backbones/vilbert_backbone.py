@@ -112,247 +112,106 @@ class VilbertBackbone(Backbone):
         box_mask: torch.Tensor,
         text: TextFieldTensors,
     ) -> Dict[str, torch.Tensor]:
-        if self.training:
-            if "token_ids" in text["tokens"]:
-                token_ids = text["tokens"]["token_ids"]
-            else:
-                token_ids = text["tokens"]["tokens"]
-
-            # Shape: (batch_size, num_tokens)
-            token_type_ids = text["tokens"].get("type_ids")
-            # Shape: (batch_size, num_tokens)
-            attention_mask = text["tokens"].get("mask")
-
-            # TODO: clean this up
-            change_dimensions = False
-            if len(box_features.shape) > 3:
-                change_dimensions = True
-                sizes = box_features.shape
-                batch_size = sizes[0]
-                num_boxes = sizes[-2]
-                feature_size = sizes[-1]
-                other_dimensions = sizes[1:-2]
-                token_ids = token_ids.repeat_interleave(prod(other_dimensions), 0)
-                token_type_ids = token_type_ids.repeat_interleave(prod(other_dimensions), 0)
-                attention_mask = attention_mask.repeat_interleave(prod(other_dimensions), 0)
-
-                # box_features = box_features.view(batch_size * num_images, num_boxes, feature_dimension)
-                # box_coordinates = box_coordinates.view(
-                #     batch_size * num_images, box_coordinates.shape[2], box_coordinates.shape[3]
-                # )
-                # box_mask = box_mask.view(batch_size * num_images, box_mask.shape[2])
-                box_features = box_features.view(
-                    batch_size * prod(other_dimensions), num_boxes, feature_size
-                )
-                box_coordinates = box_coordinates.view(
-                    batch_size * prod(other_dimensions),
-                    box_coordinates.shape[2],
-                    box_coordinates.shape[3],
-                )
-                box_mask = box_mask.view(batch_size * prod(other_dimensions), box_mask.shape[2])
-            else:
-                batch_size, _, feature_size = box_features.size()
-            # end TODO: clean this up
-
-            # Shape: (batch_size *  prod(other_dimensions), num_tokens, embedding_dim)
-            embedding_output = self.text_embeddings(token_ids, token_type_ids)
-            num_tokens = embedding_output.size(1)
-
-            # this attention mask is more simple than the triangular masking of
-            # causal attention used in OpenAI GPT, we just need to prepare the
-            # broadcast dimension here.
-            if attention_mask is not None:
-                extended_attention_mask = attention_mask
-            else:
-                extended_attention_mask = None
-
-            extended_image_attention_mask = box_mask
-
-            # Shape: (batch_size * prod(other_dimensions), feature_size, num_tokens)
-            # TODO (epwalsh): Why all zeros?? This doesn't seem right.
-            extended_co_attention_mask = torch.zeros(
-                batch_size * prod(other_dimensions),
-                feature_size,
-                num_tokens,
-                dtype=extended_image_attention_mask.dtype,
-            )
-
-            # Shape: (batch_size * prod(other_dimensions), num_boxes, image_embedding_dim)
-            v_embedding_output = self.image_embeddings(box_features, box_coordinates)
-
-            logger.info("shapes:")
-            logger.info(embedding_output.shape)
-            logger.info(v_embedding_output.shape)
-            logger.info(extended_attention_mask.shape)
-            logger.info(extended_image_attention_mask.shape)
-            logger.info(extended_co_attention_mask.shape)
-            logger.info(embedding_output.requires_grad)
-            encoded_layers_t, encoded_layers_v = self.encoder(
-                embedding_output,
-                v_embedding_output,
-                extended_attention_mask,
-                extended_image_attention_mask,
-                extended_co_attention_mask,
-            )
-
-            # Shape: (batch_size * prod(other_dimensions), num_tokens, embedding_dim)
-            sequence_output_t = encoded_layers_t[:, :, :, -1]
-            # Shape: (batch_size * prod(other_dimensions), num_boxes, image_embedding_dim)
-            sequence_output_v = encoded_layers_v[:, :, :, -1]
-
-            # Shape: (batch_size * prod(other_dimensions), pooled_output_dim)
-            pooled_output_t = self.t_pooler(sequence_output_t)
-            # Shape: (batch_size * prod(other_dimensions), pooled_output_dim)
-            pooled_output_v = self.v_pooler(sequence_output_v)
-
-            if change_dimensions:
-                some_dimensions = [batch_size] + list(other_dimensions)
-                sequence_output_t = sequence_output_t.view(
-                    some_dimensions + [sequence_output_t.shape[-2], sequence_output_t.shape[-1]]
-                )
-                sequence_output_v = sequence_output_v.view(
-                    some_dimensions + [sequence_output_v.shape[-2], sequence_output_v.shape[-1]]
-                )
-                pooled_output_t = pooled_output_t.view(some_dimensions + [pooled_output_t.shape[-1]])
-                pooled_output_v = pooled_output_v.view(some_dimensions + [pooled_output_v.shape[-1]])
-
-            if self.fusion_method == "sum":
-                pooled_output = self.dropout(pooled_output_t + pooled_output_v)
-            elif self.fusion_method == "mul":
-                pooled_output = self.dropout(pooled_output_t * pooled_output_v)
-            else:
-                raise ValueError(f"Fusion method '{self.fusion_method}' not supported")
-
-            return {
-                "encoded_boxes": sequence_output_v,
-                "encoded_boxes_mask": box_mask,
-                "encoded_boxes_pooled": pooled_output_v,
-                "encoded_text": sequence_output_t,
-                "encoded_text_mask": attention_mask,
-                "encoded_text_pooled": pooled_output_t,
-                "pooled_boxes_and_text": pooled_output,
-            }
+        # if self.training:
+        if "token_ids" in text["tokens"]:
+            token_ids = text["tokens"]["token_ids"]
         else:
-            self.eval()
-            with torch.no_grad():
-                logger.info("eval")
-                if "token_ids" in text["tokens"]:
-                    token_ids = text["tokens"]["token_ids"]
-                else:
-                    token_ids = text["tokens"]["tokens"]
+            token_ids = text["tokens"]["tokens"]
 
-                # Shape: (batch_size, num_tokens)
-                token_type_ids = text["tokens"].get("type_ids")
-                # Shape: (batch_size, num_tokens)
-                attention_mask = text["tokens"].get("mask")
+        # Shape: (batch_size, num_tokens)
+        token_type_ids = text["tokens"].get("type_ids")
+        # Shape: (batch_size, num_tokens)
+        attention_mask = text["tokens"].get("mask")
 
-                # TODO: clean this up
-                change_dimensions = False
-                if len(box_features.shape) > 3:
-                    change_dimensions = True
-                    sizes = box_features.shape
-                    batch_size = sizes[0]
-                    num_boxes = sizes[-2]
-                    feature_size = sizes[-1]
-                    other_dimensions = sizes[1:-2]
-                    token_ids = token_ids.repeat_interleave(prod(other_dimensions), 0)
-                    token_type_ids = token_type_ids.repeat_interleave(prod(other_dimensions), 0)
-                    attention_mask = attention_mask.repeat_interleave(prod(other_dimensions), 0)
+        dimensions = box_features.shape
+        batch_size = dimensions[0]
+        feature_size = dimensions[-1]
+        rolled_dimensions = dimensions[1:-2]
+        rolled_dimensions_product = prod(rolled_dimensions)
 
-                    # box_features = box_features.view(batch_size * num_images, num_boxes, feature_dimension)
-                    # box_coordinates = box_coordinates.view(
-                    #     batch_size * num_images, box_coordinates.shape[2], box_coordinates.shape[3]
-                    # )
-                    # box_mask = box_mask.view(batch_size * num_images, box_mask.shape[2])
-                    box_features = box_features.view(
-                        batch_size * prod(other_dimensions), num_boxes, feature_size
-                    )
-                    box_coordinates = box_coordinates.view(
-                        batch_size * prod(other_dimensions),
-                        box_coordinates.shape[2],
-                        box_coordinates.shape[3],
-                    )
-                    box_mask = box_mask.view(batch_size * prod(other_dimensions), box_mask.shape[2])
-                else:
-                    batch_size, _, feature_size = box_features.size()
-                # end TODO: clean this up
+        if rolled_dimensions:
+            token_ids = token_ids.repeat_interleave(rolled_dimensions_product, 0)
+            token_type_ids = token_type_ids.repeat_interleave(rolled_dimensions_product, 0)
+            attention_mask = attention_mask.repeat_interleave(rolled_dimensions_product, 0)
 
-                # Shape: (batch_size *  prod(other_dimensions), num_tokens, embedding_dim)
-                embedding_output = self.text_embeddings(token_ids, token_type_ids)
-                num_tokens = embedding_output.size(1)
+            box_features = box_features.view(
+                batch_size * rolled_dimensions_product, dimensions[-2], feature_size
+            )
+            box_coordinates = box_coordinates.view(
+                batch_size * rolled_dimensions_product,
+                box_coordinates.shape[2],
+                box_coordinates.shape[3],
+            )
+            box_mask = box_mask.view(batch_size * rolled_dimensions_product, box_mask.shape[2])
 
-                # this attention mask is more simple than the triangular masking of
-                # causal attention used in OpenAI GPT, we just need to prepare the
-                # broadcast dimension here.
-                if attention_mask is not None:
-                    extended_attention_mask = attention_mask
-                else:
-                    extended_attention_mask = None
+        # Shape: (batch_size *  rolled_dimensions_product, num_tokens, embedding_dim)
+        embedding_output = self.text_embeddings(token_ids, token_type_ids)
+        num_tokens = embedding_output.size(1)
 
-                extended_image_attention_mask = box_mask
+        # this attention mask is more simple than the triangular masking of
+        # causal attention used in OpenAI GPT, we just need to prepare the
+        # broadcast dimension here.
+        if attention_mask is not None:
+            extended_attention_mask = attention_mask
+        else:
+            extended_attention_mask = None
 
-                # Shape: (batch_size * prod(other_dimensions), feature_size, num_tokens)
-                # TODO (epwalsh): Why all zeros?? This doesn't seem right.
-                extended_co_attention_mask = torch.zeros(
-                    batch_size * prod(other_dimensions),
-                    feature_size,
-                    num_tokens,
-                    dtype=extended_image_attention_mask.dtype,
-                )
+        extended_image_attention_mask = box_mask
 
-                # Shape: (batch_size * prod(other_dimensions), num_boxes, image_embedding_dim)
-                v_embedding_output = self.image_embeddings(box_features, box_coordinates)
+        # Shape: (batch_size * rolled_dimensions_product, feature_size, num_tokens)
+        # TODO (epwalsh): Why all zeros?? This doesn't seem right.
+        extended_co_attention_mask = torch.zeros(
+            extended_image_attention_mask.shape[0],
+            feature_size,
+            num_tokens,
+            dtype=extended_image_attention_mask.dtype,
+        )
 
-                logger.info("shapes:")
-                logger.info(embedding_output.shape)
-                logger.info(v_embedding_output.shape)
-                logger.info(extended_attention_mask.shape)
-                logger.info(extended_image_attention_mask.shape)
-                logger.info(extended_co_attention_mask.shape)
-                logger.info(embedding_output.requires_grad)
-                encoded_layers_t, encoded_layers_v = self.encoder(
-                    embedding_output,
-                    v_embedding_output,
-                    extended_attention_mask,
-                    extended_image_attention_mask,
-                    extended_co_attention_mask,
-                )
+        # Shape: (batch_size * rolled_dimensions_product, num_boxes, image_embedding_dim)
+        v_embedding_output = self.image_embeddings(box_features, box_coordinates)
 
-                # Shape: (batch_size * prod(other_dimensions), num_tokens, embedding_dim)
-                sequence_output_t = encoded_layers_t[:, :, :, -1]
-                # Shape: (batch_size * prod(other_dimensions), num_boxes, image_embedding_dim)
-                sequence_output_v = encoded_layers_v[:, :, :, -1]
+        encoded_layers_t, encoded_layers_v = self.encoder(
+            embedding_output,
+            v_embedding_output,
+            extended_attention_mask,
+            extended_image_attention_mask,
+            extended_co_attention_mask,
+        )
 
-                # Shape: (batch_size * prod(other_dimensions), pooled_output_dim)
-                pooled_output_t = self.t_pooler(sequence_output_t)
-                # Shape: (batch_size * prod(other_dimensions), pooled_output_dim)
-                pooled_output_v = self.v_pooler(sequence_output_v)
+        # Shape: (batch_size * rolled_dimensions_product, num_tokens, embedding_dim)
+        sequence_output_t = encoded_layers_t[:, :, :, -1]
+        # Shape: (batch_size * rolled_dimensions_product, num_boxes, image_embedding_dim)
+        sequence_output_v = encoded_layers_v[:, :, :, -1]
 
-                if change_dimensions:
-                    some_dimensions = [batch_size] + list(other_dimensions)
-                    sequence_output_t = sequence_output_t.view(
-                        some_dimensions + [sequence_output_t.shape[-2], sequence_output_t.shape[-1]]
-                    )
-                    sequence_output_v = sequence_output_v.view(
-                        some_dimensions + [sequence_output_v.shape[-2], sequence_output_v.shape[-1]]
-                    )
-                    pooled_output_t = pooled_output_t.view(some_dimensions + [pooled_output_t.shape[-1]])
-                    pooled_output_v = pooled_output_v.view(some_dimensions + [pooled_output_v.shape[-1]])
+        # Shape: (batch_size * rolled_dimensions_product, pooled_output_dim)
+        pooled_output_t = self.t_pooler(sequence_output_t)
+        # Shape: (batch_size * rolled_dimensions_product, pooled_output_dim)
+        pooled_output_v = self.v_pooler(sequence_output_v)
 
-                if self.fusion_method == "sum":
-                    pooled_output = self.dropout(pooled_output_t + pooled_output_v)
-                elif self.fusion_method == "mul":
-                    pooled_output = self.dropout(pooled_output_t * pooled_output_v)
-                else:
-                    raise ValueError(f"Fusion method '{self.fusion_method}' not supported")
+        if rolled_dimensions:
+            unrolled_dimensions = [batch_size] + list(rolled_dimensions)
+            sequence_output_t = sequence_output_t.view(
+                unrolled_dimensions + [sequence_output_t.shape[-2], sequence_output_t.shape[-1]]
+            )
+            sequence_output_v = sequence_output_v.view(
+                unrolled_dimensions + [sequence_output_v.shape[-2], sequence_output_v.shape[-1]]
+            )
+            pooled_output_t = pooled_output_t.view(unrolled_dimensions + [pooled_output_t.shape[-1]])
+            pooled_output_v = pooled_output_v.view(unrolled_dimensions + [pooled_output_v.shape[-1]])
 
-                self.train()
-                return {
-                    "encoded_boxes": sequence_output_v,
-                    "encoded_boxes_mask": box_mask,
-                    "encoded_boxes_pooled": pooled_output_v,
-                    "encoded_text": sequence_output_t,
-                    "encoded_text_mask": attention_mask,
-                    "encoded_text_pooled": pooled_output_t,
-                    "pooled_boxes_and_text": pooled_output,
-                }
+        if self.fusion_method == "sum":
+            pooled_output = self.dropout(pooled_output_t + pooled_output_v)
+        elif self.fusion_method == "mul":
+            pooled_output = self.dropout(pooled_output_t * pooled_output_v)
+        else:
+            raise ValueError(f"Fusion method '{self.fusion_method}' not supported")
+
+        return {
+            "encoded_boxes": sequence_output_v,
+            "encoded_boxes_mask": box_mask,
+            "encoded_boxes_pooled": pooled_output_v,
+            "encoded_text": sequence_output_t,
+            "encoded_text_mask": attention_mask,
+            "encoded_text_pooled": pooled_output_t,
+            "pooled_boxes_and_text": pooled_output,
+        }
