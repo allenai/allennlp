@@ -253,4 +253,4 @@ class MultiTaskDataLoader(DataLoader):
             kwargs["max_instances_in_memory"] = self._max_instances_in_memory[key]
         if key in self._start_method:
             kwargs["start_method"] = self._start_method[key]
-        return MultiProcessDataLoader(**kwargs)
+        return MultiProcessDataLoader(**kwargs)Œ
