@@ -289,12 +289,14 @@ class LogWriterCallback(TrainerCallback):
         )
 
     def _should_log_distributions_next_batch(self) -> bool:
+        assert self.trainer is not None
         return (
             self._distribution_interval is not None
             and (self.trainer._total_batches_completed + 1) % self._distribution_interval == 0
         )
 
     def _should_log_distributions_this_batch(self) -> bool:
+        assert self.trainer is not None
         return (
             self._distribution_interval is not None
             and self.trainer._total_batches_completed % self._distribution_interval == 0
