@@ -150,3 +150,8 @@ class WandBCallback(LogWriterCallback):
 
         if self._watch_model:
             self.wandb.watch(self.trainer.model)  # type: ignore
+
+    @overrides
+    def close(self) -> None:
+        super().close()
+        self.wandb.finish()  # type: ignore
