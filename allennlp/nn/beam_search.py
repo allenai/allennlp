@@ -662,7 +662,9 @@ class RepeatedNGramBlockingConstraint(Constraint):
                 seen_ngrams = beam["seen_ngrams"]
                 try:
                     disallowed_indices = seen_ngrams[current_prefix]
-                    class_log_probabilities[i, j, disallowed_indices] = min_value_of_dtype(class_log_probabilities.dtype)
+                    class_log_probabilities[i, j, disallowed_indices] = min_value_of_dtype(
+                        class_log_probabilities.dtype
+                    )
                 except KeyError:
                     # We have not seen this prefix before, so there is no index
                     # that needs to be blocked
@@ -964,7 +966,9 @@ class BeamSearch(FromParams):
         self._update_initial_state(state, batch_size)
 
         for i, constraint in enumerate(self.constraints):
-            constraint_states[i] = constraint.update_state(constraint_states[i], start_predicted_classes)
+            constraint_states[i] = constraint.update_state(
+                constraint_states[i], start_predicted_classes
+            )
 
         for timestep in range(self.max_steps - 1):
             # shape: (batch_size * beam_size,)
@@ -1069,7 +1073,9 @@ class BeamSearch(FromParams):
             self._update_state(state, backpointer)
 
             for i, constraint in enumerate(self.constraints):
-                constraint_states[i] = constraint.update_state(constraint_states[i], restricted_predicted_classes)
+                constraint_states[i] = constraint.update_state(
+                    constraint_states[i], restricted_predicted_classes
+                )
 
         if not torch.isfinite(last_log_probabilities).all():
             warnings.warn(

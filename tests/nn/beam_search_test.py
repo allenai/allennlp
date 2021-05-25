@@ -664,7 +664,9 @@ class BeamSearchTest(AllenNlpTestCase):
         log_probabilities = torch.rand(batch_size, beam_size, num_classes)
         constraint.apply(state, log_probabilities)
 
-        disallowed_locations = torch.nonzero(log_probabilities == min_value_of_dtype(log_probabilities.dtype)).tolist()
+        disallowed_locations = torch.nonzero(
+            log_probabilities == min_value_of_dtype(log_probabilities.dtype)
+        ).tolist()
         assert len(disallowed_locations) == 4
         assert [0, 1, 4] in disallowed_locations
         assert [1, 1, 0] in disallowed_locations
@@ -760,9 +762,7 @@ class BeamSearchTest(AllenNlpTestCase):
         """
         self.beam_search.beam_size = 2
         self.beam_search.max_steps = 5
-        expected_top_k = np.array(
-            [[1, 3, 1, 3, 1], [1, 2, 3, 1, 3]]
-        )
+        expected_top_k = np.array([[1, 3, 1, 3, 1], [1, 2, 3, 1, 3]])
         expected_log_probs = np.log(np.array([0.36, 0.24]))
         self._check_results(
             expected_top_k=expected_top_k,
@@ -782,9 +782,7 @@ class BeamSearchTest(AllenNlpTestCase):
         # Unigrams: On step 3, [1, 3, 1] will be blocked and [1, 3, end] will take its place
         self.beam_search.max_steps = 3
         self.beam_search.constraints = [RepeatedNGramBlockingConstraint(ngram_size=1)]
-        expected_top_k = np.array(
-            [[1, 2, 3], [1, 3, 5]]
-        )
+        expected_top_k = np.array([[1, 2, 3], [1, 3, 5]])
         expected_log_probs = np.log(np.array([0.4, 0.6 * 1e-9]))
         self._check_results(
             expected_top_k=expected_top_k,
@@ -795,9 +793,7 @@ class BeamSearchTest(AllenNlpTestCase):
         # Bigrams: On step 4, [1, 3, 1, 3] will be blocked and [1, 3, 1, 2] will take its place
         self.beam_search.max_steps = 4
         self.beam_search.constraints = [RepeatedNGramBlockingConstraint(ngram_size=2)]
-        expected_top_k = np.array(
-            [[1, 2, 3, 1], [1, 3, 1, 2]]
-        )
+        expected_top_k = np.array([[1, 2, 3, 1], [1, 3, 1, 2]])
         expected_log_probs = np.log(np.array([0.4, 0.24]))
         self._check_results(
             expected_top_k=expected_top_k,
@@ -808,9 +804,7 @@ class BeamSearchTest(AllenNlpTestCase):
         # Trigrams: On step 5, [1, 3, 1, 3, 1] will be blocked and [1, 2, 3, 1, 2] will take its place
         self.beam_search.max_steps = 5
         self.beam_search.constraints = [RepeatedNGramBlockingConstraint(ngram_size=3)]
-        expected_top_k = np.array(
-            [[1, 2, 3, 1, 3], [1, 2, 3, 1, 2]]
-        )
+        expected_top_k = np.array([[1, 2, 3, 1, 3], [1, 2, 3, 1, 2]])
         expected_log_probs = np.log(np.array([0.24, 0.16]))
         self._check_results(
             expected_top_k=expected_top_k,
@@ -827,9 +821,7 @@ class BeamSearchTest(AllenNlpTestCase):
         # up the sequence's probability
         self.beam_search.beam_size = 2
         self.beam_search.constraints = [RepeatedNGramBlockingConstraint(ngram_size=1)]
-        expected_top_k = np.array(
-            [[1, 3, 5, 5], [1, 2, 3, 5]]
-        )
+        expected_top_k = np.array([[1, 3, 5, 5], [1, 2, 3, 5]])
         expected_log_probs = np.log(np.array([0.6 * 1e-9, 0.4 * 1e-9]))
         self._check_results(
             expected_top_k=expected_top_k,
