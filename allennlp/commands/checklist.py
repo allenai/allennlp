@@ -1,6 +1,6 @@
 """
-The `checklist` subcommand allows you to sanity check your
-model's predictions using a trained model and its
+The `checklist` subcommand allows you to conduct behavioural
+testing for your model's predictions using a trained model and its
 [`Predictor`](../predictors/predictor.md#predictor) wrapper.
 """
 
@@ -15,7 +15,7 @@ from allennlp.commands.subcommand import Subcommand
 from allennlp.common.checks import check_for_gpu, ConfigurationError
 from allennlp.models.archival import load_archive
 from allennlp.predictors.predictor import Predictor
-from allennlp.sanity_checks.task_checklists.task_suite import TaskSuite
+from allennlp.confidence_checks.task_checklists.task_suite import TaskSuite
 
 
 @Subcommand.register("checklist")

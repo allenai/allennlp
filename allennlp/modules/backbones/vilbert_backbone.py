@@ -7,7 +7,12 @@ from overrides import overrides
 from allennlp.data.fields.text_field import TextFieldTensors
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.modules.backbones.backbone import Backbone
-from allennlp.modules.transformer import BiModalEncoder, ImageFeatureEmbeddings, Embeddings
+from allennlp.modules.transformer import (
+    BiModalEncoder,
+    ImageFeatureEmbeddings,
+    TransformerEmbeddings,
+    TransformerPooler,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +28,7 @@ class VilbertBackbone(Backbone):
     def __init__(
         self,
         vocab: Vocabulary,
-        text_embeddings: Embeddings,
+        text_embeddings: TransformerEmbeddings,
         image_embeddings: ImageFeatureEmbeddings,
         encoder: BiModalEncoder,
         pooled_output_dim: int,
@@ -36,7 +41,6 @@ class VilbertBackbone(Backbone):
         self.text_embeddings = text_embeddings
         self.image_embeddings = image_embeddings
         self.encoder = encoder
-        from allennlp.modules.transformer import TransformerPooler
 
         self.t_pooler = TransformerPooler(encoder.hidden_size1, pooled_output_dim)
         self.v_pooler = TransformerPooler(encoder.hidden_size2, pooled_output_dim)
@@ -66,44 +70,7 @@ class VilbertBackbone(Backbone):
         image_fixed_layer: int,
         fusion_method: str = "sum",
     ):
-        from transformers import AutoModel
-
-        transformer = AutoModel.from_pretrained(model_name)
-
-        from copy import deepcopy
-
-        text_embeddings = deepcopy(transformer.embeddings)
-
-        # Albert (and maybe others?) has this "embedding_size", that's different from "hidden_size".
-        # To get them to the same dimensionality, it uses a linear transform after the embedding
-        # layer, which we need to pull out and copy here.
-        if hasattr(transformer.config, "embedding_size"):
-            config = transformer.config
-
-            from transformers.models.albert.modeling_albert import AlbertModel
-
-            if isinstance(transformer, AlbertModel):
-                linear_transform = deepcopy(transformer.encoder.embedding_hidden_mapping_in)
-            else:
-                logger.warning(
-                    "Unknown model that uses separate embedding size; weights of the linear "
-                    f"transform will not be initialized.  Model type is: {transformer.__class__}"
-                )
-                linear_transform = torch.nn.Linear(config.embedding_dim, config.hidden_dim)
-
-            # We can't just use torch.nn.Sequential here, even though that's basically all this is,
-            # because Sequential doesn't accept *inputs, only a single argument.
-
-            class EmbeddingsShim(torch.nn.Module):
-                def __init__(self, embeddings: torch.nn.Module, linear_transform: torch.nn.Module):
-                    super().__init__()
-                    self.linear_transform = linear_transform
-                    self.embeddings = embeddings
-
-                def forward(self, *inputs, **kwargs):
-                    return self.linear_transform(self.embeddings(*inputs, **kwargs))
-
-            text_embeddings = EmbeddingsShim(text_embeddings, linear_transform)
+        text_embeddings = TransformerEmbeddings.from_pretrained_module(model_name)
 
         image_embeddings = ImageFeatureEmbeddings(
             feature_size=image_feature_dim,
@@ -112,7 +79,7 @@ class VilbertBackbone(Backbone):
         )
 
         encoder = BiModalEncoder.from_pretrained_module(
-            pretrained_module=transformer,
+            model_name,
             num_hidden_layers2=image_num_hidden_layers,
             hidden_size2=image_hidden_size,
             num_attention_heads2=image_num_attention_heads,
@@ -126,6 +93,7 @@ class VilbertBackbone(Backbone):
             fixed_layer1=text_fixed_layer,
             fixed_layer2=image_fixed_layer,
         )
+
         return cls(
             vocab=vocab,
             text_embeddings=text_embeddings,
