@@ -42,6 +42,18 @@ short_sequence_transition_probabilities = torch.tensor(
     ]  # end token -> jth token
 )
 
+# A transition matrix that favors repeated ngrams
+repeated_ngram_transition_probabilities = torch.tensor(
+    [
+        [0.0, 1.0, 0.0, 0.0, 0.0, 0.0],  # start token -> jth token
+        [0.0, 0.0, 0.4, 0.6, 0.0, 1e-9],  # 1st token -> jth token
+        [0.0, 0.0, 0.0, 1.0, 0.0, 1e-9],  # 2nd token -> jth token
+        [0.0, 1.0, 0.0, 0.0, 0.0, 1e-9],  # ...
+        [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],  # not used
+        [0.0, 0.0, 0.0, 0.0, 0.0, 1.0],
+    ]  # end token -> jth token
+)
+
 log_probabilities = torch.log(
     torch.tensor([[0.1, 0.3, 0.3, 0.3, 0.0, 0.0], [0.0, 0.0, 0.4, 0.3, 0.2, 0.1]])
 )
@@ -91,6 +103,25 @@ def take_short_sequence_step(
     log_probs_list = []
     for last_token in last_predictions:
         log_probs = torch.log(short_sequence_transition_probabilities[last_token.item()])
+        log_probs_list.append(log_probs)
+
+    return torch.stack(log_probs_list), state
+
+
+def take_repeated_ngrams_step(
+    last_predictions: torch.Tensor,
+    state: Dict[str, torch.Tensor],
+    timestep: int,
+) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
+    """
+    Take decoding step.
+
+    This method is the same as `take_step_no_timestep` except it uses the
+    `short_sequence_transition_probabilities` transitions instead of `transition_probabilities`
+    """
+    log_probs_list = []
+    for last_token in last_predictions:
+        log_probs = torch.log(repeated_ngram_transition_probabilities[last_token.item()])
         log_probs_list.append(log_probs)
 
     return torch.stack(log_probs_list), state
@@ -677,3 +708,137 @@ class BeamSearchTest(AllenNlpTestCase):
         ]
         updated_state = constraint.update_state(state, predictions, backpointers)
         assert updated_state == expected_state
+
+    def test_take_repeated_ngram_step(self):
+        """
+        Tests to ensure the top-k from the short_sequence_transition_probabilities
+        transition matrix is expected. The transitions are:
+
+            - p(1|start) = 1.0
+            - p(2|1) = 0.4
+            - p(3|1) = 0.6
+            - p(end|1) = 1e-9
+            - p(3|2) = 1.0
+            - p(end|2) = 1e-9
+            - p(1|3) = 1.0
+            - p(end|3) = 1e-9
+
+        The probabilities don't add up 1 because of the 1e-9 transitions to end. That doesn't
+        really matter. Each state just needed some transition to the end probability with a very
+        small probability to ensure it's possible to reach the end state from there and that it
+        isn't selected by beam search without a constraint.
+
+        Below is the beam search tracing for beam size 2. Any sequence below the
+        line is not selected by beam search. The number that comes before the sequence
+        is the probability of the sequence.
+
+        Step 1
+        1.0: [1]
+
+        Step 2
+        0.6: [1, 3]
+        0.4: [1, 2]
+        -----
+        1e-9: [1, 2, end]
+
+        Step 3
+        0.6: [1, 3, 1]
+        0.4: [1, 2, 3]
+        -----
+        0.6 * 1e-9: [1, 3, end]
+        0.4 * 1e-9: [1, 2, end]
+
+        Step 4
+        0.4:  [1, 2, 3, 1]
+        0.36: [1, 3, 1, 3]
+        -----
+        0.24:       [1, 3, 1, 2]
+        0.6 * 1e-9: [1, 3, 1, end]
+        0.4 * 1e-9: [1, 2, 3, end]
+
+        Step 5
+        0.36: [1, 3, 1, 3, 1]
+        0.24: [1, 2, 3, 1, 3]
+        -----
+        0.16:        [1, 2, 3, 1, 2]
+        0.4 * 1e-9:  [1, 2, 3, 1, end]
+        0.36 * 1e-9: [1, 3, 1, 3, end]
+        """
+        self.beam_search.beam_size = 2
+        self.beam_search.max_steps = 5
+        expected_top_k = np.array(
+            [[1, 3, 1, 3, 1], [1, 2, 3, 1, 3]]
+        )
+        expected_log_probs = np.log(np.array([0.36, 0.24]))
+        self._check_results(
+            expected_top_k=expected_top_k,
+            expected_log_probs=expected_log_probs,
+            take_step=take_repeated_ngrams_step,
+        )
+
+    def test_ngram_blocking_end_to_end(self):
+        """
+        This test checks to make sure the `NGramBlockingConstraint` successfully blocks ngrams.
+        It works by blocking ngrams of different sizes and ensures that the result of beam search
+        is correctly changed. We rely on the beam search trace for `repeated_ngram_transition_probabilities`
+        in `test_take_repeated_ngram_step`.
+        """
+        self.beam_search.beam_size = 2
+
+        # Unigrams: On step 3, [1, 3, 1] will be blocked and [1, 3, end] will take its place
+        self.beam_search.max_steps = 3
+        self.beam_search.constraints = [NGramBlockingConstraint(ngram_size=1)]
+        expected_top_k = np.array(
+            [[1, 2, 3], [1, 3, 5]]
+        )
+        expected_log_probs = np.log(np.array([0.4, 0.6 * 1e-9]))
+        self._check_results(
+            expected_top_k=expected_top_k,
+            expected_log_probs=expected_log_probs,
+            take_step=take_repeated_ngrams_step,
+        )
+
+        # Bigrams: On step 4, [1, 3, 1, 3] will be blocked and [1, 3, 1, 2] will take its place
+        self.beam_search.max_steps = 4
+        self.beam_search.constraints = [NGramBlockingConstraint(ngram_size=2)]
+        expected_top_k = np.array(
+            [[1, 2, 3, 1], [1, 3, 1, 2]]
+        )
+        expected_log_probs = np.log(np.array([0.4, 0.24]))
+        self._check_results(
+            expected_top_k=expected_top_k,
+            expected_log_probs=expected_log_probs,
+            take_step=take_repeated_ngrams_step,
+        )
+
+        # Trigrams: On step 5, [1, 3, 1, 3, 1] will be blocked and [1, 2, 3, 1, 2] will take its place
+        self.beam_search.max_steps = 5
+        self.beam_search.constraints = [NGramBlockingConstraint(ngram_size=3)]
+        expected_top_k = np.array(
+            [[1, 2, 3, 1, 3], [1, 2, 3, 1, 2]]
+        )
+        expected_log_probs = np.log(np.array([0.24, 0.16]))
+        self._check_results(
+            expected_top_k=expected_top_k,
+            expected_log_probs=expected_log_probs,
+            take_step=take_repeated_ngrams_step,
+        )
+
+    def test_ngram_blocking_end_indices(self):
+        """
+        Ensures that the ngram blocking does not mess up when one sequence is shorter
+        than another, which would result in repeated "end" symbols.
+        """
+        # We block unigrams, but 5 (the end symbol) is repeated and it does not mess
+        # up the sequence's probability
+        self.beam_search.beam_size = 2
+        self.beam_search.constraints = [NGramBlockingConstraint(ngram_size=1)]
+        expected_top_k = np.array(
+            [[1, 3, 5, 5], [1, 2, 3, 5]]
+        )
+        expected_log_probs = np.log(np.array([0.6 * 1e-9, 0.4 * 1e-9]))
+        self._check_results(
+            expected_top_k=expected_top_k,
+            expected_log_probs=expected_log_probs,
+            take_step=take_repeated_ngrams_step,
+        )
