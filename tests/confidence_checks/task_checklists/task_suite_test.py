@@ -1,5 +1,5 @@
 import pytest
-from allennlp.sanity_checks.task_checklists.task_suite import TaskSuite
+from allennlp.confidence_checks.task_checklists.task_suite import TaskSuite
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.common.checks import ConfigurationError
 from allennlp.models.archival import load_archive

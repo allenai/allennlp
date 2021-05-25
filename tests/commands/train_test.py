@@ -13,6 +13,7 @@ from typing import Optional, List, Dict, Any
 import pytest
 import torch
 
+from allennlp.version import VERSION
 from allennlp.commands.train import Train, train_model, train_model_from_args, TrainModel
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
@@ -109,7 +110,11 @@ class TestTrain(AllenNlpTestCase):
     def test_train_model(self):
         params = lambda: copy.deepcopy(self.DEFAULT_PARAMS)
 
-        train_model(params(), serialization_dir=os.path.join(self.TEST_DIR, "test_train_model"))
+        serialization_dir = os.path.join(self.TEST_DIR, "test_train_model")
+        train_model(params(), serialization_dir=serialization_dir)
+        archive = load_archive(os.path.join(serialization_dir, "model.tar.gz"))
+        assert archive.meta is not None
+        assert archive.meta.version == VERSION
 
         # It's OK if serialization dir exists but is empty:
         serialization_dir2 = os.path.join(self.TEST_DIR, "empty_directory")
