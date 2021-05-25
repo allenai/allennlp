@@ -1,5 +1,5 @@
 import glob
-from typing import Dict, Any, Tuple, Optional, Set
+from typing import Dict, Any, Tuple, Optional, Set, Union
 
 import logging
 import os
@@ -47,7 +47,7 @@ class Checkpointer(Registrable):
         self,
         serialization_dir: str,
         save_completed_epochs: bool = True,
-        save_every_num_seconds: Optional[int] = None,
+        save_every_num_seconds: Optional[float] = None,
         save_every_num_batches: Optional[int] = None,
         keep_most_recent_by_count: Optional[int] = 2,
         keep_most_recent_by_age: Optional[int] = None,
@@ -74,8 +74,30 @@ class Checkpointer(Registrable):
             f"training_state_e{epochs_completed}_b{batches_in_epoch_completed}.th",
         )
 
-    _model_state_file_re = re.compile(r".*/model_state_e(\d+)_b(\d+)\.th$")
-    _training_state_file_re = re.compile(r".*/training_state_e(\d+)_b(\d+)\.th$")
+    _model_state_file_re = re.compile(r"(.*/)?model_state_e(\d+)_b(\d+)\.th$")
+    _training_state_file_re = re.compile(r"(.*/)?training_state_e(\d+)_b(\d+)\.th$")
+
+    @classmethod
+    def _parse_model_state_path(cls, path: Union[str, os.PathLike]) -> Optional[Tuple[int, int]]:
+        match = cls._model_state_file_re.match(str(path))
+        if match is None:
+            return None
+        else:
+            try:
+                return int(match.group(2)), int(match.group(3))
+            except ValueError:
+                return None
+
+    @classmethod
+    def _parse_training_state_path(cls, path: Union[str, os.PathLike]) -> Optional[Tuple[int, int]]:
+        match = cls._training_state_file_re.match(str(path))
+        if match is None:
+            return None
+        else:
+            try:
+                return int(match.group(2)), int(match.group(3))
+            except ValueError:
+                return None
 
     def _find_all_checkpoints(self) -> Set[Tuple[int, int]]:
         """Returns a set of integers, each of which is a number of batches that were completed at the
@@ -84,15 +106,11 @@ class Checkpointer(Registrable):
         for model_state_file in glob.iglob(
             os.path.join(self._serialization_dir, "model_state_e*_b*.th")
         ):
-            match = self._model_state_file_re.match(model_state_file)
-            if match is None:
+            point_in_time = self._parse_model_state_path(model_state_file)
+            if point_in_time is None:
                 continue
-            try:
-                epochs_completed = int(match.group(1))
-                batches_in_epoch_completed = int(match.group(2))
-            except ValueError:
-                continue
-            checkpoints.add((epochs_completed, batches_in_epoch_completed))
+            else:
+                checkpoints.add(point_in_time)
         return checkpoints
 
     def maybe_save_checkpoint(
