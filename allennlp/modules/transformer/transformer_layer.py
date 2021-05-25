@@ -5,7 +5,7 @@ import torch
 from allennlp.common import FromParams
 from allennlp.modules.transformer.transformer_module import TransformerModule
 from allennlp.modules.transformer.activation_layer import ActivationLayer
-from allennlp.modules.transformer.self_attention import SelfAttention
+from allennlp.modules.transformer.attention_module import SelfAttention
 from allennlp.modules.transformer.output_layer import OutputLayer
 
 if TYPE_CHECKING:
@@ -38,9 +38,17 @@ class AttentionLayer(TransformerModule, FromParams):
         num_attention_heads: int,
         attention_dropout: float = 0.0,
         hidden_dropout: float = 0.0,
+        is_cross_attention: bool = False,
+        is_decoder: bool = False,
     ):
         super().__init__()
-        self.self = SelfAttention(hidden_size, num_attention_heads, attention_dropout)
+        self.self = SelfAttention(
+            hidden_size,
+            num_attention_heads,
+            attention_dropout,
+            is_cross_attention=is_cross_attention,
+            is_decoder=is_decoder,
+        )
         self.output = OutputLayer(hidden_size, hidden_size, hidden_dropout)
 
     def forward(
@@ -71,9 +79,9 @@ class AttentionLayer(TransformerModule, FromParams):
             input_tensor,
             encoder_hidden_states,
             encoder_hidden_states,
-            attention_mask,
-            head_mask,
-            output_attentions,
+            attention_mask=attention_mask,
+            head_mask=head_mask,
+            output_attentions=output_attentions,
         )
         attention_output = self.output(self_output[0], input_tensor)
         outputs = (attention_output,) + self_output[1:]  # add attentions if we output them
@@ -149,6 +157,8 @@ class TransformerLayer(TransformerModule, FromParams):
                 num_attention_heads=num_attention_heads,
                 attention_dropout=attention_dropout,
                 hidden_dropout=hidden_dropout,
+                is_cross_attention=True,
+                is_decoder=True,
             )
 
         self.intermediate = ActivationLayer(

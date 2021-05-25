@@ -19,9 +19,9 @@ BoolT = Union[torch.BoolTensor]
 
 
 @dataclass
-class GeneralAttentionOutput:
+class AttentionOutput:
     """
-    Encapsulates the outputs of the `GeneralAttention` module.
+    Encapsulates the outputs of the `Attention` module.
     """
 
     hidden_states: FloatT
@@ -30,7 +30,7 @@ class GeneralAttentionOutput:
     attention_probs: Optional[FloatT] = None
 
 
-class GeneralAttention(TransformerModule, FromParams):
+class AttentionModule(TransformerModule, FromParams):
     """
     This module computes self-attention (or cross-attention), similar to the architecture in BERT.
     Details in the paper:
@@ -188,6 +188,8 @@ class GeneralAttention(TransformerModule, FromParams):
             if source_states is None:
                 # self-attn
                 # (batch_size, num_heads, key_length, dim_per_head)
+                # if len(past_key_or_value.shape) == 3:
+                #     past_key_or_value = self._transpose_for_scores(past_key_or_value)
                 hidden_states = torch.cat([past_key_or_value, hidden_states], dim=2)
             else:
                 # cross-attn
@@ -357,7 +359,7 @@ class GeneralAttention(TransformerModule, FromParams):
         present_key_value_state = (
             (key_layer, value_layer) if (self.is_decoder and use_cache) else None
         )
-        outputs = GeneralAttentionOutput(
+        outputs = AttentionOutput(
             context_layer, present_key_value_state, position_bias, attention_probs
         )
 
@@ -440,7 +442,7 @@ class GeneralAttention(TransformerModule, FromParams):
         return values
 
 
-class T5Attention(GeneralAttention):
+class T5Attention(AttentionModule):
 
     _pretrained_relevant_module = ["encoder.block.0.layer.0.SelfAttention"]
     _pretrained_mapping = {
@@ -493,7 +495,7 @@ class T5Attention(GeneralAttention):
         query_length: Optional[int] = None,  # only relevant in cross-attention.
         use_cache: bool = False,
         output_attentions: bool = False,
-    ) -> GeneralAttentionOutput:
+    ) -> AttentionOutput:
         """
         Self-attention (if key_value_states is None) or attention over source sentence (provided by
         key_value_states).
@@ -542,7 +544,7 @@ class T5Attention(GeneralAttention):
         return cls(**final_kwargs)
 
 
-class SelfAttention(GeneralAttention):
+class SelfAttention(AttentionModule):
     """
     This module computes the self-attention, similar to the architecture in BERT. Additionally, the attention
     scoring function can be specified.
@@ -577,6 +579,8 @@ class SelfAttention(GeneralAttention):
         dropout: float = 0.0,
         scoring_func: str = "scaled_dot_product",
         output_linear: bool = False,
+        is_decoder: bool = False,
+        is_cross_attention: bool = False,
     ):
 
         attention_head_size = int(hidden_size / num_attention_heads)
@@ -589,6 +593,8 @@ class SelfAttention(GeneralAttention):
             output_linear=output_linear,
             dropout=dropout,
             bias=True,
+            is_decoder=is_decoder,
+            is_cross_attention=is_cross_attention,
         )
 
     def forward(self, *args, **kwargs):

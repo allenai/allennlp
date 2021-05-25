@@ -6,8 +6,7 @@ from transformers import AutoModel
 
 from allennlp.common import Params
 
-# from allennlp.modules.transformer.t5 import T5Attention
-from allennlp.modules.transformer.general_attention import T5Attention
+from allennlp.modules.transformer.attention_module import T5Attention
 
 from transformers.models.t5.configuration_t5 import T5Config
 from transformers.models.t5.modeling_t5 import T5Attention as HFT5Attention

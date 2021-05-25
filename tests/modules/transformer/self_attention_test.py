@@ -6,8 +6,7 @@ from transformers import AutoModel
 
 from allennlp.common import Params
 
-# from allennlp.modules.transformer import SelfAttention
-from allennlp.modules.transformer.general_attention import SelfAttention
+from allennlp.modules.transformer.attention_module import SelfAttention
 from allennlp.nn.util import min_value_of_dtype
 
 

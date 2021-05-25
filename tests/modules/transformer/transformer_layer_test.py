@@ -44,7 +44,7 @@ def test_attention(attention_params):
     assert attention_layer.self.query.in_features == attention_params["hidden_size"]
     assert attention_layer.self.key.in_features == attention_params["hidden_size"]
     assert attention_layer.self.value.in_features == attention_params["hidden_size"]
-    assert attention_layer.self.dropout.p == attention_params["attention_dropout"]
+    assert attention_layer.self.dropout == attention_params["attention_dropout"]
 
     assert attention_layer.output.dense.in_features == attention_params["hidden_size"]
     assert attention_layer.output.dense.out_features == attention_params["hidden_size"]
@@ -166,7 +166,7 @@ def test_layer(layer_params):
     assert transformer_layer.attention.self.query.in_features == layer_params["hidden_size"]
     assert transformer_layer.attention.self.key.in_features == layer_params["hidden_size"]
     assert transformer_layer.attention.self.value.in_features == layer_params["hidden_size"]
-    assert transformer_layer.attention.self.dropout.p == layer_params["attention_dropout"]
+    assert transformer_layer.attention.self.dropout == layer_params["attention_dropout"]
 
     assert transformer_layer.attention.output.dense.in_features == layer_params["hidden_size"]
     assert transformer_layer.attention.output.dense.out_features == layer_params["hidden_size"]
@@ -207,7 +207,7 @@ def test_layer_with_cross_attention(layer_params):
     transformer_layer(
         torch.randn(2, 3, 6),
         attention_mask=attention_mask,
-        encoder_hidden_states=torch.randn(2, 3, 6),
+        encoder_hidden_states=torch.randn(2, 2, 3, 3),
     )
 
 

@@ -78,7 +78,7 @@ def test_transformer_stack_with_cross_attention(params):
     transformer_stack.forward(
         torch.randn(2, 3, 6),
         attention_mask=attention_mask,
-        encoder_hidden_states=torch.randn(2, 3, 6),
+        encoder_hidden_states=torch.randn(2, 2, 3, 3),
     )
 
 
