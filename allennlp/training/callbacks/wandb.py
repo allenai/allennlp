@@ -134,7 +134,7 @@ class WandBCallback(LogWriterCallback):
             dict_to_log = {f"{log_prefix}/{k}": v for k, v in dict_to_log.items()}
         if epoch is not None:
             dict_to_log["epoch"] = epoch
-        self.wandb.log(dict_to_log, step=self.trainer._batch_num_total)  # type: ignore[union-attr]
+        self.wandb.log(dict_to_log, step=self.trainer._total_batches_completed)  # type: ignore[union-attr]
 
     @overrides
     def on_start(
