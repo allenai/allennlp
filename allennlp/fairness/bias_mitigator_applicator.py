@@ -52,7 +52,6 @@ class BiasMitigatorApplicator(Model):
 
         self.vocab = self.base_model.vocab
         self._regularizer = self.base_model._regularizer
-        self.serialization_dir = self.base_model.serialization_dir
 
     @overrides
     def train(self, mode: bool = True):
