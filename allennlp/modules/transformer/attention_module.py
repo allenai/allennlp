@@ -107,7 +107,7 @@ class AttentionModule(TransformerModule, FromParams):
 
         # out linear layer for distilbert, T5 etc.
         if output_linear:
-            self.output = torch.nn.Linear(hidden_size, self.all_head_size, bias=bias)
+            self.output = torch.nn.Linear(self.all_head_size, hidden_size, bias=bias)
 
         self.scoring_func = scoring_func
         if self.scoring_func in ["additive", "linear", "bilinear"]:

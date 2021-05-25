@@ -84,7 +84,6 @@ class AttentionLayer(TransformerModule, FromParams):
         )
 
         attention_output = self.output(self_output.hidden_states, input_tensor)
-        # outputs = (attention_output, self_output.attention_probs)  # add attentions if we output them
         outputs = AttentionOutput(
             attention_output,
             self_output.key_value_state,
