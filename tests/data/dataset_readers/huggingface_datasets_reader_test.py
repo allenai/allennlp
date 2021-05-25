@@ -1,6 +1,4 @@
 import pytest
-from allennlp.common.testing import AllenNlpTestCase
-from allennlp.common.util import ensure_list
 from allennlp.data import Tokenizer
 
 from allennlp.data.dataset_readers.huggingface_datasets_reader import HuggingfaceDatasetReader
@@ -103,8 +101,7 @@ class HuggingfaceDatasetReaderTest:
     Test to help validate for the known supported datasets
     Skipped by default, enable when required
     """
-
-    @pytest.mark.skip()
+    # TODO pab-vmware skip these once MR is ready to check-in
     @pytest.mark.parametrize(
         "dataset, config, split",
         (
@@ -138,7 +135,7 @@ class HuggingfaceDatasetReaderTest:
         Skipped by default, enable when required
     """
 
-    @pytest.mark.skip()
+    # TODO pab-vmware skip these once MR is ready to check-in
     @pytest.mark.parametrize(
         "dataset", (("swahili"), ("conll2003"), ("dbpedia_14"), ("trec"), ("emotion"))
     )
@@ -155,3 +152,7 @@ class HuggingfaceDatasetReaderTest:
         # Confirm all features were mapped
         assert len(instance.fields) == len(entry)
 
+    # def test_air_dialogue(self):
+    #     reader = HuggingfaceDatasetReader(dataset_name="amazon_us_reviews", config_name="Apparel_v1_00")
+    #     instances = list(reader.read("train"))
+    #     print(instances[0])

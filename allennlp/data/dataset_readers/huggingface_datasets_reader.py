@@ -134,7 +134,7 @@ def _map_Feature(
 
     elif isinstance(feature_type, Sequence):
         fields_to_be_added[feature_name] = _map_Sequence(
-            feature_name, entry, feature_type.feature, tokenizer
+            feature_name, entry[feature_name], feature_type.feature, tokenizer
         )
 
     elif isinstance(feature_type, Translation):
@@ -177,11 +177,12 @@ def _map_Sequence(
     field_list: List[Field] = list()
     field: ListField
     item_field: Field
+    # In HF Sequence and list are considered interchangeable, but there are some distinctions such as
     if isinstance(item_feature_type, Value):
         for item in value:
             # If tokenizer is provided we will use it to split it to tokens
             # Else put whole text as a single token
-            item_field = _map_Value(value.feature, item, item.value, tokenizer)
+            item_field = _map_Value(feature_name, item, item_feature_type, tokenizer)
             field_list.append(item_field)
         if len(field_list) > 0:
             field = ListField(field_list)
@@ -189,7 +190,7 @@ def _map_Sequence(
     # datasets Sequence of strings to ListField of LabelField
     elif isinstance(item_feature_type, ClassLabel):
         for item in value:
-            item_field = _map_to_Label(value.feature, item, skip_indexing=True)
+            item_field = _map_to_Label(feature_name, item, skip_indexing=True)
             field_list.append(item_field)
 
         if len(field_list) > 0:
