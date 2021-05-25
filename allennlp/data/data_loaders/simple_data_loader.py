@@ -37,6 +37,7 @@ class SimpleDataLoader(DataLoader):
         self.vocab = vocab
         self.cuda_device: Optional[torch.device] = None
         self._batch_generator: Optional[Iterator[TensorDict]] = None
+        self.collate_fn = DefaultDataCollator()
 
     def __len__(self) -> int:
         if self.batches_per_epoch is not None:
@@ -61,7 +62,7 @@ class SimpleDataLoader(DataLoader):
         if self.shuffle:
             random.shuffle(self.instances)
         for batch in lazy_groups_of(self.iter_instances(), self.batch_size):
-            tensor_dict = DefaultDataCollator(batch)
+            tensor_dict = self.collate_fn(batch)
             if self.cuda_device is not None:
                 tensor_dict = nn_util.move_to_device(tensor_dict, self.cuda_device)
             yield tensor_dict
