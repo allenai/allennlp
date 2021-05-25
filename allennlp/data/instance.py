@@ -2,6 +2,7 @@ from typing import Dict, MutableMapping, Mapping
 
 from allennlp.data.fields.field import DataArray, Field
 from allennlp.data.vocabulary import Vocabulary
+from allennlp.common.util import JsonDict
 
 
 class Instance(Mapping[str, Field]):
@@ -111,3 +112,11 @@ class Instance(Mapping[str, Field]):
         new = Instance({k: field.duplicate() for k, field in self.fields.items()})
         new.indexed = self.indexed
         return new
+
+    def human_readable_dict(self) -> JsonDict:
+        """
+        This function help to output instances to json files or print for human readability.
+        Use case includes example-based explanation, where it's better to have a output file or
+        rather than printing or logging.
+        """
+        return {key: field.human_readable_repr() for key, field in self.fields.items()}

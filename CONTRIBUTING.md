@@ -78,6 +78,7 @@ When you're ready to contribute code to address an open issue, please follow the
 
     Once your virtual environment is activated, you can install your local clone in "editable mode" with
 
+        pip install -U pip setuptools wheel
         pip install -e . 
         pip install -r dev-requirements.txt
 
@@ -139,7 +140,10 @@ When you're ready to contribute code to address an open issue, please follow the
     
         pytest -v --cov allennlp.nn.util tests/nn/util_test.py
 
-     If your contribution involves changes to any docstrings, you should make sure the API documentation can build without errors. For that, just run
+    If your contribution involves additions to any public part of the API, we require that you write docstrings
+    for each function, method, class, or module that you add.
+    See the [Writing docstrings](#writing-docstrings) section below for details on the syntax.
+    You should test to make sure the API documentation can build without errors by running
 
         make build-docs
 
@@ -157,6 +161,99 @@ When you're ready to contribute code to address an open issue, please follow the
     We look forward to reviewing your PR!
 
     </details>
+
+### Writing docstrings
+
+Our docstrings are written in a syntax that is essentially just Markdown with additional special syntax for writing parameter descriptions.
+
+Class docstrings should start with a description of the class, followed by a `# Parameters` section
+that lists the names, types, and purpose of all parameters to the class's `__init__()` method.
+Parameter descriptions should look like:
+
+```
+name : `type`
+    Description of the parameter, indented by four spaces.
+```
+
+Optional parameters can also be written like this:
+
+```
+name : `type`, optional (default = `default_value`)
+    Description of the parameter, indented by four spaces.
+```
+
+Sometimes you can omit the description if the parameter is self-explanatory.
+
+Method and function docstrings are similar, but should also include a `# Returns`
+section when the return value is not obvious. Other valid sections are
+
+- `# Attributes`, for listing class attributes. These should be formatted in the same
+    way as parameters.
+- `# Raises`, for listing any errors that the function or method might intentionally raise.
+- `# Examples`, where you can include code snippets.
+
+Here is an example of what the docstrings should look like in a class:
+
+
+```python
+class SentenceClassifier(Model):
+    """
+    A model for classifying sentences.
+
+    This is based on [this paper](link-to-paper). The input is a sentence and
+    the output is a score for each target label.
+
+    # Parameters
+
+    vocab : `Vocabulary`
+
+    text_field_embedder : `TextFieldEmbedder`
+        The text field embedder that will be used to create a representation of the
+        source tokens.
+
+    seq2vec_encoder : `Seq2VeqEncoder`
+        This encoder will take the embeddings from the `text_field_embedder` and
+        encode them into a vector which represents the un-normalized scores
+        for the target labels.
+
+    dropout : `Optional[float]`, optional (default = `None`)
+        Optional dropout to apply to the text field embeddings before passing through
+        the `seq2vec_encoder`.
+    """
+
+    def __init__(
+        self,
+        vocab: Vocabulary,
+        text_field_embedder: TextFieldEmbedder,
+        seq2vec_encoder: Seq2SeqEncoder,
+        dropout: Optional[float] = None,
+    ) -> None:
+        pass
+
+    def forward(
+        self,
+        tokens: TextFieldTensors,
+        labels: Optional[Tensor] = None,
+    ) -> Dict[str, Tensor]:
+        """
+        Runs a forward pass of the model, computing the predicted logits and also the loss
+        when `labels` is provided.
+
+        # Parameters
+
+        tokens : `TextFieldTensors`
+            The tokens corresponding to the source sequence.
+
+        labels : `Optional[Tensor]`, optional (default = `None`)
+            The target labels.
+
+        # Returns
+
+        `Dict[str, Tensor]`
+            An output dictionary with keys for the `loss` and `logits`.
+        """
+        pass
+```
 
 ### New models
 

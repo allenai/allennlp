@@ -123,8 +123,8 @@ almost = AlmostRegularTransformer()
 ```
 """
 
+from allennlp.modules.transformer.layer_norm import LayerNorm
 from allennlp.modules.transformer.positional_encoding import SinusoidalPositionalEncoding
-
 from allennlp.modules.transformer.transformer_module import TransformerModule
 from allennlp.modules.transformer.transformer_embeddings import (
     Embeddings,
@@ -140,3 +140,4 @@ from allennlp.modules.transformer.output_layer import OutputLayer
 
 from allennlp.modules.transformer.bimodal_attention import BiModalAttention
 from allennlp.modules.transformer.bimodal_encoder import BiModalEncoder
+from allennlp.modules.transformer.t5 import T5

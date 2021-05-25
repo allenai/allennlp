@@ -257,11 +257,6 @@ jobs:
     - name: Install core package
       run: |
         pip install $(ls dist/*.whl)
-        # TODO(epwalsh): In PyTorch 1.7, dataclasses is an unconditional dependency, when it should
-        # only be a conditional dependency for Python < 3.7.
-        # This has been fixed on PyTorch main branch, so we should be able to
-        # remove this check with the next PyTorch release.
-        pip uninstall -y dataclasses
 
     - name: Pip freeze
       run: |
@@ -278,7 +273,7 @@ jobs:
     runs-on: [self-hosted, GPU]
     strategy:
       matrix:
-        cuda: ['10.1', '10.2', '11.0']
+        cuda: ['10.1', '10.2', '11.1']
 
     steps:
     - uses: actions/checkout@v2
@@ -289,11 +284,11 @@ jobs:
       run: |
         # Check the install instructions on https://pytorch.org/ to keep these up-to-date.
         if [[ $CUDA == '10.1' ]]; then
-            echo "DOCKER_TORCH_VERSION='torch==1.7.1+cu101 torchvision==0.8.2+cu101 -f https://download.pytorch.org/whl/torch_stable.html'" >> $GITHUB_ENV;
+            echo "DOCKER_TORCH_VERSION='torch==1.8.0+cu101 torchvision==0.9.0+cu101 -f https://download.pytorch.org/whl/torch_stable.html'" >> $GITHUB_ENV;
         elif [[ $CUDA == '10.2' ]]; then
-            echo "DOCKER_TORCH_VERSION='torch==1.7.1'" >> $GITHUB_ENV;
-        elif [[ $CUDA == '11.0' ]]; then
-            echo "DOCKER_TORCH_VERSION='torch==1.7.1+cu110 torchvision==0.8.2+cu110 -f https://download.pytorch.org/whl/torch_stable.html'" >> $GITHUB_ENV;
+            echo "DOCKER_TORCH_VERSION='torch==1.8.0'" >> $GITHUB_ENV;
+        elif [[ $CUDA == '11.1' ]]; then
+            echo "DOCKER_TORCH_VERSION='torch==1.8.0+cu111 torchvision==0.9.0+cu111 -f https://download.pytorch.org/whl/torch_stable.html'" >> $GITHUB_ENV;
         else
             echo "Unhandled CUDA version $CUDA";
             exit 1;
@@ -461,6 +456,17 @@ jobs:
         git add -A
         git commit -m "automated update of the docs"
         git push
+
+    - name: Re-write docs commit history
+      if: github.event_name == 'release'
+      run: |
+        cd ~/allennlp-docs/
+        git checkout --orphan latest_branch
+        git add -A
+        git commit -m "Re-write commit history"
+        git branch -D master  # remove old master branch
+        git branch -m master  # rename clean new branch to master branch
+        git push -f origin master
 
     - name: Clean up
       if: always()

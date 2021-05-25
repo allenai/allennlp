@@ -12,6 +12,12 @@ from allennlp.common.from_params import FromParams
 
 
 @dataclass(frozen=True)
+class ExampleCategory(FromParams):
+    category: str
+    examples: List[Dict[str, str]]
+
+
+@dataclass(frozen=True)
 class TaskCard(FromParams):
     """
     The `TaskCard` stores information about the task. It is modeled after the
@@ -58,4 +64,4 @@ class TaskCard(FromParams):
     expected_inputs: Optional[str] = None
     expected_outputs: Optional[str] = None
     scope_and_limitations: Optional[str] = None
-    examples: Optional[Union[List[Dict[str, str]], Dict[str, List[Dict[str, str]]]]] = None
+    examples: Optional[Union[List[Dict[str, str]], List[ExampleCategory]]] = None

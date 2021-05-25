@@ -27,17 +27,19 @@
 
 ## Quick Links
 
-- [Website](https://allennlp.org/)
-- [Guide](https://guide.allennlp.org/)
-- [Documentation](https://docs.allennlp.org/) ( [latest](https://docs.allennlp.org/latest/) | [stable](https://docs.allennlp.org/stable/) | [commit](https://docs.allennlp.org/main/) )
-- [Upgrade Guide from 1.x to 2.0](https://github.com/allenai/allennlp/discussions/4933)
-- [Stack Overflow](https://stackoverflow.com/questions/tagged/allennlp)
-- [Contributing Guidelines](CONTRIBUTING.md)
-- [Officially Supported Models](https://github.com/allenai/allennlp-models)
+- ↗️ [Website](https://allennlp.org/)
+- 🔦 [Guide](https://guide.allennlp.org/)
+- 🖼 [Gallery](https://gallery.allennlp.org)
+- 💻 [Demo](https://demo.allennlp.org)
+- 📓 [Documentation](https://docs.allennlp.org/) ( [latest](https://docs.allennlp.org/latest/) | [stable](https://docs.allennlp.org/stable/) | [commit](https://docs.allennlp.org/main/) )
+- ⬆️ [Upgrade Guide from 1.x to 2.0](https://github.com/allenai/allennlp/discussions/4933)
+- ❓ [Stack Overflow](https://stackoverflow.com/questions/tagged/allennlp)
+- ✋ [Contributing Guidelines](CONTRIBUTING.md)
+- 🤖 [Officially Supported Models](https://github.com/allenai/allennlp-models)
     - [Pretrained Models](https://github.com/allenai/allennlp-models/blob/main/allennlp_models/pretrained.py)
     - [Documentation](https://docs.allennlp.org/models/) ( [latest](https://docs.allennlp.org/models/latest/) | [stable](https://docs.allennlp.org/models/stable/) | [commit](https://docs.allennlp.org/models/main/) )
-- [Continuous Build](https://github.com/allenai/allennlp/actions)
-- [Nightly Releases](https://pypi.org/project/allennlp/#history)
+- ⚙️ [Continuous Build](https://github.com/allenai/allennlp/actions)
+- 🌙 [Nightly Releases](https://pypi.org/project/allennlp/#history)
 
 ## In this README
 
@@ -45,9 +47,9 @@
 - [Plugins](#plugins)
 - [Package Overview](#package-overview)
 - [Installation](#installation)
-  - [Installing via pip](#installing-via-pip)
-  - [Installing using Docker](#installing-using-docker)
-  - [Installing from source](#installing-from-source)
+    - [Installing via pip](#installing-via-pip)
+    - [Installing using Docker](#installing-using-docker)
+    - [Installing from source](#installing-from-source)
 - [Running AllenNLP](#running-allennlp)
 - [Issues](#issues)
 - [Contributions](#contributions)
@@ -152,6 +154,10 @@ to distribute as a plugin, see the [subcommand API docs](https://docs.allennlp.o
     <td> A data processing module for loading datasets and encoding strings as integers for representation in matrices </td>
 </tr>
 <tr>
+    <td><b> allennlp.fairness </b></td>
+    <td> A module for bias mitigation and fairness algorithms and metrics </td>
+</tr>
+<tr>
     <td><b> allennlp.modules </b></td>
     <td> A collection of PyTorch modules for use with text </td>
 </tr>
@@ -167,10 +173,14 @@ to distribute as a plugin, see the [subcommand API docs](https://docs.allennlp.o
 
 ## Installation
 
-AllenNLP requires Python 3.7 or later and [PyTorch](https://pytorch.org/).
+AllenNLP requires Python 3.6.1 or later and [PyTorch](https://pytorch.org/).
 It's recommended that you install the PyTorch ecosystem **before** installing AllenNLP by following the instructions on [pytorch.org](https://pytorch.org/).
 
-The preferred way to install AllenNLP is via `pip`. Just run `pip install allennlp`. If you need pointers on setting up an appropriate Python environment or would like to install AllenNLP using a different method, see below.
+The preferred way to install AllenNLP is via `pip`. Just run `pip install allennlp`.
+
+> ⚠️ If you're using Python 3.7 or greater, you should ensure that you don't have the PyPI version of `dataclasses` installed after running the above command, as this could cause issues on certain platforms. You can quickly check this by running `pip freeze | grep dataclasses`. If you see something like `dataclasses=0.6` in the output, then just run `pip uninstall -y dataclasses`.
+
+If you need pointers on setting up an appropriate Python environment or would like to install AllenNLP using a different method, see below.
 
 We support AllenNLP on Mac and Linux environments. We presently do not support Windows but are open to contributions.
 
@@ -184,7 +194,7 @@ environment you want to use, you can skip to the 'installing via pip' section.
 
 1.  [Download and install Conda](https://conda.io/projects/conda/en/latest/user-guide/install/index.html).
 
-2.  Create a Conda environment with Python 3.7 (3.8 would work as well):
+2.  Create a Conda environment with Python 3.7 (3.6 or 3.8 would work as well):
 
     ```
     conda create -n allennlp python=3.7

@@ -150,3 +150,7 @@ class SequenceLabelField(Field[torch.Tensor]):
             f"SequenceLabelField of length {length} with "
             f"labels:\n {formatted_labels} \t\tin namespace: '{self._label_namespace}'."
         )
+
+    @overrides
+    def human_readable_repr(self) -> Union[List[str], List[int]]:
+        return self.labels

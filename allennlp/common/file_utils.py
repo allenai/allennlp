@@ -44,17 +44,19 @@ import warnings
 import boto3
 import botocore
 import torch
-from botocore.exceptions import ClientError, EndpointConnectionError
 from filelock import FileLock as _FileLock
+from google.cloud import storage
+from google.api_core.exceptions import NotFound
 import numpy as np
 from overrides import overrides
 import requests
 from requests.adapters import HTTPAdapter
-from requests.exceptions import ConnectionError
 from requests.packages.urllib3.util.retry import Retry
 import lmdb
 from torch import Tensor
+import huggingface_hub as hf_hub
 
+from allennlp.version import VERSION
 from allennlp.common.tqdm import Tqdm
 
 logger = logging.getLogger(__name__)
@@ -206,15 +208,34 @@ def cached_path(
     force_extract: bool = False,
 ) -> str:
     """
-    Given something that might be a URL (or might be a local path),
-    determine which. If it's a URL, download the file and cache it, and
-    return the path to the cached file. If it's already a local path,
-    make sure the file exists and then return the path.
+    Given something that might be a URL or local path, determine which.
+    If it's a remote resource, download the file and cache it, and
+    then return the path to the cached file. If it's already a local path,
+    make sure the file exists and return the path.
+
+    For URLs, "http://", "https://", "s3://", "gs://", and "hf://" are all supported.
+    The latter corresponds to the HuggingFace Hub.
+
+    For example, to download the PyTorch weights for the model `epwalsh/bert-xsmall-dummy`
+    on HuggingFace, you could do:
+
+    ```python
+    cached_path("hf://epwalsh/bert-xsmall-dummy/pytorch_model.bin")
+    ```
+
+    For paths or URLs that point to a tarfile or zipfile, you can also add a path
+    to a specific file to the `url_or_filename` preceeded by a "!", and the archive will
+    be automatically extracted (provided you set `extract_archive` to `True`),
+    returning the local path to the specific file. For example:
+
+    ```python
+    cached_path("model.tar.gz!weights.th", extract_archive=True)
+    ```
 
     # Parameters
 
     url_or_filename : `Union[str, Path]`
-        A URL or local file to parse and possibly download.
+        A URL or path to parse and possibly download.
 
     cache_dir : `Union[str, Path]`, optional (default = `None`)
         The directory to cache downloads.
@@ -237,6 +258,7 @@ def cached_path(
         url_or_filename = str(url_or_filename)
 
     file_path: str
+    extraction_path: Optional[str] = None
 
     # If we're using the /a/b/foo.zip!c/d/file.txt syntax, handle it here.
     exclamation_index = url_or_filename.find("!")
@@ -261,9 +283,7 @@ def cached_path(
 
     parsed = urlparse(url_or_filename)
 
-    extraction_path: Optional[str] = None
-
-    if parsed.scheme in ("http", "https", "s3"):
+    if parsed.scheme in ("http", "https", "s3", "hf", "gs"):
         # URL, so get it from the cache (downloading if necessary)
         file_path = get_from_cache(url_or_filename, cache_dir)
 
@@ -355,20 +375,28 @@ def is_url_or_existing_file(url_or_filename: Union[str, Path, None]) -> bool:
         return False
     url_or_filename = os.path.expanduser(str(url_or_filename))
     parsed = urlparse(url_or_filename)
-    return parsed.scheme in ("http", "https", "s3") or os.path.exists(url_or_filename)
+    return parsed.scheme in ("http", "https", "s3", "gs") or os.path.exists(url_or_filename)
 
 
 def _split_s3_path(url: str) -> Tuple[str, str]:
+    return _split_cloud_path(url, "s3")
+
+
+def _split_gcs_path(url: str) -> Tuple[str, str]:
+    return _split_cloud_path(url, "gs")
+
+
+def _split_cloud_path(url: str, provider: str) -> Tuple[str, str]:
     """Split a full s3 path into the bucket name and path."""
     parsed = urlparse(url)
     if not parsed.netloc or not parsed.path:
-        raise ValueError("bad s3 path {}".format(url))
+        raise ValueError("bad {} path {}".format(provider, url))
     bucket_name = parsed.netloc
-    s3_path = parsed.path
+    provider_path = parsed.path
     # Remove '/' at beginning of path.
-    if s3_path.startswith("/"):
-        s3_path = s3_path[1:]
-    return bucket_name, s3_path
+    if provider_path.startswith("/"):
+        provider_path = provider_path[1:]
+    return bucket_name, provider_path
 
 
 def _s3_request(func: Callable):
@@ -381,7 +409,7 @@ def _s3_request(func: Callable):
     def wrapper(url: str, *args, **kwargs):
         try:
             return func(url, *args, **kwargs)
-        except ClientError as exc:
+        except botocore.exceptions.ClientError as exc:
             if int(exc.response["Error"]["Code"]) == 404:
                 raise FileNotFoundError("file {} not found".format(url))
             else:
@@ -419,6 +447,49 @@ def _s3_get(url: str, temp_file: IO) -> None:
     s3_resource.Bucket(bucket_name).download_fileobj(s3_path, temp_file)
 
 
+def _gcs_request(func: Callable):
+    """
+    Wrapper function for gcs requests in order to create more helpful error
+    messages.
+    """
+
+    @wraps(func)
+    def wrapper(url: str, *args, **kwargs):
+        try:
+            return func(url, *args, **kwargs)
+        except NotFound:
+            raise FileNotFoundError("file {} not found".format(url))
+
+    return wrapper
+
+
+def _get_gcs_client():
+    storage_client = storage.Client()
+    return storage_client
+
+
+def _get_gcs_blob(url: str) -> storage.blob.Blob:
+    gcs_resource = _get_gcs_client()
+    bucket_name, gcs_path = _split_gcs_path(url)
+    bucket = gcs_resource.bucket(bucket_name)
+    blob = bucket.blob(gcs_path)
+    return blob
+
+
+@_gcs_request
+def _gcs_md5(url: str) -> Optional[str]:
+    """Get GCS object's md5."""
+    blob = _get_gcs_blob(url)
+    return blob.md5_hash
+
+
+@_gcs_request
+def _gcs_get(url: str, temp_filename: str) -> None:
+    """Pull a file directly from GCS."""
+    blob = _get_gcs_blob(url)
+    blob.download_to_filename(temp_filename)
+
+
 def _session_with_backoff() -> requests.Session:
     """
     We ran into an issue where http requests to s3 were timing out,
@@ -439,7 +510,7 @@ def _http_etag(url: str) -> Optional[str]:
     with _session_with_backoff() as session:
         response = session.head(url, allow_redirects=True)
     if response.status_code != 200:
-        raise IOError(
+        raise OSError(
             "HEAD request failed for url {} with status code {}".format(url, response.status_code)
         )
     return response.headers.get("ETag")
@@ -603,6 +674,7 @@ class TensorCache(MutableMapping[str, Tensor], ABC):
         if self.read_only:
             raise ValueError("cannot write to a read-only cache")
 
+        tensor = tensor.cpu()
         encoded_key = key.encode()
         buffer = io.BytesIO()
         if tensor.storage().size() != np.prod(tensor.size()):
@@ -820,6 +892,53 @@ class _Meta:
         return cls(**data)
 
 
+def _hf_hub_download(
+    url, model_identifier: str, filename: Optional[str], cache_dir: Union[str, Path]
+) -> str:
+    revision: Optional[str]
+    if "@" in model_identifier:
+        repo_id = model_identifier.split("@")[0]
+        revision = model_identifier.split("@")[1]
+    else:
+        repo_id = model_identifier
+        revision = None
+
+    if filename is not None:
+        hub_url = hf_hub.hf_hub_url(repo_id=repo_id, filename=filename, revision=revision)
+        cache_path = str(
+            hf_hub.cached_download(
+                url=hub_url,
+                library_name="allennlp",
+                library_version=VERSION,
+                cache_dir=cache_dir,
+            )
+        )
+        # HF writes it's own meta '.json' file which uses the same format we used to use and still
+        # support, but is missing some fields that we like to have.
+        # So we overwrite it when it we can.
+        with FileLock(cache_path + ".lock", read_only_ok=True):
+            meta = _Meta.from_path(cache_path + ".json")
+            # The file HF writes will have 'resource' set to the 'http' URL corresponding to the 'hf://' URL,
+            # but we want 'resource' to be the original 'hf://' URL.
+            if meta.resource != url:
+                meta.resource = url
+                meta.to_file()
+    else:
+        cache_path = str(hf_hub.snapshot_download(repo_id, revision=revision, cache_dir=cache_dir))
+        # Need to write the meta file for snapshot downloads if it doesn't exist.
+        with FileLock(cache_path + ".lock", read_only_ok=True):
+            if not os.path.exists(cache_path + ".json"):
+                meta = _Meta(
+                    resource=url,
+                    cached_path=cache_path,
+                    creation_time=time.time(),
+                    extraction_dir=True,
+                    size=_get_resource_size(cache_path),
+                )
+                meta.to_file()
+    return cache_path
+
+
 # TODO(joelgrus): do we want to do checksums or anything like that?
 def get_from_cache(url: str, cache_dir: Union[str, Path] = None) -> str:
     """
@@ -829,13 +948,39 @@ def get_from_cache(url: str, cache_dir: Union[str, Path] = None) -> str:
     if cache_dir is None:
         cache_dir = CACHE_DIRECTORY
 
+    if url.startswith("hf://"):
+        # Remove the 'hf://' prefix
+        identifier = url[5:]
+
+        if identifier.count("/") > 1:
+            filename = "/".join(identifier.split("/")[2:])
+            model_identifier = "/".join(identifier.split("/")[:2])
+            return _hf_hub_download(url, model_identifier, filename, cache_dir)
+        elif identifier.count("/") == 1:
+            # 'hf://' URLs like 'hf://xxxx/yyyy' are potentially ambiguous,
+            # because this could refer to either:
+            #  1. the file 'yyyy' in the 'xxxx' repository, or
+            #  2. the repo 'yyyy' under the user/org name 'xxxx'.
+            # We default to (1), but if we get a 404 error then we try (2).
+            try:
+                model_identifier, filename = identifier.split("/")
+                return _hf_hub_download(url, model_identifier, filename, cache_dir)
+            except requests.exceptions.HTTPError as exc:
+                if exc.response.status_code == 404:
+                    return _hf_hub_download(url, identifier, None, cache_dir)
+                raise
+        else:
+            return _hf_hub_download(url, identifier, None, cache_dir)
+
     # Get eTag to add to filename, if it exists.
     try:
         if url.startswith("s3://"):
             etag = _s3_etag(url)
+        elif url.startswith("gs://"):
+            etag = _gcs_md5(url)
         else:
             etag = _http_etag(url)
-    except (ConnectionError, EndpointConnectionError):
+    except (requests.exceptions.ConnectionError, botocore.exceptions.EndpointConnectionError):
         # We might be offline, in which case we don't want to throw an error
         # just yet. Instead, we'll try to use the latest cached version of the
         # target resource, if it exists. We'll only throw an exception if we
@@ -887,6 +1032,8 @@ def get_from_cache(url: str, cache_dir: Union[str, Path] = None) -> str:
                 # GET file object
                 if url.startswith("s3://"):
                     _s3_get(url, cache_file)
+                elif url.startswith("gs://"):
+                    _gcs_get(url, cache_file.name)
                 else:
                     _http_get(url, cache_file)
 

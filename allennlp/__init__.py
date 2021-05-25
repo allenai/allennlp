@@ -2,8 +2,8 @@
 # (to avoid running into this bug: https://bugs.python.org/issue29246)
 import sys
 
-if sys.version_info < (3, 7, 0):
-    raise RuntimeError("AllenNLP requires Python 3.7 or later")
+if sys.version_info < (3, 6, 1):
+    raise RuntimeError("AllenNLP requires Python 3.6.1 or later")
 
 # We get a lot of these spurious warnings,
 # see https://github.com/ContinuumIO/anaconda-issues/issues/6678

@@ -1,6 +1,7 @@
 from overrides import overrides
 import torch
 
+from allennlp.common.checks import ConfigurationError
 from allennlp.training.learning_rate_schedulers.learning_rate_scheduler import LearningRateScheduler
 
 
@@ -40,6 +41,18 @@ class PolynomialDecay(LearningRateScheduler):
         last_epoch: int = -1,
     ):
         super().__init__(optimizer, last_epoch)
+
+        # Sanity check here.
+        if num_steps_per_epoch is None:
+            raise ConfigurationError(
+                "'num_steps_per_epoch' is required for this LR scheduler.\n\n"
+                "If you know how many batches per epoch for your training data, you can set this value "
+                "directly in your config. Otherwise you'll need to use compatible settings with your data loader "
+                "so that it can report an accurate number of batches per epoch. "
+                "If you're using the MultiProcessDataLoader, "
+                "this means you either need to set 'batches_per_epoch' "
+                "or leave 'max_instances_in_memory' as None (if your entire dataset can fit into memory)."
+            )
 
         self.power = power
         self.warmup_steps = warmup_steps

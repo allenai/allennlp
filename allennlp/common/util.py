@@ -256,7 +256,7 @@ LOADED_SPACY_MODELS: Dict[Tuple[str, bool, bool, bool], SpacyModelType] = {}
 
 
 def get_spacy_model(
-    spacy_model_name: str, pos_tags: bool, parse: bool, ner: bool
+    spacy_model_name: str, pos_tags: bool = True, parse: bool = False, ner: bool = False
 ) -> SpacyModelType:
     """
     In order to avoid loading spacy models a whole bunch of times, we'll save references to them,
@@ -507,6 +507,18 @@ def is_distributed() -> bool:
     Checks if the distributed process group is available and has been initialized
     """
     return dist.is_available() and dist.is_initialized()
+
+
+def is_global_primary() -> bool:
+    """
+    Checks if the distributed process group is the global primary (rank = 0).
+    If the distributed process group is not available or has not been initialized,
+    this trivially returns `True`.
+    """
+    if not is_distributed():
+        return True
+    else:
+        return dist.get_rank() == 0
 
 
 def sanitize_wordpiece(wordpiece: str) -> str:

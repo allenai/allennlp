@@ -5,6 +5,7 @@ from collections import Counter
 from typing import Tuple
 
 from allennlp.common.testing import AllenNlpTestCase
+from allennlp.data.data_loaders import MultiProcessDataLoader
 from allennlp.data.dataset_readers import (
     SequenceTaggingDatasetReader,
     ShardedDatasetReader,
@@ -27,7 +28,7 @@ class TestShardedDatasetReader(AllenNlpTestCase):
         super().setup_method()
 
         # use SequenceTaggingDatasetReader as the base reader
-        self.base_reader = SequenceTaggingDatasetReader()
+        self.base_reader = SequenceTaggingDatasetReader(max_instances=4)
         base_file_path = AllenNlpTestCase.FIXTURES_ROOT / "data" / "sequence_tagging.tsv"
 
         # Make 100 copies of the data
@@ -51,9 +52,12 @@ class TestShardedDatasetReader(AllenNlpTestCase):
 
         self.reader = ShardedDatasetReader(base_reader=self.base_reader)
 
-    def read_and_check_instances(self, filepath: str):
+    def read_and_check_instances(self, filepath: str, num_workers: int = 0):
+        data_loader = MultiProcessDataLoader(
+            self.reader, filepath, num_workers=num_workers, batch_size=1, start_method="spawn"
+        )
         all_instances = []
-        for instance in self.reader.read(filepath):
+        for instance in data_loader.iter_instances():
             all_instances.append(instance)
 
         # 100 files * 4 sentences / file
@@ -70,6 +74,9 @@ class TestShardedDatasetReader(AllenNlpTestCase):
 
     def test_sharded_read_glob(self):
         self.read_and_check_instances(self.identical_files_glob)
+
+    def test_sharded_read_with_multiprocess_loader(self):
+        self.read_and_check_instances(self.identical_files_glob, num_workers=2)
 
     def test_sharded_read_archive(self):
         self.read_and_check_instances(str(self.archive_filename))

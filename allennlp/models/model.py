@@ -101,11 +101,24 @@ class Model(torch.nn.Module, Registrable):
                 raise RuntimeError("The regularizer cannot be a non-zero float.")
         return regularization_penalty
 
-    def get_parameters_for_histogram_tensorboard_logging(self) -> List[str]:
+    def get_parameters_for_histogram_logging(self) -> List[str]:
         """
         Returns the name of model parameters used for logging histograms to tensorboard.
         """
         return [name for name, _ in self.named_parameters()]
+
+    def get_parameters_for_histogram_tensorboard_logging(self) -> List[str]:
+        """
+        Returns the name of model parameters used for logging histograms to tensorboard.
+        """
+        import warnings
+
+        warnings.warn(
+            "'Model.get_parameters_for_histogram_tensorboard_logging' is deprecated, please use "
+            "'Model.get_parameters_for_histogram_logging' instead.",
+            DeprecationWarning,
+        )
+        return self.get_parameters_for_histogram_logging()
 
     def forward(self, *inputs) -> Dict[str, torch.Tensor]:
         """
@@ -322,7 +335,7 @@ class Model(torch.nn.Module, Registrable):
 
         # Load state dict. We pass `strict=False` so PyTorch doesn't raise a RuntimeError
         # if the state dict is missing keys because we handle this case below.
-        model_state = torch.load(weights_file, map_location=util.device_mapping(cuda_device))
+        model_state = util.read_state_dict(weights_file, cuda_device=cuda_device)
         missing_keys, unexpected_keys = model.load_state_dict(model_state, strict=False)
 
         # Modules might define a class variable called `authorized_missing_keys`,

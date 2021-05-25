@@ -3,7 +3,7 @@ import logging
 from multiprocessing.process import BaseProcess
 import random
 import traceback
-from typing import List, Iterator, Optional, Iterable, Union
+from typing import List, Iterator, Optional, Iterable, Union, TypeVar
 
 from overrides import overrides
 import torch
@@ -21,6 +21,9 @@ import allennlp.nn.util as nn_util
 
 
 logger = logging.getLogger(__name__)
+
+
+_T = TypeVar("_T")
 
 
 @DataLoader.register("multiprocess")
@@ -118,6 +121,9 @@ class MultiProcessDataLoader(DataLoader):
             will automatically call [`set_target_device()`](#set_target_device) before iterating
             over batches.
 
+    quiet : `bool`, optional (default = `False`)
+        If `True`, tqdm progress bars will be disabled.
+
     # Best practices
 
     - **Large datasets**
@@ -200,6 +206,7 @@ class MultiProcessDataLoader(DataLoader):
         max_instances_in_memory: int = None,
         start_method: str = "fork",
         cuda_device: Optional[Union[int, str, torch.device]] = None,
+        quiet: bool = False,
     ) -> None:
         # Do some parameter validation.
         if num_workers is not None and num_workers < 0:
@@ -240,6 +247,7 @@ class MultiProcessDataLoader(DataLoader):
         self.collate_fn = allennlp_collate
         self.max_instances_in_memory = max_instances_in_memory
         self.start_method = start_method
+        self.quiet = quiet
         self.cuda_device: Optional[torch.device] = None
         if cuda_device is not None:
             if not isinstance(cuda_device, torch.device):
@@ -346,7 +354,7 @@ class MultiProcessDataLoader(DataLoader):
 
             if self.num_workers <= 0:
                 # Just read all instances in main process.
-                for instance in Tqdm.tqdm(
+                for instance in self._maybe_tqdm(
                     self.reader.read(self.data_path), desc="loading instances"
                 ):
                     self.reader.apply_token_indexers(instance)
@@ -365,7 +373,7 @@ class MultiProcessDataLoader(DataLoader):
                 workers = self._start_instance_workers(queue, ctx)
 
                 try:
-                    for instance in Tqdm.tqdm(
+                    for instance in self._maybe_tqdm(
                         self._gather_instances(queue), desc="loading instances"
                     ):
                         if self.max_instances_in_memory is None:
@@ -568,6 +576,11 @@ class MultiProcessDataLoader(DataLoader):
                 if self.drop_last and len(batch) < self.batch_size:
                     break
                 yield tensorize(batch)
+
+    def _maybe_tqdm(self, iterator: Iterable[_T], **tqdm_kwargs) -> Iterable[_T]:
+        if self.quiet:
+            return iterator
+        return Tqdm.tqdm(iterator, **tqdm_kwargs)
 
 
 class WorkerError(Exception):

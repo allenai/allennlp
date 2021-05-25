@@ -4,7 +4,7 @@
 flake8
 
 # Static type checking
-mypy==0.800
+mypy==0.812
 
 # Automatic code formatting
 black==20.8b1
@@ -20,10 +20,7 @@ codecov
 matplotlib>=2.2.3
 
 # For mocking HTTP requests/responses.
-responses>=0.7
-# This needs to be pinned below 1.26.0 for responses to work until
-# https://github.com/getsentry/responses/issues/354 is resolved.
-urllib3<1.26.0
+responses>=0.12
 
 # For running tests that aren't 100% reliable.
 flaky
@@ -42,7 +39,7 @@ nr.databind.core<0.0.17
 nr.interface<0.0.4
 
 mkdocs==1.1.2
-mkdocs-material>=5.5.0,<6.3.0
+mkdocs-material>=5.5.0,<7.2.0
 markdown-include==0.6.0
 
 #### PACKAGE-UPLOAD PACKAGES ####

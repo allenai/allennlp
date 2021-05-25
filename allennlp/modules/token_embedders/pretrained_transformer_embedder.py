@@ -38,11 +38,28 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         as embedders such as BERT. However, other models consist of encoder and decoder, in which case we just
         want to use the encoder.
     train_parameters: `bool`, optional (default = `True`)
-        If this is `True`, the transformer weights get updated during training.
+        If this is `True`, the transformer weights get updated during training. If this is `False`, the
+        transformer weights are not updated during training.
+    eval_mode: `bool`, optional (default = `False`)
+        If this is `True`, the model is always set to evaluation mode (e.g., the dropout is disabled and the
+        batch normalization layer statistics are not updated). If this is `False`, such dropout and batch
+        normalization layers are only set to evaluation mode when when the model is evaluating on development
+        or test data.
     last_layer_only: `bool`, optional (default = `True`)
         When `True` (the default), only the final layer of the pretrained transformer is taken
         for the embeddings. But if set to `False`, a scalar mix of all of the layers
         is used.
+    override_weights_file: `Optional[str]`, optional (default = `None`)
+        If set, this specifies a file from which to load alternate weights that override the
+        weights from huggingface. The file is expected to contain a PyTorch `state_dict`, created
+        with `torch.save()`.
+    override_weights_strip_prefix: `Optional[str]`, optional (default = `None`)
+        If set, strip the given prefix from the state dict when loading it.
+    load_weights: `bool`, optional (default = `True`)
+        Whether to load the pretrained weights. If you're loading your model/predictor from an AllenNLP archive
+        it usually makes sense to set this to `False` (via the `overrides` parameter)
+        to avoid unnecessarily caching and loading the original pretrained weights,
+        since the archive will already contain all of the weights needed.
     gradient_checkpointing: `bool`, optional (default = `None`)
         Enable or disable gradient checkpointing.
     tokenizer_kwargs: `Dict[str, Any]`, optional (default = `None`)
@@ -64,9 +81,11 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         max_length: int = None,
         sub_module: str = None,
         train_parameters: bool = True,
+        eval_mode: bool = False,
         last_layer_only: bool = True,
         override_weights_file: Optional[str] = None,
         override_weights_strip_prefix: Optional[str] = None,
+        load_weights: bool = True,
         gradient_checkpointing: Optional[bool] = None,
         tokenizer_kwargs: Optional[Dict[str, Any]] = None,
         transformer_kwargs: Optional[Dict[str, Any]] = None,
@@ -79,6 +98,7 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
             True,
             override_weights_file=override_weights_file,
             override_weights_strip_prefix=override_weights_strip_prefix,
+            load_weights=load_weights,
             **(transformer_kwargs or {}),
         )
 
@@ -121,9 +141,24 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         self._num_added_end_tokens = len(tokenizer.single_sequence_end_tokens)
         self._num_added_tokens = self._num_added_start_tokens + self._num_added_end_tokens
 
+        self.train_parameters = train_parameters
         if not train_parameters:
             for param in self.transformer_model.parameters():
                 param.requires_grad = False
+
+        self.eval_mode = eval_mode
+        if eval_mode:
+            self.transformer_model.eval()
+
+    @overrides
+    def train(self, mode: bool = True):
+        self.training = mode
+        for name, module in self.named_children():
+            if self.eval_mode and name == "transformer_model":
+                module.eval()
+            else:
+                module.train(mode)
+        return self
 
     @overrides
     def get_output_dim(self):
@@ -200,17 +235,12 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
 
         transformer_output = self.transformer_model(**parameters)
         if self._scalar_mix is not None:
-            # As far as I can tell, the hidden states will always be the last element
-            # in the output tuple as long as the model is not also configured to return
-            # attention scores.
-            # See, for example, the return value description for BERT:
-            # https://huggingface.co/transformers/model_doc/bert.html#transformers.BertModel.forward
-            # These hidden states will also include the embedding layer, which we don't
+            # The hidden states will also include the embedding layer, which we don't
             # include in the scalar mix. Hence the `[1:]` slicing.
-            hidden_states = transformer_output[-1][1:]
+            hidden_states = transformer_output.hidden_states[1:]
             embeddings = self._scalar_mix(hidden_states)
         else:
-            embeddings = transformer_output[0]
+            embeddings = transformer_output.last_hidden_state
 
         if fold_long_sequences:
             embeddings = self._unfold_long_sequences(

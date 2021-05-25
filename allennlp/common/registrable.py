@@ -3,17 +3,20 @@
 any base class with a named registry for its subclasses and a decorator
 for registering them.
 """
-from collections import defaultdict
-from typing import TypeVar, Type, Callable, Dict, List, Optional, Tuple
 import importlib
 import logging
+from collections import defaultdict
+from typing import Callable, ClassVar, DefaultDict, Dict, List, Optional, Tuple, Type, TypeVar, cast
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.from_params import FromParams
 
 logger = logging.getLogger(__name__)
 
-T = TypeVar("T", bound="Registrable")
+_T = TypeVar("_T")
+_RegistrableT = TypeVar("_RegistrableT", bound="Registrable")
+
+_SubclassRegistry = Dict[str, Tuple[type, Optional[str]]]
 
 
 class Registrable(FromParams):
@@ -38,11 +41,14 @@ class Registrable(FromParams):
     a subclass to load all other subclasses and the abstract class).
     """
 
-    _registry: Dict[Type, Dict[str, Tuple[Type, Optional[str]]]] = defaultdict(dict)
+    _registry: ClassVar[DefaultDict[type, _SubclassRegistry]] = defaultdict(dict)
+
     default_implementation: Optional[str] = None
 
     @classmethod
-    def register(cls: Type[T], name: str, constructor: str = None, exist_ok: bool = False):
+    def register(
+        cls, name: str, constructor: Optional[str] = None, exist_ok: bool = False
+    ) -> Callable[[Type[_T]], Type[_T]]:
         """
         Register a class under a particular name.
 
@@ -106,7 +112,7 @@ class Registrable(FromParams):
         """
         registry = Registrable._registry[cls]
 
-        def add_subclass_to_registry(subclass: Type[T]):
+        def add_subclass_to_registry(subclass: Type[_T]) -> Type[_T]:
             # Add to registry, raise an error if key has already been used.
             if name in registry:
                 if exist_ok:
@@ -127,7 +133,7 @@ class Registrable(FromParams):
         return add_subclass_to_registry
 
     @classmethod
-    def by_name(cls: Type[T], name: str) -> Callable[..., T]:
+    def by_name(cls: Type[_RegistrableT], name: str) -> Callable[..., _RegistrableT]:
         """
         Returns a callable function that constructs an argument of the registered class.  Because
         you can register particular functions as constructors for specific names, this isn't
@@ -136,12 +142,14 @@ class Registrable(FromParams):
         logger.debug(f"instantiating registered subclass {name} of {cls}")
         subclass, constructor = cls.resolve_class_name(name)
         if not constructor:
-            return subclass
+            return cast(Type[_RegistrableT], subclass)
         else:
-            return getattr(subclass, constructor)
+            return cast(Callable[..., _RegistrableT], getattr(subclass, constructor))
 
     @classmethod
-    def resolve_class_name(cls: Type[T], name: str) -> Tuple[Type[T], Optional[str]]:
+    def resolve_class_name(
+        cls: Type[_RegistrableT], name: str
+    ) -> Tuple[Type[_RegistrableT], Optional[str]]:
         """
         Returns the subclass that corresponds to the given `name`, along with the name of the
         method that was registered as a constructor for that `name`, if any.
@@ -181,10 +189,18 @@ class Registrable(FromParams):
 
         else:
             # is not a qualified class name
+            available = cls.list_available()
+            suggestion = _get_suggestion(name, available)
             raise ConfigurationError(
-                f"{name} is not a registered name for {cls.__name__}. "
-                "You probably need to use the --include-package flag "
-                "to load your custom code. Alternatively, you can specify your choices "
+                (
+                    f"'{name}' is not a registered name for '{cls.__name__}'"
+                    + (". " if not suggestion else f", did you mean '{suggestion}'? ")
+                )
+                + "If your registered class comes from custom code, you'll need to import "
+                "the corresponding modules. If you're using AllenNLP from the command-line, "
+                "this is done by using the '--include-package' flag, or by specifying your imports "
+                "in a '.allennlp_plugins' file. "
+                "Alternatively, you can specify your choices "
                 """using fully-qualified paths, e.g. {"model": "my_module.models.MyModel"} """
                 "in which case they will be automatically imported correctly."
             )
@@ -201,3 +217,19 @@ class Registrable(FromParams):
             raise ConfigurationError(f"Default implementation {default} is not registered")
         else:
             return [default] + [k for k in keys if k != default]
+
+
+def _get_suggestion(name: str, available: List[str]) -> Optional[str]:
+    # First check for simple mistakes like using '-' instead of '_', or vice-versa.
+    for ch, repl_ch in (("_", "-"), ("-", "_")):
+        suggestion = name.replace(ch, repl_ch)
+        if suggestion in available:
+            return suggestion
+    # If we still haven't found a reasonable suggestion, we return the first suggestion
+    # with an edit distance (with transpositions allowed) of 1 to `name`.
+    from nltk.metrics.distance import edit_distance
+
+    for suggestion in available:
+        if edit_distance(name, suggestion, transpositions=True) == 1:
+            return suggestion
+    return None

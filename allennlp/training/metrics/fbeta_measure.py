@@ -1,12 +1,12 @@
 from typing import List, Optional, Union
 
 import torch
-import torch.distributed as dist
 from overrides import overrides
 
-from allennlp.common.util import is_distributed, nan_safe_tensor_divide
+from allennlp.common.util import nan_safe_tensor_divide
 from allennlp.common.checks import ConfigurationError
 from allennlp.training.metrics.metric import Metric
+from allennlp.nn.util import dist_reduce_sum
 
 
 @Metric.register("fbeta")
@@ -110,7 +110,6 @@ class FBetaMeasure(Metric):
             A masking tensor the same size as `gold_labels`.
         """
         predictions, gold_labels, mask = self.detach_tensors(predictions, gold_labels, mask)
-        device = gold_labels.device
 
         # Calculate true_positive_sum, true_negative_sum, pred_sum, true_sum
         num_classes = predictions.size(-1)
@@ -142,7 +141,7 @@ class FBetaMeasure(Metric):
         # Watch it:
         # The total numbers of true positives under all _predicted_ classes are zeros.
         if true_positives_bins.shape[0] == 0:
-            true_positive_sum = torch.zeros(num_classes, device=device)
+            true_positive_sum = torch.zeros(num_classes, device=predictions.device)
         else:
             true_positive_sum = torch.bincount(
                 true_positives_bins.long(), minlength=num_classes
@@ -154,7 +153,7 @@ class FBetaMeasure(Metric):
         if pred_bins.shape[0] != 0:
             pred_sum = torch.bincount(pred_bins, minlength=num_classes).float()
         else:
-            pred_sum = torch.zeros(num_classes, device=device)
+            pred_sum = torch.zeros(num_classes, device=predictions.device)
 
         gold_labels_bins = gold_labels[mask].long()
         if gold_labels.shape[0] != 0:
@@ -164,15 +163,9 @@ class FBetaMeasure(Metric):
 
         self._total_sum += mask.sum().to(torch.float)
 
-        if is_distributed():
-            true_positive_sum = torch.tensor(true_positive_sum, device=device)
-            dist.all_reduce(true_positive_sum, op=dist.ReduceOp.SUM)
-            dist.all_reduce(pred_sum, op=dist.ReduceOp.SUM)
-            dist.all_reduce(true_sum, op=dist.ReduceOp.SUM)
-
-        self._true_positive_sum += true_positive_sum
-        self._pred_sum += pred_sum
-        self._true_sum += true_sum
+        self._true_positive_sum += dist_reduce_sum(true_positive_sum)
+        self._pred_sum += dist_reduce_sum(pred_sum)
+        self._true_sum += dist_reduce_sum(true_sum)
 
     @overrides
     def get_metric(self, reset: bool = False):

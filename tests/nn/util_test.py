@@ -1,6 +1,6 @@
 import json
 import random
-from typing import NamedTuple, Any
+from typing import NamedTuple, Any, Union, Callable, Dict, List
 
 import numpy
 from numpy.testing import assert_array_almost_equal, assert_almost_equal
@@ -9,7 +9,7 @@ import pytest
 from flaky import flaky
 
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.testing import AllenNlpTestCase
+from allennlp.common.testing import AllenNlpTestCase, run_distributed_test
 from allennlp.common.util import sanitize
 from allennlp.data import Token, Vocabulary
 from allennlp.data.fields import TextField
@@ -1719,3 +1719,119 @@ class TestNnUtil(AllenNlpTestCase):
         tensors = text_field.as_tensor(text_field.get_padding_lengths())
         token_ids = util.get_token_ids_from_text_field_tensors(tensors)
         assert (token_ids == expected_token_ids).all()
+
+    def test_dist_reduce_sum(self):
+
+        value = 23
+        ret_value = util.dist_reduce_sum(value)
+        assert ret_value == 23
+
+        value = torch.Tensor([1, 2, 3])
+        ret_value = util.dist_reduce_sum(value)
+        assert (ret_value == value).all().item()
+
+        func_kwargs = {"value": [torch.Tensor([1, 2, 3]), torch.Tensor([4, 5, 6])]}
+        desired_values = torch.Tensor([5, 7, 9])
+
+        run_distributed_test(
+            [-1, -1],
+            global_distributed_func,
+            function=util.dist_reduce_sum,
+            func_kwargs=func_kwargs,
+            desired_values=desired_values,
+        )
+
+
+def global_distributed_func(
+    global_rank: int,
+    world_size: int,
+    gpu_id: Union[int, torch.device],
+    function: Callable,
+    func_kwargs: Dict[str, List[Any]],
+    desired_values: torch.Tensor,
+):
+    kwargs = {}
+
+    # Use the arguments meant for the process with rank `global_rank`.
+    for argname in func_kwargs:
+        kwargs[argname] = func_kwargs[argname][global_rank]
+
+    output = function(**kwargs)
+
+    assert (output == desired_values).all().item()
+
+
+class DistributedFixtureModel(torch.nn.Module):
+    """
+    Fake model for testing `load_state_dict_distributed()`.
+    """
+
+    def __init__(self):
+        super().__init__()
+        self.direct_param = torch.nn.Parameter(torch.randn(3, 5))
+        self.register_buffer("direct_buffer", torch.randn(2, 2))
+        self.custom_submodule = DistributedFixtureSubmodule()
+        self.custom_sharded_submodule = DistributedFixtureSubmodule(sharded=True)
+        self.linear_submodule = torch.nn.Linear(3, 5)
+
+    def forward(self, x):
+        # This doesn't matter, we're not going to actually use it.
+        pass
+
+
+class DistributedFixtureSubmodule(torch.nn.Module):
+    def __init__(self, sharded: bool = False):
+        super().__init__()
+        self.direct_param = torch.nn.Parameter(torch.randn(3, 5))
+        self.register_buffer("direct_buffer", torch.randn(2, 2))
+        self.linear_submodule = torch.nn.Linear(3, 5)
+        if sharded:
+            setattr(self, util._MODULE_SHARDED_FLAG, True)
+
+    def forward(self, x):
+        # This doesn't matter, we're not going to actually use it.
+        pass
+
+
+def _dist_load_ok(global_rank, world_size, gpu_id):
+    model = DistributedFixtureModel()
+    state_dict = None if global_rank != 0 else model.state_dict()
+    missing_keys, unexpected_keys = util.load_state_dict_distributed(model, state_dict)
+    assert not missing_keys
+    assert not unexpected_keys
+
+
+def _dist_load_with_errors(global_rank, world_size, gpu_id):
+    model = DistributedFixtureModel()
+    state_dict = None if global_rank != 0 else model.state_dict()
+    _missing_keys = [
+        "direct_buffer",
+        "custom_submodule.linear_submodule.bias",
+        "custom_submodule.direct_param",
+        "custom_sharded_submodule.linear_submodule.bias",
+        "custom_sharded_submodule.direct_buffer",
+    ]
+    _unexpected_keys = [
+        "not_a_parameter",
+        "custom_submodule.not_a_parameter",
+        "custom_submodule.linear.not_a_parameter",
+        "custom_sharded_submodule.not_a_parameter",
+        "custom_sharded_submodule.linear.not_a_parameter",
+        "not_even_submodule.not_a_parameter",
+    ]
+    if state_dict is not None:
+        for key in _missing_keys:
+            del state_dict[key]
+        for key in _unexpected_keys:
+            state_dict[key] = torch.randn(2, 2)
+    missing_keys, unexpected_keys = util.load_state_dict_distributed(
+        model, state_dict, strict=False
+    )
+    if global_rank == 0:
+        assert set(missing_keys) == set(_missing_keys)
+        assert set(unexpected_keys) == set(_unexpected_keys)
+
+
+@pytest.mark.parametrize("test_func", [_dist_load_ok, _dist_load_with_errors])
+def test_load_state_dict_distributed(test_func):
+    run_distributed_test([-1, -1], func=test_func)

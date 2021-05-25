@@ -3,10 +3,9 @@ from typing import Tuple, Dict, Set
 
 from overrides import overrides
 import torch
-import torch.distributed as dist
 
-from allennlp.common.util import is_distributed
 from allennlp.training.metrics.metric import Metric
+from allennlp.nn.util import dist_reduce_sum
 
 
 @Metric.register("rouge")
@@ -36,9 +35,9 @@ class ROUGE(Metric):
         self._ngram_size = ngram_size
         self._exclude_indices = exclude_indices or set()
 
-        self._total_rouge_n_recalls: Dict[int, float] = defaultdict(lambda: 0.0)
-        self._total_rouge_n_precisions: Dict[int, float] = defaultdict(lambda: 0.0)
-        self._total_rouge_n_f1s: Dict[int, float] = defaultdict(lambda: 0.0)
+        self._total_rouge_n_recalls: Dict[int, float] = defaultdict(float)
+        self._total_rouge_n_precisions: Dict[int, float] = defaultdict(float)
+        self._total_rouge_n_f1s: Dict[int, float] = defaultdict(float)
 
         self._total_rouge_l_f1 = 0.0
 
@@ -46,9 +45,9 @@ class ROUGE(Metric):
 
     @overrides
     def reset(self) -> None:
-        self._total_rouge_n_recalls = defaultdict(lambda: 0.0)
-        self._total_rouge_n_precisions = defaultdict(lambda: 0.0)
-        self._total_rouge_n_f1s = defaultdict(lambda: 0.0)
+        self._total_rouge_n_recalls = defaultdict(float)
+        self._total_rouge_n_precisions = defaultdict(float)
+        self._total_rouge_n_f1s = defaultdict(float)
 
         self._total_rouge_l_f1 = 0.0
 
@@ -111,13 +110,7 @@ class ROUGE(Metric):
 
             total_f1 += f1
 
-        if is_distributed():
-            device = predicted_tokens.device
-            _total_f1 = torch.tensor(total_f1, device=device)
-            dist.all_reduce(_total_f1, op=dist.ReduceOp.SUM)
-            total_f1 = _total_f1.item()
-
-        return total_f1
+        return dist_reduce_sum(total_f1)
 
     def _get_rouge_n_stats(
         self,
@@ -160,17 +153,9 @@ class ROUGE(Metric):
             total_precision += precision
             total_f1 += f1
 
-        if is_distributed():
-            device = predicted_tokens.device
-            _total_recall = torch.tensor(total_recall, device=device)
-            _total_precision = torch.tensor(total_precision, device=device)
-            _total_f1 = torch.tensor(total_f1, device=device)
-            dist.all_reduce(_total_recall, op=dist.ReduceOp.SUM)
-            dist.all_reduce(_total_precision, op=dist.ReduceOp.SUM)
-            dist.all_reduce(_total_f1, op=dist.ReduceOp.SUM)
-            total_recall = _total_recall.item()
-            total_precision = _total_precision.item()
-            total_f1 = _total_f1.item()
+        total_recall = dist_reduce_sum(total_recall)
+        total_precision = dist_reduce_sum(total_precision)
+        total_f1 = dist_reduce_sum(total_f1)
 
         return total_recall, total_precision, total_f1
 
@@ -207,12 +192,7 @@ class ROUGE(Metric):
         self._total_rouge_l_f1 += self._get_rouge_l_score(predictions, gold_targets)
 
         sequence_count = len(predictions)
-        if is_distributed():
-            device = predictions.device
-            _sequence_count = torch.tensor(sequence_count, device=device)
-            dist.all_reduce(_sequence_count, op=dist.ReduceOp.SUM)
-            sequence_count = _sequence_count.item()
-        self._total_sequence_count += sequence_count
+        self._total_sequence_count += dist_reduce_sum(sequence_count)
 
     def _metric_mean(self, metric_sum):
         if self._total_sequence_count == 0:

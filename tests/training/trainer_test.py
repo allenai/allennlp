@@ -15,30 +15,95 @@ from torch.nn.utils import clip_grad_norm_
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import Params
 from allennlp.common.testing import AllenNlpTestCase, requires_gpu, requires_multi_gpu
-from allennlp.data import Vocabulary
+from allennlp.data import Vocabulary, Instance, Token
 from allennlp.data.data_loaders import MultiProcessDataLoader, SimpleDataLoader, TensorDict
-from allennlp.data.dataset_readers import SequenceTaggingDatasetReader
+from allennlp.data.dataset_readers import SequenceTaggingDatasetReader, DatasetReader
+from allennlp.data.token_indexers import SingleIdTokenIndexer
 from allennlp.models.model import Model
 from allennlp.models.simple_tagger import SimpleTagger
 from allennlp.training import (
     GradientDescentTrainer,
     Checkpointer,
+)
+from allennlp.training.callbacks import (
     TrainerCallback,
     TrackEpochCallback,
     TensorBoardCallback,
+    ConfidenceChecksCallback,
+    ConsoleLoggerCallback,
 )
+from allennlp.training.callbacks.confidence_checks import ConfidenceCheckError
 from allennlp.training.learning_rate_schedulers import CosineWithRestarts
 from allennlp.training.learning_rate_schedulers import ExponentialLearningRateScheduler
 from allennlp.training.momentum_schedulers import MomentumScheduler
 from allennlp.training.moving_average import ExponentialMovingAverage
+from allennlp.data.fields import (
+    TextField,
+    IndexField,
+    MetadataField,
+    LabelField,
+    MultiLabelField,
+    SpanField,
+    FlagField,
+    AdjacencyField,
+    TensorField,
+)
 from allennlp.training.optimizers import Optimizer
+from allennlp.common.testing.confidence_check_test import (
+    FakeModelForTestingNormalizationBiasVerification,
+)
+
+
+class FakeDatasetReader(DatasetReader):
+    def __init__(self, total_instances, batch_size):
+        super().__init__()
+        self.total_instances = total_instances
+        self.batch_size = batch_size
+
+    def _read(self, file_path):
+        for i in range(self.total_instances):
+            yield self.text_to_instance(i, "label")
+
+    def text_to_instance(self, index: int, field_type: str):  # type: ignore
+        field = TextField(
+            [Token(t) for t in ["The", "number", "is", str(index), "."]],
+            token_indexers={"words": SingleIdTokenIndexer("words")},
+        )
+
+        return Instance(
+            {
+                "text": field,
+                "label": LabelField(index, skip_indexing=True),
+                "flag": FlagField(23),
+                "index": IndexField(index % self.batch_size, field),
+                "metadata": MetadataField({"some_key": "This will not be logged as a histogram."}),
+                "adjacency": AdjacencyField([(0, 1), (1, 2)], field),
+                "multilabel": MultiLabelField(["l1", "l2"]),
+                "span": SpanField(2, 3, field),
+                "tensor": TensorField(torch.randn(2, 3)),
+            }
+        )
+
+
+class FakeModel(Model):
+    def __init__(self, vocab):
+        super().__init__(vocab)
+        self.lin = torch.nn.Linear(1, 2)
+        self.loss_fn = torch.nn.MSELoss()
+
+    def forward(self, **kwargs):
+        out = kwargs["label"].sum().unsqueeze(-1)
+        out = out.type(torch.FloatTensor)
+        out = self.lin(out)
+        loss = out.sum()
+        return {"loss": loss}
 
 
 class TrainerTestBase(AllenNlpTestCase):
     def setup_method(self):
         super().setup_method()
         self.data_path = str(self.FIXTURES_ROOT / "data" / "sequence_tagging.tsv")
-        self.reader = SequenceTaggingDatasetReader()
+        self.reader = SequenceTaggingDatasetReader(max_instances=4)
         self.data_loader = MultiProcessDataLoader(self.reader, self.data_path, batch_size=2)
         self.data_loader_lazy = MultiProcessDataLoader(
             self.reader, self.data_path, batch_size=2, max_instances_in_memory=10
@@ -639,9 +704,9 @@ class TestTrainer(TrainerTestBase):
             num_epochs=3,
             serialization_dir=self.TEST_DIR,
             callbacks=[
-                TensorBoardCallback.from_params(
-                    Params({"tensorboard_writer": {"histogram_interval": 2}}),
+                TensorBoardCallback(
                     serialization_dir=self.TEST_DIR,
+                    distribution_interval=2,
                 )
             ],
         )
@@ -739,20 +804,53 @@ class TestTrainer(TrainerTestBase):
             num_epochs=2,
             serialization_dir=self.TEST_DIR,
             callbacks=[
-                TensorBoardCallback.from_params(
-                    Params(
-                        {
-                            "tensorboard_writer": {
-                                "summary_interval": 2,
-                                "should_log_learning_rate": True,
-                            }
-                        }
-                    ),
+                TensorBoardCallback(
                     serialization_dir=self.TEST_DIR,
+                    summary_interval=2,
+                    should_log_learning_rate=True,
                 )
             ],
         )
 
+        trainer.train()
+
+    def test_confidence_check_callback(self):
+        model_with_bias = FakeModelForTestingNormalizationBiasVerification(use_bias=True)
+        inst = Instance({"x": TensorField(torch.rand(3, 1, 4))})
+        data_loader = SimpleDataLoader([inst, inst], 2)
+        trainer = GradientDescentTrainer(
+            model_with_bias,
+            self.optimizer,
+            data_loader,
+            num_epochs=1,
+            serialization_dir=self.TEST_DIR,
+            callbacks=[ConfidenceChecksCallback(serialization_dir=self.TEST_DIR)],
+        )
+        with pytest.raises(ConfidenceCheckError):
+            trainer.train()
+
+    def test_confidence_check_default(self):
+        model_with_bias = FakeModelForTestingNormalizationBiasVerification(use_bias=True)
+        inst = Instance({"x": TensorField(torch.rand(3, 1, 4))})
+        data_loader = SimpleDataLoader([inst, inst], 2)
+        trainer = GradientDescentTrainer.from_partial_objects(
+            model_with_bias,
+            serialization_dir=self.TEST_DIR,
+            data_loader=data_loader,
+            num_epochs=1,
+        )
+        with pytest.raises(ConfidenceCheckError):
+            trainer.train()
+
+        trainer = GradientDescentTrainer.from_partial_objects(
+            model_with_bias,
+            serialization_dir=self.TEST_DIR,
+            data_loader=data_loader,
+            num_epochs=1,
+            run_confidence_checks=False,
+        )
+
+        # Check is not run, so no failure.
         trainer.train()
 
     def test_trainer_saves_models_at_specified_interval(self):
@@ -968,7 +1066,7 @@ class TestTrainer(TrainerTestBase):
             def on_batch(
                 self,
                 trainer: "GradientDescentTrainer",
-                batch_inputs: List[List[TensorDict]],
+                batch_inputs: List[TensorDict],
                 batch_outputs: List[Dict[str, Any]],
                 batch_metrics: Dict[str, Any],
                 epoch: int,
@@ -1047,7 +1145,7 @@ class TestTrainer(TrainerTestBase):
             def on_batch(
                 self,
                 trainer: "GradientDescentTrainer",
-                batch_inputs: List[List[TensorDict]],
+                batch_inputs: List[TensorDict],
                 batch_outputs: List[Dict[str, Any]],
                 batch_metrics: Dict[str, Any],
                 epoch: int,
@@ -1071,6 +1169,64 @@ class TestTrainer(TrainerTestBase):
         metrics = trainer.train()
 
         assert metrics["training_loss"] == float(sum(trainer.batch_losses) / batches_per_epoch)
+
+    def test_trainer_can_log_batch_inputs(self):
+        total_instances = 1000
+        batch_size = 25
+
+        reader = FakeDatasetReader(total_instances, batch_size)
+        data_loader = SimpleDataLoader.from_dataset_reader(
+            reader, "fake_path", batch_size=batch_size
+        )
+        instances = list(data_loader.iter_instances())
+        vocab = Vocabulary.from_instances(instances)
+        data_loader.index_with(vocab)
+        model = FakeModel(vocab)
+        optimizer = torch.optim.SGD(model.parameters(), 0.01, momentum=0.9)
+
+        trainer = GradientDescentTrainer(
+            model,
+            optimizer,
+            data_loader,
+            num_epochs=2,
+            serialization_dir=self.TEST_DIR,
+            callbacks=[
+                TensorBoardCallback(
+                    serialization_dir=self.TEST_DIR,
+                    distribution_interval=2,
+                )
+            ],
+        )
+        trainer.train()
+
+    def test_console_log_callback(self):
+        total_instances = 1000
+        batch_size = 25
+
+        reader = FakeDatasetReader(total_instances, batch_size)
+        data_loader = SimpleDataLoader.from_dataset_reader(
+            reader, "fake_path", batch_size=batch_size
+        )
+        instances = list(data_loader.iter_instances())
+        vocab = Vocabulary.from_instances(instances)
+        data_loader.index_with(vocab)
+        model = FakeModel(vocab)
+        optimizer = torch.optim.SGD(model.parameters(), 0.01, momentum=0.9)
+
+        trainer = GradientDescentTrainer(
+            model,
+            optimizer,
+            data_loader,
+            num_epochs=3,
+            serialization_dir=self.TEST_DIR,
+            callbacks=[
+                ConsoleLoggerCallback.from_params(
+                    Params({"should_log_inputs": True}),
+                    serialization_dir=self.TEST_DIR,
+                )
+            ],
+        )
+        trainer.train()
 
 
 @requires_gpu

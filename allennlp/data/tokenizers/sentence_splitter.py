@@ -45,7 +45,7 @@ class SpacySentenceSplitter(SentenceSplitter):
 
     def __init__(self, language: str = "en_core_web_sm", rule_based: bool = False) -> None:
         # we need spacy's dependency parser if we're not using rule-based sentence boundary detection.
-        self.spacy = get_spacy_model(language, parse=not rule_based, ner=False, pos_tags=False)
+        self.spacy = get_spacy_model(language, parse=not rule_based, ner=False)
         self._is_version_3 = spacy.__version__ >= "3.0"
         if rule_based:
             # we use `sentencizer`, a built-in spacy module for rule-based sentence boundary detection.

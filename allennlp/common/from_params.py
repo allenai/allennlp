@@ -375,8 +375,11 @@ def construct_arg(
         and can_construct_from_params(args[-1])
     ):
         value_cls = annotation.__args__[-1]
-
         value_dict = {}
+        if not isinstance(popped_params, Mapping):
+            raise TypeError(
+                f"Expected {argument_name} to be a Mapping (probably a dict or a Params object)."
+            )
 
         for key, value_params in popped_params.items():
             value_dict[key] = construct_arg(
@@ -455,18 +458,7 @@ def construct_arg(
 
         value_cls = args[0]
         subextras = create_extras(value_cls, extras)
-
-        def constructor(**kwargs):
-            # If there are duplicate keys between subextras and kwargs, this will overwrite the ones
-            # in subextras with what's in kwargs.  If an argument shows up twice, we should take it
-            # from what's passed to Lazy.construct() instead of what we got from create_extras().
-            # Almost certainly these will be identical objects, anyway.
-            # We do this by constructing a new dictionary, instead of mutating subextras, just in
-            # case this constructor is called multiple times.
-            constructor_extras = {**subextras, **kwargs}
-            return value_cls.from_params(params=deepcopy(popped_params), **constructor_extras)
-
-        return Lazy(constructor)  # type: ignore
+        return Lazy(value_cls, params=deepcopy(popped_params), contructor_extras=subextras)  # type: ignore
 
     # For any other kind of iterable, we will just assume that a list is good enough, and treat
     # it the same as List. This condition needs to be at the end, so we don't catch other kinds

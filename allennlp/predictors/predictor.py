@@ -1,9 +1,9 @@
 from typing import List, Iterator, Dict, Tuple, Any, Type, Union, Optional
 import logging
+from os import PathLike
 import json
 import re
 from contextlib import contextmanager
-from pathlib import Path
 
 import numpy
 import torch
@@ -268,12 +268,13 @@ class Predictor(Registrable):
     ) -> List[Instance]:
         """
         This function takes a model's outputs for an Instance, and it labels that instance according
-        to the output. For example, in classification this function labels the instance according
-        to the class with the highest probability. This function is used to to compute gradients
-        of what the model predicted. The return type is a list because in some tasks there are
-        multiple predictions in the output (e.g., in NER a model predicts multiple spans). In this
-        case, each instance in the returned list of Instances contains an individual
-        entity prediction as the label.
+        to the `outputs`. This function is used to (1) compute gradients of what the model predicted;
+        (2) label the instance for the attack. For example, (a) for the untargeted attack for classification
+        this function labels the instance according to the class with the highest probability; (b) for
+        targeted attack, it directly constructs fields from the given target.
+        The return type is a list because in some tasks there are multiple predictions in the output
+        (e.g., in NER a model predicts multiple spans). In this case, each instance in the returned list of
+        Instances contains an individual entity prediction as the label.
         """
 
         raise RuntimeError("implement this method for model interpretations or attacks")
@@ -282,7 +283,7 @@ class Predictor(Registrable):
         """
         Converts a JSON object into an [`Instance`](../data/instance.md)
         and a `JsonDict` of information which the `Predictor` should pass through,
-        such as tokenised inputs.
+        such as tokenized inputs.
         """
         raise NotImplementedError
 
@@ -313,7 +314,7 @@ class Predictor(Registrable):
     @classmethod
     def from_path(
         cls,
-        archive_path: Union[str, Path],
+        archive_path: Union[str, PathLike],
         predictor_name: str = None,
         cuda_device: int = -1,
         dataset_reader_to_load: str = "validation",
@@ -329,7 +330,7 @@ class Predictor(Registrable):
 
         # Parameters
 
-        archive_path : `Union[str, Path]`
+        archive_path : `Union[str, PathLike]`
             The path to the archive.
         predictor_name : `str`, optional (default=`None`)
             Name that the predictor is registered as, or None to use the

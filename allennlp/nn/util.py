@@ -3,23 +3,32 @@ Assorted utilities for working with neural networks in AllenNLP.
 """
 
 import copy
+from collections import defaultdict, OrderedDict
+from itertools import chain
 import json
 import logging
-from collections import defaultdict
-from typing import Any, Dict, List, Optional, Sequence, Tuple, TypeVar, Union
+from os import PathLike
+import re
+from typing import Any, Dict, List, Optional, Sequence, Tuple, TypeVar, Union, NamedTuple
 
 import math
 import numpy
 import torch
 import torch.distributed as dist
-from torch.distributed import ReduceOp
 
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.util import int_to_device, is_distributed
+from allennlp.common.util import int_to_device, is_distributed, is_global_primary
 
 logger = logging.getLogger(__name__)
 
 T = TypeVar("T")
+StateDictType = Union[Dict[str, torch.Tensor], "OrderedDict[str, torch.Tensor]"]
+
+_MODULE_SHARDED_FLAG = "_is_sharded_allennlp"
+"""
+This flag is used to indicate when a module's parameters have been sharded across
+distributed workers.
+"""
 
 
 def move_to_device(obj, device: Union[torch.device, int]):
@@ -923,6 +932,95 @@ def device_mapping(cuda_device: int):
             return storage
 
     return inner_device_mapping
+
+
+def read_state_dict(
+    path: Union[PathLike, str],
+    strip_prefix: Optional[str] = None,
+    ignore: Optional[List[str]] = None,
+    strict: bool = True,
+    cuda_device: int = -1,
+) -> Dict[str, torch.Tensor]:
+    """
+    Read a PyTorch model state dictionary from a checkpoint at the given `path`.
+
+    # Parameters
+
+    path : `Union[PathLike, str]`, required
+
+    strip_prefix : `Optional[str]`, optional (default = `None`)
+        A prefix to remove from all of the state dict keys.
+
+    ignore : `Optional[List[str]]`, optional (default = `None`)
+        Optional list of regular expressions. Keys that match any of these will be removed
+        from the state dict.
+
+        !!! Note
+            If `strip_prefix` is given, the regular expressions in `ignore` are matched
+            before the prefix is stripped.
+
+    strict : `bool`, optional (default = `True`)
+        If `True` (the default) and `strip_prefix` was never used or any of the regular expressions
+        in `ignore` never matched, a `ValueError` will be raised.
+
+    cuda_device : `int`, optional (default = `-1`)
+        The device to load the parameters onto. Use `-1` (the default) for CPU.
+
+    # Returns
+
+    `Dict[str, torch.Tensor]`
+        An ordered dictionary of the state.
+    """
+    state = torch.load(path, map_location=device_mapping(cuda_device))
+    out: Dict[str, torch.Tensor] = OrderedDict()
+
+    if ignore is not None and not isinstance(ignore, list):
+        # If user accidentally passed in something that is not a list - like a string,
+        # which is easy to do - the user would be confused why the resulting state dict
+        # is empty.
+        raise ValueError("'ignore' parameter should be a list")
+
+    # In 'strict' mode, we need to keep track of whether we've used `strip_prefix`
+    # and which regular expressions in `ignore` we've used.
+    strip_prefix_used: Optional[bool] = None
+    ignore_used: Optional[List[bool]] = None
+    if strict and strip_prefix is not None:
+        strip_prefix_used = False
+    if strict and ignore:
+        ignore_used = [False] * len(ignore)
+
+    for key in state.keys():
+        ignore_key = False
+        if ignore:
+            for i, pattern in enumerate(ignore):
+                if re.match(pattern, key):
+                    if ignore_used:
+                        ignore_used[i] = True
+                    logger.warning("ignoring %s from state dict", key)
+                    ignore_key = True
+                    break
+
+        if ignore_key:
+            continue
+
+        new_key = key
+
+        if strip_prefix and key.startswith(strip_prefix):
+            strip_prefix_used = True
+            new_key = key[len(strip_prefix) :]
+            if not new_key:
+                raise ValueError("'strip_prefix' resulted in an empty string for a key")
+
+        out[new_key] = state[key]
+
+    if strip_prefix_used is False:
+        raise ValueError(f"'strip_prefix' of '{strip_prefix}' was never used")
+    if ignore is not None and ignore_used is not None:
+        for pattern, used in zip(ignore, ignore_used):
+            if not used:
+                raise ValueError(f"'ignore' pattern '{pattern}' didn't have any matches")
+
+    return out
 
 
 def combine_tensors(combination: str, tensors: List[torch.Tensor]) -> torch.Tensor:
@@ -2017,10 +2115,21 @@ def tiny_value_of_dtype(dtype: torch.dtype):
         raise TypeError("Does not support dtype " + str(dtype))
 
 
-_V = TypeVar("_V", int, float)
+_V = TypeVar("_V", int, float, torch.Tensor)
 
 
-def dist_reduce(value: _V, reduce_op: ReduceOp, **kwargs) -> _V:
+def distributed_device() -> torch.device:
+    """
+    Get the correct `torch.device` of the current process to use for distributed point-to-point communication.
+    """
+    if not is_distributed():
+        raise RuntimeError(
+            "'distributed_device()' can only be called within a distributed process group"
+        )
+    return int_to_device(-1 if dist.get_backend() != "nccl" else torch.cuda.current_device())
+
+
+def dist_reduce(value: _V, reduce_op, **kwargs) -> _V:
     """
     Reduces the given `value` across all distributed worker nodes according the given
     reduction operation.
@@ -2031,8 +2140,9 @@ def dist_reduce(value: _V, reduce_op: ReduceOp, **kwargs) -> _V:
 
     value : `_V`
         The value to reduce across distributed nodes.
-    reduce_op : `ReduceOp`
-        The reduction operation to use.
+    reduce_op : `torch.distributed.ReduceOp`
+        The [reduction operation](https://pytorch.org/docs/stable/distributed.html#torch.distributed.ReduceOp)
+        to use.
     **kwargs : `Any`
         Additional arguments used to construct the tensor that will wrap `value`.
 
@@ -2043,7 +2153,214 @@ def dist_reduce(value: _V, reduce_op: ReduceOp, **kwargs) -> _V:
     """
     if not is_distributed():
         return value
-    device = int_to_device(-1 if dist.get_backend() != "nccl" else torch.cuda.current_device())
+    device = distributed_device()
     value_tensor = torch.tensor(value, device=device, **kwargs)
     dist.all_reduce(value_tensor, op=reduce_op)
+
+    if isinstance(value, torch.Tensor):
+        return value_tensor
     return value_tensor.item()  # type: ignore[return-value]
+
+
+def dist_reduce_sum(value: _V, **kwargs) -> _V:
+    """
+    Sums the given `value` across distributed worker nodes.
+    This is equivalent to calling `dist_reduce(v, dist.ReduceOp.SUM)`.
+    """
+    # NOTE: Why have this check here even though the same check is in `dist_reduce()`?
+    # Because we want to be able to call this function even when torch's distributed framework
+    # is not available...
+    # If torch's distributed framework is not available on the system, then `torch.distributed`
+    # (imported here as `dist`) will just be an empty module. So calling `dist.ReduceOp.SUM` would
+    # result in an `AttributeError`.
+    if not is_distributed():
+        return value
+    return dist_reduce(value, dist.ReduceOp.SUM, **kwargs)
+
+
+def _collect_state_dict(
+    module: torch.nn.Module, state_dict: Optional[StateDictType], recurse: bool = True
+) -> Tuple[StateDictType, List[str], List[str]]:
+    """
+    Collect a module's state dict across distributed processes.
+
+    Returns the syncronized state dictionary, which will always be a valid state dict,
+    and then the missing and unexpected keys corresponding to the original `state_dict`.
+    Parameters that missing from the original `state_dict` will be populated from the
+    corresponding parameter in the primary processes' module's state dict.
+
+    !!! Note
+
+        `missing_keys` and `unexpected_keys` are only populated in the primary process.
+    """
+    # This is the device we'll use for the broadcast operation.
+    dist_device = distributed_device()
+    # This is the device we'll put all tensors on in the returned state dict.
+    state_dict_device = (
+        int_to_device(-1) if not state_dict else state_dict[list(state_dict.keys())[0]].device
+    )
+
+    missing_keys: List[str] = []
+    unexpected_keys: List[str] = []
+
+    # Gather current state dict and prepare to iterator over it.
+    # We iterate over this state dict instead of `state_dict` so we can be sure
+    # that the order is consistent across processes.
+    # We'll also update this state dict as we go and return it at the end.
+    if recurse:
+        current_state_dict = module.state_dict()
+    else:
+        # Only collect state of direct members, including both parameters and buffers.
+        current_state_dict = OrderedDict(
+            chain(
+                # Paramaters
+                ((n, p.data) for (n, p) in module.named_parameters(recurse=False)),
+                # Buffers
+                module.named_buffers(recurse=False),
+            )
+        )
+
+    keys = list(current_state_dict.keys())
+
+    # Gather unexpected_keys.
+    if is_global_primary():
+        assert state_dict is not None
+        module_keys = set(module.state_dict().keys())
+        for key in state_dict:
+            if key not in module_keys:
+                unexpected_keys.append(key)
+
+    for key in keys:
+        tensor = current_state_dict[key]
+        if is_global_primary():
+            assert state_dict is not None
+            if key in state_dict:
+                # Update `tensor` to the value in `state_dict`.
+                tensor = state_dict[key]
+            else:
+                missing_keys.append(key)
+        tensor = tensor.to(dist_device)
+        dist.broadcast(tensor, 0)
+        current_state_dict[key] = tensor.to(state_dict_device)
+
+    return current_state_dict, missing_keys, unexpected_keys
+
+
+class _LoadStateDictResult(NamedTuple):
+    missing_keys: List[str]
+    unexpected_keys: List[str]
+
+
+def load_state_dict_distributed(
+    module: torch.nn.Module, state_dict: Optional[StateDictType], strict: bool = True
+) -> _LoadStateDictResult:
+    """
+    Load a `state_dict` to the `module` within a distributed process. Only the global
+    primary process requires the `state_dict` to not be `None`. All other processes
+    will have the state tensors broadcasted to them one-by-one.
+
+    If `strict` is `True`, then the keys of `state_dict` must exactly match the keys
+    returned by `module.state_dict()`.
+
+    !!! Note
+        The returned `missing_keys` and `unexpected_keys` will only be accurate
+        in the primary process.
+
+    # Returns
+
+    `_LoadStateDictResult`
+        A `NamedTuple` with `missing_keys` and `unexpected_keys` fields, both of which
+        are lists of strings.
+
+    # Raises
+
+    `RuntimeError`
+        If `strict` is `True` and there are missing or unexpected keys.
+
+    """
+    if not is_distributed():
+        return module.load_state_dict(state_dict, strict=strict)
+
+    if is_global_primary():
+        assert state_dict is not None
+    else:
+        assert state_dict is None
+
+    missing_keys: List[str] = []
+    unexpected_keys: List[str] = []
+
+    submodules = dict(module.named_children())
+
+    def update_key_list(original, updates):
+        for key in updates:
+            if key not in original:
+                original.append(key)
+
+    # If we've found a sharded module or there aren't any more submodules of the current module,
+    # we collect the state_dict and load it now instead of recursing further.
+    if getattr(module, _MODULE_SHARDED_FLAG, False) or not submodules:
+        # Collect.
+        state_dict, _missing_keys, _unexpected_keys = _collect_state_dict(module, state_dict)
+        assert state_dict is not None
+        update_key_list(missing_keys, _missing_keys)
+        update_key_list(unexpected_keys, _unexpected_keys)
+        # And load.
+        _missing_keys, _unexpected_keys = module.load_state_dict(state_dict, strict=False)
+        update_key_list(missing_keys, _missing_keys)
+        update_key_list(unexpected_keys, _unexpected_keys)
+    else:
+        # We'll recursively call this function on each submodule, but first we need
+        # to collect any parameters that are direct members of this module.
+        direct_member_state_dict, _missing_keys, _unexpected_keys = _collect_state_dict(
+            module, state_dict, recurse=False
+        )
+        update_key_list(missing_keys, _missing_keys)
+        update_key_list(unexpected_keys, _unexpected_keys)
+
+        # `_missing_keys` here will contain any keys corresponding to submodules, but
+        # we'll remove those below.
+        _missing_keys, _unexpected_keys = module.load_state_dict(
+            direct_member_state_dict, strict=False
+        )
+        update_key_list(missing_keys, _missing_keys)
+        update_key_list(unexpected_keys, _unexpected_keys)
+
+        # Okay, now for the recursive part.
+        for name, submodule in submodules.items():
+            # Update `missing_keys` to remove keys corresponding to this submodule.
+            # If they are actually missing after this step, we add them back in below.
+            missing_keys = [k for k in missing_keys if not k.startswith(name + ".")]
+            submodule_state_dict: Optional[StateDictType] = None
+            if is_global_primary():
+                assert state_dict is not None
+                submodule_state_dict = {
+                    key.replace(name + ".", "", 1): value
+                    for key, value in state_dict.items()
+                    if key.startswith(name + ".")
+                }
+            _missing_keys, _unexpected_keys = load_state_dict_distributed(
+                submodule, submodule_state_dict, strict=False
+            )
+            update_key_list(missing_keys, [f"{name}.{key}" for key in _missing_keys])
+            update_key_list(unexpected_keys, [f"{name}.{key}" for key in _unexpected_keys])
+
+    if strict:
+        error_msgs: List[str] = []
+        if missing_keys:
+            error_msgs.append(
+                "Missing key(s) in state_dict: {}".format(", ".join(f'"{k}"' for k in missing_keys))
+            )
+        if unexpected_keys:
+            error_msgs.append(
+                "Unexpected key(s) in state_dict: {}".format(
+                    ", ".join(f'"{k}"' for k in unexpected_keys)
+                )
+            )
+        if error_msgs:
+            raise RuntimeError(
+                "Error(s) in loading state_dict for {}:\n\t{}".format(
+                    module.__class__.__name__, "\n\t".join(error_msgs)
+                )
+            )
+
+    return _LoadStateDictResult(missing_keys, unexpected_keys)

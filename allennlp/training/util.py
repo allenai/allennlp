@@ -282,6 +282,23 @@ def get_metrics(
     return metrics
 
 
+def get_train_and_validation_metrics(metrics: Dict) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+    """
+    Utility function to separate out train_metrics and val_metrics.
+    """
+    train_metrics: Dict[str, Any] = {}
+    val_metrics: Dict[str, Any] = {}
+    for key, value in metrics.items():
+        if key.startswith("training_"):
+            key = key.replace("training_", "", 1)
+            if key not in {"duration", "start_epoch", "epochs"}:
+                train_metrics[key] = value
+        elif key.startswith("validation_"):
+            key = key.replace("validation_", "", 1)
+            val_metrics[key] = value
+    return train_metrics, val_metrics
+
+
 def evaluate(
     model: Model,
     data_loader: DataLoader,
@@ -435,7 +452,11 @@ def make_vocab_from_params(
     )
     # Do a quick sanity check here. There's no need to load any datasets if the vocab
     # type is "empty" or "from_files".
-    if datasets_for_vocab_creation is None and vocab_params.get("type") in {"empty", "from_files"}:
+    if datasets_for_vocab_creation is None and vocab_params.get("type") in {
+        "empty",
+        "from_files",
+        "from_pretrained_transformer",
+    }:
         datasets_for_vocab_creation = []
 
     data_loaders: Dict[str, DataLoader]
