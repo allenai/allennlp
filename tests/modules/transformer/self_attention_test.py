@@ -79,7 +79,7 @@ def test_loading_from_pretrained_weights_using_model_name(pretrained_name, relev
     pretrained_module = pretrained_module.eval()
 
     torch.manual_seed(1234)
-    output = module(hidden_states, attention_mask=attention_mask.squeeze())[0]
+    output = module(hidden_states, attention_mask=attention_mask.squeeze()).hidden_states
     if "distilbert" in pretrained_name:
         torch.manual_seed(1234)
         hf_output = pretrained_module(

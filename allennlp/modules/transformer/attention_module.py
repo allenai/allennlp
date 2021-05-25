@@ -1,5 +1,5 @@
 import math
-from typing import Optional, Union, Tuple, TYPE_CHECKING
+from typing import Optional, Tuple, TYPE_CHECKING
 from dataclasses import dataclass
 import torch
 import torch.nn.functional as F
