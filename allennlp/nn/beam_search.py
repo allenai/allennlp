@@ -591,8 +591,8 @@ class Constraint(Registrable):
         raise NotImplementedError
 
 
-@Constraint.register("ngram-blocking")
-class NGramBlockingConstraint(Constraint):
+@Constraint.register("repeated-ngram-blocking")
+class RepeatedNGramBlockingConstraint(Constraint):
     def __init__(self, ngram_size: int) -> None:
         super().__init__()
         self.ngram_size = ngram_size

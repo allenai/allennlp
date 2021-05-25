@@ -14,7 +14,7 @@ from allennlp.nn.beam_search import (
     GumbelSampler,
     SequenceLogProbabilityScorer,
     LengthNormalizedSequenceLogProbabilityScorer,
-    NGramBlockingConstraint,
+    RepeatedNGramBlockingConstraint,
 )
 from allennlp.common.params import Params
 
@@ -629,10 +629,10 @@ class BeamSearchTest(AllenNlpTestCase):
         expected_scores = expected_log_probs / length_normalization
         self._check_results(expected_top_k=expected_top_k, expected_log_probs=expected_scores)
 
-    def test_ngram_blocking_constraint_init_state(self):
+    def test_repeated_ngram_blocking_constraint_init_state(self):
         ngram_size = 3
         batch_size = 2
-        constraint = NGramBlockingConstraint(ngram_size)
+        constraint = RepeatedNGramBlockingConstraint(ngram_size)
 
         state = constraint.init_state(batch_size)
         assert len(state) == batch_size
@@ -643,12 +643,12 @@ class BeamSearchTest(AllenNlpTestCase):
             assert len(beam_state["current_prefix"]) == 0
             assert len(beam_state["seen_ngrams"]) == 0
 
-    def test_ngram_blocking_constraint_apply(self):
+    def test_repeated_ngram_blocking_constraint_apply(self):
         ngram_size = 3
         batch_size = 2
         beam_size = 2
         num_classes = 10
-        constraint = NGramBlockingConstraint(ngram_size)
+        constraint = RepeatedNGramBlockingConstraint(ngram_size)
 
         state = [
             [
@@ -670,9 +670,9 @@ class BeamSearchTest(AllenNlpTestCase):
         assert [1, 1, 1] in disallowed_locations
         assert [1, 1, 2] in disallowed_locations
 
-    def test_ngram_blocking_constraint_update_state(self):
+    def test_repeated_ngram_blocking_constraint_update_state(self):
         ngram_size = 3
-        constraint = NGramBlockingConstraint(ngram_size)
+        constraint = RepeatedNGramBlockingConstraint(ngram_size)
 
         # We will have [2, 3] -> {5, 6} from batch index 0 and [4, 5] -> {0} and [6, 7] -> {3}
         # from batch index
@@ -776,9 +776,9 @@ class BeamSearchTest(AllenNlpTestCase):
             take_step=take_repeated_ngrams_step,
         )
 
-    def test_ngram_blocking_end_to_end(self):
+    def test_repeated_ngram_blocking_end_to_end(self):
         """
-        This test checks to make sure the `NGramBlockingConstraint` successfully blocks ngrams.
+        This test checks to make sure the `RepeatedNGramBlockingConstraint` successfully blocks ngrams.
         It works by blocking ngrams of different sizes and ensures that the result of beam search
         is correctly changed. We rely on the beam search trace for `repeated_ngram_transition_probabilities`
         in `test_take_repeated_ngram_step`.
@@ -787,7 +787,7 @@ class BeamSearchTest(AllenNlpTestCase):
 
         # Unigrams: On step 3, [1, 3, 1] will be blocked and [1, 3, end] will take its place
         self.beam_search.max_steps = 3
-        self.beam_search.constraints = [NGramBlockingConstraint(ngram_size=1)]
+        self.beam_search.constraints = [RepeatedNGramBlockingConstraint(ngram_size=1)]
         expected_top_k = np.array(
             [[1, 2, 3], [1, 3, 5]]
         )
@@ -800,7 +800,7 @@ class BeamSearchTest(AllenNlpTestCase):
 
         # Bigrams: On step 4, [1, 3, 1, 3] will be blocked and [1, 3, 1, 2] will take its place
         self.beam_search.max_steps = 4
-        self.beam_search.constraints = [NGramBlockingConstraint(ngram_size=2)]
+        self.beam_search.constraints = [RepeatedNGramBlockingConstraint(ngram_size=2)]
         expected_top_k = np.array(
             [[1, 2, 3, 1], [1, 3, 1, 2]]
         )
@@ -813,7 +813,7 @@ class BeamSearchTest(AllenNlpTestCase):
 
         # Trigrams: On step 5, [1, 3, 1, 3, 1] will be blocked and [1, 2, 3, 1, 2] will take its place
         self.beam_search.max_steps = 5
-        self.beam_search.constraints = [NGramBlockingConstraint(ngram_size=3)]
+        self.beam_search.constraints = [RepeatedNGramBlockingConstraint(ngram_size=3)]
         expected_top_k = np.array(
             [[1, 2, 3, 1, 3], [1, 2, 3, 1, 2]]
         )
@@ -824,7 +824,7 @@ class BeamSearchTest(AllenNlpTestCase):
             take_step=take_repeated_ngrams_step,
         )
 
-    def test_ngram_blocking_end_indices(self):
+    def test_repeated_ngram_blocking_end_indices(self):
         """
         Ensures that the ngram blocking does not mess up when one sequence is shorter
         than another, which would result in repeated "end" symbols.
@@ -832,7 +832,7 @@ class BeamSearchTest(AllenNlpTestCase):
         # We block unigrams, but 5 (the end symbol) is repeated and it does not mess
         # up the sequence's probability
         self.beam_search.beam_size = 2
-        self.beam_search.constraints = [NGramBlockingConstraint(ngram_size=1)]
+        self.beam_search.constraints = [RepeatedNGramBlockingConstraint(ngram_size=1)]
         expected_top_k = np.array(
             [[1, 3, 5, 5], [1, 2, 3, 5]]
         )
