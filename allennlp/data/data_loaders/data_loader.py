@@ -1,4 +1,4 @@
-from typing import List, Dict, Union, Iterator
+from typing import Dict, Union, Iterator
 
 import torch
 

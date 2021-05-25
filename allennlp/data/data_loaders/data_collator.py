@@ -20,7 +20,8 @@ def allennlp_collate(instances: List[Instance]) -> TensorDict:
 
 class DataCollator(Registrable):
     """
-    This class is similar with `DataCollator` in [Transformers](https://github.com/huggingface/transformers/blob/master/src/transformers/data/data_collator.py)
+    This class is similar with `DataCollator` in [Transformers]
+    (https://github.com/huggingface/transformers/blob/master/src/transformers/data/data_collator.py)
     Allow to do some dynamic operations for tensor in different batches
     Cause this method run before each epoch to convert `List[Instance]` to `TensorDict`
     """
@@ -42,11 +43,11 @@ class LanguageModelingDataCollator(DataCollator):
     """
 
     def __init__(
-            self,
-            model_name: str,
-            mlm: bool = True,
-            mlm_probability: float = 0.15,
-            namespace: str = "tokens",
+        self,
+        model_name: str,
+        mlm: bool = True,
+        mlm_probability: float = 0.15,
+        namespace: str = "tokens",
     ):
         from allennlp.common import cached_transformers
 

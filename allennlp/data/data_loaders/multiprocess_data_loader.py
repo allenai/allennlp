@@ -13,7 +13,7 @@ from allennlp.common.util import lazy_groups_of, shuffle_iterable
 from allennlp.common.tqdm import Tqdm
 from allennlp.data.instance import Instance
 from allennlp.data.data_loaders.data_loader import DataLoader, TensorDict
-from allennlp.data.data_loaders.data_collator import DataCollator,DefaultDataCollator
+from allennlp.data.data_loaders.data_collator import DataCollator, DefaultDataCollator
 from allennlp.data.dataset_readers import DatasetReader, WorkerInfo, DatasetReaderInput
 from allennlp.data.fields import TextField
 from allennlp.data.samplers import BatchSampler
@@ -124,7 +124,7 @@ class MultiProcessDataLoader(DataLoader):
 
     quiet : `bool`, optional (default = `False`)
         If `True`, tqdm progress bars will be disabled.
-    
+
     collate_fn : `DataCollator`, optional ( default = `DefaultDataCollator`)
 
     # Best practices
