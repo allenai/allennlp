@@ -551,7 +551,7 @@ class Constraint(Registrable):
 
     The `apply()` method should manipulate the `class_log_probabilities` in place to enforce the constraint
     for this step of beam search. For instance, it may prevent a specific class from being selected by setting
-    the corresponding log probability to `-inf`.
+    the corresponding log probability to `-inf` (by using `min_value_of_dtype(class_log_probabilities.dtype)`).
 
     `update_state()` takes three arguments:
 
@@ -616,7 +616,7 @@ class RepeatedNGramBlockingConstraint(Constraint):
                 seen_ngrams = state[i][j]["seen_ngrams"]
                 try:
                     disallowed_indices = seen_ngrams[current_prefix]
-                    class_log_probabilities[i, j, disallowed_indices] = float("-inf")
+                    class_log_probabilities[i, j, disallowed_indices] = min_value_of_dtype(class_log_probabilities.dtype)
                 except KeyError:
                     # We have not seen this prefix before, so there is no index
                     # that needs to be blocked
