@@ -422,9 +422,9 @@ class GradientDescentTrainer(Trainer):
             if done_early:
                 break
 
-            if (
-                self._epochs_completed < self._start_after_epochs_completed
-                or self._batches_in_epoch_completed < self._start_after_batches_in_epoch_completed
+            if self._epochs_completed < self._start_after_epochs_completed or (
+                self._epochs_completed == self._start_after_epochs_completed
+                and self._batches_in_epoch_completed < self._start_after_batches_in_epoch_completed
             ):
                 self._batches_in_epoch_completed += 1
                 self._total_batches_completed += 1
