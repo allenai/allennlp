@@ -532,7 +532,7 @@ class Constraint(Registrable):
     An abstract class that can be used to enforce constraints on the output predictions
     by manipulate the class log probabilities during beam search.
 
-    A `Constraint` just has three methods, `init_state()`, `apply()` and `update_state()`.
+    A `Constraint` just has three methods which need to be implemented: `init_state()`, `apply()` and `update_state()`.
 
     `init_state()` takes one argument:
 
@@ -557,15 +557,28 @@ class Constraint(Registrable):
 
     - the constraint state, again, a nested list of dictionaries of length `batch_size`. Each inner list is
     length `beam_size` except on the first call of `update_state()` when it is 1.
-    - predictions, a list of tensors containing the predictions thus far, each of shape `(batch_size, beam_size)`
-    - backpointers, a list of tensors containing the beam indices of the parent beams for `predictions`, each
-    of size `(batch_size, beam_size)`
+    - last_predictions, a tensor of shape `(batch_size, beam_size)` containing the predictions from the last
+    step of beam search.
+    - last_backpointers, an optional tensor of size `(batch_size, beam_size)` containing the indices of the
+    parent beams for the last step of beam search corresponding to the predictions in `last_predictions`. If `None`,
+    this is the first step of beam search, so all backpointers are assumed to be index 0.
 
     The `update_state()` method should create a new constraint state that reflects the latest predictions made
-    during beam search.
+    during beam search. Each prediction needs to have its own unique state so that it may be edited without changing
+    the data for predictions with the same parents. The method in the `Constraint` class takes care of
+    copying the parent state using the `copy.deepcopy()` function. If this works for your state, you only need
+    to implement `_update_state()` instead.
 
-    `update_state()` should return a new constraint state: a nested list of dictionaries of length `batch_size`
-    and inner list length of `beam_size`.
+    `_update_state()` takes two arguments:
+
+    - the copied parent constraint state, which is a nested list of dictionaries. `state[i][j]` contains the
+    copied state for the parent of `last_prediction[i, j]`. It is unique to that batch and beam, so it can be
+    directly edited in-place without affecting the others.
+    - last_prediction, a tensor of shape `(batch_size, beam_size)` containing the predictions from the last
+    step of beam search.
+
+    The `_update_state()` function should return a new constraint state, a nested list of dictionaries of
+    length `batch_size` and inner list length of `beam_size`, one for each of the predictions in `last_prediction`.
 
     """
 
@@ -582,11 +595,44 @@ class Constraint(Registrable):
     ) -> None:
         raise NotImplementedError
 
+    @staticmethod
+    def _copy_state(
+        state: ConstraintStateType,
+        batch_size: int,
+        beam_size: int,
+        last_backpointer: Optional[torch.Tensor] = None,
+    ) -> ConstraintStateType:
+        """
+        Copies the `state` . This method copies the data in `state` using `copy.deepcopy()`. If this
+        is not appropriate for your constraint, you will need to implement the copying yourself.
+        """
+        new_state = []
+        for i in range(batch_size):
+            batch_state = []
+            for j in range(beam_size):
+                if last_backpointer is None:
+                    # This is the first prediction, so the backpointer is 0
+                    backpointer = 0
+                else:
+                    backpointer = last_backpointer[i, j].item()
+                batch_state.append(copy.deepcopy(state[i][backpointer]))
+            new_state.append(batch_state)
+        return new_state
+
     def update_state(
         self,
         state: ConstraintStateType,
-        predictions: List[torch.Tensor],
-        backpointers: List[torch.Tensor],
+        last_prediction: torch.Tensor,
+        last_backpointer: Optional[torch.Tensor] = None,
+    ) -> ConstraintStateType:
+        batch_size, beam_size = last_prediction.size()
+        new_state = self._copy_state(state, batch_size, beam_size, last_backpointer)
+        return self._update_state(new_state, last_prediction)
+
+    def _update_state(
+        self,
+        state: ConstraintStateType,
+        last_prediction: torch.Tensor,
     ) -> ConstraintStateType:
         raise NotImplementedError
 
@@ -623,32 +669,16 @@ class RepeatedNGramBlockingConstraint(Constraint):
                     pass
 
     @overrides
-    def update_state(
+    def _update_state(
         self,
         state: ConstraintStateType,
-        predictions: List[torch.Tensor],
-        backpointers: List[torch.Tensor],
+        last_prediction: torch.Tensor,
     ) -> ConstraintStateType:
-        last_prediction = predictions[-1]
-        batch_size, beam_size = last_prediction.size()
-        new_state = [[{} for _ in range(beam_size)] for _ in range(batch_size)]
-
-        for i in range(batch_size):
-            for j in range(beam_size):
+        for i, batch in enumerate(state):
+            for j, beam in enumerate(batch):
                 prediction = last_prediction[i, j].item()
-
-                if len(backpointers) == 0:
-                    # This is the first prediction, so the backpointer is 0
-                    backpointer = 0
-                else:
-                    backpointer = backpointers[-1][i, j].item()
-
-                # Make a copy of the prefix and seen_ngrams map. They will be
-                # edited, and the edits are specific to this prediction sequence. The
-                # `seen_ngrams` must be a deep copy so the inner lists of indices to
-                # block gets copied as well instead of just its reference
-                prefix = copy.copy(state[i][backpointer]["current_prefix"])
-                seen_ngrams = copy.deepcopy(state[i][backpointer]["seen_ngrams"])
+                prefix = beam["current_prefix"]
+                seen_ngrams = beam["seen_ngrams"]
 
                 if len(prefix) == self.ngram_size - 1:
                     # This is a new ngram that we have to remember
@@ -661,9 +691,7 @@ class RepeatedNGramBlockingConstraint(Constraint):
                 prefix.append(prediction)
                 if len(prefix) == self.ngram_size:
                     prefix.pop(0)
-
-                new_state[i][j] = {"current_prefix": prefix, "seen_ngrams": seen_ngrams}
-        return new_state
+        return state
 
 
 class BeamSearch(FromParams):
@@ -936,9 +964,7 @@ class BeamSearch(FromParams):
         self._update_initial_state(state, batch_size)
 
         for i, constraint in enumerate(self.constraints):
-            constraint_states[i] = constraint.update_state(
-                constraint_states[i], predictions, backpointers
-            )
+            constraint_states[i] = constraint.update_state(constraint_states[i], start_predicted_classes)
 
         for timestep in range(self.max_steps - 1):
             # shape: (batch_size * beam_size,)
@@ -1043,9 +1069,7 @@ class BeamSearch(FromParams):
             self._update_state(state, backpointer)
 
             for i, constraint in enumerate(self.constraints):
-                constraint_states[i] = constraint.update_state(
-                    constraint_states[i], predictions, backpointers
-                )
+                constraint_states[i] = constraint.update_state(constraint_states[i], restricted_predicted_classes)
 
         if not torch.isfinite(last_log_probabilities).all():
             warnings.warn(

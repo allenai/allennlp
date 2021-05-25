@@ -17,6 +17,7 @@ from allennlp.nn.beam_search import (
     RepeatedNGramBlockingConstraint,
 )
 from allennlp.common.params import Params
+from allennlp.nn.util import min_value_of_dtype
 
 
 transition_probabilities = torch.tensor(
@@ -663,7 +664,7 @@ class BeamSearchTest(AllenNlpTestCase):
         log_probabilities = torch.rand(batch_size, beam_size, num_classes)
         constraint.apply(state, log_probabilities)
 
-        disallowed_locations = torch.nonzero(log_probabilities == float("-inf")).tolist()
+        disallowed_locations = torch.nonzero(log_probabilities == min_value_of_dtype(log_probabilities.dtype)).tolist()
         assert len(disallowed_locations) == 4
         assert [0, 1, 4] in disallowed_locations
         assert [1, 1, 0] in disallowed_locations
@@ -686,15 +687,8 @@ class BeamSearchTest(AllenNlpTestCase):
                 {"current_prefix": [6, 7], "seen_ngrams": {(6, 7): [0, 1, 2]}},
             ],
         ]
-        predictions = [
-            torch.LongTensor(
-                [
-                    [5, 6],
-                    [0, 3],
-                ]
-            )
-        ]
-        backpointers = [torch.LongTensor([[1, 1], [0, 1]])]
+        predictions = torch.LongTensor([[5, 6], [0, 3]])
+        backpointers = torch.LongTensor([[1, 1], [0, 1]])
 
         expected_state = [
             [
