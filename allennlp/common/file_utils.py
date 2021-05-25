@@ -94,7 +94,7 @@ class FileLock(_FileLock):
         super().__init__(str(lock_file), timeout=timeout)
         self._read_only_ok = read_only_ok
 
-    @overrides
+    @overrides(check_signature=False)
     def acquire(self, timeout=None, poll_interval=0.05):
         try:
             super().acquire(timeout=timeout, poll_intervall=poll_interval)
