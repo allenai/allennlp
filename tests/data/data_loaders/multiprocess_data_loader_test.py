@@ -176,7 +176,7 @@ def test_language_model_data_collator():
     norm_loader.index_with(vocab)
     batch0 = list(norm_loader)[0]
 
-    model_name = "epwalsh/bert-xsmall-dummy"
+    model_name = "bert-base-uncased"
     data_collate = DataCollatorForLanguageModeling(model_name)
     mlm_loader = MultiProcessDataLoader(
         MockDatasetReader(), "some path", batch_size=16, collate_fn=data_collate
