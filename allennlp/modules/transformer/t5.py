@@ -222,7 +222,7 @@ class T5Attention(TransformerModule, FromParams):
         return relative_buckets
 
     def compute_bias(self, query_length: int, key_length: int) -> FloatT:
-        """ Compute binned relative position bias """
+        """Compute binned relative position bias"""
         context_position = torch.arange(query_length, dtype=torch.long)[:, None]
         memory_position = torch.arange(key_length, dtype=torch.long)[None, :]
         relative_position = memory_position - context_position  # shape (query_length, key_length)
@@ -284,7 +284,7 @@ class T5Attention(TransformerModule, FromParams):
             return states.transpose(1, 2).contiguous().view(batch_size, -1, self.inner_dim)
 
         def project(hidden_states, proj_layer, key_value_states, past_key_value) -> FloatT:
-            """ projects hidden states correctly to key/query states """
+            """projects hidden states correctly to key/query states"""
             if key_value_states is None:
                 # self-attn
                 # (batch_size, num_heads, seq_length, dim_per_head)

@@ -24,6 +24,20 @@ class TestBucketSampler(SamplerTest):
             expected_groups.remove(group)
         assert expected_groups == []
 
+    def test_disable_shuffle(self):
+        sampler = BucketBatchSampler(batch_size=2, sorting_keys=["text"], shuffle=False)
+
+        grouped_instances = []
+        for indices in sampler.get_batch_indices(self.instances):
+            grouped_instances.append([self.instances[idx] for idx in indices])
+        expected_groups = [
+            [self.instances[4], self.instances[2]],
+            [self.instances[0], self.instances[1]],
+            [self.instances[3]],
+        ]
+        for idx, group in enumerate(grouped_instances):
+            assert group == expected_groups[idx]
+
     def test_guess_sorting_key_picks_the_longest_key(self):
         sampler = BucketBatchSampler(batch_size=2, padding_noise=0)
         instances = []

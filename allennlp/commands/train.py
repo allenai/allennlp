@@ -19,6 +19,7 @@ from overrides import overrides
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common import Params, Registrable, Lazy
 from allennlp.common.checks import check_for_gpu, ConfigurationError
+from allennlp.common.meta import Meta, META_NAME
 from allennlp.common import logging as common_logging
 from allennlp.common import util as common_util
 from allennlp.common.plugins import import_plugins
@@ -226,6 +227,9 @@ def train_model(
 
     training_util.create_serialization_dir(params, serialization_dir, recover, force)
     params.to_file(os.path.join(serialization_dir, CONFIG_NAME))
+
+    meta = Meta.new()
+    meta.to_file(os.path.join(serialization_dir, META_NAME))
 
     include_in_archive = params.pop("include_in_archive", None)
     verify_include_in_archive(include_in_archive)

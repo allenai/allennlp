@@ -25,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added `TaskSuite` base class and command line functionality for running [`checklist`](https://github.com/marcotcr/checklist) test suites, along with implementations for `SentimentAnalysisSuite`, `QuestionAnsweringSuite`, and `TextualEntailmentSuite`. These can be found in the `allennlp.confidence_checks.task_checklists` module.
 - Added `allennlp diff` command to compute a diff on model checkpoints, analogous to what `git diff` does on two files.
+- Meta data defined by the class `allennlp.common.meta.Meta` is now saved in the serialization directory and archive file
+  when training models from the command line. This is also now part of the `Archive` named tuple that's returned from `load_archive()`.
 - Added `nn.util.distributed_device()` helper function.
 - Added `allennlp.nn.util.load_state_dict` helper function.
 - Added a module `allennlp.training.data_parallel` with a new base class, `DdpWrapper`, which generalizes
@@ -40,11 +42,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `SpanExtractorWithSpanWidthEmbedding`, putting specific span embedding computations into the `_embed_spans` method and leaving the common code in `SpanExtractorWithSpanWidthEmbedding` to unify the arguments, and modified `BidirectionalEndpointSpanExtractor`, `EndpointSpanExtractor` and `SelfAttentiveSpanExtractor` accordingly. Now, `SelfAttentiveSpanExtractor` can also embed span widths.
 - Added a `min_steps` parameter to `BeamSearch` to set a minimum length for the predicted sequences.
 - Added the `FinalSequenceScorer` abstraction to calculate the final scores of the generated sequences in `BeamSearch`. 
+- Added `shuffle` argument to `BucketBatchSampler` which allows for disabling shuffling.
 
 ### Fixed
 
 - When `PretrainedTransformerIndexer` folds long sequences, it no longer loses the information from token type ids.
 - Fixed documentation for `GradientDescentTrainer.cuda_device`.
+- Fixed `wandb` callback to work in distributed training.
 
 
 ## [v2.4.0](https://github.com/allenai/allennlp/releases/tag/v2.4.0) - 2021-04-22
