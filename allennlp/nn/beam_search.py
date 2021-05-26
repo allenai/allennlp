@@ -532,7 +532,8 @@ class Constraint(Registrable):
     An abstract class that can be used to enforce constraints on the output predictions
     by manipulate the class log probabilities during beam search.
 
-    A `Constraint` just has three methods which need to be implemented: `init_state()`, `apply()` and `update_state()`.
+    A `Constraint` just has three methods which need to be implemented: `init_state()`,
+    `apply()` and `update_state()`.
 
     `init_state()` takes one argument:
 
@@ -560,12 +561,12 @@ class Constraint(Registrable):
     - last_predictions, a tensor of shape `(batch_size, beam_size)` containing the predictions from the last
     step of beam search.
     - last_backpointers, an optional tensor of size `(batch_size, beam_size)` containing the indices of the
-    parent beams for the last step of beam search corresponding to the predictions in `last_predictions`. If `None`,
-    this is the first step of beam search, so all backpointers are assumed to be index 0.
+    parent beams for the last step of beam search corresponding to the predictions in `last_predictions`.
+    If `None`, this is the first step of beam search, so all backpointers are assumed to be index 0.
 
     The `update_state()` method should create a new constraint state that reflects the latest predictions made
-    during beam search. Each prediction needs to have its own unique state so that it may be edited without changing
-    the data for predictions with the same parents. The method in the `Constraint` class takes care of
+    during beam search. Each prediction needs to have its own unique state so that it may be edited without
+    changing the data for predictions with the same parents. The method in the `Constraint` class takes care of
     copying the parent state using the `copy.deepcopy()` function. If this works for your state, you only need
     to implement `_update_state()` instead.
 
