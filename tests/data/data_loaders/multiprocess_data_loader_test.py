@@ -10,6 +10,7 @@ from allennlp.data.fields import Field, TextField, MetadataField, TensorField
 from allennlp.data.tokenizers import PretrainedTransformerTokenizer
 from allennlp.data.token_indexers import PretrainedTransformerIndexer
 from allennlp.data.vocabulary import Vocabulary
+from allennlp.data.data_loaders.data_collator import DataCollatorForLanguageModeling
 
 
 class MockDatasetReader(DatasetReader):
@@ -164,6 +165,30 @@ def test_drop_last():
     for batch in batches:
         assert len(batch["index"]) == 16
     assert len(batches) == 6
+
+
+def test_language_model_data_collator():
+    """
+    Ensure `LanguageModelingDataCollator` works
+    """
+    norm_loader = MultiProcessDataLoader(MockDatasetReader(), "some path", batch_size=16)
+    vocab = Vocabulary.from_instances(norm_loader.iter_instances())
+    norm_loader.index_with(vocab)
+    batch0 = list(norm_loader)[0]
+
+    model_name = "epwalsh/bert-xsmall-dummy"
+    data_collate = DataCollatorForLanguageModeling(model_name)
+    mlm_loader = MultiProcessDataLoader(
+        MockDatasetReader(), "some path", batch_size=16, collate_fn=data_collate
+    )
+    batch1 = list(mlm_loader)[0]
+
+    norm_inputs = batch0["source"]["tokens"]["token_ids"]
+    mlm_inputs = batch1["source"]["tokens"]["token_ids"]
+    mlm_labels = batch1["source"]["tokens"]["labels"]
+
+    # if we replace the mlm inputs with their labels, should be same as origin inputs
+    assert torch.where(mlm_labels != -100, mlm_labels, mlm_inputs) == norm_inputs
 
 
 def test_batches_per_epoch():

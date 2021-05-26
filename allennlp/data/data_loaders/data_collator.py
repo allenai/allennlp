@@ -1,6 +1,5 @@
 from typing import List
 
-
 from transformers.data.data_collator import DataCollatorForLanguageModeling
 
 from allennlp.common import Registrable
@@ -47,12 +46,16 @@ class LanguageModelingDataCollator(DataCollator):
         model_name: str,
         mlm: bool = True,
         mlm_probability: float = 0.15,
+        filed_name: str = "source",
         namespace: str = "tokens",
     ):
+        self._field_name = filed_name
+        self._namespace = namespace
+
         from allennlp.common import cached_transformers
 
         tokenizer = cached_transformers.get_tokenizer(model_name)
-        self._namespace = namespace
+
         self._collator = DataCollatorForLanguageModeling(tokenizer, mlm, mlm_probability)
 
     def __call__(self, instances: List[Instance]) -> TensorDict:
@@ -61,8 +64,8 @@ class LanguageModelingDataCollator(DataCollator):
         return tensor_dicts
 
     def process_tokens(self, tensor_dicts: TensorDict) -> TensorDict:
-        inputs = tensor_dicts[self._namespace]["token_ids"]["token_ids"]
+        inputs = tensor_dicts[self._field_name][self._namespace]["token_ids"]
         inputs, labels = self._collator.mask_tokens(inputs)
-        tensor_dicts[self._namespace]["tokens"]["token_ids"] = inputs
-        tensor_dicts[self._namespace]["tokens"]["labels"] = labels
+        tensor_dicts[self._field_name][self._namespace]["token_ids"] = inputs
+        tensor_dicts[self._field_name][self._namespace]["labels"] = labels
         return tensor_dicts
