@@ -190,7 +190,7 @@ def test_language_model_data_collator():
     mlm_labels = batch1["source"]["tokens"]["labels"]
 
     # if we replace the mlm inputs with their labels, should be same as origin inputs
-    assert torch.where(mlm_labels != -100, mlm_labels, mlm_inputs) == norm_inputs
+    assert torch.where(mlm_labels != -100, mlm_labels, mlm_inputs).tolist() == norm_inputs.tolist()
 
 
 def test_batches_per_epoch():
