@@ -60,7 +60,7 @@ class LanguageModelingDataCollator(DataCollator):
         tensor_dicts = self.process_tokens(tensor_dicts)
         return tensor_dicts
 
-    def process_tokens(self, tensor_dicts: TensorDict) -> Tuple[torch.Tensor, torch.Tensor]:
+    def process_tokens(self, tensor_dicts: TensorDict) -> TensorDict:
         inputs = tensor_dicts[self._namespace]["token_ids"]["token_ids"]
         inputs, labels = self._collator.mask_tokens(inputs)
         tensor_dicts[self._namespace]["tokens"]["token_ids"] = inputs
