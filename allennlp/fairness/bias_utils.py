@@ -1,7 +1,7 @@
 import torch
 import json
 from os import PathLike
-from typing import List, Tuple, Union
+from typing import List, Tuple, Union, Optional
 
 from allennlp.common.file_utils import cached_path
 from allennlp.data import Vocabulary
@@ -28,7 +28,7 @@ def _convert_word_to_ids_tensor(word, tokenizer, vocab, namespace, all_cases):
 def load_words(
     fname: Union[str, PathLike],
     tokenizer: Tokenizer,
-    vocab: Vocabulary = None,
+    vocab: Optional[Vocabulary] = None,
     namespace: str = "tokens",
     all_cases: bool = True,
 ) -> List[torch.Tensor]:
@@ -68,7 +68,7 @@ def load_words(
 def load_word_pairs(
     fname: Union[str, PathLike],
     tokenizer: Tokenizer,
-    vocab: Vocabulary = None,
+    vocab: Optional[Vocabulary] = None,
     namespace: str = "token",
     all_cases: bool = True,
 ) -> Tuple[List[torch.Tensor], List[torch.Tensor]]:

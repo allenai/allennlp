@@ -1,8 +1,8 @@
 import torch
-from typing import Union
+from typing import Union, Optional
 from os import PathLike
 
-from allennlp.fairness import (
+from allennlp.fairness.bias_mitigators import (
     HardBiasMitigator,
     LinearBiasMitigator,
     INLPBiasMitigator,
@@ -64,7 +64,7 @@ class HardBiasMitigatorWrapper(BiasMitigatorWrapper):
         embedding_layer: torch.nn.Embedding,
         equalize_word_pairs_file: Union[PathLike, str],
         tokenizer: Tokenizer,
-        mitigator_vocab: Vocabulary = None,
+        mitigator_vocab: Optional[Vocabulary] = None,
         namespace: str = "tokens",
         requires_grad: bool = True,
     ):
@@ -179,7 +179,7 @@ class INLPBiasMitigatorWrapper(BiasMitigatorWrapper):
         embedding_layer: torch.nn.Embedding,
         seed_word_pairs_file: Union[PathLike, str],
         tokenizer: Tokenizer,
-        mitigator_vocab: Vocabulary = None,
+        mitigator_vocab: Optional[Vocabulary] = None,
         namespace: str = "tokens",
     ):
         self.ids1, self.ids2 = load_word_pairs(

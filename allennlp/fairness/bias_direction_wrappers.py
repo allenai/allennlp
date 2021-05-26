@@ -1,8 +1,9 @@
 import torch
-from typing import Union
+from typing import Union, Optional
 from os import PathLike
 
-from allennlp.fairness import (
+from allennlp.fairness.bias_direction import (
+    BiasDirection,
     PCABiasDirection,
     PairedPCABiasDirection,
     TwoMeansBiasDirection,
@@ -21,8 +22,8 @@ class BiasDirectionWrapper(Registrable):
     """
 
     def __init__(self):
-        self.direction = None
-        self.noise = None
+        self.direction: BiasDirection = None
+        self.noise: float = None
 
     def __call__(self, module):
         raise NotImplementedError
@@ -74,7 +75,7 @@ class PCABiasDirectionWrapper(BiasDirectionWrapper):
         self,
         seed_words_file: Union[PathLike, str],
         tokenizer: Tokenizer,
-        direction_vocab: Vocabulary = None,
+        direction_vocab: Optional[Vocabulary] = None,
         namespace: str = "tokens",
         requires_grad: bool = False,
         noise: float = 1e-10,
@@ -126,7 +127,7 @@ class PairedPCABiasDirectionWrapper(BiasDirectionWrapper):
         self,
         seed_word_pairs_file: Union[PathLike, str],
         tokenizer: Tokenizer,
-        direction_vocab: Vocabulary = None,
+        direction_vocab: Optional[Vocabulary] = None,
         namespace: str = "tokens",
         requires_grad: bool = False,
         noise: float = 1e-10,
@@ -183,7 +184,7 @@ class TwoMeansBiasDirectionWrapper(BiasDirectionWrapper):
         self,
         seed_word_pairs_file: Union[PathLike, str],
         tokenizer: Tokenizer,
-        direction_vocab: Vocabulary = None,
+        direction_vocab: Optional[Vocabulary] = None,
         namespace: str = "tokens",
         requires_grad: bool = False,
         noise: float = 1e-10,
@@ -238,7 +239,7 @@ class ClassificationNormalBiasDirectionWrapper(BiasDirectionWrapper):
         self,
         seed_word_pairs_file: Union[PathLike, str],
         tokenizer: Tokenizer,
-        direction_vocab: Vocabulary = None,
+        direction_vocab: Optional[Vocabulary] = None,
         namespace: str = "tokens",
         noise: float = 1e-10,
     ):
