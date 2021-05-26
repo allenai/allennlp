@@ -1,6 +1,6 @@
-from typing import List, Tuple
+from typing import List
 
-import torch
+
 from transformers.data.data_collator import DataCollatorForLanguageModeling
 
 from allennlp.common import Registrable
