@@ -181,6 +181,8 @@ def test_language_model_data_collator():
     mlm_loader = MultiProcessDataLoader(
         MockDatasetReader(), "some path", batch_size=16, collate_fn=data_collate
     )
+    vocab = Vocabulary.from_instances(mlm_loader.iter_instances())
+    mlm_loader.index_with(vocab)
     batch1 = list(mlm_loader)[0]
 
     norm_inputs = batch0["source"]["tokens"]["token_ids"]

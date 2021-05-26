@@ -1,7 +1,6 @@
 from typing import List
 
 from transformers.data.data_collator import DataCollatorForLanguageModeling
-from transformers import AutoTokenizer
 from allennlp.common import Registrable
 from allennlp.data.batch import Batch
 from allennlp.data.data_loaders.data_loader import TensorDict
@@ -52,6 +51,7 @@ class LanguageModelingDataCollator(DataCollator):
         self._field_name = filed_name
         self._namespace = namespace
         from allennlp.common import cached_transformers
+
         tokenizer = cached_transformers.get_tokenizer(model_name)
         self._collator = DataCollatorForLanguageModeling(tokenizer, mlm, mlm_probability)
 
