@@ -51,8 +51,8 @@ class LanguageModelingDataCollator(DataCollator):
     ):
         self._field_name = filed_name
         self._namespace = namespace
-
-        tokenizer = AutoTokenizer.from_pretrained(model_name)
+        from allennlp.common import cached_transformers
+        tokenizer = cached_transformers.get_tokenizer(model_name)
         self._collator = DataCollatorForLanguageModeling(tokenizer, mlm, mlm_probability)
 
     def __call__(self, instances: List[Instance]) -> TensorDict:

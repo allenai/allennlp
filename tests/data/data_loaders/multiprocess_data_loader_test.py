@@ -10,7 +10,7 @@ from allennlp.data.fields import Field, TextField, MetadataField, TensorField
 from allennlp.data.tokenizers import PretrainedTransformerTokenizer
 from allennlp.data.token_indexers import PretrainedTransformerIndexer
 from allennlp.data.vocabulary import Vocabulary
-from allennlp.data.data_loaders.data_collator import DataCollatorForLanguageModeling
+from allennlp.data.data_loaders.data_collator import LanguageModelingDataCollator
 
 
 class MockDatasetReader(DatasetReader):
@@ -176,8 +176,8 @@ def test_language_model_data_collator():
     norm_loader.index_with(vocab)
     batch0 = list(norm_loader)[0]
 
-    model_name = "bert-base-uncased"
-    data_collate = DataCollatorForLanguageModeling(model_name)
+    model_name = "epwalsh/bert-xsmall-dummy"
+    data_collate = LanguageModelingDataCollator(model_name)
     mlm_loader = MultiProcessDataLoader(
         MockDatasetReader(), "some path", batch_size=16, collate_fn=data_collate
     )
