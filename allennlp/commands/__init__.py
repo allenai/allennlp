@@ -20,7 +20,6 @@ from allennlp.commands.count_instances import CountInstances
 from allennlp.common.plugins import import_plugins
 from allennlp.common.util import import_module_and_submodules
 from allennlp.commands.checklist import CheckList
-from allennlp.fairness.evaluate_bias_mitigation import EvaluateBiasMitigation
 
 logger = logging.getLogger(__name__)
 
