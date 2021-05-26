@@ -39,6 +39,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - When `PretrainedTransformerIndexer` folds long sequences, it no longer loses the information from token type ids.
 - Fixed documentation for `GradientDescentTrainer.cuda_device`.
+- Fixed `wandb` callback to work in distributed training.
 
 
 ## [v2.4.0](https://github.com/allenai/allennlp/releases/tag/v2.4.0) - 2021-04-22
