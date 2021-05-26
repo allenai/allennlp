@@ -85,22 +85,22 @@ jobs:
         pip freeze
 
     - name: Format
-      if: always()
+      if: '! cancelled()'
       run: |
         make format
 
     - name: Lint
-      if: always()
+      if: '! cancelled()'
       run: |
         make lint
 
     - name: Type check
-      if: always()
+      if: '! cancelled()'
       run: |
         make typecheck
 
     - name: Run tests
-      if: always()
+      if: '! cancelled()'
       run: |
         make test-with-cov
 
