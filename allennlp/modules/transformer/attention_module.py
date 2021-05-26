@@ -416,7 +416,7 @@ class AttentionModule(TransformerModule, FromParams):
         return relative_buckets
 
     def compute_bias(self, query_length: int, key_length: int) -> FloatT:
-        """ Compute binned relative position bias """
+        """Compute binned relative position bias"""
         context_position = torch.arange(query_length, dtype=torch.long)[:, None]
         memory_position = torch.arange(key_length, dtype=torch.long)[None, :]
         relative_position = memory_position - context_position  # shape (query_length, key_length)
