@@ -36,7 +36,7 @@ class DefaultDataCollator(DataCollator):
         return allennlp_collate(instances)
 
 
-@DataCollator.register("language-model")
+@DataCollator.register("language_model")
 class LanguageModelingDataCollator(DataCollator):
     """
     Register as an `DataCollator` with name `LanguageModelingDataCollator`
