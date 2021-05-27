@@ -247,6 +247,10 @@ def cached_path(
     force_extract : `bool`, optional (default = `False`)
         If `True` and the file is an archive file, it will be extracted regardless
         of whether or not the extracted directory already exists.
+
+        !!! Warning
+            Use this flag with caution! This can lead to race conditions if used
+            from multiple processes on the same file.
     """
     if cache_dir is None:
         cache_dir = CACHE_DIRECTORY
@@ -325,12 +329,24 @@ def cached_path(
 
     if extraction_path is not None:
         # If the extracted directory already exists (and is non-empty), then no
-        # need to extract again unless `force_extract=True`.
+        # need to create a lock file and extract again unless `force_extract=True`.
         if os.path.isdir(extraction_path) and os.listdir(extraction_path) and not force_extract:
             return extraction_path
 
         # Extract it.
         with FileLock(extraction_path + ".lock"):
+            # Check again if the directory exists now that we've acquired the lock.
+            if os.path.isdir(extraction_path) and os.listdir(extraction_path):
+                if force_extract:
+                    logger.warning(
+                        "Extraction directory for %s (%s) already exists, "
+                        "overwriting it since 'force_extract' is 'True'",
+                        url_or_filename,
+                        extraction_path,
+                    )
+                else:
+                    return extraction_path
+
             logger.info("Extracting %s to %s", url_or_filename, extraction_path)
             shutil.rmtree(extraction_path, ignore_errors=True)
 
