@@ -24,8 +24,11 @@ class DataCollator(Registrable):
     Cause this method run before each epoch to convert `List[Instance]` to `TensorDict`
     """
 
+    default_implementation = "allennlp"
+
     def __call__(self, instances: List[Instance]) -> TensorDict:
         raise NotImplementedError
+
 
 @DataCollator.register("allennlp")
 class DefaultDataCollator(DataCollator):
