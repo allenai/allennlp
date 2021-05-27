@@ -278,12 +278,13 @@ class TransformerModule(torch.nn.Module):
                 # this class. This is called recursively on each submodule of the current module.
                 state_dict = model._get_mapped_state_dict(pretrained_state_dict, mapping=mapping)
 
+            logger.info("Loading state_dict into module")
+
             missing_keys: List[str]
             unexpected_keys: List[str]
             error_msgs: List[str] = []
             if not is_distributed():
                 assert state_dict is not None
-                logger.info("Loading state_dict into module")
                 missing_keys, unexpected_keys = model.load_state_dict(state_dict, strict=False)
             else:
                 # We're in distributed training. `state_dict` is `None` for all process groups
@@ -292,7 +293,6 @@ class TransformerModule(torch.nn.Module):
                 # to load the state_dict into memory.
                 dist.barrier()
                 # Now load the state dict into the model.
-                logger.info("Loading state_dict into module (MEMORY_EFFICIENT strategy)")
                 missing_keys, unexpected_keys = load_state_dict_distributed(
                     model, state_dict, strict=False
                 )

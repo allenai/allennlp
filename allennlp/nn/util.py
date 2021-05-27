@@ -2179,7 +2179,10 @@ def dist_reduce_sum(value: _V, **kwargs) -> _V:
 
 
 def _collect_state_dict(
-    module: torch.nn.Module, state_dict: Optional[StateDictType], recurse: bool = True
+    module: torch.nn.Module,
+    state_dict: Optional[StateDictType],
+    recurse: bool = True,
+    prefix: str = "",
 ) -> Tuple[StateDictType, List[str], List[str]]:
     """
     Collect a module's state dict across distributed processes.
@@ -2242,6 +2245,7 @@ def _collect_state_dict(
                 tensor = state_dict[key]
             else:
                 missing_keys.append(key)
+        logger.info("Broadcasting distributed parameter '%s'", prefix + key)
         tensor = tensor.to(dist_device)
         dist.broadcast(tensor, 0)
         current_state_dict[key] = tensor.to(state_dict_device)
@@ -2255,7 +2259,10 @@ class _LoadStateDictResult(NamedTuple):
 
 
 def load_state_dict_distributed(
-    module: torch.nn.Module, state_dict: Optional[StateDictType], strict: bool = True
+    module: torch.nn.Module,
+    state_dict: Optional[StateDictType],
+    strict: bool = True,
+    prefix: str = "",
 ) -> _LoadStateDictResult:
     """
     Load a `state_dict` to the `module` within a distributed process. Only the global
@@ -2303,7 +2310,9 @@ def load_state_dict_distributed(
     # we collect the state_dict and load it now instead of recursing further.
     if getattr(module, _MODULE_SHARDED_FLAG, False) or not submodules:
         # Collect.
-        state_dict, _missing_keys, _unexpected_keys = _collect_state_dict(module, state_dict)
+        state_dict, _missing_keys, _unexpected_keys = _collect_state_dict(
+            module, state_dict, prefix=prefix
+        )
         assert state_dict is not None
         update_key_list(missing_keys, _missing_keys)
         update_key_list(unexpected_keys, _unexpected_keys)
@@ -2315,7 +2324,10 @@ def load_state_dict_distributed(
         # We'll recursively call this function on each submodule, but first we need
         # to collect any parameters that are direct members of this module.
         direct_member_state_dict, _missing_keys, _unexpected_keys = _collect_state_dict(
-            module, state_dict, recurse=False
+            module,
+            state_dict,
+            recurse=False,
+            prefix=prefix,
         )
         update_key_list(missing_keys, _missing_keys)
         update_key_list(unexpected_keys, _unexpected_keys)
@@ -2342,7 +2354,10 @@ def load_state_dict_distributed(
                     if key.startswith(name + ".")
                 }
             _missing_keys, _unexpected_keys = load_state_dict_distributed(
-                submodule, submodule_state_dict, strict=False
+                submodule,
+                submodule_state_dict,
+                strict=False,
+                prefix=prefix + name + ".",
             )
             update_key_list(missing_keys, [f"{name}.{key}" for key in _missing_keys])
             update_key_list(unexpected_keys, [f"{name}.{key}" for key in _unexpected_keys])
