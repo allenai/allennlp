@@ -88,11 +88,7 @@ class WandBCallback(LogWriterCallback):
 
         self._watch_model = watch_model
         self._files_to_save = files_to_save
-
-        import wandb
-
-        self.wandb = wandb
-        self.wandb.init(
+        self._wandb_kwargs: Dict[str, Any] = dict(
             dir=os.path.abspath(serialization_dir),
             project=project,
             entity=entity,
@@ -104,9 +100,6 @@ class WandBCallback(LogWriterCallback):
             anonymous="allow",
             **(wandb_kwargs or {}),
         )
-
-        for fpath in self._files_to_save:
-            self.wandb.save(os.path.join(serialization_dir, fpath), base_path=serialization_dir)
 
     @overrides
     def log_scalars(
@@ -122,7 +115,7 @@ class WandBCallback(LogWriterCallback):
         self, tensors: Dict[str, torch.Tensor], log_prefix: str = "", epoch: Optional[int] = None
     ) -> None:
         self._log(
-            {k: self.wandb.Histogram(v.cpu().data.numpy().flatten()) for k, v in tensors.items()},
+            {k: self.wandb.Histogram(v.cpu().data.numpy().flatten()) for k, v in tensors.items()},  # type: ignore
             log_prefix=log_prefix,
             epoch=epoch,
         )
@@ -134,12 +127,31 @@ class WandBCallback(LogWriterCallback):
             dict_to_log = {f"{log_prefix}/{k}": v for k, v in dict_to_log.items()}
         if epoch is not None:
             dict_to_log["epoch"] = epoch
-        self.wandb.log(dict_to_log, step=self.trainer._total_batches_completed)  # type: ignore[union-attr]
+        self.wandb.log(dict_to_log, step=self.trainer._total_batches_completed)  # type: ignore
 
     @overrides
     def on_start(
         self, trainer: "GradientDescentTrainer", is_primary: bool = True, **kwargs
     ) -> None:
         super().on_start(trainer, is_primary=is_primary, **kwargs)
+
+        if not is_primary:
+            return None
+
+        import wandb
+
+        self.wandb = wandb
+        self.wandb.init(**self._wandb_kwargs)
+
+        for fpath in self._files_to_save:
+            self.wandb.save(  # type: ignore
+                os.path.join(self.serialization_dir, fpath), base_path=self.serialization_dir
+            )
+
         if self._watch_model:
-            self.wandb.watch(self.trainer.model)  # type: ignore[union-attr]
+            self.wandb.watch(self.trainer.model)  # type: ignore
+
+    @overrides
+    def close(self) -> None:
+        super().close()
+        self.wandb.finish()  # type: ignore

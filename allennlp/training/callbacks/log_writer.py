@@ -148,7 +148,7 @@ class LogWriterCallback(TrainerCallback):
         batch_grad_norm: Optional[float] = None,
         **kwargs,
     ) -> None:
-        if not is_training and not is_primary:
+        if not is_training or not is_primary:
             return None
         assert self.trainer is not None
 

@@ -42,6 +42,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Re-starting a training run from a checkpoint in the middle of an epoch now works correctly.
 - When using the "moving average" weights smoothing feature of the trainer, training checkpoints would also get smoothed, with strange results for resuming a training job. This has been fixed.
 - When re-starting an interrupted training job, the trainer will now read out the data loader even for epochs and batches that can be skipped. This ensures that any random number generators used by the reader or data loader are in the same state as they were the first time the training job ran.
+- Fixed `wandb` callback to work in distributed training.
 
 
 ## [v2.4.0](https://github.com/allenai/allennlp/releases/tag/v2.4.0) - 2021-04-22
