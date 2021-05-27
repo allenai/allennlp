@@ -27,7 +27,7 @@ class DataCollator(Registrable):
     def __call__(self, instances: List[Instance]) -> TensorDict:
         raise NotImplementedError
 
-
+@DataCollator.register("allennlp")
 class DefaultDataCollator(DataCollator):
     def __call__(self, instances: List[Instance]) -> TensorDict:
         return allennlp_collate(instances)
