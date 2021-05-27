@@ -516,11 +516,7 @@ class GradientDescentTrainer(Trainer):
             batch_num_total = self._batch_num_total
 
             # Zero gradients.
-            # NOTE: this is actually more efficient than calling `self.optimizer.zero_grad()`
-            # because it avoids a read op when the gradients are first updated below.
-            for param_group in self.optimizer.param_groups:
-                for p in param_group["params"]:
-                    p.grad = None
+            self.optimizer.zero_grad(set_to_none=True)
 
             batch_loss = 0.0
             batch_group_outputs = []
