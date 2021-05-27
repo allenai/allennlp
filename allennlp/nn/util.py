@@ -2236,6 +2236,7 @@ def _collect_state_dict(
             if key not in module_keys:
                 unexpected_keys.append(key)
 
+    logger.info("Collecting state for parameters: %s", [prefix + key for key in keys])
     for key in keys:
         tensor = current_state_dict[key]
         if is_global_primary():
