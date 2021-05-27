@@ -2209,10 +2209,8 @@ def _collect_state_dict(
     # that the order is consistent across processes.
     # We'll also update this state dict as we go and return it at the end.
 
-    _state_dict = module.state_dict()
-
     if recurse:
-        current_state_dict = _state_dict
+        current_state_dict = module.state_dict()
     else:
         # Only collect state of direct members, including both parameters and buffers.
         current_state_dict = OrderedDict(
@@ -2229,9 +2227,8 @@ def _collect_state_dict(
     # Gather unexpected_keys.
     if is_global_primary():
         assert state_dict is not None
-        module_keys = set(_state_dict.keys())
         for key in state_dict:
-            if key not in module_keys:
+            if key not in keys:
                 unexpected_keys.append(key)
 
     for key in keys:
@@ -2327,6 +2324,11 @@ def load_state_dict_distributed(
             recurse=False,
             prefix=prefix,
         )
+        # `_unexpected_keys` will contain keys corresponding to submodules (not direct members)
+        # that may be legitimate, so we ignore any `_unexpected_keys` here that correspond to submodules.
+        _unexpected_keys = [
+            k for k in _unexpected_keys if "." not in k or k.split(".")[0] not in submodules.keys()
+        ]
         update_key_list(missing_keys, _missing_keys)
         update_key_list(unexpected_keys, _unexpected_keys)
 
