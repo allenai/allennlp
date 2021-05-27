@@ -1018,7 +1018,7 @@ class T5(TransformerModule, Registrable):
     ):
         super().__init__()
 
-        if ddp_wrapper not is None:
+        if ddp_wrapper is not None:
             logger.info("Initializing T5 module with DdpWrapper %s", ddp_wrapper)
 
         self.model_dim = model_dim
