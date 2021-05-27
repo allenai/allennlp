@@ -147,9 +147,11 @@ docker-image :
 		--build-arg TORCH=$(DOCKER_TORCH_VERSION) \
 		-t $(DOCKER_IMAGE_NAME) .
 
+DOCKER_GPUS = --gpus all
+
 .PHONY : docker-run
 docker-run :
-	$(DOCKER_RUN_CMD) --gpus all $(DOCKER_IMAGE_NAME) $(ARGS)
+	$(DOCKER_RUN_CMD) $(DOCKER_GPUS) $(DOCKER_IMAGE_NAME) $(ARGS)
 
 .PHONY : docker-test-image
 docker-test-image :
@@ -161,4 +163,4 @@ docker-test-image :
 
 .PHONY : docker-test-run
 docker-test-run :
-	$(DOCKER_RUN_CMD) --gpus all $(DOCKER_TEST_IMAGE_NAME) $(ARGS)
+	$(DOCKER_RUN_CMD) $(DOCKER_GPUS) $(DOCKER_TEST_IMAGE_NAME) $(ARGS)

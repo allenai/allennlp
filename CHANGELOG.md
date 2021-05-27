@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+
 ### Changed
 
 - Use `dist_reduce_sum` in distributed metrics.
@@ -34,11 +35,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added a `min_steps` parameter to `BeamSearch` to set a minimum length for the predicted sequences.
 - Added the `FinalSequenceScorer` abstraction to calculate the final scores of the generated sequences in `BeamSearch`. 
 - Added `shuffle` argument to `BucketBatchSampler` which allows for disabling shuffling.
+- Added `DataCollator` for dynamic operations for each batch.
 
 ### Fixed
 
 - When `PretrainedTransformerIndexer` folds long sequences, it no longer loses the information from token type ids.
 - Fixed documentation for `GradientDescentTrainer.cuda_device`.
+- Fixed the potential for a race condition with `cached_path()` when extracting archives. Although the race condition
+  is still possible if used with `force_extract=True`.
+- Fixed `wandb` callback to work in distributed training.
 
 
 ## [v2.4.0](https://github.com/allenai/allennlp/releases/tag/v2.4.0) - 2021-04-22

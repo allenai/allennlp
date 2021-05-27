@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 
 class Archive(NamedTuple):
-    """ An archive comprises a Model and its experimental config"""
+    """An archive comprises a Model and its experimental config"""
 
     model: Model
     config: Params
