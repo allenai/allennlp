@@ -28,6 +28,8 @@ from allennlp.nn.parallel import DdpWrapper, NoOpDdpWrapper
 if TYPE_CHECKING:
     from transformers.configuration_utils import PretrainedConfig
 
+logger = logging.getLogger(__name__)
+
 # Unfortunately mypy is insane, so I have to wrap these in unions.
 FloatT = Union[torch.FloatTensor]
 IntT = Union[torch.IntTensor]
@@ -831,7 +833,7 @@ class T5EncoderStack(T5Stack, FromParams):
         if ddp_wrapper is None:
             ddp_wrapper = NoOpDdpWrapper()
         else:
-            logging.info("Initializing T5 encoder with DdpWrapper %s", ddp_wrapper)
+            logger.info("Initializing T5 encoder with DdpWrapper %s", ddp_wrapper)
         blocks = [
             ddp_wrapper.wrap_module(
                 T5Block(
@@ -882,7 +884,7 @@ class T5DecoderStack(T5Stack, FromParams):
         if ddp_wrapper is None:
             ddp_wrapper = NoOpDdpWrapper()
         else:
-            logging.info("Initializing T5 decoder with DdpWrapper %s", ddp_wrapper)
+            logger.info("Initializing T5 decoder with DdpWrapper %s", ddp_wrapper)
         blocks = [
             ddp_wrapper.wrap_module(
                 T5Block(
@@ -1016,10 +1018,8 @@ class T5(TransformerModule, Registrable):
     ):
         super().__init__()
 
-        if ddp_wrapper is None:
-            ddp_wrapper = NoOpDdpWrapper()
-        else:
-            logging.info("Initializing T5 module with DdpWrapper %s", ddp_wrapper)
+        if ddp_wrapper not is None:
+            logger.info("Initializing T5 module with DdpWrapper %s", ddp_wrapper)
 
         self.model_dim = model_dim
         self.token_embeddings = token_embeddings or nn.Embedding(vocab_size, model_dim)
@@ -1102,6 +1102,7 @@ class T5(TransformerModule, Registrable):
             eos_token_id=config.eos_token_id,
             vocab_size=config.vocab_size,
             model_dim=config.d_model,
+            **kwargs,
         )
 
     def _shift_right(self, input_ids, start_value: int):
