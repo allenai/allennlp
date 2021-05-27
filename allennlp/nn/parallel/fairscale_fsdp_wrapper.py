@@ -50,7 +50,6 @@ class FairScaleFsdpWrapper(DdpWrapper):
         self,
         mixed_precision: bool = False,
         reshard_after_forward: bool = True,
-        cpu_offload: bool = False,
         flatten_parameters: bool = True,
         auto_wrap_policy_kwargs: Dict[str, Any] = None,
         **kwargs,
@@ -61,9 +60,10 @@ class FairScaleFsdpWrapper(DdpWrapper):
             "compute_device": self.cuda_device,
             "mixed_precision": mixed_precision,
             "reshard_after_forward": reshard_after_forward,
-            "cpu_offload": cpu_offload,
             "flatten_parameters": flatten_parameters,
         }
+        if mixed_precision:
+            self._fsdp_kwargs["move_params_to_cpu"] = True
 
     @overrides
     def wrap_model(self, model: "Model") -> Tuple["Model", DdpWrappedModel]:
