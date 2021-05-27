@@ -5,6 +5,7 @@ An implementation of [T5](https://api.semanticscholar.org/CorpusID:204838007), a
 
 import math
 from dataclasses import dataclass
+import logging
 from typing import Optional, Tuple, List, Union, Dict, TYPE_CHECKING
 
 import torch
@@ -829,6 +830,8 @@ class T5EncoderStack(T5Stack, FromParams):
     ) -> "T5EncoderStack":
         if ddp_wrapper is None:
             ddp_wrapper = NoOpDdpWrapper()
+        else:
+            logging.info("Initializing T5 encoder with DdpWrapper %s", ddp_wrapper)
         blocks = [
             ddp_wrapper.wrap_module(
                 T5Block(
@@ -878,6 +881,8 @@ class T5DecoderStack(T5Stack, FromParams):
     ) -> "T5DecoderStack":
         if ddp_wrapper is None:
             ddp_wrapper = NoOpDdpWrapper()
+        else:
+            logging.info("Initializing T5 decoder with DdpWrapper %s", ddp_wrapper)
         blocks = [
             ddp_wrapper.wrap_module(
                 T5Block(
@@ -1013,6 +1018,8 @@ class T5(TransformerModule, Registrable):
 
         if ddp_wrapper is None:
             ddp_wrapper = NoOpDdpWrapper()
+        else:
+            logging.info("Initializing T5 module with DdpWrapper %s", ddp_wrapper)
 
         self.model_dim = model_dim
         self.token_embeddings = token_embeddings or nn.Embedding(vocab_size, model_dim)
