@@ -3,7 +3,6 @@ from typing import Dict, List
 
 import torch
 from overrides import overrides
-from math import prod
 
 from allennlp.data.fields.text_field import TextFieldTensors
 from allennlp.data.vocabulary import Vocabulary
@@ -127,7 +126,9 @@ class VilbertBackbone(Backbone):
         batch_size = dimensions[0]
         feature_size = dimensions[-1]
         rolled_dimensions = dimensions[1:-2]
-        rolled_dimensions_product = prod(rolled_dimensions)
+        rolled_dimensions_product = 1
+        for dim in rolled_dimensions:
+            rolled_dimensions_product *= dim 
 
         if rolled_dimensions:
             token_ids = token_ids.repeat_interleave(rolled_dimensions_product, 0)
