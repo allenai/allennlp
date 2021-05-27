@@ -111,7 +111,6 @@ class VilbertBackbone(Backbone):
         box_mask: torch.Tensor,
         text: TextFieldTensors,
     ) -> Dict[str, torch.Tensor]:
-        # if self.training:
         if "token_ids" in text["tokens"]:
             token_ids = text["tokens"]["token_ids"]
         else:
@@ -128,12 +127,14 @@ class VilbertBackbone(Backbone):
         rolled_dimensions = dimensions[1:-2]
         rolled_dimensions_product = 1
         for dim in rolled_dimensions:
-            rolled_dimensions_product *= dim 
+            rolled_dimensions_product *= dim
 
         if rolled_dimensions:
             token_ids = token_ids.repeat_interleave(rolled_dimensions_product, 0)
-            token_type_ids = token_type_ids.repeat_interleave(rolled_dimensions_product, 0)
-            attention_mask = attention_mask.repeat_interleave(rolled_dimensions_product, 0)
+            if token_type_ids is not None:
+                token_type_ids = token_type_ids.repeat_interleave(rolled_dimensions_product, 0)
+            if attention_mask is not None:
+                attention_mask = attention_mask.repeat_interleave(rolled_dimensions_product, 0)
 
             box_features = box_features.view(
                 batch_size * rolled_dimensions_product, dimensions[-2], feature_size
@@ -197,8 +198,12 @@ class VilbertBackbone(Backbone):
             sequence_output_v = sequence_output_v.view(
                 unrolled_dimensions + [sequence_output_v.shape[-2], sequence_output_v.shape[-1]]
             )
-            pooled_output_t = pooled_output_t.view(unrolled_dimensions + [pooled_output_t.shape[-1]])
-            pooled_output_v = pooled_output_v.view(unrolled_dimensions + [pooled_output_v.shape[-1]])
+            pooled_output_t = pooled_output_t.view(
+                unrolled_dimensions + [pooled_output_t.shape[-1]]
+            )
+            pooled_output_v = pooled_output_v.view(
+                unrolled_dimensions + [pooled_output_v.shape[-1]]
+            )
 
         if self.fusion_method == "sum":
             pooled_output = self.dropout(pooled_output_t + pooled_output_v)
