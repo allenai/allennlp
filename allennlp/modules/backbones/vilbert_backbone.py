@@ -191,18 +191,18 @@ class VilbertBackbone(Backbone):
         pooled_output_v = self.v_pooler(sequence_output_v)
 
         if rolled_dimensions:
-            unrolled_dimensions = [batch_size] + list(rolled_dimensions)
+            unrolled_dimensions = (batch_size,) + rolled_dimensions
             sequence_output_t = sequence_output_t.view(
-                unrolled_dimensions + [sequence_output_t.shape[-2], sequence_output_t.shape[-1]]
+                unrolled_dimensions + (sequence_output_t.shape[-2], sequence_output_t.shape[-1])
             )
             sequence_output_v = sequence_output_v.view(
-                unrolled_dimensions + [sequence_output_v.shape[-2], sequence_output_v.shape[-1]]
+                unrolled_dimensions + (sequence_output_v.shape[-2], sequence_output_v.shape[-1])
             )
             pooled_output_t = pooled_output_t.view(
-                unrolled_dimensions + [pooled_output_t.shape[-1]]
+                unrolled_dimensions + (pooled_output_t.shape[-1],)
             )
             pooled_output_v = pooled_output_v.view(
-                unrolled_dimensions + [pooled_output_v.shape[-1]]
+                unrolled_dimensions + (pooled_output_v.shape[-1],)
             )
 
         if self.fusion_method == "sum":
