@@ -700,7 +700,7 @@ class TestVocabulary(AllenNlpTestCase):
             )
 
     def test_from_instances_exclusive_embeddings_file_inside_archive(self):
-        """ Just for ensuring there are no problems when reading pretrained tokens from an archive """
+        """Just for ensuring there are no problems when reading pretrained tokens from an archive"""
         # Read embeddings file from archive
         archive_path = str(self.TEST_DIR / "embeddings-archive.zip")
 
