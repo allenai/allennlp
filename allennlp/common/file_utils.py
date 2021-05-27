@@ -336,8 +336,16 @@ def cached_path(
         # Extract it.
         with FileLock(extraction_path + ".lock"):
             # Check again if the directory exists now that we've acquired the lock.
-            if os.path.isdir(extraction_path) and os.listdir(extraction_path) and not force_extract:
-                return extraction_path
+            if os.path.isdir(extraction_path) and os.listdir(extraction_path):
+                if force_extract:
+                    logger.warning(
+                        "Extraction directory for %s (%s) already exists, "
+                        "overwriting it since 'force_extract' is 'True'",
+                        url_or_filename,
+                        extraction_path,
+                    )
+                else:
+                    return extraction_path
 
             logger.info("Extracting %s to %s", url_or_filename, extraction_path)
             shutil.rmtree(extraction_path, ignore_errors=True)

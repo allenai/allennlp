@@ -48,6 +48,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - When `PretrainedTransformerIndexer` folds long sequences, it no longer loses the information from token type ids.
 - Fixed documentation for `GradientDescentTrainer.cuda_device`.
+- Fixed the potential for a race condition with `cached_path()` when extracting archives. Although the race condition
+  is still possible if used with `force_extract=True`.
 - Fixed `wandb` callback to work in distributed training.
 
 
