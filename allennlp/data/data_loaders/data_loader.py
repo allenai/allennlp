@@ -1,10 +1,9 @@
-from typing import List, Dict, Union, Iterator
+from typing import Dict, Union, Iterator
 
 import torch
 
 from allennlp.common.registrable import Registrable
 from allennlp.data.instance import Instance
-from allennlp.data.batch import Batch
 from allennlp.data.vocabulary import Vocabulary
 
 
@@ -12,15 +11,6 @@ TensorDict = Dict[str, Union[torch.Tensor, Dict[str, torch.Tensor]]]
 """
 `TensorDict` is the type we use for batches.
 """
-
-
-def allennlp_collate(instances: List[Instance]) -> TensorDict:
-    """
-    This is the default function used to turn a list of `Instance`s into a `TensorDict`
-    batch.
-    """
-    batch = Batch(instances)
-    return batch.as_tensor_dict()
 
 
 class DataLoader(Registrable):

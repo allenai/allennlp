@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+
 ### Changed
 
 - Use `dist_reduce_sum` in distributed metrics.
@@ -34,6 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added a `min_steps` parameter to `BeamSearch` to set a minimum length for the predicted sequences.
 - Added the `FinalSequenceScorer` abstraction to calculate the final scores of the generated sequences in `BeamSearch`. 
 - Added `shuffle` argument to `BucketBatchSampler` which allows for disabling shuffling.
+- Added `DataCollator` for dynamic operations for each batch.
 
 ### Fixed
 
