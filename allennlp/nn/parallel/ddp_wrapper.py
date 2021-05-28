@@ -106,7 +106,7 @@ class TorchDdpWrapper(DdpWrapper):
     around PyTorch's `DistributedDataParallel`.
     """
 
-    def __init__(self, find_unused_parameters: bool = True, **kwargs) -> None:
+    def __init__(self, find_unused_parameters: bool = False, **kwargs) -> None:
         super().__init__(**kwargs)
         self._ddp_kwargs = {
             "find_unused_parameters": find_unused_parameters,
