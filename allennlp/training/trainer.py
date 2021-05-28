@@ -278,6 +278,13 @@ class GradientDescentTrainer(Trainer):
     run_sanity_checks : `bool`, optional (default = `True`)
         This parameter is deprecated. Please use `run_confidence_checks` instead.
 
+    grad_scaling : `bool`, optional (default = `True`)
+        When `use_amp` is `True`, this determines whether or not to use a [`GradScaler`]
+        (https://pytorch.org/docs/stable/amp.html?highlight=gradscaler#torch.cuda.amp.GradScaler).
+
+        !!! Note
+            This parameter is ignored when `use_amp` is `False`.
+
     ddp_wrapped_model : `Optional[DdpWrappedModel]`, optional (default = `None`)
         The `model` wrapped with a `DdpWrapper` for distributed training.
 
@@ -311,6 +318,7 @@ class GradientDescentTrainer(Trainer):
         use_amp: bool = False,
         enable_default_callbacks: bool = True,
         run_confidence_checks: bool = True,
+        grad_scaling: bool = True,
         ddp_wrapped_model: Optional[DdpWrappedModel] = None,
         **kwargs,
     ) -> None:
@@ -378,20 +386,24 @@ class GradientDescentTrainer(Trainer):
         self._last_log = 0.0  # time of last logging
         self._num_gradient_accumulation_steps = num_gradient_accumulation_steps
 
-        # Enable automatic mixed precision training.
-        self._scaler: Optional[amp.GradScaler] = None
-        self._use_amp = use_amp
-        if self._use_amp:
-            if self.cuda_device == torch.device("cpu"):
-                raise ValueError("Using AMP requires a cuda device")
-            self._scaler = amp.GradScaler()
-
         self._ddp_wrapped_model = ddp_wrapped_model
         if distributed:
             # The model needs to be wrapped before initializing the optimizer,
             # so at this point it's too late to wrap the model.
             if ddp_wrapped_model is None:
                 raise ValueError("trainer requires 'ddp_wrapped_model' for distributed training")
+
+        # Enable automatic mixed precision training.
+        self._scaler: Optional[amp.GradScaler] = None
+        self._use_amp = use_amp
+        if self._use_amp:
+            if self.cuda_device == torch.device("cpu"):
+                raise ValueError("Using AMP requires a cuda device")
+            if grad_scaling:
+                if self._ddp_wrapped_model is None:
+                    self._scaler = amp.GradScaler()
+                else:
+                    self._scaler = self._ddp_wrapped_model.get_grad_scaler()
 
     @property
     def _pytorch_model(self):
@@ -1037,6 +1049,7 @@ class GradientDescentTrainer(Trainer):
         callbacks: List[Lazy[TrainerCallback]] = None,
         enable_default_callbacks: bool = True,
         run_confidence_checks: bool = True,
+        grad_scaling: bool = True,
         ddp_wrapper: Optional[DdpWrapper] = None,
         **kwargs,
     ) -> "Trainer":
@@ -1151,6 +1164,7 @@ class GradientDescentTrainer(Trainer):
             use_amp=use_amp,
             enable_default_callbacks=enable_default_callbacks,
             run_confidence_checks=run_confidence_checks,
+            grad_scaling=grad_scaling,
             ddp_wrapped_model=ddp_wrapped_model,
             **kwargs,
         )

@@ -12,6 +12,7 @@ from typing import (
 
 from overrides import overrides
 import torch
+from torch.cuda import amp
 from torch.nn.utils import clip_grad_norm_
 
 from allennlp.common import Registrable
@@ -57,6 +58,9 @@ class DdpWrappedModel:
 
     def clip_grad_norm_(self, max_norm: Union[float, int]) -> torch.Tensor:
         return clip_grad_norm_([p for p in self.model.parameters() if p.grad is not None], max_norm)
+
+    def get_grad_scaler(self) -> amp.GradScaler:
+        return amp.GradScaler()
 
 
 class DdpWrapper(Registrable):

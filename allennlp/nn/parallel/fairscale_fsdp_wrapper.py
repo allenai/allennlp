@@ -2,8 +2,10 @@ from typing import Tuple, Union, Optional, Dict, Any, TYPE_CHECKING
 
 from fairscale.nn import FullyShardedDataParallel as FSDP
 from fairscale.nn.wrap import enable_wrap, auto_wrap, default_auto_wrap_policy
+from fairscale.optim.grad_scaler import GradScaler
 from overrides import overrides
 import torch
+from torch.cuda import amp
 
 from allennlp.nn.util import _MODULE_SHARDED_FLAG
 from allennlp.nn.parallel.ddp_wrapper import (
@@ -38,6 +40,10 @@ class FairScaleFsdpWrappedModel(DdpWrappedModel):
     def clip_grad_norm_(self, max_norm: Union[float, int]) -> torch.Tensor:
         return self.model.clip_grad_norm_(max_norm)  # type: ignore[operator]
 
+    @overrides
+    def get_grad_scaler(self) -> amp.GradScaler:
+        return GradScaler()
+
 
 @DdpWrapper.register("fairscale_fsdp")
 class FairScaleFsdpWrapper(DdpWrapper):
@@ -64,6 +70,7 @@ class FairScaleFsdpWrapper(DdpWrapper):
         }
         if mixed_precision:
             self._fsdp_kwargs["move_params_to_cpu"] = True
+            self._fsdp_kwargs["clear_autocast_cache"] = True
 
     @overrides
     def wrap_model(self, model: "Model") -> Tuple["Model", DdpWrappedModel]:
@@ -71,7 +78,7 @@ class FairScaleFsdpWrapper(DdpWrapper):
             model,
             **self._fsdp_kwargs,
         )
-        if self.cuda_device != torch.device("cpu"):
+        if not self._fsdp_kwargs["mixed_precision"] and self.cuda_device != torch.device("cpu"):
             wrapped_model = wrapped_model.cuda()
         # `FSDP._lazy_init()` may have been called already on submodules that were wrapped
         # (through `wrap_module()`), leading those submodules to think they are root submodules.

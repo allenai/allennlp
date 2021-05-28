@@ -3,7 +3,9 @@ from os import PathLike
 from typing import Union, Dict, Optional
 
 import torch
+from torch.cuda import amp
 from torch.testing import assert_allclose
+import pytest
 
 from allennlp.common.testing import AllenNlpTestCase, run_distributed_test, requires_multi_gpu
 from allennlp.nn.util import _MODULE_SHARDED_FLAG, load_state_dict_distributed
@@ -78,11 +80,18 @@ class FeedForward(torch.nn.Module):
         return self.activation(self.linear(x))
 
 
-def _dist_load(global_rank: int, world_size: int, gpu_id: int, test_dir: Union[str, PathLike]):
+def _dist_load_and_train(
+    global_rank: int,
+    world_size: int,
+    gpu_id: int,
+    test_dir: Union[str, PathLike],
+    mixed_precision: bool,
+):
     fsdp_wrapper = FairScaleFsdpWrapper(
         local_rank=global_rank,
         world_size=world_size,
         cuda_device=gpu_id,
+        mixed_precision=mixed_precision,
         auto_wrap_policy_kwargs={"min_num_params": 1},
     )
     model = EncoderDecoderModel(fsdp_wrapper)
@@ -127,36 +136,68 @@ def _dist_load(global_rank: int, world_size: int, gpu_id: int, test_dir: Union[s
     # Now wrap outer model.
     model, wrapped_model = fsdp_wrapper.wrap_model(model)
 
+    # TODO: grad scaler doesn't work now due to https://github.com/facebookresearch/fairscale/issues/421.
+    #  scaler = wrapped_model.get_grad_scaler()
+    scaler: Optional[amp.GradScaler] = None
+
     # Checkpoint each worker's state.
     worker_state = wrapped_model.state_dict()
 
-    # Each tensor should be on the current device.
-    for value in worker_state.values():
-        assert value.device == torch.device(gpu_id)
+    for name, value in worker_state.items():
+        # Each tensor should be on the current device if mixed_precision is `False`,
+        # otherwise they will be on CPU (since we set `move_params_to_cpu`).
+        if mixed_precision:
+            assert value.device == torch.device("cpu")
+        else:
+            assert value.device == torch.device(gpu_id)
+        # Either way, tensors returned should be full precision.
+        # TODO (epwalsh): remove this skip once https://github.com/facebookresearch/fairscale/pull/705
+        # is fixed.
+        if mixed_precision and "buffer" in name:
+            continue
+        assert value.dtype == torch.float, f"{name} is {value.dtype}"
 
     # Save state dict from each worker.
     torch.save(worker_state, os.path.join(test_dir, f"state_worker{gpu_id}.pt"))
 
     # Now we'll make sure we can successfully do a forward pass, backward pass, and optimizer step.
     optim = torch.optim.Adam(wrapped_model.model.parameters(), lr=0.0001)
+    x = torch.randint(12, (2, 6)).to(torch.device(gpu_id))
 
     # Do a forward pass.
-    x = torch.randint(12, (2, 6)).to(torch.device(gpu_id))
-    x = wrapped_model.model(x)
-    loss = x.sum()
+    with amp.autocast(enabled=mixed_precision):
+        x = wrapped_model.model(x)
+        loss = x.sum()
 
-    # And a backward pass + step.
-    loss.backward()
-    optim.step()
+    # And a backwards pass + optimizer step.
+    if scaler is not None:
+        scaler.scale(loss).backward()
+        scaler.step(optim)
+        scaler.update()
+    else:
+        loss.backward()
+        optim.step()
 
     # Now save final state.
     torch.save(wrapped_model.state_dict(), os.path.join(test_dir, f"final_state_worker{gpu_id}.pt"))
 
 
 class TestFairScaleFsdpWrapper(AllenNlpTestCase):
+    @pytest.mark.parametrize(
+        "mixed_precision",
+        (
+            False,
+            True,
+        ),
+    )
     @requires_multi_gpu
-    def test_distributed_loading(self):
-        run_distributed_test([0, 1], func=_dist_load, test_dir=self.TEST_DIR)
+    def test_distributed_loading_and_training(self, mixed_precision: bool):
+        run_distributed_test(
+            [0, 1],
+            func=_dist_load_and_train,
+            test_dir=self.TEST_DIR,
+            mixed_precision=mixed_precision,
+        )
 
         # Now make sure the saved state is exactly the same across workers
         state = torch.load(self.TEST_DIR / "state.pt", map_location="cpu")
@@ -169,6 +210,10 @@ class TestFairScaleFsdpWrapper(AllenNlpTestCase):
         for key, tensor in state.items():
             worker0_tensor = state_worker0[key]
             worker1_tensor = state_worker1[key]
+            # TODO (epwalsh): remove this skip once https://github.com/facebookresearch/fairscale/pull/705
+            # is fixed.
+            if mixed_precision and "buffer" in key:
+                continue
             assert_allclose(
                 tensor,
                 worker0_tensor,
