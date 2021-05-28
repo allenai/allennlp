@@ -116,37 +116,48 @@ class VilbertBackbone(Backbone):
         else:
             token_ids = text["tokens"]["tokens"]
 
+        if token_ids.shape[:-1] != box_features.shape[:-2]:
+            raise ValueError(
+                "Tokens and boxes must have the same batch size and extra "
+                "dimensions (if applicable). Token size {0} did not match "
+                "box feature size {1}.".format(
+                    token_ids.shape[:-1], box_features.shape[:-2]
+                )
+            )
+
         # Shape: (batch_size, num_tokens)
         token_type_ids = text["tokens"].get("type_ids")
         # Shape: (batch_size, num_tokens)
         attention_mask = text["tokens"].get("mask")
 
-        dimensions = box_features.shape
-        batch_size = dimensions[0]
-        feature_size = dimensions[-1]
-        rolled_dimensions = dimensions[1:-2]
+        box_feature_dimensions = box_features.shape
+        batch_size = box_feature_dimensions[0]
+        feature_size = box_feature_dimensions[-1]
+        rolled_dimensions = box_feature_dimensions[:-2]
         rolled_dimensions_product = 1
         for dim in rolled_dimensions:
             rolled_dimensions_product *= dim
 
-        if rolled_dimensions:
-            token_ids = token_ids.repeat_interleave(rolled_dimensions_product, 0)
-            if token_type_ids is not None:
-                token_type_ids = token_type_ids.repeat_interleave(rolled_dimensions_product, 0)
-            if attention_mask is not None:
-                attention_mask = attention_mask.repeat_interleave(rolled_dimensions_product, 0)
-
-            box_features = box_features.view(
-                batch_size * rolled_dimensions_product, dimensions[-2], feature_size
+        token_ids = token_ids.view(rolled_dimensions_product, token_ids.shape[-1])
+        if token_type_ids is not None:
+            token_type_ids = token_type_ids.view(
+                rolled_dimensions_product, token_type_ids.shape[-1]
             )
-            box_coordinates = box_coordinates.view(
-                batch_size * rolled_dimensions_product,
-                box_coordinates.shape[2],
-                box_coordinates.shape[3],
+        if attention_mask is not None:
+            attention_mask = attention_mask.view(
+                rolled_dimensions_product, attention_mask.shape[-1]
             )
-            box_mask = box_mask.view(batch_size * rolled_dimensions_product, box_mask.shape[2])
+        box_features = box_features.view(
+            rolled_dimensions_product, box_feature_dimensions[-2], feature_size
+        )
+        box_coordinates = box_coordinates.view(
+            rolled_dimensions_product,
+            box_coordinates.shape[-2],
+            box_coordinates.shape[-1],
+        )
+        box_mask = box_mask.view(rolled_dimensions_product, box_mask.shape[-1])
 
-        # Shape: (batch_size *  rolled_dimensions_product, num_tokens, embedding_dim)
+        # Shape: (rolled_dimensions_product, num_tokens, embedding_dim)
         embedding_output = self.text_embeddings(token_ids, token_type_ids)
         num_tokens = embedding_output.size(1)
 
@@ -160,7 +171,7 @@ class VilbertBackbone(Backbone):
 
         extended_image_attention_mask = box_mask
 
-        # Shape: (batch_size * rolled_dimensions_product, feature_size, num_tokens)
+        # Shape: (rolled_dimensions_product, feature_size, num_tokens)
         # TODO (epwalsh): Why all zeros?? This doesn't seem right.
         extended_co_attention_mask = torch.zeros(
             extended_image_attention_mask.shape[0],
@@ -169,7 +180,7 @@ class VilbertBackbone(Backbone):
             dtype=extended_image_attention_mask.dtype,
         )
 
-        # Shape: (batch_size * rolled_dimensions_product, num_boxes, image_embedding_dim)
+        # Shape: (rolled_dimensions_product, num_boxes, image_embedding_dim)
         v_embedding_output = self.image_embeddings(box_features, box_coordinates)
 
         encoded_layers_t, encoded_layers_v = self.encoder(
@@ -180,30 +191,24 @@ class VilbertBackbone(Backbone):
             extended_co_attention_mask,
         )
 
-        # Shape: (batch_size * rolled_dimensions_product, num_tokens, embedding_dim)
+        # Shape: (rolled_dimensions_product, num_tokens, embedding_dim)
         sequence_output_t = encoded_layers_t[:, :, :, -1]
-        # Shape: (batch_size * rolled_dimensions_product, num_boxes, image_embedding_dim)
+        # Shape: (rolled_dimensions_product, num_boxes, image_embedding_dim)
         sequence_output_v = encoded_layers_v[:, :, :, -1]
 
-        # Shape: (batch_size * rolled_dimensions_product, pooled_output_dim)
+        # Shape: (rolled_dimensions_product, pooled_output_dim)
         pooled_output_t = self.t_pooler(sequence_output_t)
-        # Shape: (batch_size * rolled_dimensions_product, pooled_output_dim)
+        # Shape: (rolled_dimensions_product, pooled_output_dim)
         pooled_output_v = self.v_pooler(sequence_output_v)
 
-        if rolled_dimensions:
-            unrolled_dimensions = (batch_size,) + rolled_dimensions
-            sequence_output_t = sequence_output_t.view(
-                unrolled_dimensions + (sequence_output_t.shape[-2], sequence_output_t.shape[-1])
-            )
-            sequence_output_v = sequence_output_v.view(
-                unrolled_dimensions + (sequence_output_v.shape[-2], sequence_output_v.shape[-1])
-            )
-            pooled_output_t = pooled_output_t.view(
-                unrolled_dimensions + (pooled_output_t.shape[-1],)
-            )
-            pooled_output_v = pooled_output_v.view(
-                unrolled_dimensions + (pooled_output_v.shape[-1],)
-            )
+        sequence_output_t = sequence_output_t.view(
+            rolled_dimensions + (sequence_output_t.shape[-2], sequence_output_t.shape[-1])
+        )
+        sequence_output_v = sequence_output_v.view(
+            rolled_dimensions + (sequence_output_v.shape[-2], sequence_output_v.shape[-1])
+        )
+        pooled_output_t = pooled_output_t.view(rolled_dimensions + (pooled_output_t.shape[-1],))
+        pooled_output_v = pooled_output_v.view(rolled_dimensions + (pooled_output_v.shape[-1],))
 
         if self.fusion_method == "sum":
             pooled_output = self.dropout(pooled_output_t + pooled_output_v)
