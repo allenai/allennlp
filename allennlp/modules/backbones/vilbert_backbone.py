@@ -120,9 +120,7 @@ class VilbertBackbone(Backbone):
             raise ValueError(
                 "Tokens and boxes must have the same batch size and extra "
                 "dimensions (if applicable). Token size {0} did not match "
-                "box feature size {1}.".format(
-                    token_ids.shape[:-1], box_features.shape[:-2]
-                )
+                "box feature size {1}.".format(token_ids.shape[:-1], box_features.shape[:-2])
             )
 
         # Shape: (batch_size, num_tokens)
