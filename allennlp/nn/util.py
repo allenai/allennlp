@@ -2199,6 +2199,7 @@ def _collect_state_dict(
     # This is the device we'll use for the broadcast operation.
     dist_device = distributed_device()
     # We'll keep tensors on CPU in the returned state dict.
+    # TODO (epwalsh): maybe make this configurable?
     state_dict_device = int_to_device(-1)
 
     missing_keys: List[str] = []
