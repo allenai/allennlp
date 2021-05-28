@@ -131,7 +131,6 @@ class VilbertBackbone(Backbone):
         attention_mask = text["tokens"].get("mask")
 
         box_feature_dimensions = box_features.shape
-        batch_size = box_feature_dimensions[0]
         feature_size = box_feature_dimensions[-1]
         rolled_dimensions = box_feature_dimensions[:-2]
         rolled_dimensions_product = 1
