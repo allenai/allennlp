@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Print the first batch to the console by default.
 - Renamed `sanity_checks` to `confidence_checks` (`sanity_checks` is deprecated and will be removed in AllenNLP 3.0).
 - VilBERT backbone now rolls and unrolls extra dimensions to handle input with > 3 dimensions.
+- Register `BeamSearch` with name `"beam_search"` and make this the `default_implementation`.
 
 ### Added
 
