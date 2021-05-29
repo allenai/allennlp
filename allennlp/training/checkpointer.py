@@ -214,7 +214,7 @@ class Checkpointer(Registrable):
 
     def load_checkpoint(self) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         """
-        Restores a model from a serialization_dir to the last saved checkpoint.
+        Loads model state from a `serialization_dir` corresponding to the last saved checkpoint.
         This includes a training state, which is serialized separately from model parameters. This function
         should only be used to continue training - if you wish to load a model for inference/load parts
         of a model into a new computation graph, you should use the native Pytorch functions:
