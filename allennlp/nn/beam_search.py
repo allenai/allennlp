@@ -5,7 +5,7 @@ import warnings
 from overrides import overrides
 import torch
 
-from allennlp.common import FromParams, Registrable
+from allennlp.common import Registrable
 from allennlp.common.checks import ConfigurationError
 from allennlp.nn.util import min_value_of_dtype
 
