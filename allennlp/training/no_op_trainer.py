@@ -1,10 +1,11 @@
 import os
-from contextlib import contextmanager
-from typing import Any, Dict, Iterator, Tuple
+from typing import Any, Dict, Optional
+
+import torch
 
 from allennlp.models import Model
 from allennlp.training.checkpointer import Checkpointer
-from allennlp.training.trainer import Trainer
+from allennlp.training.trainer import Trainer, TrainerCheckpoint
 
 
 @Trainer.register("no_op")
@@ -24,14 +25,24 @@ class NoOpTrainer(Trainer):
 
         super().__init__(serialization_dir, cuda_device=-1)
         self.model = model
+        self._best_model_filename: Optional[str] = None
 
     def train(self) -> Dict[str, Any]:
         assert self._serialization_dir is not None
         self.model.vocab.save_to_files(os.path.join(self._serialization_dir, "vocabulary"))
         checkpointer = Checkpointer(self._serialization_dir)
-        checkpointer.save_checkpoint(epoch=0, trainer=self, is_best_so_far=True)
+        checkpointer.save_checkpoint(self)
+
+        best_model_filename = os.path.join(self._serialization_dir, "best.th")
+        torch.save(self.model.state_dict(), best_model_filename)
+        self._best_model_filename = best_model_filename
+
         return {}
 
-    @contextmanager
-    def get_checkpoint_state(self) -> Iterator[Tuple[Dict[str, Any], Dict[str, Any]]]:
-        yield self.model.state_dict(), {}
+    def get_checkpoint_state(self) -> TrainerCheckpoint:
+        return TrainerCheckpoint(
+            self.model.state_dict(), {"epochs_completed": 0, "batches_in_epoch_completed": 0}
+        )
+
+    def get_best_weights_path(self) -> Optional[str]:
+        return self._best_model_filename

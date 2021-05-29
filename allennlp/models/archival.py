@@ -2,6 +2,7 @@
 Helper functions for archiving models and restoring archived models.
 """
 from os import PathLike
+from pathlib import Path
 from typing import Tuple, NamedTuple, Union, Dict, Any, List, Optional
 import logging
 import os
@@ -130,7 +131,11 @@ def archive_model(
     include_in_archive : `List[str]`, optional, (default = `None`)
         Paths relative to `serialization_dir` that should be archived in addition to the default ones.
     """
-    weights_file = os.path.join(serialization_dir, weights)
+    extra_copy_of_weights_just_for_mypy = Path(weights)
+    if extra_copy_of_weights_just_for_mypy.is_absolute():
+        weights_file = extra_copy_of_weights_just_for_mypy
+    else:
+        weights_file = Path(serialization_dir) / extra_copy_of_weights_just_for_mypy
     if not os.path.exists(weights_file):
         logger.error("weights file %s does not exist, unable to archive model", weights_file)
         return
