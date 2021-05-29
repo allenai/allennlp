@@ -156,6 +156,7 @@ jobs:
       run: |
         git clone https://github.com/allenai/allennlp-models.git
         cd allennlp-models
+        git checkout Checkpointing
         pip install --upgrade --upgrade-strategy eager -e . -r dev-requirements.txt
 
     - name: Run models tests
