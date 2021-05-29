@@ -524,7 +524,7 @@ class LengthNormalizedSequenceLogProbabilityScorer(FinalSequenceScorer):
         return average_log_probs
 
 
-class BeamSearch(FromParams):
+class BeamSearch(Registrable):
     """
     Implements the beam search algorithm for decoding the most likely sequences.
 
@@ -567,6 +567,8 @@ class BeamSearch(FromParams):
         specified, `SequenceLogProbabilityScorer` will be used, which scores the sequences
         by the sum of the token log probabilities.
     """
+
+    default_implementation = "beam_search"
 
     def __init__(
         self,
@@ -968,3 +970,6 @@ class BeamSearch(FromParams):
                     .gather(1, expanded_backpointer)
                     .reshape(batch_size * self.beam_size, *last_dims)
                 )
+
+
+BeamSearch.register("beam_search")(BeamSearch)
