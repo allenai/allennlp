@@ -532,8 +532,8 @@ class Constraint(Registrable):
     An abstract class that can be used to enforce constraints on the output predictions
     by manipulating the class log probabilities during beam search.
 
-    A `Constraint` just has three methods which need to be implemented: `init_state()`,
-    `apply()` and `update_state()`.
+    A `Constraint` just has three methods that need to be implemented by subclasses:
+    `init_state()`, `apply()` and `_update_state()`.
 
     `init_state()` takes one argument:
 
@@ -555,22 +555,6 @@ class Constraint(Registrable):
     the corresponding log probability to a negligible value such as `float("-inf")` or
     `min_value_of_dtype(class_log_probabilities.dtype)`.
 
-    `update_state()` takes three arguments:
-
-    - the constraint state, again, a nested list of dictionaries of length `batch_size`. Each inner list is
-    length `beam_size` except on the first call of `update_state()` when it is 1.
-    - last_predictions, a tensor of shape `(batch_size, beam_size)` containing the predictions from the last
-    step of beam search.
-    - last_backpointers, an optional tensor of size `(batch_size, beam_size)` containing the indices of the
-    parent beams for the last step of beam search corresponding to the predictions in `last_predictions`.
-    If `None`, this is the first step of beam search, so all backpointers are assumed to be index 0.
-
-    The `update_state()` method should create a new constraint state that reflects the latest predictions made
-    during beam search. Each prediction needs to have its own unique state so that it may be edited without
-    changing the data for predictions with the same parents. The method in the `Constraint` class takes care of
-    copying the parent state using the `copy.deepcopy()` function. If this works for your state, you only need
-    to implement `_update_state()` instead.
-
     `_update_state()` takes two arguments:
 
     - the copied parent constraint state, which is a nested list of dictionaries. `state[i][j]` contains the
@@ -580,7 +564,7 @@ class Constraint(Registrable):
     step of beam search.
 
     The `_update_state()` function should return a new constraint state, a nested list of dictionaries of
-    length `batch_size` and inner list length of `beam_size`, one for each of the predictions in `last_prediction`.
+    length `batch_size` and inner list of length `beam_size`, one for each of the predictions in `last_prediction`.
 
     """
 
@@ -1096,7 +1080,9 @@ class BeamSearch(FromParams):
                     constraint_states[i], restricted_predicted_classes
                 )
 
-        if (
+        # Warn about "-inf" log probabilities if not using any constraints (negligible
+        # log probabilities are expected when using constraints).
+        if not self.constraints and (
             not torch.isfinite(last_log_probabilities).all()
             or (last_log_probabilities == min_value_of_dtype(last_log_probabilities.dtype)).any()
         ):
