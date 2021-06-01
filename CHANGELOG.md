@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Renamed `sanity_checks` to `confidence_checks` (`sanity_checks` is deprecated and will be removed in AllenNLP 3.0).
 - Trainer callbacks can now store and restore state in case a training run gets interrupted.
 - VilBERT backbone now rolls and unrolls extra dimensions to handle input with > 3 dimensions.
+- `BeamSearch` is now a `Registrable` class.
 
 ### Added
 

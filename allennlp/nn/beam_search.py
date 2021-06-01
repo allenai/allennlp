@@ -6,7 +6,7 @@ import warnings
 from overrides import overrides
 import torch
 
-from allennlp.common import FromParams, Registrable
+from allennlp.common import Registrable
 from allennlp.common.checks import ConfigurationError
 from allennlp.nn.util import min_value_of_dtype
 
@@ -683,7 +683,7 @@ class RepeatedNGramBlockingConstraint(Constraint):
         return state
 
 
-class BeamSearch(FromParams):
+class BeamSearch(Registrable):
     """
     Implements the beam search algorithm for decoding the most likely sequences.
 
@@ -730,6 +730,8 @@ class BeamSearch(FromParams):
         An optional list of `Constraint`s which should be applied during beam search. If not
         provided, no constraints will be enforced.
     """
+
+    default_implementation = "beam_search"
 
     def __init__(
         self,
@@ -1180,3 +1182,6 @@ class BeamSearch(FromParams):
                     .gather(1, expanded_backpointer)
                     .reshape(batch_size * self.beam_size, *last_dims)
                 )
+
+
+BeamSearch.register("beam_search")(BeamSearch)
