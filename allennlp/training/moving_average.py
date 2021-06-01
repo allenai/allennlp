@@ -1,4 +1,4 @@
-from typing import Iterable, Tuple, Optional
+from typing import Iterable, Tuple, Optional, Any, Dict
 
 import torch
 
@@ -40,6 +40,14 @@ class MovingAverage(Registrable):
         """
         for name, parameter in self._parameters:
             parameter.data.copy_(self._backups[name])
+
+    def state_dict(self) -> Dict[str, Any]:
+        return {"parameters": self._parameters, "shadows": self._shadows, "backups": self._backups}
+
+    def load_state_dict(self, state_dict: Dict[str, Any]) -> None:
+        self._parameters = state_dict["parameters"]
+        self._shadows = state_dict["shadows"]
+        self._backups = state_dict["backups"]
 
 
 @MovingAverage.register("exponential")
