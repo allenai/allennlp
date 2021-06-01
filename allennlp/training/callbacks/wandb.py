@@ -11,7 +11,7 @@ from allennlp.training.callbacks.log_writer import LogWriterCallback
 
 
 if TYPE_CHECKING:
-    from allennlp.training.trainer import GradientDescentTrainer
+    from allennlp.training.gradient_descent_trainer import GradientDescentTrainer
 
 
 logger = logging.getLogger(__name__)
@@ -127,7 +127,7 @@ class WandBCallback(LogWriterCallback):
             dict_to_log = {f"{log_prefix}/{k}": v for k, v in dict_to_log.items()}
         if epoch is not None:
             dict_to_log["epoch"] = epoch
-        self.wandb.log(dict_to_log, step=self.trainer._batch_num_total)  # type: ignore
+        self.wandb.log(dict_to_log, step=self.trainer._total_batches_completed)  # type: ignore
 
     @overrides
     def on_start(

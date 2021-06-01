@@ -10,7 +10,7 @@ from allennlp.training.callbacks.callback import TrainerCallback
 from allennlp.training.util import get_train_and_validation_metrics, get_batch_size
 
 if TYPE_CHECKING:
-    from allennlp.training.trainer import GradientDescentTrainer
+    from allennlp.training.gradient_descent_trainer import GradientDescentTrainer
 
 
 logger = logging.getLogger(__name__)
@@ -289,15 +289,17 @@ class LogWriterCallback(TrainerCallback):
         )
 
     def _should_log_distributions_next_batch(self) -> bool:
+        assert self.trainer is not None
         return (
             self._distribution_interval is not None
-            and (self.trainer._batch_num_total + 1) % self._distribution_interval == 0  # type: ignore[union-attr]
+            and (self.trainer._total_batches_completed + 1) % self._distribution_interval == 0
         )
 
     def _should_log_distributions_this_batch(self) -> bool:
+        assert self.trainer is not None
         return (
             self._distribution_interval is not None
-            and self.trainer._batch_num_total % self._distribution_interval == 0  # type: ignore[union-attr]
+            and self.trainer._total_batches_completed % self._distribution_interval == 0
         )
 
     def _enable_activation_logging(self) -> None:
@@ -318,7 +320,7 @@ class LogWriterCallback(TrainerCallback):
                 self._module_hook_handles.append(module.register_forward_hook(hook))
 
     def _should_log_this_batch(self) -> bool:
-        return self.trainer._batch_num_total % self._summary_interval == 0  # type: ignore[union-attr]
+        return self.trainer._total_batches_completed % self._summary_interval == 0  # type: ignore[union-attr]
 
     def _log_activation_distribution(self, outputs: Any, module_name: str) -> None:
         activations_to_log: Dict[str, torch.Tensor] = {}
