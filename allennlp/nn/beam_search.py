@@ -530,7 +530,7 @@ class LengthNormalizedSequenceLogProbabilityScorer(FinalSequenceScorer):
 class Constraint(Registrable):
     """
     An abstract class that can be used to enforce constraints on the output predictions
-    by manipulate the class log probabilities during beam search.
+    by manipulating the class log probabilities during beam search.
 
     A `Constraint` just has three methods which need to be implemented: `init_state()`,
     `apply()` and `update_state()`.
@@ -550,9 +550,10 @@ class Constraint(Registrable):
     - `class_log_probabilities`, a tensor of shape `(batch_size, beam_size, num_classes)` that contains the
     log probabilities for the classes during search. The first time `apply()` is called, `beam_size = 1`.
 
-    The `apply()` method should manipulate the `class_log_probabilities` in place to enforce the constraint
+    The `apply()` method should return new `class_log_probabilities` that enforce the constraint
     for this step of beam search. For instance, it may prevent a specific class from being selected by setting
-    the corresponding log probability to `-inf` (by using `min_value_of_dtype(class_log_probabilities.dtype)`).
+    the corresponding log probability to a negligible value such as `float("-inf")` or
+    `min_value_of_dtype(class_log_probabilities.dtype)`.
 
     `update_state()` takes three arguments:
 
@@ -593,7 +594,7 @@ class Constraint(Registrable):
         self,
         state: ConstraintStateType,
         class_log_probabilities: torch.Tensor,
-    ) -> None:
+    ) -> torch.Tensor:
         raise NotImplementedError
 
     @staticmethod
@@ -656,7 +657,7 @@ class RepeatedNGramBlockingConstraint(Constraint):
         self,
         state: ConstraintStateType,
         class_log_probabilities: torch.Tensor,
-    ) -> None:
+    ) -> torch.Tensor:
         for i, batch in enumerate(state):
             for j, beam in enumerate(batch):
                 current_prefix = tuple(beam["current_prefix"])
@@ -670,6 +671,7 @@ class RepeatedNGramBlockingConstraint(Constraint):
                     # We have not seen this prefix before, so there is no index
                     # that needs to be blocked
                     pass
+        return class_log_probabilities
 
     @overrides
     def _update_state(
@@ -816,15 +818,14 @@ class BeamSearch(FromParams):
         Given a starting state and a step function, apply beam search to find the
         most likely target sequences.
 
-        # Notes
-
-        If your step function returns `-inf` for some log probabilities
-        (like if you're using a masked log-softmax) then some of the "best"
-        sequences returned may also have `-inf` log probability. Specifically
-        this happens when the beam size is smaller than the number of actions
-        with finite log probability (non-zero probability) returned by the step function.
-        Therefore if you're using a mask you may want to check the results from `search`
-        and potentially discard sequences with non-finite log probability.
+        !!! Note
+            If your step function returns `-inf` for some log probabilities
+            (like if you're using a masked log-softmax) then some of the "best"
+            sequences returned may also have `-inf` log probability. Specifically
+            this happens when the beam size is smaller than the number of actions
+            with finite log probability (non-zero probability) returned by the step function.
+            Therefore if you're using a mask you may want to check the results from `search`
+            and potentially discard sequences with non-finite log probability.
 
         # Parameters
 
@@ -923,15 +924,21 @@ class BeamSearch(FromParams):
             start_class_log_probabilities, batch_size, num_classes
         )
 
-        for constraint, constraint_state in zip(self.constraints, constraint_states):
+        # Apply all constraints.
+        if self.constraints:
             # shape: (batch_size, 1, num_classes)
             expanded_start_class_log_probabilities = start_class_log_probabilities.unsqueeze(1)
-
-            constraint.apply(constraint_state, expanded_start_class_log_probabilities)
+            for constraint, constraint_state in zip(self.constraints, constraint_states):
+                expanded_start_class_log_probabilities = constraint.apply(
+                    constraint_state, expanded_start_class_log_probabilities
+                )
+            start_class_log_probabilities = expanded_start_class_log_probabilities.squeeze(1)
 
         # Prevent selecting the end symbol if there is any min_steps constraint
         if self.min_steps >= 1:
-            start_class_log_probabilities[:, self._end_index] = float("-inf")
+            start_class_log_probabilities[:, self._end_index] = min_value_of_dtype(
+                start_class_log_probabilities.dtype
+            )
 
         # Get the initial predicted classed and their log probabilities.
         # shape: (batch_size, beam_size), (batch_size, beam_size)
@@ -959,7 +966,8 @@ class BeamSearch(FromParams):
         # Log probability tensor that mandates that the end token is selected.
         # shape: (batch_size * beam_size, num_classes)
         log_probs_after_end = start_class_log_probabilities.new_full(
-            (batch_size * self.beam_size, num_classes), float("-inf")
+            (batch_size * self.beam_size, num_classes),
+            min_value_of_dtype(start_class_log_probabilities.dtype),
         )
         log_probs_after_end[:, self._end_index] = 0.0
 
@@ -984,19 +992,29 @@ class BeamSearch(FromParams):
             # shape: (batch_size * beam_size, num_classes)
             class_log_probabilities, state = step(last_predictions, state, timestep + 1)
 
-            for constraint, constraint_state in zip(self.constraints, constraint_states):
+            # Apply all constraints.
+            if self.constraints:
                 # shape: (batch_size, beam_size, num_classes)
                 reshaped_class_log_probabilities = class_log_probabilities.view(
                     batch_size, self.beam_size, -1
                 )
-                constraint.apply(constraint_state, reshaped_class_log_probabilities)
+                for constraint, constraint_state in zip(self.constraints, constraint_states):
+                    reshaped_class_log_probabilities = constraint.apply(
+                        constraint_state, reshaped_class_log_probabilities
+                    )
+                # shape: (batch_size * beam_size, num_classes)
+                class_log_probabilities = reshaped_class_log_probabilities.view(
+                    batch_size * self.beam_size, -1
+                )
 
             # The `timestep`-th iteration of the for loop is generating the `timestep + 2`-th token
             # of the sequence (because `timestep` is 0-indexed and we generated the first token
             # before the for loop). Here we block the end index if the search is not allowed to
             # terminate on this iteration.
             if timestep + 2 <= self.min_steps:
-                class_log_probabilities[:, self._end_index] = float("-inf")
+                class_log_probabilities[:, self._end_index] = min_value_of_dtype(
+                    class_log_probabilities.dtype
+                )
 
             # shape: (batch_size * beam_size, num_classes)
             last_predictions_expanded = last_predictions.unsqueeze(-1).expand(
@@ -1078,9 +1096,13 @@ class BeamSearch(FromParams):
                     constraint_states[i], restricted_predicted_classes
                 )
 
-        if not torch.isfinite(last_log_probabilities).all():
+        if (
+            not torch.isfinite(last_log_probabilities).all()
+            or (last_log_probabilities == min_value_of_dtype(last_log_probabilities.dtype)).any()
+        ):
             warnings.warn(
-                "Infinite log probabilities encountered. Some final sequences may not make sense. "
+                "Negligible log probabilities encountered ('-inf' or equivalent). "
+                "Some final sequences may not make sense. "
                 "This can happen when the beam size is larger than the number of valid (non-zero "
                 "probability) transitions that the step function produces.",
                 RuntimeWarning,

@@ -305,11 +305,12 @@ class BeamSearchTest(AllenNlpTestCase):
         self.beam_search.min_steps = 0
         expected_top_k = np.array([[5]])
         expected_log_probs = np.log(np.array([0.9]))
-        self._check_results(
-            expected_top_k=expected_top_k,
-            expected_log_probs=expected_log_probs,
-            take_step=take_short_sequence_step,
-        )
+        with pytest.warns(RuntimeWarning, match="Empty sequences predicted"):
+            self._check_results(
+                expected_top_k=expected_top_k,
+                expected_log_probs=expected_log_probs,
+                take_step=take_short_sequence_step,
+            )
 
         self.beam_search.min_steps = 1
         expected_top_k = np.array([[1, 5]])
@@ -364,7 +365,7 @@ class BeamSearchTest(AllenNlpTestCase):
         # next beams will result in 2 new beams that are invalid, in that have probability of 0.
         # The beam search should warn us of this.
         initial_predictions = torch.LongTensor([self.end_index - 1, self.end_index - 1])
-        with pytest.warns(RuntimeWarning, match="Infinite log probabilities"):
+        with pytest.warns(RuntimeWarning, match="Negligible log probabilities"):
             self.beam_search.search(initial_predictions, {}, take_step_no_timestep)
 
     def test_empty_sequences(self):
