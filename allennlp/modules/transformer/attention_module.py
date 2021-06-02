@@ -5,6 +5,7 @@ import torch
 import torch.nn.functional as F
 
 from allennlp.common import FromParams
+from allennlp.common.checks import ConfigurationError
 from allennlp.modules.attention import Attention
 from allennlp.modules.transformer.transformer_module import TransformerModule
 from allennlp.modules.transformer.util import apply_mask, FloatT, IntT, BoolT
@@ -63,9 +64,9 @@ class AttentionModule(TransformerModule, FromParams):
     is_cross_attention: `bool` (default = `False`)
         Whether this module is being used for cross-attention in a decoder stack or not.
         If `is_cross_attention` is `True`, then `is_decoder` must also be `True`.
-    has_relative_attention_bias: `bool` (default = `False`)
-    relative_attention_num_buckets: `int` (default = `32`)
-        This is ignored if `has_relative_attention_bias` is set to `False`.
+    relative_attention_num_buckets: `int`,  optional (default = `None`)
+        The number of buckets to use in relative attention; if `None`, relative attention
+        will not be applied.
     """
 
     def __init__(
@@ -80,21 +81,22 @@ class AttentionModule(TransformerModule, FromParams):
         normalize_weights: bool = False,
         is_decoder: bool = False,
         is_cross_attention: bool = False,
-        has_relative_attention_bias: bool = False,
-        relative_attention_num_buckets: int = 32,
+        relative_attention_num_buckets: Optional[int] = None,
     ):
 
         super().__init__()
 
         if hidden_size % num_attention_heads != 0:
-            raise ValueError(
+            raise ConfigurationError(
                 "The hidden size (%d) is not a multiple of the number of attention "
                 "heads (%d)" % (hidden_size, num_attention_heads)
             )
 
-        if is_cross_attention:
-            assert is_decoder, "The attention layer can be a cross-attention layer only "
-            "if it is within a decoder."
+        if is_cross_attention and not is_decoder:
+            raise ConfigurationError(
+                "The attention layer can be a cross-attention layer only "
+                "if it is within a decoder."
+            )
 
         self.hidden_size = hidden_size
         self.num_attention_heads = num_attention_heads
@@ -117,10 +119,9 @@ class AttentionModule(TransformerModule, FromParams):
         else:
             self.attn = Attention.by_name(self.scoring_func)()
 
-        self.has_relative_attention_bias = has_relative_attention_bias
         self.relative_attention_num_buckets = relative_attention_num_buckets
 
-        if self.has_relative_attention_bias:
+        if self.relative_attention_num_buckets is not None:
             self.relative_attention_bias = torch.nn.Embedding(
                 self.relative_attention_num_buckets, self.num_attention_heads
             )
@@ -133,7 +134,7 @@ class AttentionModule(TransformerModule, FromParams):
         if normalize_weights:
             self._normalize()
 
-    def _normalize(self):
+    def _normalize(self) -> None:
         self.query.weight.data.normal_(
             mean=0.0, std=(self.hidden_size * self.attention_head_size) ** -0.5
         )
@@ -145,10 +146,10 @@ class AttentionModule(TransformerModule, FromParams):
                 mean=0.0, std=(self.num_attention_heads * self.attention_head_size) ** -0.5
             )
 
-        if hasattr(self, "has_relative_attention_bias") and self.has_relative_attention_bias:
+        if hasattr(self, "relative_attention_bias"):
             self.relative_attention_bias.weight.data.normal_(mean=0.0, std=self.hidden_size ** -0.5)
 
-    def _transpose_for_scores(self, x: torch.Tensor):
+    def _transpose_for_scores(self, x: torch.Tensor) -> torch.Tensor:
         new_x_shape = x.size()[:-1] + (
             self.num_attention_heads,
             self.attention_head_size,
@@ -156,7 +157,7 @@ class AttentionModule(TransformerModule, FromParams):
         x = x.view(*new_x_shape)
         return x.permute(0, 2, 1, 3)
 
-    def _query_layer(self, query_states: torch.Tensor):
+    def _query_layer(self, query_states: torch.Tensor) -> torch.Tensor:
         mixed_query_layer = self.query(query_states)
         query_layer = self._transpose_for_scores(mixed_query_layer)
         return query_layer
@@ -167,7 +168,7 @@ class AttentionModule(TransformerModule, FromParams):
         layer: torch.nn.Linear,
         source_states: Optional[torch.Tensor] = None,
         past_key_or_value: Optional[torch.Tensor] = None,
-    ):
+    ) -> torch.Tensor:
         # TODO: clarify logic in terms of is_decoder and is_cross_attention
         # to make it more readable.
         if source_states is None:
@@ -193,15 +194,15 @@ class AttentionModule(TransformerModule, FromParams):
 
     def _position_bias(
         self,
-        position_bias,
-        seq_lengths,
-        past_key_states,
-        attention_scores,
-    ):
+        position_bias: Optional[torch.Tensor],
+        seq_lengths: Tuple[int, int, int],
+        past_key_states: Optional[torch.Tensor],
+        attention_scores: torch.Tensor,
+    ) -> torch.Tensor:
         seq_length, real_seq_length, key_length = seq_lengths
 
         if position_bias is None:
-            if self.has_relative_attention_bias:
+            if self.relative_attention_num_buckets is not None:
                 position_bias = self.compute_bias(real_seq_length, key_length)
             else:
                 position_bias = torch.zeros(
@@ -222,8 +223,8 @@ class AttentionModule(TransformerModule, FromParams):
         key_layer: torch.Tensor,
         attention_mask: torch.Tensor,
         head_mask: torch.Tensor,
+        seq_lengths: Tuple[int, int, int],
         position_bias: Optional[torch.Tensor] = None,
-        seq_lengths: Optional[Tuple[int, int, int]] = None,
         past_key_states: Optional[torch.Tensor] = None,
         **kwargs,
     ):
@@ -233,14 +234,10 @@ class AttentionModule(TransformerModule, FromParams):
             position_bias, seq_lengths, past_key_states, attention_scores
         )
 
-        if position_bias is not None:
-            if attention_mask is not None:
-                # Shape: (batch_size, num_heads, seq_length, key_length)
-                position_bias = apply_mask(position_bias, attention_mask)
-            attention_scores += position_bias
-        else:
-            if attention_mask is not None:
-                attention_scores = apply_mask(attention_scores, attention_mask)
+        if attention_mask is not None:
+            # Shape: (batch_size, num_heads, seq_length, key_length)
+            position_bias = apply_mask(position_bias, attention_mask)
+        attention_scores += position_bias
 
         attention_probs = torch.nn.Softmax(dim=-1)(attention_scores)
 
@@ -264,7 +261,13 @@ class AttentionModule(TransformerModule, FromParams):
 
         return context_layer
 
-    def _get_lengths(self, query_states, past_key_states, source_states, query_length):
+    def _get_lengths(
+        self,
+        query_states: torch.Tensor,
+        past_key_states: Optional[torch.Tensor] = None,
+        source_states: Optional[torch.Tensor] = None,
+        query_length: Optional[int] = None,
+    ) -> Tuple[int, int, int]:
 
         seq_length = query_states.shape[1]
         effective_seq_len = seq_length
@@ -344,8 +347,8 @@ class AttentionModule(TransformerModule, FromParams):
             key_layer,
             attention_mask,
             head_mask,
-            position_bias,
             seq_lengths,
+            position_bias,
             past_key_states,
         )
 
@@ -354,6 +357,10 @@ class AttentionModule(TransformerModule, FromParams):
         present_key_value_state = (
             (key_layer, value_layer) if (self.is_decoder and use_cache) else None
         )
+
+        if not output_attentions:
+            attention_probs = None
+
         outputs = AttentionOutput(
             context_layer, present_key_value_state, position_bias, attention_probs
         )
@@ -423,7 +430,7 @@ class AttentionModule(TransformerModule, FromParams):
         relative_position_bucket = self._relative_position_bucket(
             relative_position,  # shape (query_length, key_length)
             bidirectional=(not self.is_decoder),
-            num_buckets=self.relative_attention_num_buckets,
+            num_buckets=self.relative_attention_num_buckets,  # type: ignore
         )
         relative_position_bucket = relative_position_bucket.to(
             self.relative_attention_bias.weight.device
@@ -460,6 +467,9 @@ class T5Attention(AttentionModule):
         is_cross_attention: bool = False,
     ):
 
+        if not has_relative_attention_bias:
+            relative_attention_num_buckets = None  # type: ignore
+
         super().__init__(
             hidden_size=hidden_size,
             attention_head_size=key_value_proj_dim,
@@ -471,7 +481,6 @@ class T5Attention(AttentionModule):
             normalize_weights=normalize,
             is_decoder=is_decoder,
             is_cross_attention=is_cross_attention,
-            has_relative_attention_bias=has_relative_attention_bias,
             relative_attention_num_buckets=relative_attention_num_buckets,
         )
 
@@ -599,7 +608,7 @@ class SelfAttention(AttentionModule):
         final_kwargs["num_attention_heads"] = config.num_attention_heads
         final_kwargs["output_linear"] = hasattr(
             config, "n_heads"
-        )  # Since this is the distilbert case.
+        )  # This is the distilbert case; they have a linear layer as the output.
         if hasattr(config, "attention_dropout"):
             final_kwargs["dropout"] = config.attention_dropout
         else:

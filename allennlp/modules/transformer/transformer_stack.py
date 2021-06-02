@@ -1,5 +1,6 @@
-from typing import Union, Optional, TYPE_CHECKING
+from typing import Union, Optional, Tuple, TYPE_CHECKING
 import logging
+from dataclasses import dataclass
 
 import torch
 
@@ -7,12 +8,25 @@ from allennlp.common import FromParams
 from allennlp.modules.util import replicate_layers
 from allennlp.modules.transformer.transformer_layer import TransformerLayer
 from allennlp.modules.transformer.transformer_module import TransformerModule
+from allennlp.modules.transformer.util import FloatT
 
 if TYPE_CHECKING:
     from transformers.configuration_utils import PretrainedConfig
 
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class TransformerStackOutput:
+    """
+    Encapsulates the outputs of the `TransformerLayer` module.
+    """
+
+    final_hidden_states: FloatT
+    all_hidden_states: Optional[Tuple] = None
+    all_self_attentions: Optional[Tuple] = None
+    all_cross_attentions: Optional[Tuple] = None
 
 
 class TransformerStack(TransformerModule, FromParams):
@@ -87,7 +101,7 @@ class TransformerStack(TransformerModule, FromParams):
         encoder_attention_mask: Optional[torch.Tensor] = None,
         output_attentions: bool = False,
         output_hidden_states: bool = False,
-    ):
+    ) -> TransformerStackOutput:
         """
         # Parameters
 
@@ -118,7 +132,7 @@ class TransformerStack(TransformerModule, FromParams):
                 encoder_attention_mask,
                 output_attentions,
             )
-            hidden_states = layer_outputs[0]
+            hidden_states = layer_outputs.hidden_states
             if output_attentions:
                 all_attentions = all_attentions + (layer_outputs[1],)  # type: ignore
                 if self._add_cross_attention:
@@ -127,10 +141,8 @@ class TransformerStack(TransformerModule, FromParams):
         if output_hidden_states:
             all_hidden_states = all_hidden_states + (hidden_states,)  # type: ignore
 
-        return tuple(
-            v
-            for v in [hidden_states, all_hidden_states, all_attentions, all_cross_attentions]
-            if v is not None
+        return TransformerStackOutput(
+            hidden_states, all_hidden_states, all_attentions, all_cross_attentions
         )
 
     @classmethod

@@ -13,8 +13,7 @@ from torch.nn import CrossEntropyLoss
 
 from allennlp.common import FromParams, Params, Lazy, Registrable
 from allennlp.common.checks import ConfigurationError
-from allennlp.modules.transformer import TransformerModule
-
+from allennlp.modules.transformer.transformer_module import TransformerModule
 from allennlp.modules.transformer.attention_module import (
     T5Attention,
     AttentionOutput,
@@ -142,6 +141,10 @@ class T5LayerSelfAttention(TransformerModule, FromParams):
         )
         self.layer_norm = layer_norm or T5LayerNorm(hidden_size=self.self_attention.hidden_size)
         self.dropout = nn.Dropout(dropout)
+
+    @property
+    def hidden_size(self) -> int:
+        return self.self_attention.hidden_size
 
     def forward(
         self,
@@ -271,7 +274,7 @@ class T5Block(TransformerModule, FromParams):
 
     @property
     def hidden_size(self) -> int:
-        return self.layer[0].self_attention.hidden_size
+        return self.layer[0].hidden_size
 
     def forward(
         self,
