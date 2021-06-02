@@ -55,7 +55,7 @@ def test_transformer_stack_from_params(params):
         hidden_states, attention_mask=attention_mask
     )
 
-    assert torch.allclose(from_layer_output[0], output[0])
+    assert torch.allclose(from_layer_output.final_hidden_states, output.final_hidden_states)
 
     # Make sure forward pass raises with bad input.
     with pytest.raises(AssertionError):
@@ -102,7 +102,7 @@ def test_loading_from_pretrained(pretrained_model_name):
     torch.manual_seed(SEED)
     hf_output = pretrained_module(hidden_states, attention_mask=attention_mask_hf)
 
-    assert torch.allclose(output[0], hf_output[0])
+    assert torch.allclose(output.final_hidden_states, hf_output[0])
 
 
 def test_loading_partial_pretrained_weights():

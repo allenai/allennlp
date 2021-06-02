@@ -131,7 +131,7 @@ from allennlp.modules.transformer.transformer_embeddings import (
     TransformerEmbeddings,
     ImageFeatureEmbeddings,
 )
-from allennlp.modules.transformer.self_attention import SelfAttention
+from allennlp.modules.transformer.attention_module import SelfAttention, T5Attention
 from allennlp.modules.transformer.activation_layer import ActivationLayer
 from allennlp.modules.transformer.transformer_layer import AttentionLayer, TransformerLayer
 from allennlp.modules.transformer.transformer_stack import TransformerStack

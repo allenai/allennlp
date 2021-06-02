@@ -44,7 +44,7 @@ def test_attention(attention_params):
     assert attention_layer.self.query.in_features == attention_params["hidden_size"]
     assert attention_layer.self.key.in_features == attention_params["hidden_size"]
     assert attention_layer.self.value.in_features == attention_params["hidden_size"]
-    assert attention_layer.self.dropout.p == attention_params["attention_dropout"]
+    assert attention_layer.self.dropout == attention_params["attention_dropout"]
 
     assert attention_layer.output.dense.in_features == attention_params["hidden_size"]
     assert attention_layer.output.dense.out_features == attention_params["hidden_size"]
@@ -87,7 +87,7 @@ def test_attention_matches_huggingface(attention_params, module_name, hf_module)
     torch.manual_seed(1234)
     hf_output = hf_module(hidden_states, attention_mask=attention_mask_hf)
 
-    assert torch.allclose(output[0], hf_output[0])
+    assert torch.allclose(output.hidden_states, hf_output[0])
 
 
 @pytest.mark.parametrize(
@@ -126,7 +126,7 @@ def test_attention_from_pretrained(pretrained_name, relevant_top_level_module):
     attention_mask_hf = (1.0 - attention_mask_hf) * -10e5
 
     torch.manual_seed(1234)
-    output = module(hidden_states, attention_mask=attention_mask.squeeze())[0]
+    output = module(hidden_states, attention_mask=attention_mask.squeeze()).hidden_states
 
     torch.manual_seed(1234)
     hf_output = pretrained_module(hidden_states, attention_mask=attention_mask_hf)[0]
@@ -166,7 +166,7 @@ def test_layer(layer_params):
     assert transformer_layer.attention.self.query.in_features == layer_params["hidden_size"]
     assert transformer_layer.attention.self.key.in_features == layer_params["hidden_size"]
     assert transformer_layer.attention.self.value.in_features == layer_params["hidden_size"]
-    assert transformer_layer.attention.self.dropout.p == layer_params["attention_dropout"]
+    assert transformer_layer.attention.self.dropout == layer_params["attention_dropout"]
 
     assert transformer_layer.attention.output.dense.in_features == layer_params["hidden_size"]
     assert transformer_layer.attention.output.dense.out_features == layer_params["hidden_size"]
@@ -243,7 +243,7 @@ def test_layer_matches_huggingface(layer_params, module_name, hf_module):
     torch.manual_seed(1234)
     hf_output = hf_module(hidden_states, attention_mask=attention_mask_hf)
 
-    assert torch.allclose(output[0], hf_output[0])
+    assert torch.allclose(output.hidden_states, hf_output[0])
 
 
 @pytest.mark.parametrize(
@@ -282,7 +282,7 @@ def test_layer_from_pretrained(pretrained_name, relevant_top_level_module):
     attention_mask_hf = (1.0 - attention_mask_hf) * -10e5
 
     torch.manual_seed(1234)
-    output = module(hidden_states, attention_mask=attention_mask.squeeze())[0]
+    output = module(hidden_states, attention_mask=attention_mask.squeeze()).hidden_states
 
     torch.manual_seed(1234)
     hf_output = pretrained_module(hidden_states, attention_mask=attention_mask_hf)[0]

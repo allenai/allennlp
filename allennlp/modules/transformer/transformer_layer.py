@@ -1,12 +1,14 @@
 from typing import Union, Optional, TYPE_CHECKING
+from dataclasses import dataclass
 
 import torch
 
 from allennlp.common import FromParams
 from allennlp.modules.transformer.transformer_module import TransformerModule
 from allennlp.modules.transformer.activation_layer import ActivationLayer
-from allennlp.modules.transformer.self_attention import SelfAttention
+from allennlp.modules.transformer.attention_module import SelfAttention, AttentionOutput
 from allennlp.modules.transformer.output_layer import OutputLayer
+from allennlp.modules.transformer.util import FloatT
 
 if TYPE_CHECKING:
     from transformers.configuration_utils import PretrainedConfig
@@ -38,9 +40,17 @@ class AttentionLayer(TransformerModule, FromParams):
         num_attention_heads: int,
         attention_dropout: float = 0.0,
         hidden_dropout: float = 0.0,
+        is_cross_attention: bool = False,
+        is_decoder: bool = False,
     ):
         super().__init__()
-        self.self = SelfAttention(hidden_size, num_attention_heads, attention_dropout)
+        self.self = SelfAttention(
+            hidden_size,
+            num_attention_heads,
+            attention_dropout,
+            is_cross_attention=is_cross_attention,
+            is_decoder=is_decoder,
+        )
         self.output = OutputLayer(hidden_size, hidden_size, hidden_dropout)
 
     def forward(
@@ -69,14 +79,19 @@ class AttentionLayer(TransformerModule, FromParams):
 
         self_output = self.self(
             input_tensor,
-            encoder_hidden_states,
-            encoder_hidden_states,
-            attention_mask,
-            head_mask,
-            output_attentions,
+            source_states=encoder_hidden_states,
+            attention_mask=attention_mask,
+            head_mask=head_mask,
+            output_attentions=output_attentions,
         )
-        attention_output = self.output(self_output[0], input_tensor)
-        outputs = (attention_output,) + self_output[1:]  # add attentions if we output them
+
+        attention_output = self.output(self_output.hidden_states, input_tensor)
+        outputs = AttentionOutput(
+            attention_output,
+            self_output.key_value_state,
+            self_output.position_bias,
+            self_output.attention_probs,
+        )
         return outputs
 
     @classmethod
@@ -90,6 +105,17 @@ class AttentionLayer(TransformerModule, FromParams):
 
         final_kwargs.update(**kwargs)
         return cls(**final_kwargs)
+
+
+@dataclass
+class TransformerLayerOutput:
+    """
+    Encapsulates the outputs of the `TransformerLayer` module.
+    """
+
+    hidden_states: FloatT
+    self_attention_probs: Optional[FloatT] = None
+    cross_attention_probs: Optional[FloatT] = None
 
 
 class TransformerLayer(TransformerModule, FromParams):
@@ -149,6 +175,8 @@ class TransformerLayer(TransformerModule, FromParams):
                 num_attention_heads=num_attention_heads,
                 attention_dropout=attention_dropout,
                 hidden_dropout=hidden_dropout,
+                is_cross_attention=True,
+                is_decoder=True,
             )
 
         self.intermediate = ActivationLayer(
@@ -166,7 +194,7 @@ class TransformerLayer(TransformerModule, FromParams):
         encoder_hidden_states: Optional[torch.Tensor] = None,
         encoder_attention_mask: Optional[torch.Tensor] = None,
         output_attentions: bool = False,
-    ):
+    ) -> TransformerLayerOutput:
         """
         # Parameters
 
@@ -186,8 +214,9 @@ class TransformerLayer(TransformerModule, FromParams):
             head_mask,
             output_attentions=output_attentions,
         )
-        attention_output = attention_outputs[0]
-        outputs = attention_outputs[1:]  # add self attentions if we output attention weights
+        attention_output = attention_outputs.hidden_states
+        self_attention_probs = attention_outputs.attention_probs
+        cross_attention_probs = None
 
         if encoder_hidden_states is not None:
             assert hasattr(
@@ -203,14 +232,13 @@ class TransformerLayer(TransformerModule, FromParams):
                 encoder_attention_mask,
                 output_attentions,
             )
-            attention_output = cross_attention_outputs[0]
-            outputs = (
-                outputs + cross_attention_outputs[1:]
-            )  # add cross attentions if we output attention weights
+            attention_output = cross_attention_outputs.hidden_states
+            cross_attention_probs = cross_attention_outputs.attention_probs
 
         intermediate_output = self.intermediate(attention_output)
         layer_output = self.output(intermediate_output, attention_output)
-        outputs = (layer_output,) + outputs
+
+        outputs = TransformerLayerOutput(layer_output, self_attention_probs, cross_attention_probs)
         return outputs
 
     @classmethod
