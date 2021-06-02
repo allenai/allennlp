@@ -2,8 +2,9 @@ import os
 import logging
 import random
 
-from allennlp.common.logging import AllenNlpLogger
+from allennlp.common.logging import AllenNlpLogger, prepare_global_logging
 from allennlp.common.testing import AllenNlpTestCase
+from allennlp.common.tqdm import Tqdm
 
 
 class TestLogging(AllenNlpTestCase):
@@ -64,3 +65,18 @@ class TestLogging(AllenNlpTestCase):
         logger = logging.getLogger("test_logger")
 
         assert isinstance(logger, AllenNlpLogger)
+
+    def test_reset_tqdm_logger_handlers(self):
+        serialization_dir_a = os.path.join(self.TEST_DIR, "test_a")
+        os.makedirs(serialization_dir_a, exist_ok=True)
+        prepare_global_logging(serialization_dir_a)
+        serialization_dir_b = os.path.join(self.TEST_DIR, "test_b")
+        os.makedirs(serialization_dir_b, exist_ok=True)
+        prepare_global_logging(serialization_dir_b)
+        # Use range(1) to make sure there should be only 2 lines in the file (0% and 100%)
+        for _ in Tqdm.tqdm(range(1)):
+            pass
+        with open(os.path.join(serialization_dir_a, "out.log"), "r") as f:
+            assert len(f.readlines()) == 0
+        with open(os.path.join(serialization_dir_b, "out.log"), "r") as f:
+            assert len(f.readlines()) == 2
