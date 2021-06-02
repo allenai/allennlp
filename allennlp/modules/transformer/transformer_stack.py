@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class TransformerStackOutput:
     """
-    Encapsulates the outputs of the `TransformerLayer` module.
+    Encapsulates the outputs of the `TransformerStack` module.
     """
 
     final_hidden_states: FloatT
