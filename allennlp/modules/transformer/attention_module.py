@@ -50,7 +50,8 @@ class AttentionModule(TransformerModule, FromParams):
         The number of attention heads.
     scoring_func: `str` (default = `scaled_dot_product`)
         The name of the attention-calculating function to be used.
-        Eg. `additive`, `linear`, etc. For a complete list, please check :mod:`allennlp.modules.attention`.
+        Eg. `additive`, `linear`, etc. For a complete list, please check
+        :mod:`allennlp.modules.attention.attention`.
     output_linear: `bool` (default = `False`)
         Whether to add an additional output linear layer at the end.
     dropout: `float` (default = `0.0`)
@@ -296,6 +297,8 @@ class AttentionModule(TransformerModule, FromParams):
         query_length: Optional[int] = None,
     ):
         """
+        # Parameters
+
         query_states : `torch.Tensor`
             Shape `batch_size x seq_len x hidden_dim`
         past_key_states : `torch.Tensor`, optional
@@ -563,7 +566,8 @@ class SelfAttention(AttentionModule):
     dropout: `float` (default = `0.0`)
     scoring_func: `str` (default = `scaled_dot_product`)
         The name of the attention-calculating function to be used.
-        Eg. `additive`, `linear`, etc. For a complete list, please check :mod:`allennlp.modules.attention`.
+        Eg. `additive`, `linear`, etc. For a complete list, please check
+        :mod:`allennlp.modules.attention.attention`.
     """
 
     _pretrained_relevant_module = ["encoder.layers.0.attention.self", "encoder.layers.0.attention"]
