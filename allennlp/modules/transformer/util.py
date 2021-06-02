@@ -1,7 +1,11 @@
 from typing import Union, Tuple
 import torch
-
 from allennlp.nn.util import min_value_of_dtype
+
+# Unfortunately mypy is insane, so we have to wrap these in unions.
+FloatT = Union[torch.FloatTensor]
+IntT = Union[torch.IntTensor]
+BoolT = Union[torch.BoolTensor]
 
 
 def apply_mask(

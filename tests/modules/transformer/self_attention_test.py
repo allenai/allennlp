@@ -5,7 +5,8 @@ import pytest
 from transformers import AutoModel
 
 from allennlp.common import Params
-from allennlp.modules.transformer import SelfAttention
+
+from allennlp.modules.transformer.attention_module import SelfAttention
 from allennlp.nn.util import min_value_of_dtype
 
 
@@ -46,7 +47,7 @@ def test_can_construct_from_params(self_attention, params_dict):
     assert self_attention.key.in_features == params_dict["hidden_size"]
     assert self_attention.value.in_features == params_dict["hidden_size"]
 
-    assert self_attention.dropout.p == params_dict["dropout"]
+    assert self_attention.dropout == params_dict["dropout"]
 
 
 @pytest.mark.parametrize(
@@ -78,7 +79,7 @@ def test_loading_from_pretrained_weights_using_model_name(pretrained_name, relev
     pretrained_module = pretrained_module.eval()
 
     torch.manual_seed(1234)
-    output = module(hidden_states, attention_mask=attention_mask.squeeze())[0]
+    output = module(hidden_states, attention_mask=attention_mask.squeeze()).hidden_states
     if "distilbert" in pretrained_name:
         torch.manual_seed(1234)
         hf_output = pretrained_module(
