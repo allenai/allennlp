@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+
 ### Changed
 
 - Use `dist_reduce_sum` in distributed metrics.
@@ -16,6 +17,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   an actual `torch.nn.Module`. Other parameters to this method have changed as well.
 - Print the first batch to the console by default.
 - Renamed `sanity_checks` to `confidence_checks` (`sanity_checks` is deprecated and will be removed in AllenNLP 3.0).
+- Trainer callbacks can now store and restore state in case a training run gets interrupted.
+- VilBERT backbone now rolls and unrolls extra dimensions to handle input with > 3 dimensions.
+- `BeamSearch` is now a `Registrable` class.
 
 ### Added
 
@@ -34,11 +38,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added the `FinalSequenceScorer` abstraction to calculate the final scores of the generated sequences in `BeamSearch`. 
 - Added `shuffle` argument to `BucketBatchSampler` which allows for disabling shuffling.
 - Added `allennlp.modules.transformer.attention_module` which contains a generalized `AttentionModule`. `SelfAttention` and `T5Attention` both inherit from this.
+- Added a `Constraint` abstract class to `BeamSearch`, which allows for incorporating constraints on the predictions found by `BeamSearch`,
+  along with a `RepeatedNGramBlockingConstraint` constraint implementation, which allows for preventing repeated n-grams in the output from `BeamSearch`.
+- Added `DataCollator` for dynamic operations for each batch.
 
 ### Fixed
 
 - When `PretrainedTransformerIndexer` folds long sequences, it no longer loses the information from token type ids.
 - Fixed documentation for `GradientDescentTrainer.cuda_device`.
+- Re-starting a training run from a checkpoint in the middle of an epoch now works correctly.
+- When using the "moving average" weights smoothing feature of the trainer, training checkpoints would also get smoothed, with strange results for resuming a training job. This has been fixed.
+- When re-starting an interrupted training job, the trainer will now read out the data loader even for epochs and batches that can be skipped. We do this to try to get any random number generators used by the reader or data loader into the same state as they were the first time the training job ran.
+- Fixed the potential for a race condition with `cached_path()` when extracting archives. Although the race condition
+  is still possible if used with `force_extract=True`.
 - Fixed `wandb` callback to work in distributed training.
 
 
