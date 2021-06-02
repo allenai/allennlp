@@ -1,11 +1,12 @@
 from inspect import signature
-from typing import List, Callable, Tuple, Dict, cast, TypeVar
+from typing import Any, List, Callable, Tuple, Dict, cast, TypeVar, Optional
+import copy
 import warnings
 
 from overrides import overrides
 import torch
 
-from allennlp.common import FromParams, Registrable
+from allennlp.common import Registrable
 from allennlp.common.checks import ConfigurationError
 from allennlp.nn.util import min_value_of_dtype
 
@@ -25,6 +26,8 @@ The type of step function that can be passed to [`BeamSearch.search`](#search).
 This can either be [`StepFunctionTypeWithTimestep`](#stepfunctiontypewithtimestep)
 or [`StepFunctionTypeNoTimestep`](#stepfunctiontypenotimestep).
 """
+
+ConstraintStateType = List[List[Dict[str, Any]]]
 
 
 class Sampler(Registrable):
@@ -431,7 +434,256 @@ class GumbelSampler(Sampler):
         return T - torch.nn.functional.relu(v) - torch.log1p(torch.exp(-v.abs()))
 
 
-class BeamSearch(FromParams):
+class FinalSequenceScorer(Registrable):
+    """
+    An abstract class that can be used to score the final generated sequences found
+    by beam search. Given the predicted sequences and the corresponding log probabilities of
+    those sequences, the class calculates and returns the final score of the sequences.
+
+    The default implementation scores the sequences using the sum of the log probabilities of
+    the sequence, which is passed as input.
+    """
+
+    default_implementation = "sequence-log-prob"
+
+    def score(
+        self, predictions: torch.Tensor, log_probabilities: torch.Tensor, end_index: int
+    ) -> torch.Tensor:
+        """
+        Score the final predictions found by beam search.
+
+        # Parameters
+
+        predictions : `torch.Tensor`
+            A tensor containing the initial predictions with shape `(batch_size, beam_size, max_steps)`.
+
+        log_probabilities : `torch.Tensor`
+            A tensor containing the log probabilities of the sequence, defined as the sum
+            of the log probabilities per token, with shape `(batch_size, beam_size)`.
+
+        end_index : `int`
+            The index of the end symbol.
+
+        # Returns
+
+        `torch.Tensor`
+            A tensor of the final sequence scores of shape `(batch_size, beam_size)`.
+        """
+        raise NotImplementedError
+
+
+@FinalSequenceScorer.register("sequence-log-prob")
+class SequenceLogProbabilityScorer(FinalSequenceScorer):
+    """
+    A `FinalSequenceScorer` which scores the sequences by the sum of the log probabilities
+    across the sequence's tokens.
+    """
+
+    @overrides
+    def score(
+        self, predictions: torch.Tensor, log_probabilities: torch.Tensor, end_index: int
+    ) -> torch.Tensor:
+        # The sum of the sequence log probabilities is the input parameter, so just
+        # return it.
+        return log_probabilities
+
+
+@FinalSequenceScorer.register("length-normalized-sequence-log-prob")
+class LengthNormalizedSequenceLogProbabilityScorer(FinalSequenceScorer):
+    """
+    A `FinalSequenceScorer` which scores the sequences by the average log probability of the
+    tokens in the sequence. It optionally includes a length penalty which promotes
+    or demotes sequences based on their lengths. The final score for a sequence will
+    be `(sequence_log_probability) / (sequence_length ** length_penalty)`. The sequence length
+    here includes the end token.
+
+    # Parameters
+
+    length_penalty : `float`, optional (default = `1.0`)
+        The length penalty to use. A value of 1.0 means no length penalty is used.
+        A value > 1.0 favors longer sequences, and < 1.0 favors shorter sequences.
+    """
+
+    def __init__(self, length_penalty: float = 1.0):
+        super().__init__()
+        self.length_penalty = length_penalty
+
+    @overrides
+    def score(
+        self, predictions: torch.Tensor, log_probabilities: torch.Tensor, end_index: int
+    ) -> torch.Tensor:
+        # shape: (batch_size, beam_size)
+        lengths = (predictions != end_index).long().sum(dim=2)
+
+        # If the sequence ended during beam search, the `log_probabilities` will include
+        # the transition to the end token. Therefore, in such situations, `lengths` is
+        # actually off by 1. This corrects for that.
+        # shape: (batch_size, beam_size)
+        is_end_token = predictions[:, :, -1] == end_index
+        lengths += is_end_token.long()
+
+        # shape: (batch_size, beam_size)
+        average_log_probs = log_probabilities / (lengths ** self.length_penalty)
+        return average_log_probs
+
+
+class Constraint(Registrable):
+    """
+    An abstract class that can be used to enforce constraints on the output predictions
+    by manipulating the class log probabilities during beam search.
+
+    A `Constraint` just has three methods that need to be implemented by subclasses:
+    `init_state()`, `apply()` and `_update_state()`.
+
+    `init_state()` takes one argument:
+
+    - the batch size, an int
+
+    It returns a constraint state, which is a nested list of dictionaries, with any state needed for subsequent
+    calls to `apply()` and `update_state()`. The length of the outer list should be equal to `batch_size`.
+    Each inner list should be of length 1.
+
+    `apply()` takes two arguments:
+
+    - the constraint state, which is a nested list of dictionaries. The length of the outer list is `batch_size`
+    and the length of each inner list is `beam_size` except on the first time `apply()` is called when it is 1.
+    - `class_log_probabilities`, a tensor of shape `(batch_size, beam_size, num_classes)` that contains the
+    log probabilities for the classes during search. The first time `apply()` is called, `beam_size = 1`.
+
+    The `apply()` method should return new `class_log_probabilities` that enforce the constraint
+    for this step of beam search. For instance, it may prevent a specific class from being selected by setting
+    the corresponding log probability to a negligible value such as `float("-inf")` or
+    `min_value_of_dtype(class_log_probabilities.dtype)`.
+
+    `_update_state()` takes two arguments:
+
+    - the copied parent constraint state, which is a nested list of dictionaries. `state[i][j]` contains the
+    copied state for the parent of `last_prediction[i, j]`. It is unique to that batch and beam, so it can be
+    directly edited in-place without affecting the others.
+    - last_prediction, a tensor of shape `(batch_size, beam_size)` containing the predictions from the last
+    step of beam search.
+
+    The `_update_state()` function should return a new constraint state, a nested list of dictionaries of
+    length `batch_size` and inner list of length `beam_size`, one for each of the predictions in `last_prediction`.
+
+    """
+
+    def init_state(
+        self,
+        batch_size: int,
+    ) -> ConstraintStateType:
+        raise NotImplementedError
+
+    def apply(
+        self,
+        state: ConstraintStateType,
+        class_log_probabilities: torch.Tensor,
+    ) -> torch.Tensor:
+        raise NotImplementedError
+
+    @staticmethod
+    def _copy_state(
+        state: ConstraintStateType,
+        batch_size: int,
+        beam_size: int,
+        last_backpointer: Optional[torch.Tensor] = None,
+    ) -> ConstraintStateType:
+        """
+        Copies the `state` . This method copies the data in `state` using `copy.deepcopy()`. If this
+        is not appropriate for your constraint, you will need to implement the copying yourself.
+        """
+        new_state = []
+        for i in range(batch_size):
+            batch_state = []
+            for j in range(beam_size):
+                if last_backpointer is None:
+                    # This is the first prediction, so the backpointer is 0
+                    backpointer = 0
+                else:
+                    backpointer = last_backpointer[i, j].item()
+                batch_state.append(copy.deepcopy(state[i][backpointer]))
+            new_state.append(batch_state)
+        return new_state
+
+    def update_state(
+        self,
+        state: ConstraintStateType,
+        last_prediction: torch.Tensor,
+        last_backpointer: Optional[torch.Tensor] = None,
+    ) -> ConstraintStateType:
+        batch_size, beam_size = last_prediction.size()
+        new_state = self._copy_state(state, batch_size, beam_size, last_backpointer)
+        return self._update_state(new_state, last_prediction)
+
+    def _update_state(
+        self,
+        state: ConstraintStateType,
+        last_prediction: torch.Tensor,
+    ) -> ConstraintStateType:
+        raise NotImplementedError
+
+
+@Constraint.register("repeated-ngram-blocking")
+class RepeatedNGramBlockingConstraint(Constraint):
+    def __init__(self, ngram_size: int) -> None:
+        super().__init__()
+        self.ngram_size = ngram_size
+
+    @overrides
+    def init_state(
+        self,
+        batch_size: int,
+    ) -> ConstraintStateType:
+        return [[{"seen_ngrams": {}, "current_prefix": []}] for _ in range(batch_size)]
+
+    @overrides
+    def apply(
+        self,
+        state: ConstraintStateType,
+        class_log_probabilities: torch.Tensor,
+    ) -> torch.Tensor:
+        for i, batch in enumerate(state):
+            for j, beam in enumerate(batch):
+                current_prefix = tuple(beam["current_prefix"])
+                seen_ngrams = beam["seen_ngrams"]
+                try:
+                    disallowed_indices = seen_ngrams[current_prefix]
+                    class_log_probabilities[i, j, disallowed_indices] = min_value_of_dtype(
+                        class_log_probabilities.dtype
+                    )
+                except KeyError:
+                    # We have not seen this prefix before, so there is no index
+                    # that needs to be blocked
+                    pass
+        return class_log_probabilities
+
+    @overrides
+    def _update_state(
+        self,
+        state: ConstraintStateType,
+        last_prediction: torch.Tensor,
+    ) -> ConstraintStateType:
+        for i, batch in enumerate(state):
+            for j, beam in enumerate(batch):
+                prediction = last_prediction[i, j].item()
+                prefix = beam["current_prefix"]
+                seen_ngrams = beam["seen_ngrams"]
+
+                if len(prefix) == self.ngram_size - 1:
+                    # This is a new ngram that we have to remember
+                    if tuple(prefix) not in seen_ngrams:
+                        seen_ngrams[tuple(prefix)] = []
+                    seen_ngrams[tuple(prefix)].append(prediction)
+
+                # Create the new prefix, removing the oldest index if the prefix
+                # is too long
+                prefix.append(prediction)
+                if len(prefix) == self.ngram_size:
+                    prefix.pop(0)
+        return state
+
+
+class BeamSearch(Registrable):
     """
     Implements the beam search algorithm for decoding the most likely sequences.
 
@@ -462,7 +714,24 @@ class BeamSearch(FromParams):
 
         Using the [`GumbelSampler`](#gumbelsampler), on the other hand, will give you
         [Stochastic Beam Search](https://api.semanticscholar.org/CorpusID:76662039).
+
+    min_steps : `int`, optional (default = `None`)
+        The minimum number of decoding steps to take, i.e. the minimum length of
+        the predicted sequences. This does not include the start or end tokens. If `None`,
+        no minimum is enforced.
+
+    final_sequence_scorer : `FinalSequenceScorer`, optional (default = `None`)
+        An optional `FinalSequenceScorer` which is used to score the final generated sequences.
+        The output from this module is what is returned by the `search` method. If not
+        specified, `SequenceLogProbabilityScorer` will be used, which scores the sequences
+        by the sum of the token log probabilities.
+
+    constraints: `List[Constraint]`, optional (default = `None`)
+        An optional list of `Constraint`s which should be applied during beam search. If not
+        provided, no constraints will be enforced.
     """
+
+    default_implementation = "beam_search"
 
     def __init__(
         self,
@@ -471,6 +740,9 @@ class BeamSearch(FromParams):
         beam_size: int = 10,
         per_node_beam_size: int = None,
         sampler: Sampler = None,
+        min_steps: Optional[int] = None,
+        final_sequence_scorer: FinalSequenceScorer = None,
+        constraints: Optional[List[Constraint]] = None,
     ) -> None:
         if not max_steps > 0:
             raise ValueError("max_steps must be positive")
@@ -478,12 +750,20 @@ class BeamSearch(FromParams):
             raise ValueError("beam_size must be positive")
         if per_node_beam_size is not None and not per_node_beam_size > 0:
             raise ValueError("per_node_beam_size must be positive")
+        if min_steps is not None:
+            if not min_steps >= 0:
+                raise ValueError("min_steps must be non-negative")
+            if not min_steps <= max_steps:
+                raise ValueError("min_steps must be less than or equal to max_steps")
 
         self._end_index = end_index
         self.max_steps = max_steps
         self.beam_size = beam_size
         self.per_node_beam_size = per_node_beam_size or beam_size
         self.sampler = sampler or DeterministicSampler()
+        self.min_steps = min_steps or 0
+        self.final_sequence_scorer = final_sequence_scorer or SequenceLogProbabilityScorer()
+        self.constraints = constraints or []
 
     @staticmethod
     def _reconstruct_sequences(predictions, backpointers):
@@ -524,15 +804,14 @@ class BeamSearch(FromParams):
         Given a starting state and a step function, apply beam search to find the
         most likely target sequences.
 
-        # Notes
-
-        If your step function returns `-inf` for some log probabilities
-        (like if you're using a masked log-softmax) then some of the "best"
-        sequences returned may also have `-inf` log probability. Specifically
-        this happens when the beam size is smaller than the number of actions
-        with finite log probability (non-zero probability) returned by the step function.
-        Therefore if you're using a mask you may want to check the results from `search`
-        and potentially discard sequences with non-finite log probability.
+        !!! Note
+            If your step function returns `-inf` for some log probabilities
+            (like if you're using a masked log-softmax) then some of the "best"
+            sequences returned may also have `-inf` log probability. Specifically
+            this happens when the beam size is smaller than the number of actions
+            with finite log probability (non-zero probability) returned by the step function.
+            Therefore if you're using a mask you may want to check the results from `search`
+            and potentially discard sequences with non-finite log probability.
 
         # Parameters
 
@@ -568,8 +847,8 @@ class BeamSearch(FromParams):
         # Returns
 
         `Tuple[torch.Tensor, torch.Tensor]`
-            Tuple of `(predictions, log_probabilities)`, where `predictions`
-            has shape `(batch_size, beam_size, max_steps)` and `log_probabilities`
+            Tuple of `(predictions, final_scores)`, where `predictions`
+            has shape `(batch_size, beam_size, max_steps)` and `final_scores`
             has shape `(batch_size, beam_size)`.
         """
         step_signature = signature(step)
@@ -606,6 +885,8 @@ class BeamSearch(FromParams):
         # predictions[t-1][i][n], that it came from.
         backpointers: List[torch.Tensor] = []
 
+        constraint_states = [constraint.init_state(batch_size) for constraint in self.constraints]
+
         # Calculate the first timestep. This is done outside the main loop
         # because we are going from a single decoder input (the output from the
         # encoder) to the top `beam_size` decoder outputs. On the other hand,
@@ -628,6 +909,22 @@ class BeamSearch(FromParams):
         sampler_state = self.sampler.init_state(
             start_class_log_probabilities, batch_size, num_classes
         )
+
+        # Apply all constraints.
+        if self.constraints:
+            # shape: (batch_size, 1, num_classes)
+            expanded_start_class_log_probabilities = start_class_log_probabilities.unsqueeze(1)
+            for constraint, constraint_state in zip(self.constraints, constraint_states):
+                expanded_start_class_log_probabilities = constraint.apply(
+                    constraint_state, expanded_start_class_log_probabilities
+                )
+            start_class_log_probabilities = expanded_start_class_log_probabilities.squeeze(1)
+
+        # Prevent selecting the end symbol if there is any min_steps constraint
+        if self.min_steps >= 1:
+            start_class_log_probabilities[:, self._end_index] = min_value_of_dtype(
+                start_class_log_probabilities.dtype
+            )
 
         # Get the initial predicted classed and their log probabilities.
         # shape: (batch_size, beam_size), (batch_size, beam_size)
@@ -655,12 +952,18 @@ class BeamSearch(FromParams):
         # Log probability tensor that mandates that the end token is selected.
         # shape: (batch_size * beam_size, num_classes)
         log_probs_after_end = start_class_log_probabilities.new_full(
-            (batch_size * self.beam_size, num_classes), float("-inf")
+            (batch_size * self.beam_size, num_classes),
+            min_value_of_dtype(start_class_log_probabilities.dtype),
         )
         log_probs_after_end[:, self._end_index] = 0.0
 
         # Set the same state for each element in the beam.
         self._update_initial_state(state, batch_size)
+
+        for i, constraint in enumerate(self.constraints):
+            constraint_states[i] = constraint.update_state(
+                constraint_states[i], start_predicted_classes
+            )
 
         for timestep in range(self.max_steps - 1):
             # shape: (batch_size * beam_size,)
@@ -674,6 +977,30 @@ class BeamSearch(FromParams):
             # and updates the state.
             # shape: (batch_size * beam_size, num_classes)
             class_log_probabilities, state = step(last_predictions, state, timestep + 1)
+
+            # Apply all constraints.
+            if self.constraints:
+                # shape: (batch_size, beam_size, num_classes)
+                reshaped_class_log_probabilities = class_log_probabilities.view(
+                    batch_size, self.beam_size, -1
+                )
+                for constraint, constraint_state in zip(self.constraints, constraint_states):
+                    reshaped_class_log_probabilities = constraint.apply(
+                        constraint_state, reshaped_class_log_probabilities
+                    )
+                # shape: (batch_size * beam_size, num_classes)
+                class_log_probabilities = reshaped_class_log_probabilities.view(
+                    batch_size * self.beam_size, -1
+                )
+
+            # The `timestep`-th iteration of the for loop is generating the `timestep + 2`-th token
+            # of the sequence (because `timestep` is 0-indexed and we generated the first token
+            # before the for loop). Here we block the end index if the search is not allowed to
+            # terminate on this iteration.
+            if timestep + 2 <= self.min_steps:
+                class_log_probabilities[:, self._end_index] = min_value_of_dtype(
+                    class_log_probabilities.dtype
+                )
 
             # shape: (batch_size * beam_size, num_classes)
             last_predictions_expanded = last_predictions.unsqueeze(-1).expand(
@@ -750,9 +1077,20 @@ class BeamSearch(FromParams):
             # ancestors created this iteration.
             self._update_state(state, backpointer)
 
-        if not torch.isfinite(last_log_probabilities).all():
+            for i, constraint in enumerate(self.constraints):
+                constraint_states[i] = constraint.update_state(
+                    constraint_states[i], restricted_predicted_classes
+                )
+
+        # Warn about "-inf" log probabilities if not using any constraints (negligible
+        # log probabilities are expected when using constraints).
+        if not self.constraints and (
+            not torch.isfinite(last_log_probabilities).all()
+            or (last_log_probabilities == min_value_of_dtype(last_log_probabilities.dtype)).any()
+        ):
             warnings.warn(
-                "Infinite log probabilities encountered. Some final sequences may not make sense. "
+                "Negligible log probabilities encountered ('-inf' or equivalent). "
+                "Some final sequences may not make sense. "
                 "This can happen when the beam size is larger than the number of valid (non-zero "
                 "probability) transitions that the step function produces.",
                 RuntimeWarning,
@@ -763,7 +1101,20 @@ class BeamSearch(FromParams):
         # shape: (batch_size, beam_size, max_steps)
         all_predictions = torch.cat(list(reversed(reconstructed_predictions)), 2)
 
-        return all_predictions, last_log_probabilities
+        # Calculate the final sequence scores
+        # shape: (batch_size, beam_size)
+        final_scores = self.final_sequence_scorer.score(
+            all_predictions, last_log_probabilities, self._end_index
+        )
+
+        # Sort the sequences based on the final scores so the best scoring
+        # sequence is at index 0
+        sorted_final_scores, sorted_indices = torch.sort(final_scores, dim=1, descending=True)
+        sorted_all_predictions = torch.gather(
+            all_predictions, 1, sorted_indices.unsqueeze(-1).expand_as(all_predictions)
+        )
+
+        return sorted_all_predictions, sorted_final_scores
 
     @staticmethod
     def _is_multilayer_rnn_decoder(key: str, state_tensor: torch.Tensor) -> bool:
@@ -831,3 +1182,6 @@ class BeamSearch(FromParams):
                     .gather(1, expanded_backpointer)
                     .reshape(batch_size * self.beam_size, *last_dims)
                 )
+
+
+BeamSearch.register("beam_search")(BeamSearch)

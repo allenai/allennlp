@@ -12,7 +12,8 @@ import torch.multiprocessing as mp
 from allennlp.common.util import lazy_groups_of, shuffle_iterable
 from allennlp.common.tqdm import Tqdm
 from allennlp.data.instance import Instance
-from allennlp.data.data_loaders.data_loader import DataLoader, TensorDict, allennlp_collate
+from allennlp.data.data_loaders.data_loader import DataLoader, TensorDict
+from allennlp.data.data_loaders.data_collator import DataCollator, DefaultDataCollator
 from allennlp.data.dataset_readers import DatasetReader, WorkerInfo, DatasetReaderInput
 from allennlp.data.fields import TextField
 from allennlp.data.samplers import BatchSampler
@@ -124,6 +125,8 @@ class MultiProcessDataLoader(DataLoader):
     quiet : `bool`, optional (default = `False`)
         If `True`, tqdm progress bars will be disabled.
 
+    collate_fn : `DataCollator`, optional ( default = `DefaultDataCollator`)
+
     # Best practices
 
     - **Large datasets**
@@ -207,6 +210,7 @@ class MultiProcessDataLoader(DataLoader):
         start_method: str = "fork",
         cuda_device: Optional[Union[int, str, torch.device]] = None,
         quiet: bool = False,
+        collate_fn: DataCollator = DefaultDataCollator(),
     ) -> None:
         # Do some parameter validation.
         if num_workers is not None and num_workers < 0:
@@ -244,7 +248,7 @@ class MultiProcessDataLoader(DataLoader):
         self.batch_sampler = batch_sampler
         self.batches_per_epoch = batches_per_epoch
         self.num_workers = num_workers
-        self.collate_fn = allennlp_collate
+        self.collate_fn = collate_fn
         self.max_instances_in_memory = max_instances_in_memory
         self.start_method = start_method
         self.quiet = quiet

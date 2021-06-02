@@ -10,7 +10,7 @@ from checklist.perturb import Perturb
 from allennlp.common.registrable import Registrable
 from allennlp.common.file_utils import cached_path
 from allennlp.predictors.predictor import Predictor
-from allennlp.sanity_checks.task_checklists import utils
+from allennlp.confidence_checks.task_checklists import utils
 
 logger = logging.getLogger(__name__)
 

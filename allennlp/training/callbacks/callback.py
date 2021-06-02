@@ -5,7 +5,7 @@ from allennlp.data import TensorDict
 
 
 if TYPE_CHECKING:
-    from allennlp.training.trainer import GradientDescentTrainer
+    from allennlp.training.gradient_descent_trainer import GradientDescentTrainer
 
 
 class TrainerCallback(Registrable):
@@ -75,6 +75,12 @@ class TrainerCallback(Registrable):
         """
         This callback hook is called after the final training epoch.
         """
+        pass
+
+    def state_dict(self) -> Dict[str, Any]:
+        return {}
+
+    def load_state_dict(self, state_dict: Dict[str, Any]) -> None:
         pass
 
 

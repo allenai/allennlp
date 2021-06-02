@@ -5,8 +5,8 @@ from overrides import overrides
 from checklist.test_suite import TestSuite
 from checklist.test_types import MFT
 from checklist.perturb import Perturb
-from allennlp.sanity_checks.task_checklists.task_suite import TaskSuite
-from allennlp.sanity_checks.task_checklists import utils
+from allennlp.confidence_checks.task_checklists.task_suite import TaskSuite
+from allennlp.confidence_checks.task_checklists import utils
 
 
 def _wrap_apply_to_each(perturb_fn: Callable, both: bool = False, *args, **kwargs):

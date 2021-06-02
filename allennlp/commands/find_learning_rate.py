@@ -317,7 +317,7 @@ def search_learning_rate(
 
 
 def _smooth(values: List[float], beta: float) -> List[float]:
-    """ Exponential smoothing of values """
+    """Exponential smoothing of values"""
     avg_value = 0.0
     smoothed = []
     for i, value in enumerate(values):

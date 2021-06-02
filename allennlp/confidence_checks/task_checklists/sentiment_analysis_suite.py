@@ -4,8 +4,8 @@ from overrides import overrides
 from checklist.test_suite import TestSuite
 from checklist.test_types import MFT, INV, DIR, Expect
 from checklist.perturb import Perturb
-from allennlp.sanity_checks.task_checklists.task_suite import TaskSuite
-from allennlp.sanity_checks.task_checklists import utils
+from allennlp.confidence_checks.task_checklists.task_suite import TaskSuite
+from allennlp.confidence_checks.task_checklists import utils
 from allennlp.data.instance import Instance
 
 

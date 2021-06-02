@@ -79,5 +79,4 @@ class Scheduler:
         By default, a scheduler is assumed to only update every epoch, not every batch.
         So this does nothing unless it's overriden.
         """
-
         return

@@ -2,25 +2,27 @@ from typing import List, Dict, Any, Optional, TYPE_CHECKING
 
 from allennlp.training.callbacks.callback import TrainerCallback
 from allennlp.data import TensorDict
-from allennlp.sanity_checks.normalization_bias_verification import NormalizationBiasVerification
+from allennlp.confidence_checks.normalization_bias_verification import NormalizationBiasVerification
 
 
 if TYPE_CHECKING:
-    from allennlp.training.trainer import GradientDescentTrainer
+    from allennlp.training.gradient_descent_trainer import GradientDescentTrainer
 
 
+# `sanity_checks` is deprecated and will be removed.
 @TrainerCallback.register("sanity_checks")
-class SanityChecksCallback(TrainerCallback):
+@TrainerCallback.register("confidence_checks")
+class ConfidenceChecksCallback(TrainerCallback):
     """
-    Performs model sanity checks.
+    Performs model confidence checks.
 
     Checks performed:
 
     * `NormalizationBiasVerification` for detecting invalid combinations of
        bias and normalization layers.
-       See `allennlp.sanity_checks.normalization_bias_verification` for more details.
+       See `allennlp.confidence_checks.normalization_bias_verification` for more details.
 
-    Note: Any new sanity checks should also be added to this callback.
+    Note: Any new confidence checks should also be added to this callback.
     """
 
     def on_start(
@@ -54,18 +56,18 @@ class SanityChecksCallback(TrainerCallback):
             self._verification.destroy_hooks()
             detected_pairs = self._verification.collect_detections()
             if len(detected_pairs) > 0:
-                raise SanityCheckError(
+                raise ConfidenceCheckError(
                     "The NormalizationBiasVerification check failed. See logs for more details."
                 )
 
 
-class SanityCheckError(Exception):
+class ConfidenceCheckError(Exception):
     """
-    The error type raised when a sanity check fails.
+    The error type raised when a confidence check fails.
     """
 
     def __init__(self, message) -> None:
         super().__init__(
             message
-            + "\nYou can disable these checks by setting the trainer parameter `run_sanity_checks` to `False`."
+            + "\nYou can disable these checks by setting the trainer parameter `run_confidence_checks` to `False`."
         )
