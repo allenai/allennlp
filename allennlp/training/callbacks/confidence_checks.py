@@ -6,7 +6,7 @@ from allennlp.confidence_checks.normalization_bias_verification import Normaliza
 
 
 if TYPE_CHECKING:
-    from allennlp.training.trainer import GradientDescentTrainer
+    from allennlp.training.gradient_descent_trainer import GradientDescentTrainer
 
 
 # `sanity_checks` is deprecated and will be removed.

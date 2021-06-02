@@ -8,7 +8,7 @@ from allennlp.training.util import get_train_and_validation_metrics
 from allennlp.data import TensorDict
 
 if TYPE_CHECKING:
-    from allennlp.training.trainer import GradientDescentTrainer
+    from allennlp.training.gradient_descent_trainer import GradientDescentTrainer
 
 
 logger = logging.getLogger(__name__)
