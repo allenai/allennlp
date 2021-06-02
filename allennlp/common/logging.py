@@ -126,4 +126,5 @@ def prepare_global_logging(
     # also log tqdm
     from allennlp.common.tqdm import logger as tqdm_logger
 
+    tqdm_logger.handlers.clear()
     tqdm_logger.addHandler(file_handler)
