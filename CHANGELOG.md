@@ -8,18 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Unreleased
 
 
-### Changed
-
-- Use `dist_reduce_sum` in distributed metrics.
-- Allow Google Cloud Storage paths in `cached_path` ("gs://...").
-- Renamed `nn.util.load_state_dict()` to `read_state_dict` to avoid confusion with `torch.nn.Module.load_state_dict()`.
-- `TransformerModule.from_pretrained_module` now only accepts a pretrained model ID (e.g. "bert-base-case") instead of
-  an actual `torch.nn.Module`. Other parameters to this method have changed as well.
-- Print the first batch to the console by default.
-- Renamed `sanity_checks` to `confidence_checks` (`sanity_checks` is deprecated and will be removed in AllenNLP 3.0).
-- Trainer callbacks can now store and restore state in case a training run gets interrupted.
-- VilBERT backbone now rolls and unrolls extra dimensions to handle input with > 3 dimensions.
-- `BeamSearch` is now a `Registrable` class.
+## [v2.5.0](https://github.com/allenai/allennlp/releases/tag/v2.5.0) - 2021-06-03
 
 ### Added
 
@@ -44,6 +33,19 @@ on a downstream task.
   along with a `RepeatedNGramBlockingConstraint` constraint implementation, which allows for preventing repeated n-grams in the output from `BeamSearch`.
 - Added `DataCollator` for dynamic operations for each batch.
 
+### Changed
+
+- Use `dist_reduce_sum` in distributed metrics.
+- Allow Google Cloud Storage paths in `cached_path` ("gs://...").
+- Renamed `nn.util.load_state_dict()` to `read_state_dict` to avoid confusion with `torch.nn.Module.load_state_dict()`.
+- `TransformerModule.from_pretrained_module` now only accepts a pretrained model ID (e.g. "bert-base-case") instead of
+  an actual `torch.nn.Module`. Other parameters to this method have changed as well.
+- Print the first batch to the console by default.
+- Renamed `sanity_checks` to `confidence_checks` (`sanity_checks` is deprecated and will be removed in AllenNLP 3.0).
+- Trainer callbacks can now store and restore state in case a training run gets interrupted.
+- VilBERT backbone now rolls and unrolls extra dimensions to handle input with > 3 dimensions.
+- `BeamSearch` is now a `Registrable` class.
+
 ### Fixed
 
 - When `PretrainedTransformerIndexer` folds long sequences, it no longer loses the information from token type ids.
@@ -55,6 +57,7 @@ on a downstream task.
   is still possible if used with `force_extract=True`.
 - Fixed `wandb` callback to work in distributed training.
 - Fixed `tqdm` logging into multiple files with `allennlp-optuna`.
+
 
 ## [v2.4.0](https://github.com/allenai/allennlp/releases/tag/v2.4.0) - 2021-04-22
 
