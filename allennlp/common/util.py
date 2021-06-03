@@ -347,6 +347,7 @@ def import_module_and_submodules(package_name: str) -> None:
         except ModuleNotFoundError as exc:
             # Ignore import errors of optional dependencies.
             if exc.name == "fairscale":
+                logger.warning("Cannot import %s since %s is not installed", package_name, exc.name)
                 return None
             else:
                 raise
