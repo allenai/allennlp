@@ -87,7 +87,7 @@ install :
 	python setup.py install_egg_info
 	# Need to install PyTorch first, since some dependencies require PyTorch before they can be installed.
 	grep -Eo 'torch(vision)?[><=,.0-9]+' setup.py | xargs pip install
-	pip install --upgrade --upgrade-strategy eager -e[all] . -r dev-requirements.txt
+	pip install --upgrade --upgrade-strategy eager -e .[all] -r dev-requirements.txt
 	# These nltk packages are used by the 'checklist' module.
 	python -c 'import nltk; [nltk.download(p) for p in ("wordnet", "wordnet_ic", "sentiwordnet")]'
 
