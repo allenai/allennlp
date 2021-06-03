@@ -258,6 +258,8 @@ class NaturalLanguageInference(Metric):
     3. Threshold:tau (T:tau): A parameterized measure that reports the fraction
     of examples whose probability of neutral is above tau.
 
+    # Parameters
+
     neutral_label : `int`, optional (default=`2`)
         The discrete integer label corresponding to a neutral entailment prediction.
     taus : `List[float]`, optional (default=`[0.5, 0.7]`)

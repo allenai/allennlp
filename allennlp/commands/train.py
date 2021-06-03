@@ -491,11 +491,22 @@ def _train_worker(
     except KeyboardInterrupt:
         # if we have completed an epoch, try to create a model archive.
         if primary and os.path.exists(os.path.join(serialization_dir, _DEFAULT_WEIGHTS)):
-            logging.info(
-                "Training interrupted by the user. Attempting to create "
-                "a model archive using the current best epoch weights."
-            )
-            archive_model(serialization_dir, include_in_archive=include_in_archive)
+            best_weights_path = train_loop.trainer.get_best_weights_path()
+            if best_weights_path is None:
+                logging.info(
+                    "Training interrupted by the user, and no best model has been saved. "
+                    "No model archive created."
+                )
+            else:
+                logging.info(
+                    "Training interrupted by the user. Attempting to create "
+                    "a model archive using the current best epoch weights."
+                )
+                archive_model(
+                    serialization_dir,
+                    weights=best_weights_path,
+                    include_in_archive=include_in_archive,
+                )
         raise
 
     if primary:
