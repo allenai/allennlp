@@ -342,7 +342,14 @@ def import_module_and_submodules(package_name: str) -> None:
     # the end won't hurt anything.
     with push_python_path("."):
         # Import at top level
-        module = importlib.import_module(package_name)
+        try:
+            module = importlib.import_module(package_name)
+        except ModuleNotFoundError as exc:
+            # Ignore import errors of optional dependencies.
+            if exc.name == "fairscale":
+                pass
+            else:
+                raise
         path = getattr(module, "__path__", [])
         path_string = "" if not path else path[0]
 
