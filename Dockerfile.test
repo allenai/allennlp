@@ -32,9 +32,10 @@ RUN touch allennlp/__init__.py \
     && touch README.md \
     && pip install --no-cache-dir -e .[all] -r dev-requirements.txt
 
+# These environment variables are helpful for debugging.
+# See https://pytorch.org/docs/stable/distributed.html#common-environment-variables for more info.
 ENV NCCL_DEBUG INFO
 ENV NCCL_DEBUG_SUBSYS ALL
-ENV NCCL_IB_DISABLE 1
 
 # Now add the full package source and re-install just the package.
 COPY . .

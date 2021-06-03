@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   norm is never even calculated. `True` means the gradients are still not rescaled but the gradient
   norm is calculated and passed on to callbacks. A `float` value means gradients are rescaled.
 
+### Fixed
+
+- Fixed a mispelling: the parameter `contructor_extras` in `Lazy()` is now correctly called `constructor_extras`.
+
 
 ## [v2.5.0](https://github.com/allenai/allennlp/releases/tag/v2.5.0) - 2021-06-03
 
