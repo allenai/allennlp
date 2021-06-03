@@ -347,7 +347,7 @@ def import_module_and_submodules(package_name: str) -> None:
         except ModuleNotFoundError as exc:
             # Ignore import errors of optional dependencies.
             if exc.name == "fairscale":
-                pass
+                return None
             else:
                 raise
         path = getattr(module, "__path__", [])
