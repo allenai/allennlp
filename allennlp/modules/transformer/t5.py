@@ -832,9 +832,9 @@ class T5(TransformerModule, Registrable):
         return cls(
             encoder=Lazy(
                 T5EncoderStack.basic_encoder,
-                contructor_extras={
+                constructor_extras={
                     "num_blocks": config.num_layers,
-                    "block_self_attention": Lazy(T5Attention, contructor_extras=attention_kwargs),
+                    "block_self_attention": Lazy(T5Attention, constructor_extras=attention_kwargs),
                     "final_layer_norm": T5LayerNorm(**layer_norm_kwargs),
                     "block_ff": block_ff,
                     "dropout": config.dropout_rate,
@@ -842,10 +842,10 @@ class T5(TransformerModule, Registrable):
             ),
             decoder=Lazy(
                 T5DecoderStack.basic_decoder,
-                contructor_extras={
+                constructor_extras={
                     "num_blocks": config.num_decoder_layers,
-                    "block_self_attention": Lazy(T5Attention, contructor_extras=attention_kwargs),
-                    "block_cross_attention": Lazy(T5Attention, contructor_extras=attention_kwargs),
+                    "block_self_attention": Lazy(T5Attention, constructor_extras=attention_kwargs),
+                    "block_cross_attention": Lazy(T5Attention, constructor_extras=attention_kwargs),
                     "final_layer_norm": T5LayerNorm(**layer_norm_kwargs),
                     "block_ff": block_ff,
                     "dropout": config.dropout_rate,

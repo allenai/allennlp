@@ -15,9 +15,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   with a default value of `False`. `False` means gradients are not rescaled and the gradient
   norm is never even calculated. `True` means the gradients are still not rescaled but the gradient
   norm is calculated and passed on to callbacks. A `float` value means gradients are rescaled.
-- In the `Lazy` class, the `constructor_extras` parameter is deprecated. You should pass extra constructor
-  arguments directly as key-word arguments to `Lazy`.
-  For example, `Lazy(BeamSearch, constructor_extras={"beam_size": 3})` becomes `Lazy(BeamSearch, beam_size=3)`.
 
 
 ## [v2.5.0](https://github.com/allenai/allennlp/releases/tag/v2.5.0) - 2021-06-03

@@ -1,7 +1,6 @@
 import copy
 import inspect
 from typing import Callable, Generic, TypeVar, Type, Union, Optional, Dict, Any
-import warnings
 
 from allennlp.common.params import Params
 
@@ -51,19 +50,12 @@ class Lazy(Generic[T]):
         self,
         constructor: Union[Type[T], Callable[..., T]],
         params: Optional[Params] = None,
-        contructor_extras: Optional[Dict[str, Any]] = None,
+        constructor_extras: Optional[Dict[str, Any]] = None,
         **kwargs,
     ) -> None:
-        if contructor_extras is not None:
-            warnings.warn(
-                "'contructor_extras' is deprecated, you should just pass extra arguments "
-                "directly as **kwargs instead.",
-                DeprecationWarning,
-            )
-
         self._constructor = constructor
         self._params = params or Params({})
-        self._constructor_extras = contructor_extras or {}
+        self._constructor_extras = constructor_extras or {}
         self._constructor_extras.update(kwargs)
 
     @property
