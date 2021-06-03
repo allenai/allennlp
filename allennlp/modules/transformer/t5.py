@@ -769,8 +769,7 @@ class T5(TransformerModule, Registrable):
         model_dim: int = 512,
         output_attentions: bool = False,
         output_all_hidden_states: bool = False,
-        beam_size: int = 3,
-        max_decoding_steps: int = 100,
+        beam_search: Lazy[BeamSearch] = Lazy(BeamSearch, beam_size=3, max_steps=100),
         ddp_wrapper: Optional[DdpWrapper] = None,
     ):
         super().__init__()
@@ -800,9 +799,7 @@ class T5(TransformerModule, Registrable):
         self.output_attentions = output_attentions
         self.output_all_hidden_states = output_all_hidden_states
 
-        self.beam_search = BeamSearch(
-            self.eos_token_id, max_steps=max_decoding_steps, beam_size=beam_size or 1
-        )
+        self.beam_search = beam_search.construct(end_index=self.eos_token_id)
 
     @classmethod
     def _from_config(cls, config: "PretrainedConfig", **kwargs):
