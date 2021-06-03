@@ -15,6 +15,11 @@ ENV NVIDIA_VISIBLE_DEVICES all
 ENV NVIDIA_DRIVER_CAPABILITIES compute,utility
 LABEL com.nvidia.volumes.needed="nvidia_driver"
 
+# These environment variables are helpful for debugging.
+# See https://pytorch.org/docs/stable/distributed.html#common-environment-variables for more info.
+ENV NCCL_DEBUG INFO
+ENV NCCL_DEBUG_SUBSYS ALL
+
 WORKDIR /stage/allennlp
 
 # Install torch ecosystem first. This build arg should be in the form of a version requirement,
@@ -31,11 +36,6 @@ COPY dev-requirements.txt .
 RUN touch allennlp/__init__.py \
     && touch README.md \
     && pip install --no-cache-dir -e .[all] -r dev-requirements.txt
-
-# These environment variables are helpful for debugging.
-# See https://pytorch.org/docs/stable/distributed.html#common-environment-variables for more info.
-ENV NCCL_DEBUG INFO
-ENV NCCL_DEBUG_SUBSYS ALL
 
 # Now add the full package source and re-install just the package.
 COPY . .
