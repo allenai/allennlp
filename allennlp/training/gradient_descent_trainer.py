@@ -560,7 +560,7 @@ class GradientDescentTrainer(Trainer):
                     )
 
         if self._distributed and not done_early:
-            logger.warning(
+            logger.info(
                 f"Worker {torch.distributed.get_rank()} completed its entire epoch (training)."
             )
             # Indicate that we're done so that any workers that have remaining data stop the epoch early.
@@ -836,27 +836,34 @@ class GradientDescentTrainer(Trainer):
             self._epochs_completed += 1
             self._batches_in_epoch_completed = 0
 
-            # The checkpointer saves state from the learning rate scheduler, momentum scheduler, moving
-            # average, and callbacks, so we have to make sure those are updated before we save the
-            # checkpoint here.
-            if self._primary and self._checkpointer is not None:
-                self._checkpointer.maybe_save_checkpoint(
-                    self, self._epochs_completed, self._batches_in_epoch_completed
-                )
-            # Wait for the primary process to finish saving the checkpoint
-            if self._distributed:
-                dist.barrier()
+            if self._checkpointer is not None:
+                # The checkpointer saves state from the learning rate scheduler, momentum scheduler, moving
+                # average, and callbacks, so we have to make sure those are updated before we save the
+                # checkpoint here.
+                if self._primary:
+                    self._checkpointer.maybe_save_checkpoint(
+                        self, self._epochs_completed, self._batches_in_epoch_completed
+                    )
 
-            if self._primary and self._serialization_dir and self._metric_tracker.is_best_so_far():
-                self._best_model_filename = os.path.join(self._serialization_dir, "best.th")
-                if self._moving_average is None:
-                    torch.save(self.model.state_dict(), self._best_model_filename)
-                else:
-                    self._moving_average.assign_average_value()
-                    try:
+                # Wait for the primary process to finish saving the checkpoint
+                if self._distributed:
+                    dist.barrier()
+
+                if (
+                    self._primary
+                    and self._serialization_dir
+                    and self._metric_tracker.is_best_so_far()
+                ):
+                    self._best_model_filename = os.path.join(self._serialization_dir, "best.th")
+                    if self._moving_average is None:
                         torch.save(self.model.state_dict(), self._best_model_filename)
-                    finally:
-                        self._moving_average.restore()
+                    else:
+                        self._moving_average.assign_average_value()
+                        try:
+                            torch.save(self.model.state_dict(), self._best_model_filename)
+                        finally:
+                            self._moving_average.restore()
+
             # Wait for the primary process to finish saving the best
             if self._distributed:
                 dist.barrier()
