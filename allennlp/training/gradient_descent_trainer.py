@@ -222,7 +222,7 @@ class GradientDescentTrainer(Trainer):
         validation_data_loader: DataLoader = None,
         num_epochs: int = 20,
         serialization_dir: Optional[str] = None,
-        checkpointer: Checkpointer = None,
+        checkpointer: Optional[Checkpointer] = None,
         cuda_device: Optional[Union[int, torch.device]] = None,
         grad_norm: Union[float, bool] = False,
         grad_clipping: Optional[float] = None,
@@ -285,8 +285,6 @@ class GradientDescentTrainer(Trainer):
         self._num_epochs = num_epochs
 
         self._checkpointer: Optional[Checkpointer] = checkpointer
-        if checkpointer is None and serialization_dir is not None:
-            self._checkpointer = Checkpointer(serialization_dir)
 
         self._grad_norm = grad_norm
         self._grad_clipping = grad_clipping
@@ -990,7 +988,7 @@ class GradientDescentTrainer(Trainer):
         learning_rate_scheduler: Lazy[LearningRateScheduler] = None,
         momentum_scheduler: Lazy[MomentumScheduler] = None,
         moving_average: Lazy[MovingAverage] = None,
-        checkpointer: Lazy[Checkpointer] = Lazy(Checkpointer),
+        checkpointer: Optional[Lazy[Checkpointer]] = Lazy(Checkpointer),
         callbacks: List[Lazy[TrainerCallback]] = None,
         enable_default_callbacks: bool = True,
         run_confidence_checks: bool = True,
@@ -1074,7 +1072,11 @@ class GradientDescentTrainer(Trainer):
             if momentum_scheduler is None
             else momentum_scheduler.construct(optimizer=optimizer_)
         )
-        checkpointer_ = checkpointer.construct(serialization_dir=serialization_dir)
+        checkpointer_ = (
+            None
+            if checkpointer is None
+            else checkpointer.construct(serialization_dir=serialization_dir)
+        )
 
         callbacks_: List[TrainerCallback] = []
         for callback_ in callbacks or []:
