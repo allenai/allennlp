@@ -286,6 +286,7 @@ class AllenNlpFilterProcessor(Struct):
         "TransformerModule._pretrained_allow_missing",
         "TransformerModule._distributed_loading_strategy",
         "TransformerModule._tied_weights",
+        "Constraint._update_state",
     }
 
     def process(self, graph, _resolver):

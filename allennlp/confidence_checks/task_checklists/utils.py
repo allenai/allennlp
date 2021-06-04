@@ -2,6 +2,92 @@ import string
 from typing import Dict, Callable, List, Union
 import numpy as np
 import spacy
+from checklist.editor import Editor
+
+
+def add_common_lexicons(editor: Editor):
+    """
+    Add commonly used lexicons to the editor object. These can be used in all
+    the task suites.
+
+    Note: Updates the `editor` object in place.
+    """
+    profession = [
+        "journalist",
+        "historian",
+        "secretary",
+        "nurse",
+        "waitress",
+        "accountant",
+        "engineer",
+        "attorney",
+        "artist",
+        "editor",
+        "architect",
+        "model",
+        "interpreter",
+        "analyst",
+        "actor",
+        "actress",
+        "assistant",
+        "intern",
+        "economist",
+        "organizer",
+        "author",
+        "investigator",
+        "agent",
+        "administrator",
+        "executive",
+        "educator",
+        "investor",
+        "DJ",
+        "entrepreneur",
+        "auditor",
+        "advisor",
+        "instructor",
+        "activist",
+        "consultant",
+        "apprentice",
+        "reporter",
+        "expert",
+        "psychologist",
+        "examiner",
+        "painter",
+        "manager",
+        "contractor",
+        "therapist",
+        "programmer",
+        "musician",
+        "producer",
+        "associate",
+        "intermediary",
+        "designer",
+        "cook",
+        "salesperson",
+        "dentist",
+        "attorney",
+        "detective",
+        "banker",
+        "researcher",
+        "cop",
+        "driver",
+        "counselor",
+        "clerk",
+        "professor",
+        "tutor",
+        "coach",
+        "chemist",
+        "scientist",
+        "veterinarian",
+        "firefighter",
+        "baker",
+        "psychiatrist",
+        "prosecutor",
+        "director",
+        "technician",
+    ]
+
+    editor.add_lexicon("profession", profession, overwrite=True)
 
 
 def spacy_wrap(fn: Callable, language: str = "en_core_web_sm", **kwargs) -> Callable:
