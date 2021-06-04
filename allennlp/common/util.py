@@ -422,13 +422,14 @@ def peak_gpu_memory() -> Dict[int, int]:
     if not torch.cuda.is_available():
         return {}
 
+    device = torch.cuda.current_device()
+
     results_dict: Dict[int, int] = {}
     if is_distributed():
         # If the backend is not 'nccl', we're training on CPU.
         if dist.get_backend() != "nccl":
             return {}
 
-        device = torch.cuda.current_device()
         global_rank = dist.get_rank()
         world_size = dist.get_world_size()
         peak_bytes = torch.cuda.max_memory_allocated(device)
