@@ -34,6 +34,19 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+class LayersWithSkip(nn.Module):
+    """
+    A simple module that executes an arbitrary number sequential layers along with a skip connection.
+    """
+
+    def __init__(self, *layers: nn.Module) -> None:
+        super().__init__()
+        self.layers = nn.Sequential(*layers)
+
+    def forward(self, x: FloatT) -> Tuple[FloatT, FloatT]:
+        return x, self.layers(x)
+
+
 class T5LayerNorm(TransformerModule, FromParams):
     """T5-style layer norm does not have bias and does not subtract the mean."""
 
@@ -60,48 +73,73 @@ class T5FeedForwardProjection(TransformerModule, Registrable):
 
 @T5FeedForwardProjection.register("relu")
 class T5DenseReluDense(TransformerModule, FromParams):
+    _pretrained_mapping = {"wi": "block.0", "wo": "block.3"}
+
     def __init__(self, hidden_size: int = 512, ff_size: int = 2048, dropout: float = 0.1):
         super().__init__()
-        self.wi = nn.Linear(hidden_size, ff_size, bias=False)
-        self.wi.weight.data.normal_(mean=0.0, std=hidden_size ** -0.5)
-        self.wo = nn.Linear(ff_size, hidden_size, bias=False)
-        self.wo.weight.data.normal_(mean=0.0, std=ff_size ** -0.5)
-        self.dropout = nn.Dropout(dropout)
+        wi = nn.Linear(hidden_size, ff_size, bias=False)
+        wi.weight.data.normal_(mean=0.0, std=hidden_size ** -0.5)
+        wo = nn.Linear(ff_size, hidden_size, bias=False)
+        wo.weight.data.normal_(mean=0.0, std=ff_size ** -0.5)
+        dropout = nn.Dropout(dropout)
+
+        self.block = nn.Sequential(wi, nn.ReLU(), dropout, wo)
 
     def forward(self, hidden_states) -> FloatT:
-        hidden_states = self.wi(hidden_states)
-        hidden_states = F.relu(hidden_states)
-        hidden_states = self.dropout(hidden_states)
-        hidden_states = self.wo(hidden_states)
-        return hidden_states
+        return self.block(hidden_states)
+
+
+class LinearAndMultiply(nn.Module):
+    def __init__(self, linear: nn.Linear):
+        super().__init__()
+        self.linear = linear
+
+    def forward(self, x: Tuple[FloatT, FloatT]) -> FloatT:
+        x0, x1 = x
+        return x1 * self.linear(x0)
 
 
 @T5FeedForwardProjection.register("gated-gelu")
 class T5DenseGatedGeluDense(TransformerModule, FromParams):
+    _pretrained_mapping = {
+        "wi_0": "block.0.layers.0",
+        "wi_1": "block.1.linear",
+        "wo": "block.3",
+    }
+
     def __init__(self, hidden_size: int = 512, ff_size: int = 2048, dropout: float = 0.1):
         super().__init__()
-        self.wi_0 = nn.Linear(hidden_size, ff_size, bias=False)
-        self.wi_0.weight.data.normal_(mean=0.0, std=hidden_size ** -0.5)
-        self.wi_1 = nn.Linear(hidden_size, ff_size, bias=False)
-        self.wi_1.weight.data.normal_(mean=0.0, std=hidden_size ** -0.5)
-        self.wo = nn.Linear(ff_size, hidden_size, bias=False)
-        self.wo.weight.data.normal_(mean=0.0, std=ff_size ** -0.5)
-        self.dropout = nn.Dropout(dropout)
         from allennlp.nn import Activation
 
-        self.gelu_act = Activation.by_name("gelu_new")()
+        wi_0 = nn.Linear(hidden_size, ff_size, bias=False)
+        wi_0.weight.data.normal_(mean=0.0, std=hidden_size ** -0.5)
+        wi_1 = nn.Linear(hidden_size, ff_size, bias=False)
+        wi_1.weight.data.normal_(mean=0.0, std=hidden_size ** -0.5)
+        wo = nn.Linear(ff_size, hidden_size, bias=False)
+        wo.weight.data.normal_(mean=0.0, std=ff_size ** -0.5)
+        dropout = nn.Dropout(dropout)
+        gelu_act = Activation.by_name("gelu_new")()
+
+        self.block = nn.Sequential(
+            LayersWithSkip(wi_0, gelu_act), LinearAndMultiply(wi_1), dropout, wo
+        )
 
     def forward(self, hidden_states) -> FloatT:
-        hidden_gelu = self.gelu_act(self.wi_0(hidden_states))
-        hidden_linear = self.wi_1(hidden_states)
-        hidden_states = hidden_gelu * hidden_linear
-        hidden_states = self.dropout(hidden_states)
-        hidden_states = self.wo(hidden_states)
-        return hidden_states
+        return self.block(hidden_states)
+
+
+class DropoutAndAdd(nn.Module):
+    def __init__(self, dropout: nn.Dropout) -> None:
+        super().__init__()
+        self.dropout = dropout
+
+    def forward(self, x: Tuple[FloatT, FloatT]) -> FloatT:
+        x0, x1 = x
+        return x0 + self.dropout(x1)
 
 
 class T5LayerFF(TransformerModule, FromParams):
-    _pretrained_mapping = {"DenseReluDense": "ff_proj"}
+    _pretrained_mapping = {"DenseReluDense": "block.0.layers.1", "layer_norm": "block.0.layers.0"}
 
     def __init__(
         self,
@@ -110,15 +148,13 @@ class T5LayerFF(TransformerModule, FromParams):
         dropout: float = 0.1,
     ):
         super().__init__()
-        self.ff_proj = ff_proj or T5DenseReluDense()
-        self.layer_norm = layer_norm or T5LayerNorm()
-        self.dropout = nn.Dropout(dropout)
+        self.block = nn.Sequential(
+            LayersWithSkip(layer_norm or T5LayerNorm(), ff_proj or T5DenseReluDense()),
+            DropoutAndAdd(nn.Dropout(dropout)),
+        )
 
     def forward(self, hidden_states) -> FloatT:
-        forwarded_states = self.layer_norm(hidden_states)
-        forwarded_states = self.ff_proj(forwarded_states)
-        hidden_states = hidden_states + self.dropout(forwarded_states)
-        return hidden_states
+        return self.block(hidden_states)
 
 
 @dataclass
