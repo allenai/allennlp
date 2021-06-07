@@ -28,6 +28,7 @@ from typing import (
     TypeVar,
     Union,
     Sequence,
+    Set,
 )
 
 import numpy
@@ -328,7 +329,7 @@ def push_python_path(path: PathType) -> ContextManagerFunctionReturnType[None]:
         sys.path.remove(path)
 
 
-def import_module_and_submodules(package_name: str, exclude: Optional[List[str]] = None) -> None:
+def import_module_and_submodules(package_name: str, exclude: Optional[Set[str]] = None) -> None:
     """
     Import all submodules under the given package.
     Primarily useful so that people using AllenNLP as a library
