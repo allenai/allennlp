@@ -75,6 +75,14 @@ def import_plugins() -> None:
     """
     Imports the plugins found with `discover_plugins()`.
     """
+    # Ensure all relevant submodules of AllenNLP are imported.
+    import_module_and_submodules(
+        "allennlp",
+        exclude={
+            "allennlp.sanity_checks",  # deprecated
+            "allennlp.tools",  # things in here are usually run as commands themselves
+        },
+    )
 
     # Workaround for a presumed Python issue where spawned processes can't find modules in the current directory.
     cwd = os.getcwd()
