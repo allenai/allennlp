@@ -335,6 +335,9 @@ def import_module_and_submodules(package_name: str, exclude: Optional[List[str]]
     can specify their own custom packages and have their custom
     classes get loaded and registered.
     """
+    if exclude and package_name in exclude:
+        return
+
     importlib.invalidate_caches()
 
     # For some reason, python doesn't always add this by default to your path, but you pretty much
@@ -342,8 +345,7 @@ def import_module_and_submodules(package_name: str, exclude: Optional[List[str]]
     # the end won't hurt anything.
     with push_python_path("."):
         # Import at top level
-        if not exclude or package_name not in exlude:
-            module = importlib.import_module(package_name)
+        module = importlib.import_module(package_name)
         path = getattr(module, "__path__", [])
         path_string = "" if not path else path[0]
 
