@@ -10,8 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Fixed Broken link in `allennlp.fairness.fairness_metrics.Separation` docs
-- `allennlp` is now treated as a default plugin itself to ensure that `allennlp.common.plugins.import_plugins()`
-  imports all submodules of `allennlp`.
+- Ensured all `allennlp` submodules are imported with `allennlp.common.plugins.import_plugins()`.
 
 
 ## [v2.5.0](https://github.com/allenai/allennlp/releases/tag/v2.5.0) - 2021-06-03

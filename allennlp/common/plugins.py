@@ -33,7 +33,7 @@ GLOBAL_PLUGINS_FILENAME = str(Path.home() / ".allennlp" / "plugins")
 The global plugins file will be found here.
 """
 
-DEFAULT_PLUGINS = ("allennlp", "allennlp_models", "allennlp_semparse", "allennlp_server")
+DEFAULT_PLUGINS = ("allennlp_models", "allennlp_semparse", "allennlp_server")
 """
 Default plugins do not need to be declared in a plugins file. They will always
 be imported when they are installed in the current Python environment.
@@ -75,6 +75,14 @@ def import_plugins() -> None:
     """
     Imports the plugins found with `discover_plugins()`.
     """
+    # Ensure all relevant submodules of AllenNLP are imported.
+    import_module_and_submodules(
+        "allennlp",
+        exclude=[
+            "allennlp.sanity_checks",  # deprecated
+            "allennlp.tools",  # things in here are usually run as commands themselves
+        ],
+    )
 
     # Workaround for a presumed Python issue where spawned processes can't find modules in the current directory.
     cwd = os.getcwd()
