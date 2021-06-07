@@ -78,5 +78,5 @@ def main():
 
 
 if __name__ == "__main__":
-    logging.setLevel(logging.ERROR)
+    logging.basicConfig(level=logging.ERROR)
     main()
