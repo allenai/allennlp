@@ -19,6 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Fixed a mispelling: the parameter `contructor_extras` in `Lazy()` is now correctly called `constructor_extras`.
+- Fixed Broken link in `allennlp.fairness.fairness_metrics.Separation` docs
+- Ensured all `allennlp` submodules are imported with `allennlp.common.plugins.import_plugins()`.
 
 
 ## [v2.5.0](https://github.com/allenai/allennlp/releases/tag/v2.5.0) - 2021-06-03
