@@ -33,7 +33,7 @@ GLOBAL_PLUGINS_FILENAME = str(Path.home() / ".allennlp" / "plugins")
 The global plugins file will be found here.
 """
 
-DEFAULT_PLUGINS = ("allennlp_models", "allennlp_semparse", "allennlp_server")
+DEFAULT_PLUGINS = ("allennlp", "allennlp_models", "allennlp_semparse", "allennlp_server")
 """
 Default plugins do not need to be declared in a plugins file. They will always
 be imported when they are installed in the current Python environment.
