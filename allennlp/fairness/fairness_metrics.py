@@ -196,7 +196,7 @@ class Independence(Metric):
 @Metric.register("separation")
 class Separation(Metric):
     """
-    [Separation]((https://fairmlbook.org) (pg. 12) allows correlation between the
+    [Separation](https://fairmlbook.org) (pg. 12) allows correlation between the
     predictions and the protected variable to the extent that it is justified by
     the gold labels.
 
