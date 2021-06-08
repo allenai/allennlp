@@ -510,6 +510,18 @@ def is_distributed() -> bool:
     return dist.is_available() and dist.is_initialized()
 
 
+def is_global_primary() -> bool:
+    """
+    Checks if the distributed process group is the global primary (rank = 0).
+    If the distributed process group is not available or has not been initialized,
+    this trivially returns `True`.
+    """
+    if not is_distributed():
+        return True
+    else:
+        return dist.get_rank() == 0
+
+
 def sanitize_wordpiece(wordpiece: str) -> str:
     """
     Sanitizes wordpieces from BERT, RoBERTa or ALBERT tokenizers.

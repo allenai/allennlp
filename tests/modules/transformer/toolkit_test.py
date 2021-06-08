@@ -1,9 +1,10 @@
 import torch
+from torch.testing import assert_allclose
 from overrides import overrides
+from transformers import AutoModel
 from transformers.models.albert.modeling_albert import AlbertEmbeddings
 
 from allennlp.common import cached_transformers
-from allennlp.common.testing import assert_equal_parameters
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.modules.token_embedders import Embedding, TokenEmbedder
 from allennlp.modules.transformer import TransformerStack, TransformerEmbeddings
@@ -49,15 +50,19 @@ class TestTransformerToolkit(AllenNlpTestCase):
         tiny.forward(torch.LongTensor([[0, 1, 2]]))
 
     def test_use_first_four_layers_of_pretrained(self):
-        pretrained = cached_transformers.get("bert-base-uncased", False)
+        pretrained = "bert-base-cased"
 
         class SmallTransformer(TokenEmbedder):
             def __init__(self):
                 super().__init__()
-                self.embeddings = TransformerEmbeddings.from_pretrained_module(pretrained)
-
+                self.embeddings = TransformerEmbeddings.from_pretrained_module(
+                    pretrained, relevant_module="bert.embeddings"
+                )
                 self.transformer = TransformerStack.from_pretrained_module(
-                    pretrained, num_hidden_layers=4
+                    pretrained,
+                    num_hidden_layers=4,
+                    relevant_module="bert.encoder",
+                    strict=False,
                 )
 
             @overrides
@@ -68,19 +73,27 @@ class TestTransformerToolkit(AllenNlpTestCase):
 
         small = SmallTransformer()
         assert len(small.transformer.layers) == 4
-        small.forward(torch.LongTensor([[0, 1, 2]]))
+        small(torch.LongTensor([[0, 1, 2]]))
 
     def test_use_selected_layers_of_bert_for_different_purposes(self):
         class MediumTransformer(torch.nn.Module):
             def __init__(self):
                 super().__init__()
-                self.embeddings = TransformerEmbeddings.from_pretrained_module("bert-base-uncased")
+                self.embeddings = TransformerEmbeddings.from_pretrained_module(
+                    "bert-base-cased", relevant_module="bert.embeddings"
+                )
                 self.separate_transformer = TransformerStack.from_pretrained_module(
-                    "bert-base-uncased", num_hidden_layers=range(0, 8)
+                    "bert-base-cased",
+                    relevant_module="bert.encoder",
+                    num_hidden_layers=8,
+                    strict=False,
                 )
                 self.combined_transformer = TransformerStack.from_pretrained_module(
-                    "bert-base-uncased",
-                    num_hidden_layers=range(8, 12),
+                    "bert-base-cased",
+                    relevant_module="bert.encoder",
+                    num_hidden_layers=4,
+                    mapping={f"layer.{l}": f"layers.{i}" for (i, l) in enumerate(range(8, 12))},
+                    strict=False,
                 )
 
             @overrides
@@ -106,22 +119,31 @@ class TestTransformerToolkit(AllenNlpTestCase):
         assert (len(medium.separate_transformer.layers)) == 8
         assert (len(medium.combined_transformer.layers)) == 4
 
-        pretrained = cached_transformers.get("bert-base-uncased", False)
+        pretrained = cached_transformers.get("bert-base-cased", False)
         pretrained_layers = dict(pretrained.encoder.layer.named_modules())
 
-        medium_layers = dict(medium.combined_transformer.layers.named_modules())
+        separate_layers = dict(medium.separate_transformer.layers.named_modules())
+        assert_allclose(
+            separate_layers["0"].intermediate.dense.weight.data,
+            pretrained_layers["0"].intermediate.dense.weight.data,
+        )
 
-        assert_equal_parameters(
-            medium_layers["0"], pretrained_layers["8"], TransformerStack._huggingface_mapping
+        combined_layers = dict(medium.combined_transformer.layers.named_modules())
+        assert_allclose(
+            combined_layers["0"].intermediate.dense.weight.data,
+            pretrained_layers["8"].intermediate.dense.weight.data,
         )
-        assert_equal_parameters(
-            medium_layers["1"], pretrained_layers["9"], TransformerStack._huggingface_mapping
+        assert_allclose(
+            combined_layers["1"].intermediate.dense.weight.data,
+            pretrained_layers["9"].intermediate.dense.weight.data,
         )
-        assert_equal_parameters(
-            medium_layers["2"], pretrained_layers["10"], TransformerStack._huggingface_mapping
+        assert_allclose(
+            combined_layers["2"].intermediate.dense.weight.data,
+            pretrained_layers["10"].intermediate.dense.weight.data,
         )
-        assert_equal_parameters(
-            medium_layers["3"], pretrained_layers["11"], TransformerStack._huggingface_mapping
+        assert_allclose(
+            combined_layers["3"].intermediate.dense.weight.data,
+            pretrained_layers["11"].intermediate.dense.weight.data,
         )
 
     def test_combination_of_two_different_berts(self):
@@ -130,8 +152,10 @@ class TestTransformerToolkit(AllenNlpTestCase):
         class AlmostRegularTransformer(TokenEmbedder):
             def __init__(self):
                 super().__init__()
-                self.embeddings = TransformerEmbeddings.get_relevant_module("albert-base-v2")
-                self.transformer = TransformerStack.from_pretrained_module("bert-base-uncased")
+                self.embeddings = AutoModel.from_pretrained("albert-base-v2").embeddings
+                self.transformer = TransformerStack.from_pretrained_module(
+                    "bert-base-cased", relevant_module="bert.encoder"
+                )
                 # We want to tune only the embeddings, because that's our experiment.
                 self.transformer.requires_grad = False
 

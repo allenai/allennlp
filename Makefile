@@ -86,9 +86,8 @@ install :
 	# See https://github.com/pypa/pip/issues/4537.
 	python setup.py install_egg_info
 	pip install --upgrade --upgrade-strategy eager -e . -r dev-requirements.txt
-	# Docs are not built on docker, and the runner is unable to find
-	# the nltk_data folder. Hence, we download the requirement.
-	python -c 'import nltk; nltk.download("sentiwordnet")'
+	# These nltk packages are used by the 'checklist' module.
+	python -c 'import nltk; [nltk.download(p) for p in ("wordnet", "wordnet_ic", "sentiwordnet")]'
 #
 # Documention helpers.
 #
@@ -148,9 +147,11 @@ docker-image :
 		--build-arg TORCH=$(DOCKER_TORCH_VERSION) \
 		-t $(DOCKER_IMAGE_NAME) .
 
+DOCKER_GPUS = --gpus all
+
 .PHONY : docker-run
 docker-run :
-	$(DOCKER_RUN_CMD) --gpus all $(DOCKER_IMAGE_NAME) $(ARGS)
+	$(DOCKER_RUN_CMD) $(DOCKER_GPUS) $(DOCKER_IMAGE_NAME) $(ARGS)
 
 .PHONY : docker-test-image
 docker-test-image :
@@ -162,4 +163,4 @@ docker-test-image :
 
 .PHONY : docker-test-run
 docker-test-run :
-	$(DOCKER_RUN_CMD) --gpus all $(DOCKER_TEST_IMAGE_NAME) $(ARGS)
+	$(DOCKER_RUN_CMD) $(DOCKER_GPUS) $(DOCKER_TEST_IMAGE_NAME) $(ARGS)

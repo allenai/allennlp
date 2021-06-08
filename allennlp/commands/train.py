@@ -19,6 +19,7 @@ from overrides import overrides
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common import Params, Registrable, Lazy
 from allennlp.common.checks import check_for_gpu, ConfigurationError
+from allennlp.common.meta import Meta, META_NAME
 from allennlp.common import logging as common_logging
 from allennlp.common import util as common_util
 from allennlp.common.plugins import import_plugins
@@ -225,6 +226,9 @@ def train_model(
 
     training_util.create_serialization_dir(params, serialization_dir, recover, force)
     params.to_file(os.path.join(serialization_dir, CONFIG_NAME))
+
+    meta = Meta.new()
+    meta.to_file(os.path.join(serialization_dir, META_NAME))
 
     include_in_archive = params.pop("include_in_archive", None)
     verify_include_in_archive(include_in_archive)
@@ -467,11 +471,22 @@ def _train_worker(
     except KeyboardInterrupt:
         # if we have completed an epoch, try to create a model archive.
         if primary and os.path.exists(os.path.join(serialization_dir, _DEFAULT_WEIGHTS)):
-            logging.info(
-                "Training interrupted by the user. Attempting to create "
-                "a model archive using the current best epoch weights."
-            )
-            archive_model(serialization_dir, include_in_archive=include_in_archive)
+            best_weights_path = train_loop.trainer.get_best_weights_path()
+            if best_weights_path is None:
+                logging.info(
+                    "Training interrupted by the user, and no best model has been saved. "
+                    "No model archive created."
+                )
+            else:
+                logging.info(
+                    "Training interrupted by the user. Attempting to create "
+                    "a model archive using the current best epoch weights."
+                )
+                archive_model(
+                    serialization_dir,
+                    weights=best_weights_path,
+                    include_in_archive=include_in_archive,
+                )
         raise
 
     if primary:
@@ -723,13 +738,12 @@ class TrainModel(Registrable):
         for data_loader_ in data_loaders.values():
             data_loader_.index_with(model_.vocab)
 
-        # We don't need to pass serialization_dir and local_rank here, because they will have been
-        # passed through the trainer by from_params already, because they were keyword arguments to
-        # construct this class in the first place.
         trainer_ = trainer.construct(
+            serialization_dir=serialization_dir,
             model=model_,
             data_loader=data_loaders["train"],
             validation_data_loader=data_loaders.get("validation"),
+            local_rank=local_rank,
         )
         assert trainer_ is not None
 

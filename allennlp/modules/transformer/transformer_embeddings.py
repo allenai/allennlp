@@ -1,10 +1,13 @@
-from typing import Optional, Dict
+from typing import Optional, TYPE_CHECKING
 
 import torch
 
 from allennlp.common import FromParams
-
+from allennlp.modules.transformer.layer_norm import LayerNorm
 from allennlp.modules.transformer.transformer_module import TransformerModule
+
+if TYPE_CHECKING:
+    from transformers.configuration_utils import PretrainedConfig
 
 
 class Embeddings(TransformerModule, FromParams):
@@ -38,7 +41,7 @@ class Embeddings(TransformerModule, FromParams):
                     )
                 )
         self.embeddings = embeddings
-        self.layer_norm = torch.nn.LayerNorm(embedding_size, eps=1e-12)
+        self.layer_norm = LayerNorm(embedding_size, eps=1e-12)
         self.dropout = torch.nn.Dropout(dropout)
 
     def forward(self, *inputs) -> torch.Tensor:
@@ -101,13 +104,27 @@ class TransformerEmbeddings(Embeddings):
         Optionally apply a linear transform after the dropout, projecting to `output_size`.
     """
 
-    _relevant_module = "embeddings"
-    _huggingface_mapping = {
+    _pretrained_relevant_module = ["embeddings", "bert.embeddings"]
+    _pretrained_mapping = {
         "LayerNorm": "layer_norm",
         "word_embeddings": "embeddings.word_embeddings",
         "position_embeddings": "embeddings.position_embeddings",
         "token_type_embeddings": "embeddings.token_type_embeddings",
+        # Albert is a special case. A linear projection is applied to the embeddings,
+        # but that linear transformation lives in the encoder.
+        "albert.embeddings.LayerNorm": "layer_norm",
+        "albert.embeddings.LayerNorm": "layer_norm",
+        "albert.embeddings.word_embeddings": "embeddings.word_embeddings",
+        "albert.embeddings.position_embeddings": "embeddings.position_embeddings",
+        "albert.embeddings.token_type_embeddings": "embeddings.token_type_embeddings",
+        "albert.encoder.embedding_hidden_mapping_in": "linear_transform",
     }
+    _pretrained_ignore = [
+        # Ignore these for Albert case.
+        r"^albert\.pooler\..*",
+        r"^albert\.encoder\.albert_layer_groups\..*",
+        r"^predictions\.*",
+    ]
 
     def __init__(
         self,
@@ -150,6 +167,7 @@ class TransformerEmbeddings(Embeddings):
     ) -> torch.Tensor:
 
         """
+        # Parameters
         input_ids : `torch.Tensor`
             Shape `batch_size x seq_len`
         attention_mask : `torch.Tensor`
@@ -185,32 +203,18 @@ class TransformerEmbeddings(Embeddings):
         return embeddings
 
     @classmethod
-    def _get_input_arguments(
-        cls,
-        pretrained_module: torch.nn.Module,
-        source="huggingface",
-        mapping: Optional[Dict[str, str]] = None,
-        **kwargs,
-    ):
-        submodules = cls._get_mapped_submodules(pretrained_module, source, mapping)
-
+    def _from_config(cls, config: "PretrainedConfig", **kwargs):
         final_kwargs = {}
-
-        final_kwargs["vocab_size"] = submodules["embeddings.word_embeddings"].num_embeddings
-        final_kwargs["embedding_size"] = submodules["embeddings.word_embeddings"].embedding_dim
-        final_kwargs["pad_token_id"] = submodules["embeddings.word_embeddings"].padding_idx
-        final_kwargs["max_position_embeddings"] = submodules[
-            "embeddings.position_embeddings"
-        ].num_embeddings
-
-        if "embeddings.token_type_embeddings" in submodules:
-            final_kwargs["type_vocab_size"] = submodules[
-                "embeddings.token_type_embeddings"
-            ].num_embeddings
-
+        final_kwargs["vocab_size"] = config.vocab_size
+        # For Albert, the embedding size is different than the hidden size used
+        # in the model, so a linear transform is applied.
+        if hasattr(config, "embedding_size"):
+            final_kwargs["embedding_size"] = config.embedding_size
+            final_kwargs["output_size"] = config.hidden_size
         else:
-            final_kwargs["type_vocab_size"] = 0
-
+            final_kwargs["embedding_size"] = config.hidden_size
+        final_kwargs["pad_token_id"] = config.pad_token_id
+        final_kwargs["max_position_embeddings"] = config.max_position_embeddings
+        final_kwargs["type_vocab_size"] = config.type_vocab_size
         final_kwargs.update(**kwargs)
-
-        return final_kwargs
+        return cls(**final_kwargs)

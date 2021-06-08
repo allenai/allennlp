@@ -49,7 +49,8 @@ class TensorBoardCallback(LogWriterCallback):
         log_prefix: str = "",
         epoch: Optional[int] = None,
     ) -> None:
-        timestep = epoch if epoch is not None else self.trainer._batch_num_total  # type: ignore[union-attr]
+        assert self.trainer is not None
+        timestep = epoch if epoch is not None else self.trainer._total_batches_completed
         log = self._train_log if not log_prefix.startswith("validation") else self._validation_log
         for key, value in scalars.items():
             name = f"{log_prefix}/{key}" if log_prefix else key
@@ -59,7 +60,8 @@ class TensorBoardCallback(LogWriterCallback):
     def log_tensors(
         self, tensors: Dict[str, torch.Tensor], log_prefix: str = "", epoch: Optional[int] = None
     ) -> None:
-        timestep = epoch if epoch is not None else self.trainer._batch_num_total  # type: ignore[union-attr]
+        assert self.trainer is not None
+        timestep = epoch if epoch is not None else self.trainer._total_batches_completed
         log = self._train_log if not log_prefix.startswith("validation") else self._validation_log
         for key, values in tensors.items():
             name = f"{log_prefix}/{key}" if log_prefix else key

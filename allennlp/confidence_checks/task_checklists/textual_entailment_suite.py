@@ -5,8 +5,8 @@ from overrides import overrides
 from checklist.test_suite import TestSuite
 from checklist.test_types import MFT
 from checklist.perturb import Perturb
-from allennlp.sanity_checks.task_checklists.task_suite import TaskSuite
-from allennlp.sanity_checks.task_checklists import utils
+from allennlp.confidence_checks.task_checklists.task_suite import TaskSuite
+from allennlp.confidence_checks.task_checklists import utils
 
 
 def _wrap_apply_to_each(perturb_fn: Callable, both: bool = False, *args, **kwargs):
@@ -220,82 +220,6 @@ class TextualEntailmentSuite(TaskSuite):
         ]
         self.editor.add_lexicon("nouns", nouns, overwrite=True)
 
-        professions = [
-            "journalist",
-            "historian",
-            "secretary",
-            "nurse",
-            "waitress",
-            "accountant",
-            "engineer",
-            "attorney",
-            "artist",
-            "editor",
-            "architect",
-            "model",
-            "interpreter",
-            "analyst",
-            "actor",
-            "actress",
-            "assistant",
-            "intern",
-            "economist",
-            "organizer",
-            "author",
-            "investigator",
-            "agent",
-            "administrator",
-            "executive",
-            "educator",
-            "investor",
-            "DJ",
-            "entrepreneur",
-            "auditor",
-            "advisor",
-            "instructor",
-            "activist",
-            "consultant",
-            "apprentice",
-            "reporter",
-            "expert",
-            "psychologist",
-            "examiner",
-            "painter",
-            "manager",
-            "contractor",
-            "therapist",
-            "programmer",
-            "musician",
-            "producer",
-            "associate",
-            "intermediary",
-            "designer",
-            "cook",
-            "salesperson",
-            "dentist",
-            "attorney",
-            "detective",
-            "banker",
-            "researcher",
-            "cop",
-            "driver",
-            "counselor",
-            "clerk",
-            "professor",
-            "tutor",
-            "coach",
-            "chemist",
-            "scientist",
-            "veterinarian",
-            "firefighter",
-            "baker",
-            "psychiatrist",
-            "prosecutor",
-            "director",
-            "technician",
-        ]
-        self.editor.add_lexicon("professions", professions, overwrite=True)
-
     @overrides
     def _default_tests(self, data: Optional[Iterable[Tuple]], num_test_cases=100):
         super()._default_tests(data, num_test_cases)
@@ -406,8 +330,8 @@ class TextualEntailmentSuite(TaskSuite):
     def _default_temporal_tests(self, data: Optional[Iterable[Tuple]], num_test_cases=100):
         template = self.editor.template(
             (
-                "{first_name} works as {a:professions}",
-                "{first_name} used to work as a {professions}",
+                "{first_name} works as {a:profession}",
+                "{first_name} used to work as a {profession}",
             ),
             nsamples=num_test_cases,
             remove_duplicates=True,
@@ -415,8 +339,8 @@ class TextualEntailmentSuite(TaskSuite):
 
         template += self.editor.template(
             (
-                "{first_name} {last_name} is {a:professions}",
-                "{first_name} {last_name} was {a:professions}",
+                "{first_name} {last_name} is {a:profession}",
+                "{first_name} {last_name} was {a:profession}",
             ),
             nsamples=num_test_cases,
             remove_duplicates=True,
@@ -434,8 +358,8 @@ class TextualEntailmentSuite(TaskSuite):
 
         template = self.editor.template(
             (
-                "{first_name} was {a:professions1} before they were {a:professions2}",
-                "{first_name} was {a:professions1} after they were {a:professions2}",
+                "{first_name} was {a:profession1} before they were {a:profession2}",
+                "{first_name} was {a:profession1} after they were {a:profession2}",
             ),
             nsamples=num_test_cases,
             remove_duplicates=True,

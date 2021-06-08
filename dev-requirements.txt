@@ -7,7 +7,7 @@ flake8
 mypy==0.812
 
 # Automatic code formatting
-black==20.8b1
+black==21.5b2
 
 # Allows generation of coverage reports with pytest.
 pytest-cov
@@ -36,7 +36,7 @@ ruamel.yaml
 # Generating markdown files from Python modules.
 git+https://github.com/NiklasRosenstein/pydoc-markdown.git@f0bf8af1db4f11581c19d206d4ed1ab34b4854c1
 nr.databind.core<0.0.17
-nr.interface<0.0.4
+nr.interface<0.0.6
 
 mkdocs==1.1.2
 mkdocs-material>=5.5.0,<7.2.0

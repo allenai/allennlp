@@ -7,7 +7,12 @@ from overrides import overrides
 from allennlp.data.fields.text_field import TextFieldTensors
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.modules.backbones.backbone import Backbone
-from allennlp.modules.transformer import BiModalEncoder, ImageFeatureEmbeddings, Embeddings
+from allennlp.modules.transformer import (
+    BiModalEncoder,
+    ImageFeatureEmbeddings,
+    TransformerEmbeddings,
+    TransformerPooler,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +28,7 @@ class VilbertBackbone(Backbone):
     def __init__(
         self,
         vocab: Vocabulary,
-        text_embeddings: Embeddings,
+        text_embeddings: TransformerEmbeddings,
         image_embeddings: ImageFeatureEmbeddings,
         encoder: BiModalEncoder,
         pooled_output_dim: int,
@@ -36,7 +41,6 @@ class VilbertBackbone(Backbone):
         self.text_embeddings = text_embeddings
         self.image_embeddings = image_embeddings
         self.encoder = encoder
-        from allennlp.modules.transformer import TransformerPooler
 
         self.t_pooler = TransformerPooler(encoder.hidden_size1, pooled_output_dim)
         self.v_pooler = TransformerPooler(encoder.hidden_size2, pooled_output_dim)
@@ -66,44 +70,7 @@ class VilbertBackbone(Backbone):
         image_fixed_layer: int,
         fusion_method: str = "sum",
     ):
-        from transformers import AutoModel
-
-        transformer = AutoModel.from_pretrained(model_name)
-
-        from copy import deepcopy
-
-        text_embeddings = deepcopy(transformer.embeddings)
-
-        # Albert (and maybe others?) has this "embedding_size", that's different from "hidden_size".
-        # To get them to the same dimensionality, it uses a linear transform after the embedding
-        # layer, which we need to pull out and copy here.
-        if hasattr(transformer.config, "embedding_size"):
-            config = transformer.config
-
-            from transformers.models.albert.modeling_albert import AlbertModel
-
-            if isinstance(transformer, AlbertModel):
-                linear_transform = deepcopy(transformer.encoder.embedding_hidden_mapping_in)
-            else:
-                logger.warning(
-                    "Unknown model that uses separate embedding size; weights of the linear "
-                    f"transform will not be initialized.  Model type is: {transformer.__class__}"
-                )
-                linear_transform = torch.nn.Linear(config.embedding_dim, config.hidden_dim)
-
-            # We can't just use torch.nn.Sequential here, even though that's basically all this is,
-            # because Sequential doesn't accept *inputs, only a single argument.
-
-            class EmbeddingsShim(torch.nn.Module):
-                def __init__(self, embeddings: torch.nn.Module, linear_transform: torch.nn.Module):
-                    super().__init__()
-                    self.linear_transform = linear_transform
-                    self.embeddings = embeddings
-
-                def forward(self, *inputs, **kwargs):
-                    return self.linear_transform(self.embeddings(*inputs, **kwargs))
-
-            text_embeddings = EmbeddingsShim(text_embeddings, linear_transform)
+        text_embeddings = TransformerEmbeddings.from_pretrained_module(model_name)
 
         image_embeddings = ImageFeatureEmbeddings(
             feature_size=image_feature_dim,
@@ -112,7 +79,7 @@ class VilbertBackbone(Backbone):
         )
 
         encoder = BiModalEncoder.from_pretrained_module(
-            pretrained_module=transformer,
+            model_name,
             num_hidden_layers2=image_num_hidden_layers,
             hidden_size2=image_hidden_size,
             num_attention_heads2=image_num_attention_heads,
@@ -126,6 +93,7 @@ class VilbertBackbone(Backbone):
             fixed_layer1=text_fixed_layer,
             fixed_layer2=image_fixed_layer,
         )
+
         return cls(
             vocab=vocab,
             text_embeddings=text_embeddings,
@@ -143,19 +111,50 @@ class VilbertBackbone(Backbone):
         box_mask: torch.Tensor,
         text: TextFieldTensors,
     ) -> Dict[str, torch.Tensor]:
-        batch_size, _, feature_size = box_features.size()
-
         if "token_ids" in text["tokens"]:
             token_ids = text["tokens"]["token_ids"]
         else:
             token_ids = text["tokens"]["tokens"]
+
+        if token_ids.shape[:-1] != box_features.shape[:-2]:
+            raise ValueError(
+                "Tokens and boxes must have the same batch size and extra "
+                "dimensions (if applicable). Token size {0} did not match "
+                "box feature size {1}.".format(token_ids.shape[:-1], box_features.shape[:-2])
+            )
 
         # Shape: (batch_size, num_tokens)
         token_type_ids = text["tokens"].get("type_ids")
         # Shape: (batch_size, num_tokens)
         attention_mask = text["tokens"].get("mask")
 
-        # Shape: (batch_size, num_tokens, embedding_dim)
+        box_feature_dimensions = box_features.shape
+        feature_size = box_feature_dimensions[-1]
+        rolled_dimensions = box_feature_dimensions[:-2]
+        rolled_dimensions_product = 1
+        for dim in rolled_dimensions:
+            rolled_dimensions_product *= dim
+
+        token_ids = token_ids.view(rolled_dimensions_product, token_ids.shape[-1])
+        if token_type_ids is not None:
+            token_type_ids = token_type_ids.view(
+                rolled_dimensions_product, token_type_ids.shape[-1]
+            )
+        if attention_mask is not None:
+            attention_mask = attention_mask.view(
+                rolled_dimensions_product, attention_mask.shape[-1]
+            )
+        box_features = box_features.view(
+            rolled_dimensions_product, box_feature_dimensions[-2], feature_size
+        )
+        box_coordinates = box_coordinates.view(
+            rolled_dimensions_product,
+            box_coordinates.shape[-2],
+            box_coordinates.shape[-1],
+        )
+        box_mask = box_mask.view(rolled_dimensions_product, box_mask.shape[-1])
+
+        # Shape: (rolled_dimensions_product, num_tokens, embedding_dim)
         embedding_output = self.text_embeddings(token_ids, token_type_ids)
         num_tokens = embedding_output.size(1)
 
@@ -169,16 +168,16 @@ class VilbertBackbone(Backbone):
 
         extended_image_attention_mask = box_mask
 
-        # Shape: (batch_size, feature_size, num_tokens)
+        # Shape: (rolled_dimensions_product, feature_size, num_tokens)
         # TODO (epwalsh): Why all zeros?? This doesn't seem right.
         extended_co_attention_mask = torch.zeros(
-            batch_size,
+            extended_image_attention_mask.shape[0],
             feature_size,
             num_tokens,
             dtype=extended_image_attention_mask.dtype,
         )
 
-        # Shape: (batch_size, num_boxes, image_embedding_dim)
+        # Shape: (rolled_dimensions_product, num_boxes, image_embedding_dim)
         v_embedding_output = self.image_embeddings(box_features, box_coordinates)
 
         encoded_layers_t, encoded_layers_v = self.encoder(
@@ -189,15 +188,24 @@ class VilbertBackbone(Backbone):
             extended_co_attention_mask,
         )
 
-        # Shape: (batch_size, num_tokens, embedding_dim)
+        # Shape: (rolled_dimensions_product, num_tokens, embedding_dim)
         sequence_output_t = encoded_layers_t[:, :, :, -1]
-        # Shape: (batch_size, num_boxes, image_embedding_dim)
+        # Shape: (rolled_dimensions_product, num_boxes, image_embedding_dim)
         sequence_output_v = encoded_layers_v[:, :, :, -1]
 
-        # Shape: (batch_size, pooled_output_dim)
+        # Shape: (rolled_dimensions_product, pooled_output_dim)
         pooled_output_t = self.t_pooler(sequence_output_t)
-        # Shape: (batch_size, pooled_output_dim)
+        # Shape: (rolled_dimensions_product, pooled_output_dim)
         pooled_output_v = self.v_pooler(sequence_output_v)
+
+        sequence_output_t = sequence_output_t.view(
+            rolled_dimensions + (sequence_output_t.shape[-2], sequence_output_t.shape[-1])
+        )
+        sequence_output_v = sequence_output_v.view(
+            rolled_dimensions + (sequence_output_v.shape[-2], sequence_output_v.shape[-1])
+        )
+        pooled_output_t = pooled_output_t.view(rolled_dimensions + (pooled_output_t.shape[-1],))
+        pooled_output_v = pooled_output_v.view(rolled_dimensions + (pooled_output_v.shape[-1],))
 
         if self.fusion_method == "sum":
             pooled_output = self.dropout(pooled_output_t + pooled_output_v)

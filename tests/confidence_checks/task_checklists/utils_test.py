@@ -1,4 +1,4 @@
-from allennlp.sanity_checks.task_checklists import utils
+from allennlp.confidence_checks.task_checklists import utils
 from allennlp.common.testing import AllenNlpTestCase
 
 

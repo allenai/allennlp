@@ -1,15 +1,32 @@
-from typing import Union, Optional, Dict
+from typing import Union, Optional, Tuple, TYPE_CHECKING
 import logging
+from dataclasses import dataclass
 
 import torch
 
 from allennlp.common import FromParams
-
 from allennlp.modules.util import replicate_layers
 from allennlp.modules.transformer.transformer_layer import TransformerLayer
 from allennlp.modules.transformer.transformer_module import TransformerModule
+from allennlp.modules.transformer.util import FloatT
+
+if TYPE_CHECKING:
+    from transformers.configuration_utils import PretrainedConfig
+
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class TransformerStackOutput:
+    """
+    Encapsulates the outputs of the `TransformerStack` module.
+    """
+
+    final_hidden_states: FloatT
+    all_hidden_states: Optional[Tuple] = None
+    all_self_attentions: Optional[Tuple] = None
+    all_cross_attentions: Optional[Tuple] = None
 
 
 class TransformerStack(TransformerModule, FromParams):
@@ -38,8 +55,8 @@ class TransformerStack(TransformerModule, FromParams):
         This is helpful when using the `TransformerStack` as a decoder.
     """
 
-    _huggingface_mapping = {"layer": "layers"}
-    _relevant_module = "encoder"
+    _pretrained_mapping = {"layer": "layers"}
+    _pretrained_relevant_module = ["encoder", "bert.encoder"]
 
     def __init__(
         self,
@@ -84,8 +101,10 @@ class TransformerStack(TransformerModule, FromParams):
         encoder_attention_mask: Optional[torch.Tensor] = None,
         output_attentions: bool = False,
         output_hidden_states: bool = False,
-    ):
+    ) -> TransformerStackOutput:
         """
+        # Parameters
+
         hidden_states : `torch.Tensor`
             Shape `batch_size x seq_len x hidden_dim`
         attention_mask : `torch.BoolTensor`, optional
@@ -113,7 +132,7 @@ class TransformerStack(TransformerModule, FromParams):
                 encoder_attention_mask,
                 output_attentions,
             )
-            hidden_states = layer_outputs[0]
+            hidden_states = layer_outputs.hidden_states
             if output_attentions:
                 all_attentions = all_attentions + (layer_outputs[1],)  # type: ignore
                 if self._add_cross_attention:
@@ -123,74 +142,20 @@ class TransformerStack(TransformerModule, FromParams):
             all_hidden_states = all_hidden_states + (hidden_states,)  # type: ignore
 
         # TODO: return a named tuple here
-        return tuple(
-            v
-            for v in [hidden_states, all_hidden_states, all_attentions, all_cross_attentions]
-            if v is not None
+        return TransformerStackOutput(
+            hidden_states, all_hidden_states, all_attentions, all_cross_attentions
         )
 
     @classmethod
-    def _get_input_arguments(
-        cls,
-        pretrained_module: torch.nn.Module,
-        source="huggingface",
-        mapping: Optional[Dict[str, str]] = None,
-        **kwargs,
-    ):
-        submodules = cls._get_mapped_submodules(pretrained_module, source, mapping)
-
+    def _from_config(cls, config: "PretrainedConfig", **kwargs):
         final_kwargs = {}
-
-        final_kwargs["num_hidden_layers"] = len(submodules["layers"])
-
-        final_kwargs["hidden_size"] = submodules["layers.0.attention.self.query"].in_features
-        final_kwargs["num_attention_heads"] = submodules[
-            "layers.0.attention.self"
-        ].num_attention_heads
-        final_kwargs["attention_dropout"] = submodules["layers.0.attention.self.dropout"].p
-        final_kwargs["hidden_dropout"] = submodules["layers.0.attention.output.dropout"].p
-        final_kwargs["intermediate_size"] = submodules["layers.0.intermediate.dense"].out_features
-
-        # We require the if block as `act_fn` is a function rather than a module,
-        # so `_get_mapped_submodules` does not automatically fix this.
-        if source == "huggingface":
-            final_kwargs["activation"] = getattr(
-                submodules["layers.0.intermediate"], "intermediate_act_fn"
-            )
-        else:
-            final_kwargs["activation"] = getattr(submodules["layers.0.intermediate"], "act_fn")
-
-        final_kwargs["add_cross_attention"] = "layers.0.cross_attention" in submodules
-
+        final_kwargs["num_hidden_layers"] = config.num_hidden_layers
+        final_kwargs["hidden_size"] = config.hidden_size
+        final_kwargs["num_attention_heads"] = config.num_attention_heads
+        final_kwargs["add_cross_attention"] = config.add_cross_attention
+        final_kwargs["attention_dropout"] = config.attention_probs_dropout_prob
+        final_kwargs["hidden_dropout"] = config.hidden_dropout_prob
+        final_kwargs["intermediate_size"] = config.intermediate_size
+        final_kwargs["activation"] = config.hidden_act
         final_kwargs.update(**kwargs)
-
-        return final_kwargs
-
-    @classmethod
-    def from_pretrained_module(  # type: ignore
-        cls,
-        pretrained_module: Union[str, torch.nn.Module],
-        num_hidden_layers: Optional[Union[int, range]] = None,
-        source="huggingface",
-        mapping: Optional[Dict[str, str]] = None,
-        load_weights: bool = True,
-        **kwargs,
-    ):
-        final_kwargs = {}
-        if num_hidden_layers is not None:
-            if isinstance(num_hidden_layers, range):
-                if mapping is None:
-                    mapping = {}
-                    for num_layer, mapped in enumerate(num_hidden_layers):
-                        mapping[str(mapped)] = str(num_layer)
-                final_kwargs["num_hidden_layers"] = len(num_hidden_layers)
-            else:
-                final_kwargs["num_hidden_layers"] = num_hidden_layers
-
-        return super().from_pretrained_module(
-            pretrained_module,
-            source=source,
-            mapping=mapping,
-            load_weights=load_weights,
-            **final_kwargs,
-        )
+        return cls(**final_kwargs)
