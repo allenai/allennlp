@@ -1,3 +1,4 @@
+from allennlp.training.callbacks.backward import BackwardCallback
 import argparse
 import copy
 import json
@@ -26,6 +27,11 @@ from allennlp.training import TrainerCallback, GradientDescentTrainer
 from allennlp.training.learning_rate_schedulers import (
     ExponentialLearningRateScheduler,
     LearningRateScheduler,
+)
+from allennlp.training.callbacks.backward import (
+    VanillaBackwardCallback,
+    MixedPrecisionBackwardCallback,
+    BackwardCallbackError,
 )
 
 SEQUENCE_TAGGING_DATA_PATH = str(AllenNlpTestCase.FIXTURES_ROOT / "data" / "sequence_tagging.tsv")
@@ -87,6 +93,32 @@ class TrainingPrimaryCheckCallback(TrainerCallback):
         super().on_start(trainer, is_primary=is_primary, **kwargs)
         if is_primary:
             assert torch.distributed.get_rank() == 0
+
+
+@TrainerCallback.register("zero_gradients")
+class ZeroGradientsBackwardCallback(BackwardCallback):
+    """
+    Zeros all gradients after backpropagation.
+    """
+
+    def on_backward(
+        self, trainer: "GradientDescentTrainer", loss: torch.FloatTensor, **kwargs
+    ) -> None:
+        loss.backward()
+        for param in trainer.model.parameters():
+            param.grad *= 0.0
+
+
+@TrainerCallback.register("extra_backward")
+class ExtraBackwardCallback(BackwardCallback):
+    """
+    Invalid extra backward callback.
+    """
+
+    def on_backward(
+        self, trainer: "GradientDescentTrainer", loss: torch.FloatTensor, **kwargs
+    ) -> None:
+        pass
 
 
 class TestTrain(AllenNlpTestCase):
@@ -156,6 +188,32 @@ class TestTrain(AllenNlpTestCase):
                 force=True,
                 recover=True,
             )
+
+    def test_train_zero_gradients(self):
+        import copy
+
+        params = copy.deepcopy(self.DEFAULT_PARAMS)
+        weights = {}
+        model = train_model(params, serialization_dir=os.path.join(self.TEST_DIR, "test_baseline"))
+        for name, param in model.named_parameters():
+            weights[name] = param.data.clone()
+
+        params = copy.deepcopy(self.DEFAULT_PARAMS)
+        params["trainer"]["callbacks"] = ["zero_gradients"]
+        model = train_model(
+            params, serialization_dir=os.path.join(self.TEST_DIR, "test_zero_gradients")
+        )
+        # weights should not be the same
+        for name, param in model.named_parameters():
+            assert not torch.equal(weights[name], param.data)
+
+    def test_backward_callback_exception(self):
+        import copy
+
+        params = copy.deepcopy(self.DEFAULT_PARAMS)
+        params["trainer"]["callbacks"] = ["zero_gradients", "extra_backward"]
+        with pytest.raises(BackwardCallbackError):
+            train_model(params, serialization_dir=os.path.join(self.TEST_DIR, "extra_backward"))
 
     @cpu_or_gpu
     def test_detect_gpu(self):
