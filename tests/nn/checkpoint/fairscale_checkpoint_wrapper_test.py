@@ -33,8 +33,7 @@ class ModuleForTesting(nn.Module):
     def __init__(self, checkpoint_wrapper: FairScaleCheckpointWrapper) -> None:
         super().__init__()
         self.ffn = nn.Sequential(
-            # TODO (epwalsh): figure out why uncommenting this causes an error.
-            #  checkpoint_wrapper.wrap_module(nn.Linear(3, 3)),  # this causes an error
+            checkpoint_wrapper.wrap_module(nn.Linear(3, 3)),
             nn.Linear(3, 3),
             checkpoint_wrapper.wrap_module(FeedForwardForTesting()),
             checkpoint_wrapper.wrap_module(nn.Linear(3, 3)),

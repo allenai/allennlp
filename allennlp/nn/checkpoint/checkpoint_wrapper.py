@@ -58,9 +58,11 @@ def _checkpointed_forward(
     if not module.training:
         return original_forward(module, *args, **kwargs)
 
-    # Need a dummy tensor with `requires_grad=True` or all gradients will be None,
-    # so we have to wrap the `original_forward` method with a function that takes the
-    # dummy tensor (it doesn't have to do anythning with it).
+    # The function that the `CheckpointFunction` is applied to needs to have at least one
+    # input tensor that has `requires_grad=True`.
+    # So to avoid having to make users manually set the `requires_grad` flag on input tensors,
+    # we wrap the `original_forward` with a `run_function` that takes an additional dummy tensor
+    # as input, and we'll set `requires_grad=True` on this dummy tensor.
 
     def run_function(dummy_tensor, *forward_args, **forward_kwargs):
         return original_forward(module, *forward_args, **forward_kwargs)
