@@ -1,14 +1,17 @@
-from typing import Dict, Optional, Any, Union
+from typing import Dict, Optional, Any, Union, TYPE_CHECKING
 
 import torch
 
 from allennlp.common import FromParams
 from allennlp.modules.transformer.activation_layer import ActivationLayer
 
+if TYPE_CHECKING:
+    from transformers.configuration_utils import PretrainedConfig
+
 
 class TransformerPooler(ActivationLayer, FromParams):
 
-    _relevant_module = "pooler"
+    _pretrained_relevant_module = ["pooler", "bert.pooler"]
 
     def __init__(
         self,
@@ -35,3 +38,11 @@ class TransformerPooler(ActivationLayer, FromParams):
         final_kwargs.update(kwargs)
 
         return final_kwargs
+
+    @classmethod
+    def _from_config(cls, config: "PretrainedConfig", **kwargs):
+        return cls(
+            config.hidden_size,
+            config.hidden_size,
+            "tanh"      # BERT has this hardcoded
+        )
