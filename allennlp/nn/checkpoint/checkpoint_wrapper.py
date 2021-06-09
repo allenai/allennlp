@@ -29,6 +29,13 @@ class TorchCheckpointWrapper(CheckpointWrapper):
         """
         Wrap a module so that the forward method uses PyTorch's [checkpointing functionality]
         (https://pytorch.org/docs/stable/checkpoint.html).
+
+        !!! Note
+            Currently this `CheckpointWrapper` implementation requires that the wrapped
+            module is called with positional arguments only.
+
+            We recommend you use the `FairScaleCheckpointWrapper` is you need more flexibility.
+
         """
         # Inspired by FairScale:
         #  --> https://github.com/facebookresearch/fairscale/blob/1e4a503cda8571851a68effd6e504a192838ab06/fairscale/nn/checkpoint/checkpoint_activations.py#L145-L153  # noqa: E501

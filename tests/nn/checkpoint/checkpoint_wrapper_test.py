@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import pytest
 
 from allennlp.common.params import Params
 from allennlp.common.testing import multi_device
@@ -21,7 +22,7 @@ def setup_function(_):
     forward_calls = 0
 
 
-class ModuleForTesting(nn.Module):
+class BasicModule(nn.Module):
     def __init__(self, checkpoint_wrapper: CheckpointWrapper) -> None:
         super().__init__()
         ffn = nn.Sequential(
@@ -44,7 +45,7 @@ def test_torch_checkpoint_wrapper(device: str):
     checkpoint_wrapper: TorchCheckpointWrapper = CheckpointWrapper.from_params(  # type: ignore[assignment]
         Params({"type": "torch"})
     )
-    module = ModuleForTesting(checkpoint_wrapper).to(device_)
+    module = BasicModule(checkpoint_wrapper).to(device_)
     optim = torch.optim.Adam(module.parameters(), lr=0.0001)
 
     # Test forward pass
@@ -66,3 +67,43 @@ def test_torch_checkpoint_wrapper(device: str):
     module.eval()
     x = torch.randn(2, 3).to(device_)
     module(x)
+
+
+class SubmoduleWithKwargs(nn.Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self.linear1 = nn.Linear(3, 3)
+        self.linear2 = nn.Linear(3, 3)
+
+    def forward(self, x, y=None) -> torch.Tensor:
+        out = self.linear1(x)
+        if y is not None:
+            out = x + self.linear2(y)
+        return out.sum(-1)
+
+
+class ModuleWithKwargs(nn.Module):
+    def __init__(self, checkpoint_wrapper: CheckpointWrapper) -> None:
+        super().__init__()
+        self.ffn = checkpoint_wrapper.wrap_module(SubmoduleWithKwargs())
+
+    def forward(self, x, y=None) -> torch.Tensor:
+        return self.ffn(x, y=y)
+
+
+# I'm not sure if we should try to make this work.. it wouldn't be that hard, but
+# we'd end up with essentially the same implementation that FairScale has, which we already
+# support via the `FairScaleCheckpointWrapper`.
+@pytest.mark.xfail(
+    reason="Not implemented yet but the FairScaleCheckpointWrapper handles this well already",
+    raises=TypeError,
+    strict=True,
+)
+def test_torch_checkpoint_wrapper_with_kwargs():
+    checkpoint_wrapper = TorchCheckpointWrapper()
+    module = ModuleWithKwargs(checkpoint_wrapper)
+    module.train()
+    x = torch.randn(2, 3)
+    y = torch.randn(2, 3)
+    loss = module(x, y=y).sum()
+    loss.backward()
