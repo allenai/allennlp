@@ -16,9 +16,11 @@ from typing import (
 
 import datasets
 import torch.optim
+from torch import cuda
 from datasets import Dataset
 
 from allennlp.common import cached_transformers, Lazy
+from allennlp.common.checks import check_for_gpu
 from allennlp.common.util import log_frozen_and_tunable_parameter_names
 from allennlp.data import (
     DataLoader,
@@ -359,7 +361,16 @@ class TrainingStep(Step):
             data_loader = MaxBatchesDataLoader(data_loader, limit_batches_per_epoch)
         loader = self._DataLoaderAdapter(data_loader)
 
-        model = model.construct(vocab=dataset.vocab)
+        if cuda.device_count() > 0:
+            cuda_device = torch.device(0)
+        else:
+            cuda_device = torch.device("cpu")
+        check_for_gpu(cuda_device)
+        loader.set_target_device(cuda_device)
+        if validation_loader is not None:
+            validation_loader.set_target_device(cuda_device)
+
+        model = model.construct(vocab=dataset.vocab).to(cuda_device)
         if no_grad:
             for name, parameter in model.named_parameters():
                 if any(re.search(regex, name) for regex in no_grad):
