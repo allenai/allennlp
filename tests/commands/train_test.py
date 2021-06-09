@@ -28,11 +28,7 @@ from allennlp.training.learning_rate_schedulers import (
     ExponentialLearningRateScheduler,
     LearningRateScheduler,
 )
-from allennlp.training.callbacks.backward import (
-    VanillaBackwardCallback,
-    MixedPrecisionBackwardCallback,
-    BackwardCallbackError,
-)
+from allennlp.training.callbacks.backward import BackwardCallbackError
 
 SEQUENCE_TAGGING_DATA_PATH = str(AllenNlpTestCase.FIXTURES_ROOT / "data" / "sequence_tagging.tsv")
 SEQUENCE_TAGGING_SHARDS_PATH = str(AllenNlpTestCase.FIXTURES_ROOT / "data" / "shards" / "*")
