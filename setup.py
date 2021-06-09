@@ -23,7 +23,7 @@ with open("allennlp/version.py", "r") as version_file:
 
 EXTRAS: Dict[str, List[str]] = {
     "fairscale": [
-        "fairscale @ git+https://github.com/facebookresearch/fairscale@d60fc2841a01c5c4033a5dcee709b4fd7a3dfadd#egg=fairscale"
+        "fairscale @ git+https://github.com/facebookresearch/fairscale@d60fc2841a01c5c4033a5dcee709b4fd7a3dfadd#egg=fairscale"  # noqa: E501
     ]
 }
 
