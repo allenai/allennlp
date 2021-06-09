@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+
+- Added `BackwardCallback`, a training callback which allows for control over backpropagation and gradient manipulation.
+
 ### Fixed
 
 - Fixed Broken link in `allennlp.fairness.fairness_metrics.Separation` docs

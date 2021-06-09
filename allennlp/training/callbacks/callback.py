@@ -12,7 +12,7 @@ class TrainerCallback(Registrable):
     """
     A general callback object that handles multiple events.
 
-    This class has `on_batch`, `on_epoch`, and `on_end` methods, corresponding to
+    This class has `on_backward`, `on_batch`, `on_epoch`, and `on_end` methods, corresponding to
     each callback type. Each one receives the state of the wrapper object as `self`.
     This enables easier state sharing between related callbacks.
 
