@@ -2,7 +2,6 @@ from allennlp.nn.parallel.ddp_wrapper import (
     DdpWrapper,
     DdpWrappedModel,
     TorchDdpWrapper,
-    NoOpDdpWrapper,
 )
 
 try:

@@ -3,9 +3,8 @@ An implementation of [T5](https://api.semanticscholar.org/CorpusID:204838007), a
 (https://github.com/huggingface/transformers/blob/4c32f9f26e6a84f0d9843fec8757e6ce640bb44e/src/transformers/models/t5/modeling_t5.py).
 """  # noqa: E401
 
-from dataclasses import dataclass
 import logging
-from typing import Optional, Tuple, List, Union, Dict, TYPE_CHECKING
+from typing import Optional, Tuple, List, Union, Dict, TYPE_CHECKING, NamedTuple
 
 import torch
 from torch import nn
@@ -26,7 +25,8 @@ from allennlp.modules.transformer.util import (
     BoolT,
 )
 from allennlp.nn.beam_search import BeamSearch
-from allennlp.nn.parallel import DdpWrapper, NoOpDdpWrapper
+from allennlp.nn.parallel import DdpWrapper
+from allennlp.nn.checkpoint import CheckpointWrapper
 
 if TYPE_CHECKING:
     from transformers.configuration_utils import PretrainedConfig
@@ -121,8 +121,7 @@ class T5LayerFF(TransformerModule, FromParams):
         return hidden_states
 
 
-@dataclass
-class T5LayerSelfAttentionOutput:
+class T5LayerSelfAttentionOutput(NamedTuple):
     hidden_states: FloatT
     attn_key_value_state: Optional[Tuple[FloatT, FloatT]]
     attn_position_bias: FloatT
@@ -183,8 +182,7 @@ class T5LayerSelfAttention(TransformerModule, FromParams):
         )
 
 
-@dataclass
-class T5LayerCrossAttentionOutput:
+class T5LayerCrossAttentionOutput(NamedTuple):
     hidden_states: FloatT
     attn_key_value_state: Optional[Tuple[FloatT, FloatT]]
     attn_position_bias: FloatT
@@ -249,8 +247,7 @@ KeyValueStates = Union[
 ]
 
 
-@dataclass
-class T5BlockOutput:
+class T5BlockOutput(NamedTuple):
     hidden_states: FloatT
     present_key_value_states: Optional[KeyValueStates]
     self_attn_weights: Optional[FloatT]
@@ -369,15 +366,17 @@ class T5Block(TransformerModule, FromParams):
             present_key_value_state,
             self_attention_outputs.attn_weights,
             self_attention_outputs.attn_position_bias,
+            cross_attn_weights=(
+                None if not do_cross_attention else cross_attention_outputs.attn_weights
+            ),
+            cross_attn_position_bias=(
+                None if not do_cross_attention else cross_attention_outputs.attn_position_bias
+            ),
         )
-        if do_cross_attention:
-            output.cross_attn_weights = cross_attention_outputs.attn_weights
-            output.cross_attn_position_bias = cross_attention_outputs.attn_position_bias
         return output
 
 
-@dataclass
-class T5StackOutput:
+class T5StackOutput(NamedTuple):
     last_hidden_state: FloatT
     past_key_values: Optional[List[KeyValueStates]] = None
     all_hidden_states: Optional[List[FloatT]] = None
@@ -526,6 +525,10 @@ class T5Stack(TransformerModule, FromParams):
                 use_cache=use_cache,
                 output_attentions=output_attentions,
             )
+            # If the blocks were wrapped with a `CheckpointWrapper`, the output
+            # may just be a raw tuple, not the NamedTuple that we want.
+            if not isinstance(layer_outputs, T5BlockOutput):
+                layer_outputs = T5BlockOutput(*layer_outputs)
             hidden_states = layer_outputs.hidden_states
 
             # We share the position biases between the layers - the first layer store them
@@ -585,25 +588,26 @@ class T5EncoderStack(T5Stack, FromParams):
         block_ff: Lazy[T5LayerFF] = Lazy(T5LayerFF),
         dropout: float = 0.1,
         ddp_wrapper: Optional[DdpWrapper] = None,
+        checkpoint_wrapper: Optional[CheckpointWrapper] = None,
     ) -> "T5EncoderStack":
-        if ddp_wrapper is None:
-            ddp_wrapper = NoOpDdpWrapper()
-        else:
+        if ddp_wrapper is not None:
             logger.info("Initializing T5 encoder with DdpWrapper %s", ddp_wrapper)
-        blocks = [
-            ddp_wrapper.wrap_module(
-                T5Block(
-                    attention=T5LayerSelfAttention(
-                        self_attention=block_self_attention.construct(
-                            is_decoder=False, has_relative_attention_bias=(i == 0)
-                        )
-                    ),
-                    cross_attention=None,
-                    ff=block_ff.construct(),
+        blocks: List[T5Block] = []
+        for i in range(num_blocks):
+            block = T5Block(
+                attention=T5LayerSelfAttention(
+                    self_attention=block_self_attention.construct(
+                        is_decoder=False, has_relative_attention_bias=(i == 0)
+                    )
                 ),
+                cross_attention=None,
+                ff=block_ff.construct(),
             )
-            for i in range(num_blocks)
-        ]
+            if checkpoint_wrapper is not None:
+                block = checkpoint_wrapper.wrap_module(block)
+            if ddp_wrapper is not None:
+                block = ddp_wrapper.wrap_module(block)
+            blocks.append(block)
         return cls(token_embeddings, blocks, final_layer_norm=final_layer_norm, dropout=dropout)
 
 
@@ -636,35 +640,35 @@ class T5DecoderStack(T5Stack, FromParams):
         block_ff: Lazy[T5LayerFF] = Lazy(T5LayerFF),
         dropout: float = 0.1,
         ddp_wrapper: Optional[DdpWrapper] = None,
+        checkpoint_wrapper: Optional[CheckpointWrapper] = None,
     ) -> "T5DecoderStack":
-        if ddp_wrapper is None:
-            ddp_wrapper = NoOpDdpWrapper()
-        else:
+        if ddp_wrapper is not None:
             logger.info("Initializing T5 decoder with DdpWrapper %s", ddp_wrapper)
-        blocks = [
-            ddp_wrapper.wrap_module(
-                T5Block(
-                    attention=T5LayerSelfAttention(
-                        self_attention=block_self_attention.construct(
-                            is_decoder=True, has_relative_attention_bias=(i == 0)
-                        )
-                    ),
-                    cross_attention=T5LayerCrossAttention(
-                        enc_dec_attention=block_cross_attention.construct(
-                            is_decoder=True,
-                            has_relative_attention_bias=False,
-                        )
-                    ),
-                    ff=block_ff.construct(),
+        blocks: List[T5Block] = []
+        for i in range(num_blocks):
+            block = T5Block(
+                attention=T5LayerSelfAttention(
+                    self_attention=block_self_attention.construct(
+                        is_decoder=True, has_relative_attention_bias=(i == 0)
+                    )
                 ),
+                cross_attention=T5LayerCrossAttention(
+                    enc_dec_attention=block_cross_attention.construct(
+                        is_decoder=True,
+                        has_relative_attention_bias=False,
+                    )
+                ),
+                ff=block_ff.construct(),
             )
-            for i in range(num_blocks)
-        ]
+            if checkpoint_wrapper is not None:
+                block = checkpoint_wrapper.wrap_module(block)
+            if ddp_wrapper is not None:
+                block = ddp_wrapper.wrap_module(block)
+            blocks.append(block)
         return cls(token_embeddings, blocks, final_layer_norm=final_layer_norm, dropout=dropout)
 
 
-@dataclass
-class T5Output:
+class T5Output(NamedTuple):
     """
     Defines the output from the `T5` model.
     """
@@ -771,6 +775,7 @@ class T5(TransformerModule, Registrable):
         output_all_hidden_states: bool = False,
         beam_search: Lazy[BeamSearch] = Lazy(BeamSearch, beam_size=3, max_steps=100),
         ddp_wrapper: Optional[DdpWrapper] = None,
+        checkpoint_wrapper: Optional[CheckpointWrapper] = None,
     ):
         super().__init__()
 
@@ -782,10 +787,14 @@ class T5(TransformerModule, Registrable):
         if token_embeddings is None:
             self.token_embeddings.weight.data.normal_(mean=0.0, std=1.0)
         self.encoder: T5EncoderStack = encoder.construct(
-            token_embeddings=self.token_embeddings, ddp_wrapper=ddp_wrapper
+            token_embeddings=self.token_embeddings,
+            ddp_wrapper=ddp_wrapper,
+            checkpoint_wrapper=checkpoint_wrapper,
         )
         self.decoder: T5DecoderStack = decoder.construct(
-            token_embeddings=self.token_embeddings, ddp_wrapper=ddp_wrapper
+            token_embeddings=self.token_embeddings,
+            ddp_wrapper=ddp_wrapper,
+            checkpoint_wrapper=checkpoint_wrapper,
         )
         self.lm_head = nn.Linear(
             self.decoder.hidden_size, self.token_embeddings.num_embeddings, bias=False

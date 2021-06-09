@@ -1,13 +1,14 @@
 from typing import Tuple, Union, Optional, Dict, Any, TYPE_CHECKING
 
 from fairscale.nn import FullyShardedDataParallel as FSDP
-from fairscale.nn.wrap import enable_wrap, auto_wrap, default_auto_wrap_policy
+from fairscale.nn.wrap import enable_wrap, auto_wrap, wrap, default_auto_wrap_policy
+from fairscale.nn.misc import FlattenParamsWrapper
 from fairscale.optim.grad_scaler import GradScaler
 from overrides import overrides
 import torch
 from torch.cuda import amp
 
-from allennlp.nn.util import _MODULE_SHARDED_FLAG
+from allennlp.nn.util import _MODULE_SHARDED_FLAG, _WRAPPED_MODULE_GETTER
 from allennlp.nn.parallel.ddp_wrapper import (
     DdpWrapper,
     DdpWrappedModel,
@@ -57,10 +58,12 @@ class FairScaleFsdpWrapper(DdpWrapper):
         mixed_precision: bool = False,
         reshard_after_forward: bool = True,
         flatten_parameters: bool = True,
+        do_auto_wrap: bool = False,
         auto_wrap_policy_kwargs: Dict[str, Any] = None,
         **kwargs,
     ) -> None:
         super().__init__(**kwargs)
+        self._do_auto_wrap = do_auto_wrap
         self._auto_wrap_policy_kwargs = auto_wrap_policy_kwargs or {}
         self._fsdp_kwargs = {
             "compute_device": self.cuda_device,
@@ -95,10 +98,14 @@ class FairScaleFsdpWrapper(DdpWrapper):
         with enable_wrap(
             auto_wrap_policy=self.auto_wrap_policy, wrapper_cls=FSDP, **self._fsdp_kwargs
         ):
-            wrapped_module = auto_wrap(module)
+            if self._do_auto_wrap:
+                wrapped_module = auto_wrap(module)
+            else:
+                wrapped_module = wrap(module)
         for module in wrapped_module.modules():
             if isinstance(module, FSDP):
                 setattr(module, _MODULE_SHARDED_FLAG, True)
+                setattr(module, _WRAPPED_MODULE_GETTER, _get_wrapped_module)
         return wrapped_module
 
     def auto_wrap_policy(
@@ -107,3 +114,10 @@ class FairScaleFsdpWrapper(DdpWrapper):
         return default_auto_wrap_policy(
             module, recurse, unwrapped_params, **self._auto_wrap_policy_kwargs
         )
+
+
+def _get_wrapped_module(self):
+    module = self.module
+    if isinstance(module, FlattenParamsWrapper):
+        module = module.module
+    return module

@@ -137,22 +137,6 @@ class TorchDdpWrapper(DdpWrapper):
         )
 
 
-@DdpWrapper.register("no_op")
-class NoOpDdpWrapper(DdpWrapper):
-    """
-    This is a dummy wrapper that doesn't actually do anything. It can be useful
-    when you want to use a `DdpWrapper` inside a model when creating submodules
-    during distributed training, but don't want to use separate logic when you're
-    not in distributed training.
-    """
-
-    @overrides
-    def wrap_model(self, model: "Model") -> Tuple["Model", DdpWrappedModel]:
-        if self.cuda_device != torch.device("cpu"):
-            model = model.cuda(self.cuda_device)
-        return model, DdpWrappedModel(model)
-
-
 def _add_torch_ddp_prefix(state_dict: StateDictType, prefix: str, *args: Any) -> None:
     for key in list(state_dict.keys()):
         if key.startswith(prefix + "module."):

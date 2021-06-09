@@ -30,6 +30,11 @@ This flag is used to indicate when a module's parameters have been sharded acros
 distributed workers.
 """
 
+_WRAPPED_MODULE_GETTER = "_get_wrapped_module_allennlp"
+"""
+Defines the name of the getter assigned to wrapper modules for getting the original module.
+"""
+
 
 def move_to_device(obj, device: Union[torch.device, int]):
     """
@@ -2383,3 +2388,7 @@ def load_state_dict_distributed(
             )
 
     return _LoadStateDictResult(missing_keys, unexpected_keys)
+
+
+def _get_wrapped_module(module: torch.nn.Module) -> torch.nn.Module:
+    return getattr(module, _WRAPPED_MODULE_GETTER)(module)

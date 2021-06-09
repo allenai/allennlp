@@ -119,10 +119,11 @@ def _dist_load_and_train(
     # Make sure the right modules are sharded.
     assert getattr(model.embedding, _MODULE_SHARDED_FLAG, None) is None
     assert getattr(model.emb_proj, _MODULE_SHARDED_FLAG, None) is True
-    assert getattr(model.encoder.ff1.linear, _MODULE_SHARDED_FLAG, None) is True
-    assert getattr(model.encoder.ff2.linear, _MODULE_SHARDED_FLAG, None) is True
-    assert getattr(model.decoder, _MODULE_SHARDED_FLAG, None) is None
-    assert getattr(model.decoder.ff.linear, _MODULE_SHARDED_FLAG, None) is True
+    assert getattr(model.encoder, _MODULE_SHARDED_FLAG, None) is True
+    #  assert getattr(model.encoder.ff1.linear, _MODULE_SHARDED_FLAG, None) is True
+    #  assert getattr(model.encoder.ff2.linear, _MODULE_SHARDED_FLAG, None) is True
+    assert getattr(model.decoder.ff, _MODULE_SHARDED_FLAG, None) is True
+    #  assert getattr(model.decoder.ff.linear, _MODULE_SHARDED_FLAG, None) is True
 
     # Now load the state dict... we should be able to do this before wrapping the model itself
     # with the fsdp_wrapper.
