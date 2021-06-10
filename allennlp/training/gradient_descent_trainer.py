@@ -472,11 +472,11 @@ class GradientDescentTrainer(Trainer):
 
                 backward_called = False
                 for callback in self._callbacks:
-                    backward_called |= callback.on_backward(self, loss, backward_called)
+                    backward_called |= callback.on_backward(self, batch_outputs, backward_called)
                 if not backward_called:
                     if self._scaler is not None:
                         MixedPrecisionBackwardCallback(self._serialization_dir).on_backward(
-                            self, loss, backward_called
+                            self, batch_outputs, backward_called
                         )
                     else:
                         loss.backward()

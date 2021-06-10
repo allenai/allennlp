@@ -30,6 +30,7 @@ from allennlp.training.callbacks import (
     TensorBoardCallback,
     ConfidenceChecksCallback,
     ConsoleLoggerCallback,
+    OnBackwardException,
 )
 from allennlp.training.callbacks.confidence_checks import ConfidenceCheckError
 from allennlp.training.learning_rate_schedulers import CosineWithRestarts
@@ -135,16 +136,16 @@ class ZeroGradientsBackwardCallback(TrainerCallback):
     def on_backward(
         self,
         trainer: "GradientDescentTrainer",
-        loss: torch.FloatTensor,
+        batch_outputs: Dict[str, torch.Tensor],
         backward_called: bool,
         **kwargs,
     ) -> bool:
-        if not backward_called:
-            loss.backward()
-            for param in trainer.model.parameters():
-                param.grad *= 0.0
-            return True
-        return False
+        if backward_called:
+            raise OnBackwardException()
+        batch_outputs["loss"].backward()
+        for param in trainer.model.parameters():
+            param.grad.data.zero_()
+        return True
 
 
 class TestTrainer(TrainerTestBase):
@@ -216,37 +217,30 @@ class TestTrainer(TrainerTestBase):
             def on_backward(
                 self,
                 trainer: "GradientDescentTrainer",
-                loss: torch.FloatTensor,
+                batch_outputs: Dict[str, torch.Tensor],
                 backward_called: bool,
                 **kwargs,
             ) -> bool:
-                if not backward_called:
-                    loss.backward()
-                    for param in trainer.model.parameters():
-                        param.grad = torch.ones_like(param.grad, device=param.grad.device)
-                    return True
-                return False
+                if backward_called:
+                    raise OnBackwardException()
+                batch_outputs["loss"].backward()
+                for param in trainer.model.parameters():
+                    param.grad = torch.ones_like(param.grad, device=param.grad.device)
+                return True
 
-        weights = {}
-        for name, param in self.model.named_parameters():
-            weights[name] = param.data.clone()
-
-        trainer = GradientDescentTrainer(
-            self.model,
-            self.optimizer,
-            self.data_loader,
-            num_epochs=2,
-            validation_data_loader=self.validation_data_loader,
-            callbacks=[
-                ZeroGradientsBackwardCallback(serialization_dir=self.TEST_DIR),
-                SecondBackwardCallback(serialization_dir=self.TEST_DIR),
-            ],
-        )
-        trainer.train()
-
-        # weights should be the same
-        for name, param in self.model.named_parameters():
-            assert torch.equal(weights[name], param.data)
+        with pytest.raises(OnBackwardException):
+            trainer = GradientDescentTrainer(
+                self.model,
+                self.optimizer,
+                self.data_loader,
+                num_epochs=2,
+                validation_data_loader=self.validation_data_loader,
+                callbacks=[
+                    ZeroGradientsBackwardCallback(serialization_dir=self.TEST_DIR),
+                    SecondBackwardCallback(serialization_dir=self.TEST_DIR),
+                ],
+            )
+            trainer.train()
 
     def test_trainer_can_run_exponential_moving_average(self):
         moving_average = ExponentialMovingAverage(self.model.named_parameters(), decay=0.9999)

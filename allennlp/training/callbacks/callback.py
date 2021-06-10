@@ -37,7 +37,7 @@ class TrainerCallback(Registrable):
     def on_backward(
         self,
         trainer: "GradientDescentTrainer",
-        loss: torch.FloatTensor,
+        batch_outputs: Dict[str, torch.Tensor],
         backward_called: bool,
         **kwargs,
     ) -> bool:

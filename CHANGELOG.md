@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Added `BackwardCallback`, a training callback which allows for control over backpropagation and gradient manipulation.
+- Added `on_backward` training callback which allows for control over backpropagation and gradient manipulation.
 
 ### Fixed
 
