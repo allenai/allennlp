@@ -19,12 +19,7 @@ from allennlp.data.data_loaders.data_loader import DataLoader, TensorDict
 from allennlp.models.model import Model
 from allennlp.training.callbacks import ConsoleLoggerCallback
 from allennlp.training.callbacks.confidence_checks import ConfidenceChecksCallback
-from allennlp.training.callbacks.backward import (
-    BackwardCallback,
-    MixedPrecisionBackwardCallback,
-    VanillaBackwardCallback,
-    BackwardCallbackError,
-)
+from allennlp.training.callbacks.backward import MixedPrecisionBackwardCallback
 from allennlp.training.checkpointer import Checkpointer
 from allennlp.training.learning_rate_schedulers.learning_rate_scheduler import LearningRateScheduler
 from allennlp.training.metric_tracker import MetricTracker
@@ -156,7 +151,7 @@ class GradientDescentTrainer(Trainer):
 
     callbacks : `List[TrainerCallback]`, optional (default = `None`)
         A list of callbacks that can be called at certain events: e.g. each batch, epoch, and at the start
-        and end of training, etc. At most one callback can be a `BackwardCallback`.
+        and end of training, etc.
 
     distributed : `bool`, optional, (default = `False`)
         If set, PyTorch's `DistributedDataParallel` is used to train the model in multiple GPUs. This also
@@ -283,30 +278,8 @@ class GradientDescentTrainer(Trainer):
         self._momentum_scheduler = momentum_scheduler
         self._moving_average = moving_average
 
-        # Enable automatic mixed precision training.
-        self._scaler: Optional[amp.GradScaler] = None
-        self._use_amp = use_amp
-        if self._use_amp:
-            if self.cuda_device == torch.device("cpu"):
-                raise ValueError("Using AMP requires a cuda device")
-            self._scaler = amp.GradScaler()
-
         self._callbacks = callbacks or []
         default_callbacks = list(DEFAULT_CALLBACKS) if enable_default_callbacks else []
-
-        on_backward_callable = [
-            isinstance(callback, BackwardCallback) for callback in self._callbacks
-        ]
-        # append VanillaBackwardCallback or MixedPrecisionBackwardCallback if no callback is BackwardCallback
-        if not any(on_backward_callable):
-            if self._scaler is not None:
-                default_callbacks.append(MixedPrecisionBackwardCallback)
-            else:
-                default_callbacks.append(VanillaBackwardCallback)
-        on_backward_callable_iter = iter(on_backward_callable)
-        # raise BackwardCallbackError if more than one callback is BackwardCallback
-        if any(on_backward_callable_iter) and any(on_backward_callable_iter):
-            raise BackwardCallbackError("At most one callback can be a `BackwardCallback`.")
 
         if run_confidence_checks:
             default_callbacks.append(ConfidenceChecksCallback)
@@ -318,6 +291,14 @@ class GradientDescentTrainer(Trainer):
                 self._callbacks.append(callback_cls(self._serialization_dir))
 
         self._num_gradient_accumulation_steps = num_gradient_accumulation_steps
+
+        # Enable automatic mixed precision training.
+        self._scaler: Optional[amp.GradScaler] = None
+        self._use_amp = use_amp
+        if self._use_amp:
+            if self.cuda_device == torch.device("cpu"):
+                raise ValueError("Using AMP requires a cuda device")
+            self._scaler = amp.GradScaler()
 
         # Using `DistributedDataParallel`(ddp) brings in a quirk wrt AllenNLP's `Model` interface and its
         # usage. A `Model` object is wrapped by `ddp`, but assigning the wrapped model to `self.model`
@@ -489,9 +470,16 @@ class GradientDescentTrainer(Trainer):
                         batch_reg_loss = reg_loss.item()
                         train_reg_loss += batch_reg_loss  # type: ignore
 
+                backward_called = False
                 for callback in self._callbacks:
-                    if isinstance(callback, BackwardCallback):
-                        callback.on_backward(self, loss)
+                    backward_called |= callback.on_backward(self, loss, backward_called)
+                if not backward_called:
+                    if self._scaler is not None:
+                        MixedPrecisionBackwardCallback(self._serialization_dir).on_backward(
+                            self, loss, backward_called
+                        )
+                    else:
+                        loss.backward()
 
             if len(batch_group_outputs) <= 0:
                 continue

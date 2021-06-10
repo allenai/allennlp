@@ -1,4 +1,5 @@
 from typing import List, Dict, Any, Optional, TYPE_CHECKING
+import torch
 
 from allennlp.common import Registrable
 from allennlp.data import TensorDict
@@ -32,6 +33,20 @@ class TrainerCallback(Registrable):
         This callback hook is called before the training is started.
         """
         self.trainer = trainer
+
+    def on_backward(
+        self,
+        trainer: "GradientDescentTrainer",
+        loss: torch.FloatTensor,
+        backward_called: bool,
+        **kwargs,
+    ) -> bool:
+        """
+        This callback hook performs backpropagation and allows for gradient manipulation.
+        `backward_called` indicates if `loss.backward` has been called prior to this callback.
+        `on_backward` should return `True` if and only if `loss.backward` is called in its body.
+        """
+        return False
 
     def on_batch(
         self,
