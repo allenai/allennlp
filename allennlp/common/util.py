@@ -27,6 +27,7 @@ from typing import (
     TypeVar,
     Union,
     Sequence,
+    Set,
 )
 
 import dill
@@ -329,13 +330,16 @@ def push_python_path(path: PathType) -> ContextManagerFunctionReturnType[None]:
         sys.path.remove(path)
 
 
-def import_module_and_submodules(package_name: str) -> None:
+def import_module_and_submodules(package_name: str, exclude: Optional[Set[str]] = None) -> None:
     """
     Import all submodules under the given package.
     Primarily useful so that people using AllenNLP as a library
     can specify their own custom packages and have their custom
     classes get loaded and registered.
     """
+    if exclude and package_name in exclude:
+        return
+
     importlib.invalidate_caches()
 
     # For some reason, python doesn't always add this by default to your path, but you pretty much
@@ -354,7 +358,7 @@ def import_module_and_submodules(package_name: str) -> None:
             if path_string and module_finder.path != path_string:  # type: ignore[union-attr]
                 continue
             subpackage = f"{package_name}.{name}"
-            import_module_and_submodules(subpackage)
+            import_module_and_submodules(subpackage, exclude=exclude)
 
 
 def peak_cpu_memory() -> Dict[int, int]:
