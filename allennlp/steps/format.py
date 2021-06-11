@@ -8,6 +8,7 @@ from os import PathLike
 from typing import TypeVar, Generic, Union, Optional, Callable, Dict, Iterable, cast
 
 import dill
+import torch
 import xxhash
 from typing.io import IO
 
@@ -149,3 +150,29 @@ class DillFormatIterator(abc.Iterator):
             self.f.close()
             self.f = None
             raise StopIteration()
+
+
+@Format.register("torch")
+class TorchFormat(Format):
+    """
+    This format writes the artifact using torch.save().
+    Optionally, it can compress the data.
+    """
+
+    VERSION = 1
+
+    def write(self, artifact: T, dir: Union[str, PathLike]):
+        filename = pathlib.Path(dir) / "data.pt"
+        with open(filename, "wb") as f:
+            torch.save(self.VERSION, f)
+            torch.save(artifact, f)
+
+    def read(self, dir: Union[str, PathLike]) -> T:
+        filename = pathlib.Path(dir) / "data.pt"
+        with open(filename, "rb") as f:
+            version = torch.load(f)
+            if version > self.VERSION:
+                raise ValueError(
+                    f"File {filename} is too recent for this version of {self.__class__}."
+                )
+            return torch.load(f, map_location=torch.device("cpu"))

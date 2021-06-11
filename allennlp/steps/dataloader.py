@@ -4,9 +4,11 @@ from math import floor, ceil
 from typing import Optional, Iterator, Sequence
 
 import more_itertools
+import torch
 
 from allennlp.common import Registrable
-from allennlp.data import TensorDict, Instance, allennlp_collate, BatchSampler
+from allennlp.data import TensorDict, Instance, allennlp_collate, BatchSampler, DataLoader, Vocabulary
+from allennlp.nn.util import move_to_device
 
 
 class TangoDataLoader(Registrable):
@@ -25,6 +27,33 @@ class TangoDataLoader(Registrable):
             "TangoDataLoader.num_batches_per_epoch() instead."
         )
         return self.num_batches_per_epoch()
+
+
+class DataLoaderAdapter(DataLoader):
+    """Adapts a TangoDataLoader to an old-school AllenNLP DataLoader."""
+
+    def __init__(self, tango_data_loader: TangoDataLoader):
+        self.tango_data_loader = tango_data_loader
+        self.target_device: Optional[torch.device] = None
+
+    def __len__(self) -> int:
+        return self.tango_data_loader.num_batches_per_epoch()
+
+    def __iter__(self) -> Iterator[TensorDict]:
+        if self.target_device is None:
+            return iter(self.tango_data_loader)
+        else:
+            for batch in iter(self.tango_data_loader):
+                yield move_to_device(batch, self.target_device)
+
+    def iter_instances(self) -> Iterator[Instance]:
+        raise NotImplementedError()
+
+    def index_with(self, vocab: Vocabulary) -> None:
+        raise NotImplementedError()
+
+    def set_target_device(self, device: torch.device) -> None:
+        self.target_device = device
 
 
 @TangoDataLoader.register("batch_size")

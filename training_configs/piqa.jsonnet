@@ -8,7 +8,6 @@ local transformer_model = "bert-base-cased";
         },
         "trained_model": {
             "type": "training",
-            "produce_results": true,
             "dataset": "dataset",
             "training_split": "train",
             "data_loader": {
@@ -34,6 +33,18 @@ local transformer_model = "bert-base-cased";
             "num_epochs": 20,
             "patience": 3,
             "validation_metric": "+acc",
+        },
+        "evaluation": {
+            "type": "evaluation",
+            "produce_results": true,
+            "dataset": {
+                "type": "ref",
+                "ref": "dataset"
+            },  # TODO: Figure out why this doesn't work as a string.
+            "model": {
+                "type": "ref",
+                "ref": "trained_model"
+            }   # TODO: Figure out why this doesn't work as a string.
         }
     }
 }
