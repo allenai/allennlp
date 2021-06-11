@@ -92,7 +92,6 @@ def _dist_load_and_train(
         world_size=world_size,
         cuda_device=gpu_id,
         mixed_precision=mixed_precision,
-        auto_wrap_policy_kwargs={"min_num_params": 1},
     )
     model = EncoderDecoderModel(fsdp_wrapper)
 
@@ -186,6 +185,7 @@ class TestFairScaleFsdpWrapper(AllenNlpTestCase):
             False,
             True,
         ),
+        ids=lambda val: f"amp={val}",
     )
     @requires_multi_gpu
     def test_distributed_loading_and_training(self, mixed_precision: bool):

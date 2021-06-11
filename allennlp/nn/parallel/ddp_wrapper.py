@@ -12,6 +12,7 @@ from typing import (
 
 from overrides import overrides
 import torch
+import torch.distributed as dist
 from torch.cuda import amp
 from torch.nn.utils import clip_grad_norm_
 
@@ -35,10 +36,12 @@ class DdpWrappedModel:
     def __init__(
         self,
         model: torch.nn.Module,
-        local_rank: int = 0,
-        world_size: int = 1,
+        local_rank: Optional[int] = None,
+        world_size: Optional[int] = None,
     ) -> None:
         self.model = model
+        self.local_rank: int = local_rank if local_rank is not None else dist.get_rank()
+        self.world_size: int = world_size if world_size is not None else dist.get_world_size()
 
     def load_local_state_dict(
         self, state_dict: StateDictType, strict: bool = True
@@ -81,11 +84,14 @@ class DdpWrapper(Registrable):
     default_implementation = "torch"
 
     def __init__(
-        self, local_rank: int = 0, world_size: int = 1, cuda_device: Union[torch.device, int] = -1
+        self,
+        local_rank: Optional[int] = None,
+        world_size: Optional[int] = None,
+        cuda_device: Union[torch.device, int] = -1,
     ) -> None:
-        self.local_rank = local_rank
-        self.world_size = world_size
-        self.primary = local_rank == 0
+        self.local_rank: int = local_rank if local_rank is not None else dist.get_rank()
+        self.world_size: int = world_size if world_size is not None else dist.get_world_size()
+        self.is_primary: bool = local_rank == 0
         self.cuda_device = int_to_device(cuda_device)
 
     def wrap_model(self, model: "Model") -> Tuple["Model", DdpWrappedModel]:
@@ -110,8 +116,14 @@ class TorchDdpWrapper(DdpWrapper):
     around PyTorch's `DistributedDataParallel`.
     """
 
-    def __init__(self, find_unused_parameters: bool = False, **kwargs) -> None:
-        super().__init__(**kwargs)
+    def __init__(
+        self,
+        local_rank: Optional[int] = None,
+        world_size: Optional[int] = None,
+        cuda_device: Union[torch.device, int] = -1,
+        find_unused_parameters: bool = False,
+    ) -> None:
+        super().__init__(local_rank=local_rank, world_size=world_size, cuda_device=cuda_device)
         self._ddp_kwargs = {
             "find_unused_parameters": find_unused_parameters,
         }
