@@ -9,12 +9,11 @@ import torch
 import torch.distributed as dist
 
 from allennlp.common.util import is_distributed, is_global_primary
+from allennlp.nn.parallel import ShardedModuleMixin
 from allennlp.nn.util import (
     StateDictType,
     read_state_dict,
     load_state_dict_distributed,
-    _MODULE_SHARDED_FLAG,
-    _get_wrapped_module,
 )
 
 if TYPE_CHECKING:
@@ -374,8 +373,8 @@ def _get_mapped_state_dict(
     # Now loop through the submodules, calling this function on each submodule.
     for name, submodule in module.named_children():
         # Submodule might be a wrapped, sharded module.
-        if getattr(submodule, _MODULE_SHARDED_FLAG, False):
-            submodule = _get_wrapped_module(submodule)
+        if isinstance(submodule, ShardedModuleMixin):
+            submodule = submodule.get_original_module()
 
         # Pull-out the part of the state_dict corresponding to just this submodule.
         relevant_keys = set([key for key in state_dict.keys() if key.startswith(name + ".")])

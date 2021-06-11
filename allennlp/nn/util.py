@@ -24,17 +24,6 @@ logger = logging.getLogger(__name__)
 T = TypeVar("T")
 StateDictType = Union[Dict[str, torch.Tensor], "OrderedDict[str, torch.Tensor]"]
 
-_MODULE_SHARDED_FLAG = "_is_sharded_allennlp"
-"""
-This flag is used to indicate when a module's parameters have been sharded across
-distributed workers.
-"""
-
-_WRAPPED_MODULE_GETTER = "_get_wrapped_module_allennlp"
-"""
-Defines the name of the getter assigned to wrapper modules for getting the original module.
-"""
-
 
 def move_to_device(obj, device: Union[torch.device, int]):
     """
@@ -2307,9 +2296,12 @@ def load_state_dict_distributed(
             if key not in original:
                 original.append(key)
 
+    # Import here to prevent circular imports.
+    from allennlp.nn.parallel.sharded_module_mixin import ShardedModuleMixin
+
     # If we've found a sharded module or there aren't any more submodules of the current module,
     # we collect the state_dict and load it now instead of recursing further.
-    if getattr(module, _MODULE_SHARDED_FLAG, False) or not submodules:
+    if isinstance(module, ShardedModuleMixin) or not submodules:
         # Collect.
         state_dict, _missing_keys, _unexpected_keys = _collect_state_dict(
             module, state_dict, prefix=prefix
@@ -2388,7 +2380,3 @@ def load_state_dict_distributed(
             )
 
     return _LoadStateDictResult(missing_keys, unexpected_keys)
-
-
-def _get_wrapped_module(module: torch.nn.Module) -> torch.nn.Module:
-    return getattr(module, _WRAPPED_MODULE_GETTER)(module)

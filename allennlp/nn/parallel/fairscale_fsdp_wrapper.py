@@ -1,6 +1,6 @@
 from typing import Tuple, Union, Optional, Dict, Any, TYPE_CHECKING
 
-from fairscale.nn import FullyShardedDataParallel as FSDP
+from fairscale.nn import FullyShardedDataParallel as _FSDP
 from fairscale.nn.wrap import enable_wrap, auto_wrap, wrap, default_auto_wrap_policy
 from fairscale.nn.misc import FlattenParamsWrapper
 from fairscale.optim.grad_scaler import GradScaler
@@ -8,7 +8,7 @@ from overrides import overrides
 import torch
 from torch.cuda import amp
 
-from allennlp.nn.util import _MODULE_SHARDED_FLAG, _WRAPPED_MODULE_GETTER
+from allennlp.nn.parallel.sharded_module_mixin import ShardedModuleMixin
 from allennlp.nn.parallel.ddp_wrapper import (
     DdpWrapper,
     DdpWrappedModel,
@@ -21,11 +21,18 @@ if TYPE_CHECKING:
     from allennlp.models import Model
 
 
+class FSDP(_FSDP, ShardedModuleMixin):
+    @overrides
+    def get_original_module(self) -> torch.nn.Module:
+        module = self.module
+        if isinstance(module, FlattenParamsWrapper):
+            module = module.module
+        return module
+
+
 class FairScaleFsdpWrappedModel(DdpWrappedModel):
     def __init__(self, model: torch.nn.Module, **kwargs) -> None:
         super().__init__(model, **kwargs)
-        setattr(self, _MODULE_SHARDED_FLAG, True)
-        setattr(self.model, _MODULE_SHARDED_FLAG, True)
 
     @overrides
     def load_local_state_dict(
@@ -102,10 +109,6 @@ class FairScaleFsdpWrapper(DdpWrapper):
                 wrapped_module = auto_wrap(module)
             else:
                 wrapped_module = wrap(module)
-        for module in wrapped_module.modules():
-            if isinstance(module, FSDP):
-                setattr(module, _MODULE_SHARDED_FLAG, True)
-                setattr(module, _WRAPPED_MODULE_GETTER, _get_wrapped_module)
         return wrapped_module
 
     def auto_wrap_policy(
@@ -114,10 +117,3 @@ class FairScaleFsdpWrapper(DdpWrapper):
         return default_auto_wrap_policy(
             module, recurse, unwrapped_params, **self._auto_wrap_policy_kwargs
         )
-
-
-def _get_wrapped_module(self):
-    module = self.module
-    if isinstance(module, FlattenParamsWrapper):
-        module = module.module
-    return module

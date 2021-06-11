@@ -8,8 +8,8 @@ from torch.testing import assert_allclose
 import pytest
 
 from allennlp.common.testing import AllenNlpTestCase, run_distributed_test, requires_multi_gpu
-from allennlp.nn.util import _MODULE_SHARDED_FLAG, load_state_dict_distributed
-from allennlp.nn.parallel import FairScaleFsdpWrapper
+from allennlp.nn.util import load_state_dict_distributed
+from allennlp.nn.parallel import FairScaleFsdpWrapper, ShardedModuleMixin
 
 
 class EncoderDecoderModel(torch.nn.Module):
@@ -117,13 +117,9 @@ def _dist_load_and_train(
         torch.save(state_dict, os.path.join(test_dir, "state.pt"))
 
     # Make sure the right modules are sharded.
-    assert getattr(model.embedding, _MODULE_SHARDED_FLAG, None) is None
-    assert getattr(model.emb_proj, _MODULE_SHARDED_FLAG, None) is True
-    assert getattr(model.encoder, _MODULE_SHARDED_FLAG, None) is True
-    #  assert getattr(model.encoder.ff1.linear, _MODULE_SHARDED_FLAG, None) is True
-    #  assert getattr(model.encoder.ff2.linear, _MODULE_SHARDED_FLAG, None) is True
-    assert getattr(model.decoder.ff, _MODULE_SHARDED_FLAG, None) is True
-    #  assert getattr(model.decoder.ff.linear, _MODULE_SHARDED_FLAG, None) is True
+    assert not isinstance(model.embedding, ShardedModuleMixin)
+    assert isinstance(model.encoder, ShardedModuleMixin)
+    assert isinstance(model.decoder.ff, ShardedModuleMixin)
 
     # Now load the state dict... we should be able to do this before wrapping the model itself
     # with the fsdp_wrapper.
