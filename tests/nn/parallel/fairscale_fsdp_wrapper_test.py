@@ -86,12 +86,17 @@ def _dist_load_and_train(
     gpu_id: int,
     test_dir: Union[str, PathLike],
     mixed_precision: bool,
+    **kwargs,
 ):
+    # make sure everything is deterministic.
+    torch.manual_seed(global_rank)
+
     fsdp_wrapper = FairScaleFsdpWrapper(
         local_rank=global_rank,
         world_size=world_size,
         cuda_device=gpu_id,
         mixed_precision=mixed_precision,
+        **kwargs,
     )
     model = EncoderDecoderModel(fsdp_wrapper)
 
@@ -181,19 +186,22 @@ def _dist_load_and_train(
 class TestFairScaleFsdpWrapper(AllenNlpTestCase):
     @pytest.mark.parametrize(
         "mixed_precision",
-        (
-            False,
-            True,
-        ),
+        (True, False),
         ids=lambda val: f"amp={val}",
     )
+    @pytest.mark.parametrize(
+        "flatten_parameters",
+        (True, False),
+        ids=lambda val: f"flatten={val}",
+    )
     @requires_multi_gpu
-    def test_distributed_loading_and_training(self, mixed_precision: bool):
+    def test_distributed_loading_and_training(self, mixed_precision, flatten_parameters):
         run_distributed_test(
             [0, 1],
             func=_dist_load_and_train,
             test_dir=self.TEST_DIR,
             mixed_precision=mixed_precision,
+            flatten_parameters=flatten_parameters,
         )
 
         # Now make sure the saved state is exactly the same across workers
@@ -205,21 +213,23 @@ class TestFairScaleFsdpWrapper(AllenNlpTestCase):
         assert set(state.keys()) == set(state_worker1.keys())
 
         for key, tensor in state.items():
+            # Need to give extra tolerance for buffers when `mixed_precision` is `True`.
+            tolerance = None if not mixed_precision or "buffer" not in key else 1e-3
             worker0_tensor = state_worker0[key]
             worker1_tensor = state_worker1[key]
-            # TODO (epwalsh): remove this skip once https://github.com/facebookresearch/fairscale/pull/705
-            # is fixed.
-            if mixed_precision and "buffer" in key:
-                continue
             assert_allclose(
                 tensor,
                 worker0_tensor,
                 msg=f"{key} is off in worker 0 state.\nExpected:\n{tensor}\nGot:\n{worker0_tensor}",
+                atol=tolerance,
+                rtol=tolerance,
             )
             assert_allclose(
                 tensor,
                 worker1_tensor,
                 msg=f"{key} is off in worker 1 state.\nExpected:\n{tensor}\nGot:\n{worker1_tensor}",
+                atol=tolerance,
+                rtol=tolerance,
             )
 
         # Gather final state to make sure embeddings stayed tied.
