@@ -61,14 +61,18 @@ test :
 
 .PHONY : test-with-cov
 test-with-cov :
-	pytest --color=yes -rf --durations=40 \
+	pytest --color=yes -v -rf --durations=40 \
 			--cov-config=.coveragerc \
 			--cov=$(SRC) \
 			--cov-report=xml
 
 .PHONY : gpu-test
 gpu-test : check-for-cuda
-	pytest --color=yes -v -rf -m gpu
+	pytest --color=yes -v -rf --durations=20 \
+			--cov-config=.coveragerc \
+			--cov=$(SRC) \
+			--cov-report=xml \
+			-m gpu
 
 .PHONY : benchmarks
 benchmarks :

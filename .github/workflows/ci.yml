@@ -104,16 +104,12 @@ jobs:
       run: |
         make test-with-cov
 
-    - name: Upload coverage to Codecov
+    - name: Save coverage report
       if: matrix.python == '3.7' && github.repository == 'allenai/allennlp' && (github.event_name == 'push' || github.event_name == 'pull_request')
-      uses: codecov/codecov-action@v1
+      uses: actions/upload-artifact@v1
       with:
-        file: ./coverage.xml
-        # Ignore codecov failures as the codecov server is not
-        # very reliable but we don't want to report a failure
-        # in the github UI just because the coverage report failed to
-        # be published.
-        fail_ci_if_error: false
+        name: check_core_coverage
+        path: coverage.xml
 
     - name: Clean up
       if: always()
@@ -166,6 +162,29 @@ jobs:
       if: always()
       run: |
         pip uninstall --yes allennlp allennlp-models
+
+  upload_coverage:
+    name: Upload Coverage Report
+    if: github.repository == 'allenai/allennlp' && (github.event_name == 'push' || github.event_name == 'pull_request')
+    runs-on: ubuntu-latest
+    needs: [check_core, gpu_checks]
+
+    steps:
+    - name: Download coverage report
+      uses: actions/download-artifact@v1
+      with:
+        name: check_core_coverage
+        path: check_core/coverage.xml
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v1
+      with:
+        file: check_core_coverage.xml
+        # Ignore codecov failures as the codecov server is not
+        # very reliable but we don't want to report a failure
+        # in the github UI just because the coverage report failed to
+        # be published.
+        fail_ci_if_error: false
 
   # Builds package distribution files for PyPI.
   build_package:
