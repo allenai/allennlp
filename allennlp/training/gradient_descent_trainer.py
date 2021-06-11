@@ -19,6 +19,7 @@ from allennlp.models.model import Model
 from allennlp.nn.parallel import DdpWrapper, DdpWrappedModel, TorchDdpWrapper
 from allennlp.training.callbacks import ConsoleLoggerCallback
 from allennlp.training.callbacks.confidence_checks import ConfidenceChecksCallback
+from allennlp.training.callbacks.backward import MixedPrecisionBackwardCallback
 from allennlp.training.checkpointer import Checkpointer
 from allennlp.training.learning_rate_schedulers.learning_rate_scheduler import LearningRateScheduler
 from allennlp.training.metric_tracker import MetricTracker
@@ -151,7 +152,7 @@ class GradientDescentTrainer(Trainer):
         parameters. This is necessary because we want the saved model to perform as well as the validated
         model if we load it later. But this may cause problems if you restart the training from checkpoint.
 
-    callbacks : `List[Lazy[TrainerCallback]]`, optional (default = `None`)
+    callbacks : `List[TrainerCallback]`, optional (default = `None`)
         A list of callbacks that can be called at certain events: e.g. each batch, epoch, and at the start
         and end of training, etc.
 
@@ -495,10 +496,17 @@ class GradientDescentTrainer(Trainer):
                         batch_reg_loss = reg_loss.item()
                         train_reg_loss += batch_reg_loss  # type: ignore
 
-                if self._scaler is not None:
-                    self._scaler.scale(loss).backward()
-                else:
-                    loss.backward()
+                backward_called = False
+                for callback in self._callbacks:
+                    backward_called |= callback.on_backward(self, batch_outputs, backward_called)
+                if not backward_called:
+                    if self._scaler is not None:
+                        MixedPrecisionBackwardCallback(self._serialization_dir).on_backward(
+                            self, batch_outputs, backward_called
+                        )
+                    else:
+                        loss.backward()
+
             if len(batch_group_outputs) <= 0:
                 continue
 

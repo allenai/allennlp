@@ -30,6 +30,7 @@ from allennlp.training.callbacks import (
     TensorBoardCallback,
     ConfidenceChecksCallback,
     ConsoleLoggerCallback,
+    OnBackwardException,
 )
 from allennlp.training.callbacks.confidence_checks import ConfidenceCheckError
 from allennlp.training.learning_rate_schedulers import CosineWithRestarts
@@ -127,6 +128,26 @@ class TrainerTestBase(AllenNlpTestCase):
         self.validation_data_loader.index_with(self.vocab)
 
 
+class ZeroGradientsBackwardCallback(TrainerCallback):
+    """
+    Zeros all gradients after backpropagation.
+    """
+
+    def on_backward(
+        self,
+        trainer: "GradientDescentTrainer",
+        batch_outputs: Dict[str, torch.Tensor],
+        backward_called: bool,
+        **kwargs,
+    ) -> bool:
+        if backward_called:
+            raise OnBackwardException()
+        batch_outputs["loss"].backward()
+        for param in trainer.model.parameters():
+            param.grad.data.zero_()
+        return True
+
+
 class TestTrainer(TrainerTestBase):
     def test_trainer_can_run(self):
         trainer = GradientDescentTrainer(
@@ -167,6 +188,59 @@ class TestTrainer(TrainerTestBase):
         assert "peak_worker_0_memory_MB" in metrics
         assert isinstance(metrics["peak_worker_0_memory_MB"], float)
         assert metrics["peak_worker_0_memory_MB"] > 0
+
+    def test_train_zero_gradients(self):
+        weights = {}
+        for name, param in self.model.named_parameters():
+            weights[name] = param.data.clone()
+
+        trainer = GradientDescentTrainer(
+            self.model,
+            self.optimizer,
+            self.data_loader,
+            num_epochs=2,
+            validation_data_loader=self.validation_data_loader,
+            callbacks=[ZeroGradientsBackwardCallback(serialization_dir=self.TEST_DIR)],
+        )
+        trainer.train()
+
+        # weights should be the same
+        for name, param in self.model.named_parameters():
+            assert torch.equal(weights[name], param.data)
+
+    def test_two_backward_callbacks(self):
+        class SecondBackwardCallback(TrainerCallback):
+            """
+            Changes all gradients to 1 after backpropagation.
+            """
+
+            def on_backward(
+                self,
+                trainer: "GradientDescentTrainer",
+                batch_outputs: Dict[str, torch.Tensor],
+                backward_called: bool,
+                **kwargs,
+            ) -> bool:
+                if backward_called:
+                    raise OnBackwardException()
+                batch_outputs["loss"].backward()
+                for param in trainer.model.parameters():
+                    param.grad = torch.ones_like(param.grad, device=param.grad.device)
+                return True
+
+        with pytest.raises(OnBackwardException):
+            trainer = GradientDescentTrainer(
+                self.model,
+                self.optimizer,
+                self.data_loader,
+                num_epochs=2,
+                validation_data_loader=self.validation_data_loader,
+                callbacks=[
+                    ZeroGradientsBackwardCallback(serialization_dir=self.TEST_DIR),
+                    SecondBackwardCallback(serialization_dir=self.TEST_DIR),
+                ],
+            )
+            trainer.train()
 
     def test_trainer_can_run_exponential_moving_average(self):
         moving_average = ExponentialMovingAverage(self.model.named_parameters(), decay=0.9999)

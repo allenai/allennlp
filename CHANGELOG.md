@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added `on_backward` training callback which allows for control over backpropagation and gradient manipulation.
+
 ### Changed
 
 - The type of the `grad_norm` parameter of `GradientDescentTrainer` is now `Union[float, bool]`,
