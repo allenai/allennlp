@@ -167,4 +167,4 @@ docker-test-image :
 
 .PHONY : docker-test-run
 docker-test-run :
-	$(DOCKER_RUN_CMD) -v $(shell pwd):/run/ $(DOCKER_GPUS) $(DOCKER_TEST_IMAGE_NAME) $(ARGS)
+	$(DOCKER_RUN_CMD) $(DOCKER_GPUS) $(DOCKER_TEST_IMAGE_NAME) $(ARGS)
