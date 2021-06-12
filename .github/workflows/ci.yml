@@ -170,6 +170,9 @@ jobs:
     needs: [check_core, gpu_checks]
 
     steps:
+      # Need to checkout code to get the coverage config.
+    - uses: actions/checkout@v2
+
     - name: Download coverage report
       uses: actions/download-artifact@v1
       with:
