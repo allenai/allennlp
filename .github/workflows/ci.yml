@@ -241,7 +241,7 @@ jobs:
 
     - name: Debug info
       run: |
-        ls -lh coverage
+        ls -lh check_core_coverage
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v1
