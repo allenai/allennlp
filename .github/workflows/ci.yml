@@ -177,12 +177,12 @@ jobs:
       uses: actions/download-artifact@v1
       with:
         name: check_core_coverage
-        path: check_core/coverage.xml
+        path: coverage/check_core.xml
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v1
       with:
-        file: check_core_coverage.xml
+        file: coverage/check_core.xml
         # Ignore codecov failures as the codecov server is not
         # very reliable but we don't want to report a failure
         # in the github UI just because the coverage report failed to
