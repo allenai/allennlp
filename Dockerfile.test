@@ -36,4 +36,6 @@ RUN touch allennlp/__init__.py \
 COPY . .
 RUN pip install --no-cache-dir --no-deps -e .
 
+WORKDIR /run
+
 ENTRYPOINT ["make"]

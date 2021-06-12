@@ -55,6 +55,7 @@ jobs:
     - name: Run GPU tests
       run: |
         make docker-test-run DOCKER_TAG=$DOCKER_TAG ARGS='gpu-test'
+        ls -lh
 
   check_core:
     name: Check Core
