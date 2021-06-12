@@ -36,25 +36,67 @@ jobs:
     if: github.repository == 'allenai/allennlp'  # self-hosted runner only available on main repo
     timeout-minutes: 15
     runs-on: [self-hosted, GPU]
+    env:
+      # Required to use the setup-python action.
+      AGENT_TOOLSDIRECTORY: '/opt/hostedtoolcache'
+      # Our self-hosted runner currently is currently compatible with CUDA 11.*.
+      TORCH_VERSION: 'torch==1.8.1+cu111 torchvision==0.9.1+cu111 -f https://download.pytorch.org/whl/torch_stable.html'
+    strategy:
+      matrix:
+        python: ['3.8']
 
     steps:
     - uses: actions/checkout@v2
 
-    - name: Set Docker tag
-      run: |
-        if [[ $GITHUB_EVENT_NAME == 'release' ]]; then
-            echo "DOCKER_TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV;
-        else
-            echo "DOCKER_TAG=$GITHUB_SHA" >> $GITHUB_ENV;
-        fi
+    - name: Setup Python
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python }}
 
-    - name: Build test image
+    - uses: actions/cache@v2
+      with:
+        path: ${{ env.pythonLocation }}
+        key: ${{ runner.os }}-pydeps-${{ env.pythonLocation }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
+
+    - name: Install requirements
       run: |
-        make docker-test-image DOCKER_TAG=$DOCKER_TAG
+        make install
 
     - name: Run GPU tests
       run: |
-        make docker-test-run DOCKER_TAG=$DOCKER_TAG ARGS='gpu-test'
+        make gpu-test
+        mkdir coverage
+        mv coverage.xml coverage/
+
+    - name: Save coverage report
+      if: github.repository == 'allenai/allennlp' && (github.event_name == 'push' || github.event_name == 'pull_request')
+      uses: actions/upload-artifact@v1
+      with:
+        name: gpu_checks_coverage
+        path: ./coverage
+
+    - name: Clean up
+      if: always()
+      run: |
+        # Could run into issues with the cache if we don't uninstall the editable.
+        # See https://github.com/pypa/pip/issues/4537.
+        pip uninstall --yes allennlp
+
+    # - name: Set Docker tag
+    #   run: |
+    #     if [[ $GITHUB_EVENT_NAME == 'release' ]]; then
+    #         echo "DOCKER_TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV;
+    #     else
+    #         echo "DOCKER_TAG=$GITHUB_SHA" >> $GITHUB_ENV;
+    #     fi
+
+    # - name: Build test image
+    #   run: |
+    #     make docker-test-image DOCKER_TAG=$DOCKER_TAG
+
+    # - name: Run GPU tests
+    #   run: |
+    #     make docker-test-run DOCKER_TAG=$DOCKER_TAG ARGS='gpu-test'
 
     # - name: Save coverage report
     #   if: github.repository == 'allenai/allennlp' && (github.event_name == 'push' || github.event_name == 'pull_request')
@@ -109,14 +151,16 @@ jobs:
     - name: Run tests
       if: '! cancelled()'
       run: |
-        make test-with-cov
+        make test
+        mkdir coverage
+        mv coverage.xml coverage/
 
     - name: Save coverage report
       if: matrix.python == '3.7' && github.repository == 'allenai/allennlp' && (github.event_name == 'push' || github.event_name == 'pull_request')
       uses: actions/upload-artifact@v1
       with:
         name: check_core_coverage
-        path: coverage.xml
+        path: ./coverage
 
     - name: Clean up
       if: always()
@@ -184,13 +228,13 @@ jobs:
       uses: actions/download-artifact@v1
       with:
         name: check_core_coverage
-        path: coverage/check_core.xml
+        path: check_core_coverage
 
     # - name: Download coverage report from GPU Checks
     #   uses: actions/download-artifact@v1
     #   with:
     #     name: gpu_checks_coverage
-    #     path: coverage/gpu_checks.xml
+    #     path: gpu_checks_coverage
 
     - name: Debug info
       run: |
@@ -199,7 +243,7 @@ jobs:
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v1
       with:
-        file: coverage/check_core.xml
+        file: check_core_coverage/coverage.xml
         # Ignore codecov failures as the codecov server is not
         # very reliable but we don't want to report a failure
         # in the github UI just because the coverage report failed to

@@ -10,6 +10,8 @@ MD_DOCS_CONF_SRC = mkdocs-skeleton.yml
 MD_DOCS_TGT = site/
 MD_DOCS_EXTRAS = $(addprefix $(MD_DOCS_ROOT),README.md CHANGELOG.md CONTRIBUTING.md)
 
+TORCH_VERSION = 'torch==1.8.1 torchvision==0.9.1'
+
 DOCKER_TAG = latest
 DOCKER_IMAGE_NAME = allennlp/allennlp:$(DOCKER_TAG)
 DOCKER_TEST_IMAGE_NAME = allennlp/test:$(DOCKER_TAG)
@@ -57,10 +59,6 @@ typecheck :
 
 .PHONY : test
 test :
-	pytest --color=yes -rf --durations=40
-
-.PHONY : test-with-cov
-test-with-cov :
 	pytest --color=yes -v -rf --durations=40 \
 			--cov-config=.coveragerc \
 			--cov=$(SRC) \
@@ -89,6 +87,8 @@ install :
 	# Due to a weird thing with pip, we may need egg-info before running `pip install -e`.
 	# See https://github.com/pypa/pip/issues/4537.
 	python setup.py install_egg_info
+	# Install torch ecosystem first.
+	pip install $(TORCH_VERSION)
 	pip install --upgrade --upgrade-strategy eager -e . -r dev-requirements.txt
 	# These nltk packages are used by the 'checklist' module.
 	python -c 'import nltk; [nltk.download(p) for p in ("wordnet", "wordnet_ic", "sentiwordnet")]'
