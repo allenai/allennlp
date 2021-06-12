@@ -55,7 +55,13 @@ jobs:
     - name: Run GPU tests
       run: |
         make docker-test-run DOCKER_TAG=$DOCKER_TAG ARGS='gpu-test'
-        ls -lh
+
+    - name: Save coverage report
+      if: github.repository == 'allenai/allennlp' && (github.event_name == 'push' || github.event_name == 'pull_request')
+      uses: actions/upload-artifact@v1
+      with:
+        name: gpu_checks_coverage
+        path: coverage.xml
 
   check_core:
     name: Check Core
@@ -174,16 +180,26 @@ jobs:
       # Need to checkout code to get the coverage config.
     - uses: actions/checkout@v2
 
-    - name: Download coverage report
+    - name: Download coverage report from Check Core
       uses: actions/download-artifact@v1
       with:
         name: check_core_coverage
         path: coverage/check_core.xml
 
+    - name: Download coverage report from GPU Checks
+      uses: actions/download-artifact@v1
+      with:
+        name: gpu_checks_coverage
+        path: coverage/gpu_checks.xml
+
+    - name: Debug info
+      run: |
+        ls -lh coverage
+
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v1
       with:
-        file: coverage/check_core.xml
+        file: coverage/check_core.xml,coverage/gpu_checks.xml
         # Ignore codecov failures as the codecov server is not
         # very reliable but we don't want to report a failure
         # in the github UI just because the coverage report failed to
