@@ -229,11 +229,7 @@ jobs:
     - name: Run models tests
       run: |
         cd allennlp-models
-        pytest -v --color=yes -rf --durations=40 \
-            -m "not pretrained_model_test and not pretrained_config_test" \
-            --cov-config=.coveragerc \
-            --cov=allennlp \
-            --cov-report=xml
+        make test-with-cov COV=allennlp
         mkdir coverage
         mv coverage.xml coverage/
 
