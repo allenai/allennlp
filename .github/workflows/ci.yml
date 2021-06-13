@@ -254,34 +254,41 @@ jobs:
     if: github.repository == 'allenai/allennlp' && (github.event_name == 'push' || github.event_name == 'pull_request')
     runs-on: ubuntu-latest
     # needs: [check_core, gpu_checks]
-    needs: [check_core, gpu_checks]
+    needs: [check_core, check_models, gpu_checks]
 
     steps:
       # Need to checkout code to get the coverage config.
     - uses: actions/checkout@v2
 
-    - name: Download coverage report from Check Core
+    - name: Download coverage report from CPU tests
       uses: actions/download-artifact@v1
       with:
         name: cpu-tests-coverage
         path: coverage/cpu_tests
 
-    - name: Download coverage report from GPU Checks
+    - name: Download coverage report from GPU Tests
       uses: actions/download-artifact@v1
       with:
         name: gpu-tests-coverage
         path: coverage/gpu_tests
+
+    - name: Download coverage report from model tests
+      uses: actions/download-artifact@v1
+      with:
+        name: model-tests-coverage
+        path: coverage/model_tests
 
     - name: Debug info
       run: |
         ls -lh coverage
         ls -lh coverage/cpu_tests
         ls -lh coverage/gpu_tests
+        ls -lh coverage/model_tests
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v1
       with:
-        files: coverage/cpu_tests/coverage.xml,coverage/gpu_tests/coverage.xml
+        files: coverage/cpu_tests/coverage.xml,coverage/gpu_tests/coverage.xml,coverage/model_tests/coverage.xml
         # Ignore codecov failures as the codecov server is not
         # very reliable but we don't want to report a failure
         # in the github UI just because the coverage report failed to
