@@ -31,6 +31,66 @@ jobs:
         # file with notes on your contribution.
         git diff --name-only $(git merge-base origin/main HEAD) | grep '^CHANGELOG.md$' && echo "Thanks for helping keep our CHANGELOG up-to-date!"
 
+  style:
+    name: Style
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Setup Python
+      uses: actions/setup-python@v1
+      with:
+        python-version: 3.8
+
+    - name: Install requirements
+      run: |
+        grep -E '^black' dev-requirements.txt | xargs pip install
+
+    - name: Debug info
+      run: |
+        pip freeze
+
+    - name: Run black
+      if: '! cancelled()'
+      run: |
+        black --check .
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Setup Python
+      uses: actions/setup-python@v1
+      with:
+        python-version: 3.8
+
+    - uses: actions/cache@v2
+      with:
+        path: ${{ env.pythonLocation }}
+        key: ${{ runner.os }}-pydeps-${{ env.pythonLocation }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
+
+    - name: Install requirements
+      run: |
+        make install
+
+    - name: Debug info
+      run: |
+        pip freeze
+
+    - name: Run flake8
+      if: '! cancelled()'
+      run: |
+        flake8 .
+
+    - name: Run mypy
+      if: '! cancelled()'
+      run: |
+        mypy . --cache-dir=/dev/null
+
   gpu_checks:
     name: GPU Checks
     if: github.repository == 'allenai/allennlp'  # self-hosted runner only available on main repo
@@ -41,9 +101,6 @@ jobs:
       AGENT_TOOLSDIRECTORY: '/opt/hostedtoolcache'
       # Our self-hosted runner currently is currently compatible with CUDA 11.*.
       TORCH_VERSION: 'torch==1.8.1+cu111 torchvision==0.9.1+cu111 -f https://download.pytorch.org/whl/torch_stable.html'
-    strategy:
-      matrix:
-        python: ['3.8']
 
     steps:
     - uses: actions/checkout@v2
@@ -53,7 +110,7 @@ jobs:
       env:
         ACTIONS_STEP_DEBUG: 'true'
       with:
-        python-version: ${{ matrix.python }}
+        python-version: 3.8
 
     - uses: actions/cache@v2
       with:
@@ -111,21 +168,6 @@ jobs:
     - name: Debug info
       run: |
         pip freeze
-
-    - name: Format
-      if: '! cancelled()'
-      run: |
-        make format
-
-    - name: Lint
-      if: '! cancelled()'
-      run: |
-        make lint
-
-    - name: Type check
-      if: '! cancelled()'
-      run: |
-        make typecheck
 
     - name: Run tests
       if: '! cancelled()'
@@ -545,7 +587,7 @@ jobs:
   # Publish the core distribution files to PyPI.
   publish:
     name: PyPI
-    needs: [check_core, check_models, gpu_checks, build_package, test_package, docker, docs]
+    needs: [style, lint, check_core, check_models, gpu_checks, build_package, test_package, docker, docs]
     # Only publish to PyPI on releases and nightly builds to "allenai/allennlp" (not forks).
     if: github.repository == 'allenai/allennlp' && (github.event_name == 'release' || github.event_name == 'schedule')
     runs-on: ubuntu-latest
