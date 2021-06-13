@@ -224,7 +224,7 @@ jobs:
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v1
       with:
-        file: check_core_coverage/coverage.xml,gpu_checks_coverage/coverage.xml
+        files: check_core_coverage/coverage.xml,gpu_checks_coverage/coverage.xml
         # Ignore codecov failures as the codecov server is not
         # very reliable but we don't want to report a failure
         # in the github UI just because the coverage report failed to
