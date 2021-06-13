@@ -228,7 +228,21 @@ jobs:
 
     - name: Run models tests
       run: |
-        cd allennlp-models && make test
+        cd allennlp-models
+	      pytest -v --color=yes -rf --durations=40 \
+            -m "not pretrained_model_test and not pretrained_config_test" \
+            --cov-config=.coveragerc \
+            --cov=allennlp \
+            --cov-report=xml
+        mkdir coverage
+        mv coverage.xml coverage/
+
+    - name: Save coverage report
+      if: matrix.python == '3.7' && github.repository == 'allenai/allennlp' && (github.event_name == 'push' || github.event_name == 'pull_request')
+      uses: actions/upload-artifact@v1
+      with:
+        name: model-tests-coverage
+        path: ./coverage
 
     - name: Clean up
       if: always()
