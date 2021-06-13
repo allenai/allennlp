@@ -131,7 +131,7 @@ jobs:
       if: github.repository == 'allenai/allennlp' && (github.event_name == 'push' || github.event_name == 'pull_request')
       uses: actions/upload-artifact@v1
       with:
-        name: gpu_checks_coverage
+        name: gpu-tests-coverage
         path: ./coverage
 
     - name: Clean up
@@ -180,7 +180,7 @@ jobs:
       if: matrix.python == '3.7' && github.repository == 'allenai/allennlp' && (github.event_name == 'push' || github.event_name == 'pull_request')
       uses: actions/upload-artifact@v1
       with:
-        name: check_core_coverage
+        name: cpu-tests-coverage
         path: ./coverage
 
     - name: Clean up
@@ -249,24 +249,25 @@ jobs:
     - name: Download coverage report from Check Core
       uses: actions/download-artifact@v1
       with:
-        name: check_core_coverage
-        path: check_core_coverage
+        name: cpu-tests-coverage
+        path: coverage/cpu_tests
 
     - name: Download coverage report from GPU Checks
       uses: actions/download-artifact@v1
       with:
-        name: gpu_checks_coverage
-        path: gpu_checks_coverage
+        name: gpu-tests-coverage
+        path: coverage/gpu_tests
 
     - name: Debug info
       run: |
-        ls -lh check_core_coverage
-        ls -lh gpu_checks_coverage
+        ls -lh coverage
+        ls -lh coverage/cpu_tests
+        ls -lh coverage/gpu_tests
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v1
       with:
-        files: check_core_coverage/coverage.xml,gpu_checks_coverage/coverage.xml
+        files: coverage/cpu_tests/coverage.xml,coverage/gpu_tests/coverage.xml
         # Ignore codecov failures as the codecov server is not
         # very reliable but we don't want to report a failure
         # in the github UI just because the coverage report failed to
