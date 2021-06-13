@@ -238,7 +238,7 @@ jobs:
       uses: actions/upload-artifact@v1
       with:
         name: model-tests-coverage
-        path: ./coverage
+        path: allennlp-models/coverage
 
     - name: Clean up
       if: always()
