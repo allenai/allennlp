@@ -52,7 +52,6 @@ jobs:
         pip freeze
 
     - name: Run black
-      if: '! cancelled()'
       run: |
         black --check .
 
@@ -82,12 +81,11 @@ jobs:
         pip freeze
 
     - name: Run flake8
-      if: '! cancelled()'
       run: |
         flake8 .
 
     - name: Run mypy
-      if: '! cancelled()'
+      if: '! cancelled()'  # run this step even if the last step failed.
       run: |
         mypy . --cache-dir=/dev/null
 
@@ -276,13 +274,6 @@ jobs:
       with:
         name: model-tests-coverage
         path: coverage/model_tests
-
-    - name: Debug info
-      run: |
-        ls -lh coverage
-        ls -lh coverage/cpu_tests
-        ls -lh coverage/gpu_tests
-        ls -lh coverage/model_tests
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v1
