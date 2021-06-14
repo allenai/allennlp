@@ -22,7 +22,7 @@ def multi_device(test_method):
     """
     Decorator that provides an argument `device` of type `str` to a test function.
 
-    If you have a CUDA capable GPU available, device will be "cuda:0", other the device will
+    If you have a CUDA capable GPU available, device will be "cuda:0", otherwise the device will
     be "cpu".
 
     !!! Note
