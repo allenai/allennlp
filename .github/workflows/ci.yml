@@ -238,7 +238,7 @@ jobs:
         mv coverage.xml coverage/
 
     - name: Save coverage report
-      if: matrix.python == '3.7' && github.repository == 'allenai/allennlp' && (github.event_name == 'push' || github.event_name == 'pull_request')
+      if: github.repository == 'allenai/allennlp' && (github.event_name == 'push' || github.event_name == 'pull_request')
       uses: actions/upload-artifact@v1
       with:
         name: model-tests-coverage
