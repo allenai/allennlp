@@ -124,7 +124,7 @@ When you're ready to contribute code to address an open issue, please follow the
 
     Our CI also uses [`flake8`](https://github.com/allenai/allennlp/tree/main/tests) to lint the code base and [`mypy`](http://mypy-lang.org/) for type-checking. You should run both of these next with
 
-        make lint
+        flake8 .
 
     and
 
