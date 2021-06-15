@@ -3,7 +3,7 @@ from typing import Dict, Any, TYPE_CHECKING
 from allennlp.training.callbacks.callback import TrainerCallback
 
 if TYPE_CHECKING:
-    from allennlp.training.trainer import GradientDescentTrainer
+    from allennlp.training.gradient_descent_trainer import GradientDescentTrainer
 
 
 @TrainerCallback.register("track_epoch_callback")

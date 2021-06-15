@@ -3,7 +3,6 @@ An implementation of [T5](https://api.semanticscholar.org/CorpusID:204838007), a
 (https://github.com/huggingface/transformers/blob/4c32f9f26e6a84f0d9843fec8757e6ce640bb44e/src/transformers/models/t5/modeling_t5.py).
 """  # noqa: E401
 
-import math
 from dataclasses import dataclass
 from typing import Optional, Tuple, List, Union, Dict, TYPE_CHECKING
 
@@ -14,22 +13,21 @@ from torch.nn import CrossEntropyLoss
 
 from allennlp.common import FromParams, Params, Lazy, Registrable
 from allennlp.common.checks import ConfigurationError
-from allennlp.modules.transformer.transformer_module import (
-    TransformerModule,
+from allennlp.modules.transformer.transformer_module import TransformerModule
+from allennlp.modules.transformer.attention_module import (
+    T5Attention,
+    AttentionOutput,
 )
 from allennlp.modules.transformer.util import (
-    apply_mask,
     get_extended_attention_mask,
+    FloatT,
+    IntT,
+    BoolT,
 )
 from allennlp.nn.beam_search import BeamSearch
 
 if TYPE_CHECKING:
     from transformers.configuration_utils import PretrainedConfig
-
-# Unfortunately mypy is insane, so I have to wrap these in unions.
-FloatT = Union[torch.FloatTensor]
-IntT = Union[torch.IntTensor]
-BoolT = Union[torch.BoolTensor]
 
 
 class T5LayerNorm(TransformerModule, FromParams):
@@ -120,259 +118,6 @@ class T5LayerFF(TransformerModule, FromParams):
 
 
 @dataclass
-class T5AttentionOutput:
-    hidden_states: FloatT
-    key_value_state: Optional[Tuple[FloatT, FloatT]]
-    position_bias: FloatT
-    attn_weights: Optional[FloatT] = None
-
-
-class T5Attention(TransformerModule, FromParams):
-    def __init__(
-        self,
-        is_decoder: bool = False,
-        hidden_size: int = 512,
-        key_value_proj_dim: int = 64,
-        num_heads: int = 8,
-        has_relative_attention_bias: bool = False,
-        relative_attention_num_buckets: int = 32,
-        dropout: float = 0.1,
-    ):
-        super().__init__()
-        self.is_decoder = is_decoder
-        self.has_relative_attention_bias = has_relative_attention_bias
-
-        self.relative_attention_num_buckets = relative_attention_num_buckets
-        self.hidden_size = hidden_size
-        self.key_value_proj_dim = key_value_proj_dim
-        self.num_heads = num_heads
-        self.dropout = dropout
-        self.inner_dim = self.num_heads * self.key_value_proj_dim
-
-        self.q = nn.Linear(self.hidden_size, self.inner_dim, bias=False)
-        self.k = nn.Linear(self.hidden_size, self.inner_dim, bias=False)
-        self.v = nn.Linear(self.hidden_size, self.inner_dim, bias=False)
-        self.o = nn.Linear(self.inner_dim, self.hidden_size, bias=False)
-        if self.has_relative_attention_bias:
-            self.relative_attention_bias = nn.Embedding(
-                self.relative_attention_num_buckets, self.num_heads
-            )
-
-        self.q.weight.data.normal_(mean=0.0, std=(hidden_size * key_value_proj_dim) ** -0.5)
-        self.k.weight.data.normal_(mean=0.0, std=hidden_size ** -0.5)
-        self.v.weight.data.normal_(mean=0.0, std=hidden_size ** -0.5)
-        self.o.weight.data.normal_(mean=0.0, std=(num_heads * key_value_proj_dim) ** -0.5)
-        if self.has_relative_attention_bias:
-            self.relative_attention_bias.weight.data.normal_(mean=0.0, std=hidden_size ** -0.5)
-
-    @staticmethod
-    def _relative_position_bucket(
-        relative_position: IntT,
-        bidirectional: bool = True,
-        num_buckets: int = 32,
-        max_distance: int = 128,
-    ) -> IntT:
-        """
-        Adapted from Mesh Tensorflow:
-        https://github.com/tensorflow/mesh/blob/0cb87fe07da627bf0b7e60475d59f95ed6b5be3d/mesh_tensorflow/transformer/transformer_layers.py#L593
-
-        Translate relative position to a bucket number for relative attention. The relative position is defined as
-        memory_position - query_position, i.e. the distance in tokens from the attending position to the
-        attended-to position. If bidirectional=False, then positive relative positions are invalid. We use smaller
-        buckets for small absolute relative_position and larger buckets for larger absolute relative_positions. All
-        relative positions >=max_distance map to the same bucket. All relative positions <=-max_distance map to the
-        same bucket. This should allow for more graceful generalization to longer sequences than the model has been
-        trained on.
-
-        Args:
-            relative_position: an int32 Tensor
-            bidirectional: a boolean - whether the attention is bidirectional
-            num_buckets: an integer
-            max_distance: an integer
-
-        Returns:
-            a Tensor with the same shape as relative_position, containing int32 values in the range
-            [0, num_buckets)
-        """
-        relative_buckets = relative_position.new_zeros(relative_position.shape)
-        if bidirectional:
-            num_buckets //= 2
-            relative_buckets += (relative_position > 0).to(torch.long) * num_buckets
-            relative_position = torch.abs(relative_position)
-        else:
-            relative_position = -torch.min(relative_position, torch.zeros_like(relative_position))
-        # now relative_position is in the range [0, inf)
-
-        # half of the buckets are for exact increments in positions
-        max_exact = num_buckets // 2
-        is_small = relative_position < max_exact
-
-        # The other half of the buckets are for logarithmically bigger bins in positions up to max_distance
-        relative_postion_if_large = max_exact + (
-            torch.log(relative_position.float() / max_exact)
-            / math.log(max_distance / max_exact)
-            * (num_buckets - max_exact)
-        ).to(torch.long)
-        relative_postion_if_large = torch.min(
-            relative_postion_if_large, torch.full_like(relative_postion_if_large, num_buckets - 1)
-        )
-
-        relative_buckets += torch.where(is_small, relative_position, relative_postion_if_large)
-        return relative_buckets
-
-    def compute_bias(self, query_length: int, key_length: int) -> FloatT:
-        """ Compute binned relative position bias """
-        context_position = torch.arange(query_length, dtype=torch.long)[:, None]
-        memory_position = torch.arange(key_length, dtype=torch.long)[None, :]
-        relative_position = memory_position - context_position  # shape (query_length, key_length)
-        relative_position_bucket = self._relative_position_bucket(
-            relative_position,  # shape (query_length, key_length)
-            bidirectional=(not self.is_decoder),
-            num_buckets=self.relative_attention_num_buckets,
-        )
-        relative_position_bucket = relative_position_bucket.to(
-            self.relative_attention_bias.weight.device
-        )
-        values = self.relative_attention_bias(
-            relative_position_bucket
-        )  # shape (query_length, key_length, num_heads)
-        values = values.permute([2, 0, 1]).unsqueeze(
-            0
-        )  # shape (1, num_heads, query_length, key_length)
-        return values
-
-    def forward(
-        self,
-        hidden_states: torch.Tensor,
-        mask: Optional[torch.BoolTensor] = None,
-        key_value_states: Optional[FloatT] = None,
-        position_bias: Optional[FloatT] = None,
-        past_key_value: Optional[Tuple[FloatT, FloatT]] = None,
-        layer_head_mask: Optional[BoolT] = None,
-        query_length: Optional[int] = None,
-        use_cache: bool = False,
-        output_attentions: bool = False,
-    ) -> T5AttentionOutput:
-        """
-        Self-attention (if key_value_states is None) or attention over source sentence (provided by
-        key_value_states).
-        """
-        # Input is (batch_size, seq_length, dim)
-        # Mask is (batch_size, key_length) (non-causal) or (batch_size, key_length, key_length)
-        # past_key_value[0] is (batch_size, num_heads, q_len - 1, dim_per_head)
-        batch_size, seq_length = hidden_states.shape[:2]
-
-        real_seq_length = seq_length
-
-        if past_key_value is not None:
-            assert (
-                len(past_key_value) == 2
-            ), "past_key_value should have 2 past states: keys and values. Got {} past states".format(
-                len(past_key_value)
-            )
-            real_seq_length += past_key_value[0].shape[2] if query_length is None else query_length
-
-        key_length = real_seq_length if key_value_states is None else key_value_states.shape[1]
-
-        def shape(states):
-            return states.view(batch_size, -1, self.num_heads, self.key_value_proj_dim).transpose(
-                1, 2
-            )
-
-        def unshape(states):
-            return states.transpose(1, 2).contiguous().view(batch_size, -1, self.inner_dim)
-
-        def project(hidden_states, proj_layer, key_value_states, past_key_value) -> FloatT:
-            """ projects hidden states correctly to key/query states """
-            if key_value_states is None:
-                # self-attn
-                # (batch_size, num_heads, seq_length, dim_per_head)
-                hidden_states = shape(proj_layer(hidden_states))
-            elif past_key_value is None:
-                # cross-attn
-                # (batch_size, num_heads, seq_length, dim_per_head)
-                hidden_states = shape(proj_layer(key_value_states))
-
-            if past_key_value is not None:
-                if key_value_states is None:
-                    # self-attn
-                    # (batch_size, num_heads, key_length, dim_per_head)
-                    hidden_states = torch.cat([past_key_value, hidden_states], dim=2)
-                else:
-                    # cross-attn
-                    hidden_states = past_key_value
-            return hidden_states
-
-        # get query states
-        query_states = shape(
-            self.q(hidden_states)
-        )  # (batch_size, num_heads, seq_length, dim_per_head)
-
-        # get key/value states
-        key_states = project(
-            hidden_states,
-            self.k,
-            key_value_states,
-            past_key_value[0] if past_key_value is not None else None,
-        )
-        value_states = project(
-            hidden_states,
-            self.v,
-            key_value_states,
-            past_key_value[1] if past_key_value is not None else None,
-        )
-
-        # compute scores
-        scores = torch.matmul(
-            query_states, key_states.transpose(3, 2)
-        )  # equivalent of torch.einsum("bnqd,bnkd->bnqk", query_states, key_states), compatible with onnx op>9
-
-        if position_bias is None:
-            if self.has_relative_attention_bias:
-                position_bias = self.compute_bias(real_seq_length, key_length)
-            else:
-                position_bias = torch.zeros(
-                    (1, self.num_heads, real_seq_length, key_length),
-                    device=scores.device,
-                    dtype=scores.dtype,
-                )
-
-            # if key and values are already calculated
-            # we want only the last query position bias
-            if past_key_value is not None:
-                position_bias = position_bias[:, :, -seq_length:, :]
-
-            if mask is not None:
-                # Shape: (batch_size, num_heads, seq_length, key_length)
-                position_bias = apply_mask(position_bias, mask)
-
-        scores += position_bias
-        attn_weights = F.softmax(scores.float(), dim=-1).type_as(
-            scores
-        )  # (batch_size, num_heads, seq_length, key_length)
-        attn_weights = F.dropout(
-            attn_weights, p=self.dropout, training=self.training
-        )  # (batch_size, num_heads, seq_length, key_length)
-
-        # Mask heads if we want to
-        if layer_head_mask is not None:
-            attn_weights = attn_weights * layer_head_mask
-
-        attn_output = unshape(
-            torch.matmul(attn_weights, value_states)
-        )  # (batch_size, seq_length, dim)
-        attn_output = self.o(attn_output)
-
-        present_key_value_state = (
-            (key_states, value_states) if (self.is_decoder and use_cache) else None
-        )
-        outputs = T5AttentionOutput(attn_output, present_key_value_state, position_bias)
-        if output_attentions:
-            outputs.attn_weights = attn_weights
-        return outputs
-
-
-@dataclass
 class T5LayerSelfAttentionOutput:
     hidden_states: FloatT
     attn_key_value_state: Optional[Tuple[FloatT, FloatT]]
@@ -397,6 +142,10 @@ class T5LayerSelfAttention(TransformerModule, FromParams):
         self.layer_norm = layer_norm or T5LayerNorm(hidden_size=self.self_attention.hidden_size)
         self.dropout = nn.Dropout(dropout)
 
+    @property
+    def hidden_size(self) -> int:
+        return self.self_attention.hidden_size
+
     def forward(
         self,
         hidden_states: FloatT,
@@ -407,8 +156,10 @@ class T5LayerSelfAttention(TransformerModule, FromParams):
         use_cache: bool = False,
         output_attentions: bool = False,
     ) -> T5LayerSelfAttentionOutput:
+
         normed_hidden_states = self.layer_norm(hidden_states)
-        attention_output: T5AttentionOutput = self.self_attention(
+
+        attention_output: AttentionOutput = self.self_attention(
             normed_hidden_states,
             mask=attention_mask,
             position_bias=position_bias,
@@ -417,12 +168,14 @@ class T5LayerSelfAttention(TransformerModule, FromParams):
             use_cache=use_cache,
             output_attentions=output_attentions,
         )
+
         hidden_states = hidden_states + self.dropout(attention_output.hidden_states)
+
         return T5LayerSelfAttentionOutput(
             hidden_states,
             attention_output.key_value_state,
             attention_output.position_bias,
-            attention_output.attn_weights,
+            attention_output.attention_probs,
         )
 
 
@@ -445,7 +198,9 @@ class T5LayerCrossAttention(TransformerModule, FromParams):
     ):
         super().__init__()
         self.enc_dec_attention = enc_dec_attention or T5Attention(
-            is_decoder=True, has_relative_attention_bias=False
+            is_decoder=True,
+            has_relative_attention_bias=False,
+            is_cross_attention=True,
         )
         self.layer_norm = layer_norm or T5LayerNorm(hidden_size=self.enc_dec_attention.hidden_size)
         self.dropout = nn.Dropout(dropout)
@@ -463,7 +218,7 @@ class T5LayerCrossAttention(TransformerModule, FromParams):
         output_attentions: bool = False,
     ) -> T5LayerCrossAttentionOutput:
         normed_hidden_states = self.layer_norm(hidden_states)
-        attention_output: T5AttentionOutput = self.enc_dec_attention(
+        attention_output: AttentionOutput = self.enc_dec_attention(
             normed_hidden_states,
             mask=attention_mask,
             key_value_states=key_value_states,
@@ -475,11 +230,12 @@ class T5LayerCrossAttention(TransformerModule, FromParams):
             output_attentions=output_attentions,
         )
         layer_output = hidden_states + self.dropout(attention_output.hidden_states)
+
         return T5LayerCrossAttentionOutput(
             layer_output,
             attention_output.key_value_state,
             attention_output.position_bias,
-            attention_output.attn_weights,
+            attention_output.attention_probs,
         )
 
 
@@ -518,7 +274,7 @@ class T5Block(TransformerModule, FromParams):
 
     @property
     def hidden_size(self) -> int:
-        return self.layer[0].self_attention.hidden_size
+        return self.layer[0].hidden_size
 
     def forward(
         self,
@@ -967,6 +723,7 @@ class T5Output:
 
 
 class T5(TransformerModule, Registrable):
+
     _pretrained_mapping = {"shared": "token_embeddings"}
     _tied_weights = {
         "token_embeddings.weight": [

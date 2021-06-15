@@ -7,19 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-### Changed
+### Added
 
-- Use `dist_reduce_sum` in distributed metrics.
-- Allow Google Cloud Storage paths in `cached_path` ("gs://...").
-- Renamed `nn.util.load_state_dict()` to `read_state_dict` to avoid confusion with `torch.nn.Module.load_state_dict()`.
-- `TransformerModule.from_pretrained_module` now only accepts a pretrained model ID (e.g. "bert-base-case") instead of
-  an actual `torch.nn.Module`. Other parameters to this method have changed as well.
-- Print the first batch to the console by default.
-- Renamed `sanity_checks` to `confidence_checks` (`sanity_checks` is deprecated and will be removed in AllenNLP 3.0).
+- Added `on_backward` training callback which allows for control over backpropagation and gradient manipulation.
+
+### Fixed
+
+- Fixed Broken link in `allennlp.fairness.fairness_metrics.Separation` docs
+- Ensured all `allennlp` submodules are imported with `allennlp.common.plugins.import_plugins()`.
+
+
+## [v2.5.0](https://github.com/allenai/allennlp/releases/tag/v2.5.0) - 2021-06-03
 
 ### Added
 - Added `HuggingfaceDatasetReader` for using huggingface datasets in AllenNLP
 - Added `TaskSuite` base class and command line functionality for running [`checklist`](https://github.com/marcotcr/checklist) test suites, along with implementations for `SentimentAnalysisSuite`, `QuestionAnsweringSuite`, and `TextualEntailmentSuite`. These can be found in the `allennlp.confidence_checks.task_checklists` module.
+- Added `BiasMitigatorApplicator`, which wraps any Model and mitigates biases by finetuning
+on a downstream task.
 - Added `allennlp diff` command to compute a diff on model checkpoints, analogous to what `git diff` does on two files.
 - Meta data defined by the class `allennlp.common.meta.Meta` is now saved in the serialization directory and archive file
   when training models from the command line. This is also now part of the `Archive` named tuple that's returned from `load_archive()`.
@@ -33,11 +37,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added a `min_steps` parameter to `BeamSearch` to set a minimum length for the predicted sequences.
 - Added the `FinalSequenceScorer` abstraction to calculate the final scores of the generated sequences in `BeamSearch`. 
 - Added `shuffle` argument to `BucketBatchSampler` which allows for disabling shuffling.
+- Added `allennlp.modules.transformer.attention_module` which contains a generalized `AttentionModule`. `SelfAttention` and `T5Attention` both inherit from this.
+- Added a `Constraint` abstract class to `BeamSearch`, which allows for incorporating constraints on the predictions found by `BeamSearch`,
+  along with a `RepeatedNGramBlockingConstraint` constraint implementation, which allows for preventing repeated n-grams in the output from `BeamSearch`.
+- Added `DataCollator` for dynamic operations for each batch.
+
+### Changed
+
+- Use `dist_reduce_sum` in distributed metrics.
+- Allow Google Cloud Storage paths in `cached_path` ("gs://...").
+- Renamed `nn.util.load_state_dict()` to `read_state_dict` to avoid confusion with `torch.nn.Module.load_state_dict()`.
+- `TransformerModule.from_pretrained_module` now only accepts a pretrained model ID (e.g. "bert-base-case") instead of
+  an actual `torch.nn.Module`. Other parameters to this method have changed as well.
+- Print the first batch to the console by default.
+- Renamed `sanity_checks` to `confidence_checks` (`sanity_checks` is deprecated and will be removed in AllenNLP 3.0).
+- Trainer callbacks can now store and restore state in case a training run gets interrupted.
+- VilBERT backbone now rolls and unrolls extra dimensions to handle input with > 3 dimensions.
+- `BeamSearch` is now a `Registrable` class.
 
 ### Fixed
 
 - When `PretrainedTransformerIndexer` folds long sequences, it no longer loses the information from token type ids.
 - Fixed documentation for `GradientDescentTrainer.cuda_device`.
+- Re-starting a training run from a checkpoint in the middle of an epoch now works correctly.
+- When using the "moving average" weights smoothing feature of the trainer, training checkpoints would also get smoothed, with strange results for resuming a training job. This has been fixed.
+- When re-starting an interrupted training job, the trainer will now read out the data loader even for epochs and batches that can be skipped. We do this to try to get any random number generators used by the reader or data loader into the same state as they were the first time the training job ran.
+- Fixed the potential for a race condition with `cached_path()` when extracting archives. Although the race condition
+  is still possible if used with `force_extract=True`.
+- Fixed `wandb` callback to work in distributed training.
+- Fixed `tqdm` logging into multiple files with `allennlp-optuna`.
 
 
 ## [v2.4.0](https://github.com/allenai/allennlp/releases/tag/v2.4.0) - 2021-04-22
@@ -65,8 +93,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add new dimension to the `interpret` module: influence functions via the `InfluenceInterpreter` base class, along with a concrete implementation: `SimpleInfluence`.
 - Added a `quiet` parameter to the `MultiProcessDataLoading` that disables `Tqdm` progress bars.
 - The test for distributed metrics now takes a parameter specifying how often you want to run it.
-- Created the fairness module and added four fairness metrics: `Independence`, `Separation`, and `Sufficiency`.
-- Added three bias metrics to the fairness module: `WordEmbeddingAssociationTest`, `EmbeddingCoherenceTest`, `NaturalLanguageInference`, and `AssociationWithoutGroundTruth`.
+- Created the fairness module and added three fairness metrics: `Independence`, `Separation`, and `Sufficiency`.
+- Added four bias metrics to the fairness module: `WordEmbeddingAssociationTest`, `EmbeddingCoherenceTest`, `NaturalLanguageInference`, and `AssociationWithoutGroundTruth`.
 - Added four bias direction methods (`PCABiasDirection`, `PairedPCABiasDirection`, `TwoMeansBiasDirection`, `ClassificationNormalBiasDirection`) and four bias mitigation methods (`LinearBiasMitigator`, `HardBiasMitigator`, `INLPBiasMitigator`, `OSCaRBiasMitigator`).
 
 ### Changed

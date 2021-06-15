@@ -1,18 +1,19 @@
 from typing import List, Dict, Any, Optional, TYPE_CHECKING
+import torch
 
 from allennlp.common import Registrable
 from allennlp.data import TensorDict
 
 
 if TYPE_CHECKING:
-    from allennlp.training.trainer import GradientDescentTrainer
+    from allennlp.training.gradient_descent_trainer import GradientDescentTrainer
 
 
 class TrainerCallback(Registrable):
     """
     A general callback object that handles multiple events.
 
-    This class has `on_batch`, `on_epoch`, and `on_end` methods, corresponding to
+    This class has `on_backward`, `on_batch`, `on_epoch`, and `on_end` methods, corresponding to
     each callback type. Each one receives the state of the wrapper object as `self`.
     This enables easier state sharing between related callbacks.
 
@@ -32,6 +33,20 @@ class TrainerCallback(Registrable):
         This callback hook is called before the training is started.
         """
         self.trainer = trainer
+
+    def on_backward(
+        self,
+        trainer: "GradientDescentTrainer",
+        batch_outputs: Dict[str, torch.Tensor],
+        backward_called: bool,
+        **kwargs,
+    ) -> bool:
+        """
+        This callback hook performs backpropagation and allows for gradient manipulation.
+        `backward_called` indicates if `loss.backward` has been called prior to this callback.
+        `on_backward` should return `True` if and only if `loss.backward` is called in its body.
+        """
+        return False
 
     def on_batch(
         self,
@@ -75,6 +90,12 @@ class TrainerCallback(Registrable):
         """
         This callback hook is called after the final training epoch.
         """
+        pass
+
+    def state_dict(self) -> Dict[str, Any]:
+        return {}
+
+    def load_state_dict(self, state_dict: Dict[str, Any]) -> None:
         pass
 
 

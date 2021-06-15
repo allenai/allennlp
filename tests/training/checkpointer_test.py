@@ -1,21 +1,19 @@
 import os
-import re
 import time
-from contextlib import contextmanager
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.common.params import Params
 from allennlp.training import Checkpointer, Trainer
+from allennlp.training.trainer import TrainerCheckpoint
 
 
 class FakeTrainer(Trainer):
-    def __init__(self, model_state, training_states):
+    def __init__(self, model_state, training_state):
         self._model_state = model_state
-        self._training_states = training_states
+        self._training_state = training_state
 
-    @contextmanager
-    def get_checkpoint_state(self):
-        yield self._model_state, self._training_states
+    def get_checkpoint_state(self) -> TrainerCheckpoint:
+        return TrainerCheckpoint(self._model_state, self._training_state)
 
 
 class TestCheckpointer(AllenNlpTestCase):
@@ -26,77 +24,72 @@ class TestCheckpointer(AllenNlpTestCase):
         and returns the saved epochs as two lists of integers.
         """
         serialization_files = os.listdir(self.TEST_DIR)
-        model_checkpoints = [x for x in serialization_files if "model_state_epoch" in x]
-        found_model_epochs = [
-            int(re.search(r"model_state_epoch_([0-9\.\-]+)\.th", x).group(1))
-            for x in model_checkpoints
-        ]
+
+        model_checkpoints = [x for x in serialization_files if "model_state_" in x]
+        found_model_states = [Checkpointer._parse_model_state_path(x) for x in model_checkpoints]
         for f in model_checkpoints:
             os.remove(os.path.join(self.TEST_DIR, f))
-        training_checkpoints = [x for x in serialization_files if "training_state_epoch" in x]
-        found_training_epochs = [
-            int(re.search(r"training_state_epoch_([0-9\.\-]+)\.th", x).group(1))
-            for x in training_checkpoints
+
+        training_checkpoints = [x for x in serialization_files if "training_state_" in x]
+        found_training_states = [
+            Checkpointer._parse_training_state_path(x) for x in training_checkpoints
         ]
         for f in training_checkpoints:
             os.remove(os.path.join(self.TEST_DIR, f))
-        return sorted(found_model_epochs), sorted(found_training_epochs)
+        return sorted(found_model_states), sorted(found_training_states)
 
     def test_default(self):
         """
         Tests that the default behavior keeps just the last 2 checkpoints.
         """
         default_num_to_keep = 2
-        num_epochs = 30
-        target = list(range(num_epochs - default_num_to_keep, num_epochs))
+        num_epochs = 5
+        target = [(e, 0) for e in range(num_epochs - default_num_to_keep, num_epochs)]
 
         checkpointer = Checkpointer(serialization_dir=self.TEST_DIR)
-
-        for e in range(num_epochs):
-            checkpointer.save_checkpoint(
-                epoch=e,
-                trainer=FakeTrainer(model_state={"epoch": e}, training_states={"epoch": e}),
-                is_best_so_far=False,
-            )
+        for epochs_completed in range(num_epochs):
+            for batches_completed in [0, 5, 10]:
+                state = {
+                    "epochs_completed": epochs_completed,
+                    "batches_in_epoch_completed": batches_completed,
+                }
+                checkpointer.maybe_save_checkpoint(
+                    FakeTrainer(model_state=state, training_state=state),
+                    epochs_completed,
+                    batches_completed,
+                )
         models, training = self.retrieve_and_delete_saved()
         assert models == training == target
 
     def test_keep_zero(self):
-        checkpointer = Checkpointer(
-            serialization_dir=self.TEST_DIR, num_serialized_models_to_keep=0
-        )
-        for e in range(10):
-            checkpointer.save_checkpoint(
-                epoch=e,
-                trainer=FakeTrainer(model_state={"epoch": e}, training_states={"epoch": e}),
-                is_best_so_far=True,
+        checkpointer = Checkpointer(serialization_dir=self.TEST_DIR, keep_most_recent_by_count=0)
+        for epochs_completed in range(5):
+            state = {"epochs_completed": epochs_completed, "batches_in_epoch_completed": 0}
+            checkpointer.maybe_save_checkpoint(
+                FakeTrainer(model_state=state, training_state=state), epochs_completed, 0
             )
         files = os.listdir(self.TEST_DIR)
-        assert "model_state_epoch_1.th" not in files
-        assert "training_state_epoch_1.th" not in files
+        assert not any("model_state_" in x for x in files)
+        assert not any("training_state_" in x for x in files)
 
     def test_with_time(self):
-        """
-        Tests that keep_serialized_model_every_num_seconds parameter causes a checkpoint to be saved
-        after enough time has elapsed between epochs.
-        """
-        num_to_keep = 10
         num_epochs = 30
-        target = list(range(num_epochs - num_to_keep, num_epochs))
         pauses = [5, 18, 26]
-        target = sorted(set(target + pauses))
+        target = [(e, 0) for e in pauses]
         checkpointer = Checkpointer(
             serialization_dir=self.TEST_DIR,
-            num_serialized_models_to_keep=num_to_keep,
-            keep_serialized_model_every_num_seconds=1,
+            save_completed_epochs=False,
+            save_every_num_seconds=1,
+            keep_most_recent_by_count=3,
         )
         for e in range(num_epochs):
             if e in pauses:
                 time.sleep(2)
-            checkpointer.save_checkpoint(
-                epoch=e,
-                trainer=FakeTrainer(model_state={"epoch": e}, training_states={"epoch": e}),
-                is_best_so_far=False,
+            state = {"epochs_completed": e, "batches_in_epoch_completed": 0}
+            checkpointer.maybe_save_checkpoint(
+                trainer=FakeTrainer(model_state=state, training_state=state),
+                num_epochs_completed=e,
+                num_batches_in_epoch_completed=0,
             )
         models, training = self.retrieve_and_delete_saved()
         assert models == training == target
