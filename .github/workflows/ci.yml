@@ -87,7 +87,7 @@ jobs:
     - name: Run mypy
       if: '! cancelled()'  # run this step even if the last step failed.
       run: |
-        mypy . --cache-dir=/dev/null
+        make typecheck
 
   gpu_tests:
     name: GPU Tests

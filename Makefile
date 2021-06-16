@@ -55,7 +55,7 @@ format :
 
 .PHONY : typecheck
 typecheck :
-	mypy . --cache-dir=/dev/null
+	mypy . --install-types
 
 .PHONY : test
 test :
