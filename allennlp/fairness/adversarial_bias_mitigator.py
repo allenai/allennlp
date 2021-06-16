@@ -1,18 +1,52 @@
 """
 A Model wrapper to adversarially mitigate biases in
-contextual embeddings on a downstream task.
+predictions produced by a pretrained model for a downstream task.
 
-Based on: Zhang, B.H., Lemoine, B., & Mitchell, M. (2018).
+The documentation and explanations are heavily based on:
+Zhang, B.H., Lemoine, B., & Mitchell, M. (2018).
 [Mitigating Unwanted Biases with Adversarial Learning]
 (https://api.semanticscholar.org/CorpusID:9424845).
 Proceedings of the 2018 AAAI/ACM Conference on AI, Ethics, and Society.
+and [Mitigating Unwanted Biases in Word Embeddings
+with Adversarial Learning](https://colab.research.google.com/notebooks/
+ml_fairness/adversarial_debiasing.ipynb) colab notebook.
+
+Adversarial networks mitigate some biases based on the idea that
+predicting an outcome Y given an input X should ideally be independent
+of some protected variable Z. Informally, "knowing Y would not help
+you predict Z any better than chance" (Zaldivar et al., 2018). This
+can be achieved using two networks in a series, where the first attempts to predict
+Y using X as input, and the second attempts to use the predicted value of Y to recover Z.
+Please refer to Figure 1 of [Mitigating Unwanted Biases with Adversarial Learning]
+(https://api.semanticscholar.org/CorpusID:9424845). Ideally, we would
+like the first network to predict Y without permitting the second network to predict
+Z any better than chance.
+
+For common NLP tasks, it's usually clear what X and Y are,
+but Z is not always available. We can construct our own Z by:
+1) computing a bias direction (e.g. for binary gender)
+2) computing the inner product of static word embeddings and the bias direction
+
+Training adversarial networks is extremely difficult. It is important to:
+1) lower the step size of both the predictor and adversary to train both
+models slowly to avoid parameters diverging,
+2) initialize the parameters of the adversary to be small to avoid the predictor
+overfitting against a sub-optimal adversary,
+3) increase the adversary’s learning rate to prevent divergence if the
+predictor is too good at hiding the protected variable from the adversary.
 """
 
 from overrides import overrides
+from typing import Dict
+import torch
 
-from allennlp.common.lazy import Lazy
 from allennlp.data import Vocabulary
+from allennlp.fairness.bias_direction_wrappers import BiasDirectionWrapper
 from allennlp.models import Model
+from allennlp.nn.util import find_embedding_layer
+from allennlp.training.callbacks.callback import TrainerCallback
+from allennlp.training.callbacks.backward import OnBackwardException
+from allennlp.training.gradient_descent_trainer import GradientDescentTrainer
 
 
 @Model.register("adversarial_bias_mitigator")
@@ -23,88 +57,170 @@ class AdversarialBiasMitigator(Model):
     # Parameters
 
     vocab : `Vocabulary`
-        Vocabulary of base model.
-    base_model : `Model`
-        Base model for which to mitigate biases.
-    bias_mitigator : `Lazy[BiasMitigatorWrapper]`
-        Bias mitigator to apply to base model.
+        Vocabulary of predictor.
+    predictor : `Model`
+        Model for which to mitigate biases.
+    adversary : `Model`
+        Model that attempts to recover protected variable values from predictor's predictions.
+    bias_direction : `BiasDirectionWrapper`
+        Bias direction used by adversarial bias mitigator.
+    predictor_output_key : `str`
+        Key corresponding to output in `output_dict` of predictor that should be passed as input
+        to adversary.
     """
 
     def __init__(
         self,
         vocab: Vocabulary,
-        base_model: Model,
-        bias_mitigator: Lazy[BiasMitigatorWrapper],
+        predictor: Model,
+        adversary: Model,
+        bias_direction: BiasDirectionWrapper,
+        predictor_output_key: str,
         **kwargs
     ):
         super().__init__(vocab, **kwargs)
 
-        self.base_model = base_model
+        self.predictor = predictor
+        self.adversary = adversary
+
         # want to keep bias mitigation hook during test time
-        embedding_layer = find_embedding_layer(self.base_model)
+        embedding_layer = find_embedding_layer(self.predictor)
+        self.bias_direction = bias_direction
+        self.predetermined_bias_direction = self.bias_direction(embedding_layer)
 
-        self.bias_mitigator = bias_mitigator.construct(embedding_layer=embedding_layer)
-        embedding_layer.register_forward_hook(self.bias_mitigator)
+        self.vocab = self.predictor.vocab
+        self._regularizer = self.predictor._regularizer
 
-        self.vocab = self.base_model.vocab
-        self._regularizer = self.base_model._regularizer
+        self.predictor_output_key = predictor_output_key
 
     @overrides
     def train(self, mode: bool = True):
         super().train(mode)
-        self.base_model.train(mode)
+        self.predictor.train(mode)
+        self.adversary.train(mode)
         # appropriately change requires_grad
-        # in bias mitigator and bias direction
-        # when train() and eval() are called
-        self.bias_mitigator.train(mode)
+        # in bias direction when train() and
+        # eval() are called
+        self.bias_direction.train(mode)
 
-    # Delegate Model function calls to base_model
+    @overrides
+    def forward(self, *args, **kwargs):
+        predictor_output_dict = self.predictor.forward(*args, **kwargs)
+        adversary_output_dict = self.adversary.forward(
+            predictor_output_dict[self.predictor_output_key]
+        )
+        # prepend "adversary_" to every key in adversary_output_dict
+        # to distinguish from predictor_output_dict
+        adversary_output_dict = {("adversary_" + k): v for k, v in adversary_output_dict.items()}
+        predictor_output_dict = {**predictor_output_dict, **adversary_output_dict}
+        return predictor_output_dict
+
+    # Delegate Model function calls to predictor
     # Currently doing this manually because difficult to
     # dynamically forward __getattribute__ due to
     # behind-the-scenes usage of dunder attributes by torch.nn.Module
-    # and both BiasMitigatorWrapper and base_model inheriting from Model
+    # and predictor inheriting from Model
     # Assumes Model is relatively stable
-    # TODO: adapt BiasMitigatorWrapper to changes in Model
-    @overrides
-    def forward(self, *args, **kwargs):
-        return self.base_model.forward(*args, **kwargs)
-
     @overrides
     def forward_on_instance(self, *args, **kwargs):
-        return self.base_model.forward_on_instance(*args, **kwargs)
+        return self.predictor.forward_on_instance(*args, **kwargs)
 
     @overrides
     def forward_on_instances(self, *args, **kwargs):
-        return self.base_model.forward_on_instances(*args, **kwargs)
+        return self.predictor.forward_on_instances(*args, **kwargs)
 
     @overrides
     def get_regularization_penalty(self, *args, **kwargs):
-        return self.base_model.get_regularization_penalty(*args, **kwargs)
+        return self.predictor.get_regularization_penalty(*args, **kwargs)
 
     @overrides
     def get_parameters_for_histogram_logging(self, *args, **kwargs):
-        return self.base_model.get_parameters_for_histogram_logging(*args, **kwargs)
+        return self.predictor.get_parameters_for_histogram_logging(*args, **kwargs)
 
     @overrides
     def get_parameters_for_histogram_tensorboard_logging(self, *args, **kwargs):
-        return self.base_model.get_parameters_for_histogram_tensorboard_logging(*args, **kwargs)
+        return self.predictor.get_parameters_for_histogram_tensorboard_logging(*args, **kwargs)
 
     @overrides
     def make_output_human_readable(self, *args, **kwargs):
-        return self.base_model.make_output_human_readable(*args, **kwargs)
+        return self.predictor.make_output_human_readable(*args, **kwargs)
 
     @overrides
     def get_metrics(self, *args, **kwargs):
-        return self.base_model.get_metrics(*args, **kwargs)
+        return self.predictor.get_metrics(*args, **kwargs)
 
     @overrides
     def _get_prediction_device(self, *args, **kwargs):
-        return self.base_model._get_prediction_device(*args, **kwargs)
+        return self.predictor._get_prediction_device(*args, **kwargs)
 
     @overrides
     def _maybe_warn_for_unseparable_batches(self, *args, **kwargs):
-        return self.base_model._maybe_warn_for_unseparable_batches(*args, **kwargs)
+        return self.predictor._maybe_warn_for_unseparable_batches(*args, **kwargs)
 
     @overrides
     def extend_embedder_vocab(self, *args, **kwargs):
-        return self.base_model.extend_embedder_vocab(*args, **kwargs)
+        return self.predictor.extend_embedder_vocab(*args, **kwargs)
+
+
+@TrainerCallback.register("adversarial_bias_mitigator_backward")
+class AdversarialBiasMitigatorBackwardCallback(TrainerCallback):
+    """
+    Performs backpropagation for adversarial bias mitigation.
+    While the adversary's gradients are computed normally,
+    the predictor's gradients are computed such that updates to the
+    predictor's parameters will not aid the adversary and will
+    make it more difficult for the adversary to recover protected variables.
+
+    !!! Note:
+        Intended to be used with `AdversarialBiasMitigator`.
+        trainer.model is expected to have `predictor` and `adversary` data members.
+        Furthermore, trainer.optimizer is expected to be a `MultiOptimizer` with `"predictor"`
+        and `"adversary"` keys.
+
+    # Parameters
+
+    adversary_loss_weight : `float`, optional (default = `1.0`)
+        Quantifies how difficult predictor makes it for adversary to recover protected variables.
+    """
+
+    def __init__(self, serialization_dir: str, adversary_loss_weight: float = 1.0) -> None:
+        super().__init__(serialization_dir)
+        self.adversary_loss_weight = adversary_loss_weight
+
+    def on_backward(
+        self,
+        trainer: GradientDescentTrainer,
+        batch_outputs: Dict[str, torch.Tensor],
+        backward_called: bool,
+        **kwargs
+    ) -> bool:
+        if backward_called:
+            raise OnBackwardException()
+
+        # at this point, trainer.optimizer.zero_grad() has already been called
+        # `retain_graph=True` prevents computation graph from being erased
+        batch_outputs["adversary_loss"].backward(retain_graph=True)
+        # trainer.model is expected to have `predictor` and `adversary` data members
+        adversary_loss_grad = {
+            name: param.grad.clone() for name, param in trainer.model.predictor.named_parameters()
+        }
+
+        # trainer.optimizer is expected to be a `MultiOptimizer` with `"predictor"`
+        # and `"adversary"` keys
+        trainer.optimizer["predictor"].zero_grad()
+        batch_outputs["loss"].backward()
+
+        with torch.no_grad():
+            for name, param in trainer.model.predictor.named_parameters():
+                unit_adversary_loss_grad = adversary_loss_grad[name] / torch.linalg.norm(
+                    adversary_loss_grad[name]
+                )
+                # prevent predictor from accidentally aiding adversary
+                # by removing projection of predictor loss grad onto adversary loss grad
+                param.grad -= (
+                    (param.grad * unit_adversary_loss_grad) * unit_adversary_loss_grad
+                ).sum()
+                # make it difficult for adversary to recover protected variables
+                param.grad -= self.adversary_loss_weight * adversary_loss_grad[name]
+
+        return True
