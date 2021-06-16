@@ -145,7 +145,6 @@ class F1MeasureTest(AllenNlpTestCase):
         assert f1_measure._false_positives == 0.0
         assert f1_measure._false_negatives == 0.0
 
-    @pytest.mark.skip("idk")
     @multi_device
     def test_f1_measure_works_for_sequences(self, device: str):
         f1_measure = F1Measure(positive_label=0)

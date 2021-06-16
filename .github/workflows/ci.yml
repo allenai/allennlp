@@ -149,7 +149,7 @@ jobs:
   cpu_tests:
     name: CPU Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 18
+    timeout-minutes: 20
     strategy:
       matrix:
         python: ['3.7', '3.8']
