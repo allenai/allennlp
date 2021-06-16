@@ -64,17 +64,11 @@ def run_distributed_test(
         `func` needs to be global for spawning the processes, so that it can be pickled.
 
     start_method: `Optional[str]`, optional (default = `None`)
-        The start method to use for starting the workers. Defaults to "spawn" for GPU
-        processes and fork otherwise.
+        The start method to use for starting the workers. Defaults to "spawn".
     """
     device_ids = device_ids or [-1, -1]
     check_for_gpu(device_ids)
-    # "fork" start method is the default and should be preferred, except when we're
-    # running the tests on GPU, in which case we need to use "spawn".
-    if "start_method" in kwargs:
-        start_method = kwargs.pop("start_method")
-    else:
-        start_method = "spawn" if any(x >= 0 for x in device_ids) else "fork"
+    start_method = kwargs.pop("start_method", "spawn")
     nprocs = world_size = len(device_ids)
     mp.start_processes(
         init_process,
