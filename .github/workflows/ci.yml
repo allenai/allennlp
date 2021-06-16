@@ -98,7 +98,7 @@ jobs:
       # Required to use the setup-python action.
       AGENT_TOOLSDIRECTORY: '/opt/hostedtoolcache'
       # Our self-hosted runner currently is currently compatible with CUDA 11.*.
-      TORCH_VERSION: 'torch==1.8.1+cu111 torchvision==0.9.1+cu111 -f https://download.pytorch.org/whl/torch_stable.html'
+      TORCH_VERSION: 'torch==1.9.0+cu111 torchvision==0.10.0+cu111 -f https://download.pytorch.org/whl/torch_stable.html'
 
     steps:
     - uses: actions/checkout@v2
@@ -415,9 +415,9 @@ jobs:
         if [[ $CUDA == '10.1' ]]; then
             echo "DOCKER_TORCH_VERSION='torch==1.8.0+cu101 torchvision==0.9.0+cu101 -f https://download.pytorch.org/whl/torch_stable.html'" >> $GITHUB_ENV;
         elif [[ $CUDA == '10.2' ]]; then
-            echo "DOCKER_TORCH_VERSION='torch==1.8.0'" >> $GITHUB_ENV;
+            echo "DOCKER_TORCH_VERSION='torch==1.9.0 torchvision==0.10.0'" >> $GITHUB_ENV;
         elif [[ $CUDA == '11.1' ]]; then
-            echo "DOCKER_TORCH_VERSION='torch==1.8.0+cu111 torchvision==0.9.0+cu111 -f https://download.pytorch.org/whl/torch_stable.html'" >> $GITHUB_ENV;
+            echo "DOCKER_TORCH_VERSION='torch==1.9.0+cu111 torchvision==0.10.0+cu111 -f https://download.pytorch.org/whl/torch_stable.html'" >> $GITHUB_ENV;
         else
             echo "Unhandled CUDA version $CUDA";
             exit 1;
