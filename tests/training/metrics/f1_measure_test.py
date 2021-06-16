@@ -210,4 +210,5 @@ class F1MeasureTest(AllenNlpTestCase):
             metric_kwargs,
             desired_metrics,
             exact=False,
+            start_method="spawn",
         )
