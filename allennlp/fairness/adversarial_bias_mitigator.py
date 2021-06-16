@@ -37,16 +37,33 @@ predictor is too good at hiding the protected variable from the adversary.
 """
 
 from overrides import overrides
-from typing import Dict
+from typing import Dict, Optional
 import torch
 
+from allennlp.common.lazy import Lazy
 from allennlp.data import Vocabulary
 from allennlp.fairness.bias_direction_wrappers import BiasDirectionWrapper
+from allennlp.modules.feedforward import FeedForward
 from allennlp.models import Model
+from allennlp.nn import InitializerApplicator
 from allennlp.nn.util import find_embedding_layer
 from allennlp.training.callbacks.callback import TrainerCallback
 from allennlp.training.callbacks.backward import OnBackwardException
 from allennlp.training.gradient_descent_trainer import GradientDescentTrainer
+
+
+class _AdversaryLabelHook:
+    def __call__(self, module, module_in, module_out):
+        """
+        Called as forward hook.
+        """
+        module_out_size = module_out.size()
+        # flatten tensor except for last dimension
+        module_out = module_out.flatten(end_dim=-2)
+        module_out = torch.matmul(
+            module_out, self.predetermined_bias_direction.to(module_out.device)
+        )
+        self.adversary_label = module_out.reshape(module_out_size)
 
 
 @Model.register("adversarial_bias_mitigator")
@@ -60,31 +77,37 @@ class AdversarialBiasMitigator(Model):
         Vocabulary of predictor.
     predictor : `Model`
         Model for which to mitigate biases.
-    adversary : `Model`
+    adversary : `Lazy[Model]`
         Model that attempts to recover protected variable values from predictor's predictions.
     bias_direction : `BiasDirectionWrapper`
         Bias direction used by adversarial bias mitigator.
     predictor_output_key : `str`
         Key corresponding to output in `output_dict` of predictor that should be passed as input
         to adversary.
+
+    !!! Note
+        adversary, if it requires a vocab, must use same vocab as predictor.
     """
 
     def __init__(
         self,
         vocab: Vocabulary,
         predictor: Model,
-        adversary: Model,
+        adversary: Lazy[Model],
         bias_direction: BiasDirectionWrapper,
         predictor_output_key: str,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(vocab, **kwargs)
 
         self.predictor = predictor
-        self.adversary = adversary
+        self.adversary = adversary.construct(vocab)
 
-        # want to keep bias mitigation hook during test time
+        # want to keep adversary label computation hook during evaluation
         embedding_layer = find_embedding_layer(self.predictor)
+        self._adversary_label_hook = _AdversaryLabelHook()
+        embedding_layer.register_forward_hook(self._adversary_label_computation_forward_hook)
+
         self.bias_direction = bias_direction
         self.predetermined_bias_direction = self.bias_direction(embedding_layer)
 
@@ -107,7 +130,8 @@ class AdversarialBiasMitigator(Model):
     def forward(self, *args, **kwargs):
         predictor_output_dict = self.predictor.forward(*args, **kwargs)
         adversary_output_dict = self.adversary.forward(
-            predictor_output_dict[self.predictor_output_key]
+            predictor_output_dict[self.predictor_output_key],
+            self._adversary_label_hook.adversary_label,
         )
         # prepend "adversary_" to every key in adversary_output_dict
         # to distinguish from predictor_output_dict
@@ -162,6 +186,55 @@ class AdversarialBiasMitigator(Model):
         return self.predictor.extend_embedder_vocab(*args, **kwargs)
 
 
+@Model.register("feedforward_regression_adversary")
+class FeedForwardRegressionAdversary(Model):
+    """
+    This `Model` implements a simple feedforward regression adversary.
+
+    Registered as a `Model` with name "feedforward_regression_adversary".
+
+    # Parameters
+
+    vocab : `Vocabulary`
+    feedforward : `FeedForward`
+        A feedforward layer.
+    initializer : `Optional[InitializerApplicator]`, optional (default=`InitializerApplicator()`)
+        If provided, will be used to initialize the model parameters.
+    """
+
+    def __init__(
+        self,
+        vocab: Vocabulary,
+        feedforward: FeedForward,
+        initializer: Optional[InitializerApplicator] = InitializerApplicator(),
+        **kwargs,
+    ) -> None:
+        super().__init__(vocab, **kwargs)
+
+        self._feedforward = feedforward
+        self._loss = torch.nn.MSELoss()
+        initializer(self)
+
+    def __init__(self, input: torch.FloatTensor, label: torch.FloatTensor):
+        """
+        # Parameters
+
+        input : `torch.FloatTensor`
+            A tensor of size (batch_size, ...).
+        label : `torch.FloatTensor`
+            A tensor of the same size as input.
+
+        # Returns
+
+        An output dictionary consisting of:
+            - `loss` : `torch.FloatTensor`
+                A scalar loss to be optimised.
+        """
+
+        pred = self._feedforward(input)
+        return {"loss": self._loss(pred, label)}
+
+
 @TrainerCallback.register("adversarial_bias_mitigator_backward")
 class AdversarialBiasMitigatorBackwardCallback(TrainerCallback):
     """
@@ -192,7 +265,7 @@ class AdversarialBiasMitigatorBackwardCallback(TrainerCallback):
         trainer: GradientDescentTrainer,
         batch_outputs: Dict[str, torch.Tensor],
         backward_called: bool,
-        **kwargs
+        **kwargs,
     ) -> bool:
         if backward_called:
             raise OnBackwardException()
