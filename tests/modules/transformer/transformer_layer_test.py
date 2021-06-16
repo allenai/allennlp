@@ -17,7 +17,7 @@ from allennlp.modules.transformer import (
 )
 
 
-def teardown_function(function):
+def teardown_module(function):
     cached_transformers._clear_caches()
 
 

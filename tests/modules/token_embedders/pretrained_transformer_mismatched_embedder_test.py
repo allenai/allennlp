@@ -14,8 +14,8 @@ from allennlp.common.testing import AllenNlpTestCase
 
 
 class TestPretrainedTransformerMismatchedEmbedder(AllenNlpTestCase):
-    def teardown_method(self):
-        super().teardown_method()
+    def teardown_class(self):
+        super().teardown_class()
         cached_transformers._clear_caches()
 
     @pytest.mark.parametrize("train_parameters", [True, False])
