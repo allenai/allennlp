@@ -99,6 +99,10 @@ jobs:
       AGENT_TOOLSDIRECTORY: '/opt/hostedtoolcache'
       # Our self-hosted runner currently is currently compatible with CUDA 11.*.
       TORCH_VERSION: 'torch==1.9.0+cu111 torchvision==0.10.0+cu111 -f https://download.pytorch.org/whl/torch_stable.html'
+      # Disable tokenizers parallelism because this doesn't help.
+      TOKENIZERS_PARALLELISM: 'false'
+      # Disable multithreading with OMP because this can lead to dead-locks in distributed training.
+      OMP_NUM_THREADS: '1'
 
     steps:
     - uses: actions/checkout@v2
@@ -153,6 +157,11 @@ jobs:
     strategy:
       matrix:
         python: ['3.7', '3.8']
+    env:
+      # Disable tokenizers parallelism because this doesn't help.
+      TOKENIZERS_PARALLELISM: 'false'
+      # Disable multithreading with OMP because this can lead to dead-locks in distributed training.
+      OMP_NUM_THREADS: '1'
 
     steps:
     - uses: actions/checkout@v2
@@ -200,6 +209,11 @@ jobs:
     name: Model Tests
     timeout-minutes: 18
     runs-on: ubuntu-latest
+    env:
+      # Disable tokenizers parallelism because this doesn't help.
+      TOKENIZERS_PARALLELISM: 'false'
+      # Disable multithreading with OMP because this can lead to dead-locks in distributed training.
+      OMP_NUM_THREADS: '1'
 
     steps:
     - uses: actions/checkout@v2
