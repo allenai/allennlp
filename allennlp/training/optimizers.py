@@ -269,7 +269,7 @@ class MultiOptimizer(Optimizer):
 
         # Check to see if an optimizer didn't receive any parameters.
         for optimizer_name, optimizer_parameters in optimizer_name_to_model_parameters.items():
-            if len(optimizer_parameters[0]) == 0:
+            if optimizer_name != "default" and len(optimizer_parameters) == 0:
                 raise ConfigurationError(
                     f"Optimizer '{optimizer_name}' did not receive any parameters."
                     " If you are using `parameter_groups`, please make sure that the regexes you have provided"
@@ -278,6 +278,11 @@ class MultiOptimizer(Optimizer):
                     " Alternatively, you can remove this optimizer from the provided `optimizers`"
                     " if it is not relevant to a particular parameter group."
                 )
+        # default optimizer is required, but may not be used
+        if len(optimizer_name_to_model_parameters["default"]) == 0:
+            del optimizers["default"]
+            del optimizer_name_to_model_parameters["default"]
+            del optimizer_name_to_parameter_groups["default"]
 
         self.optimizers = {
             optimizer_name: lazy_optimizer.construct(
@@ -301,8 +306,9 @@ class MultiOptimizer(Optimizer):
         # Any parameter that doesn't match a regex goes into the last output from make_parameter_groups(). We need
         # to copy the params from the default optimizer into that groups as well.
         made_parameter_groups = make_parameter_groups(model_parameters, parameter_groups)
-        for key, value in self.optimizers["default"].defaults.items():
-            made_parameter_groups[-1][key] = value
+        if "default" in self.optimizers:
+            for key, value in self.optimizers["default"].defaults.items():
+                made_parameter_groups[-1][key] = value
 
         super().__init__(made_parameter_groups, {})
 

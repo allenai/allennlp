@@ -25,7 +25,7 @@ Z any better than chance.
 For common NLP tasks, it's usually clear what X and Y are,
 but Z is not always available. We can construct our own Z by:
 1) computing a bias direction (e.g. for binary gender)
-2) computing the inner product of static word embeddings and the bias direction
+2) computing the inner product of static sentence embeddings and the bias direction
 
 Training adversarial networks is extremely difficult. It is important to:
 1) lower the step size of both the predictor and adversary to train both
@@ -40,7 +40,6 @@ from overrides import overrides
 from typing import Dict, Optional
 import torch
 
-from allennlp.common.lazy import Lazy
 from allennlp.data import Vocabulary
 from allennlp.fairness.bias_direction_wrappers import BiasDirectionWrapper
 from allennlp.modules.feedforward import FeedForward
@@ -60,13 +59,12 @@ class _AdversaryLabelHook:
         """
         Called as forward hook.
         """
-        module_out_size = module_out.size()
-        # flatten tensor except for last dimension
-        module_out = module_out.flatten(end_dim=-2)
-        module_out = torch.matmul(
-            module_out, self.predetermined_bias_direction.to(module_out.device)
-        )
-        self.adversary_label = module_out.reshape(module_out_size)
+        with torch.no_grad():
+            # mean pooling over static word embeddings to get sentence embedding
+            module_out = module_out.mean(dim=1)
+            self.adversary_label = torch.matmul(
+                module_out, self.predetermined_bias_direction.to(module_out.device)
+            ).unsqueeze(-1)
 
 
 @Model.register("adversarial_bias_mitigator")
@@ -80,7 +78,7 @@ class AdversarialBiasMitigator(Model):
         Vocabulary of predictor.
     predictor : `Model`
         Model for which to mitigate biases.
-    adversary : `Lazy[Model]`
+    adversary : `Model`
         Model that attempts to recover protected variable values from predictor's predictions.
     bias_direction : `BiasDirectionWrapper`
         Bias direction used by adversarial bias mitigator.
@@ -96,7 +94,7 @@ class AdversarialBiasMitigator(Model):
         self,
         vocab: Vocabulary,
         predictor: Model,
-        adversary: Lazy[Model],
+        adversary: Model,
         bias_direction: BiasDirectionWrapper,
         predictor_output_key: str,
         **kwargs,
@@ -104,7 +102,7 @@ class AdversarialBiasMitigator(Model):
         super().__init__(vocab, **kwargs)
 
         self.predictor = predictor
-        self.adversary = adversary.construct(vocab)
+        self.adversary = adversary
 
         # want to keep adversary label hook during evaluation
         embedding_layer = find_embedding_layer(self.predictor)
@@ -215,9 +213,11 @@ class FeedForwardRegressionAdversary(Model):
 
         self._feedforward = feedforward
         self._loss = torch.nn.MSELoss()
-        initializer(self)
+        initializer(self)  # type: ignore
 
-    def __init__(self, input: torch.FloatTensor, label: torch.FloatTensor):
+    def forward(  # type: ignore
+        self, input: torch.FloatTensor, label: torch.FloatTensor
+    ) -> Dict[str, torch.Tensor]:
         """
         # Parameters
 
@@ -249,8 +249,6 @@ class AdversarialBiasMitigatorBackwardCallback(TrainerCallback):
     !!! Note:
         Intended to be used with `AdversarialBiasMitigator`.
         trainer.model is expected to have `predictor` and `adversary` data members.
-        Furthermore, trainer.optimizer is expected to be a `MultiOptimizer` with `"predictor"`
-        and `"adversary"` keys.
 
     # Parameters
 
@@ -272,30 +270,31 @@ class AdversarialBiasMitigatorBackwardCallback(TrainerCallback):
         if backward_called:
             raise OnBackwardException()
 
-        # at this point, trainer.optimizer.zero_grad() has already been called
+        trainer.optimizer.zero_grad()
         # `retain_graph=True` prevents computation graph from being erased
         batch_outputs["adversary_loss"].backward(retain_graph=True)
         # trainer.model is expected to have `predictor` and `adversary` data members
         adversary_loss_grad = {
-            name: param.grad.clone() for name, param in trainer.model.predictor.named_parameters()
+            name: param.grad.clone()
+            for name, param in trainer.model.predictor.named_parameters()
+            if param.grad is not None
         }
 
-        # trainer.optimizer is expected to be a `MultiOptimizer` with `"predictor"`
-        # and `"adversary"` keys
-        trainer.optimizer["predictor"].zero_grad()
+        trainer.model.predictor.zero_grad()
         batch_outputs["loss"].backward()
 
         with torch.no_grad():
             for name, param in trainer.model.predictor.named_parameters():
-                unit_adversary_loss_grad = adversary_loss_grad[name] / torch.linalg.norm(
-                    adversary_loss_grad[name]
-                )
-                # prevent predictor from accidentally aiding adversary
-                # by removing projection of predictor loss grad onto adversary loss grad
-                param.grad -= (
-                    (param.grad * unit_adversary_loss_grad) * unit_adversary_loss_grad
-                ).sum()
-                # make it difficult for adversary to recover protected variables
-                param.grad -= self.adversary_loss_weight * adversary_loss_grad[name]
+                if param.grad is not None:
+                    unit_adversary_loss_grad = adversary_loss_grad[name] / torch.linalg.norm(
+                        adversary_loss_grad[name]
+                    )
+                    # prevent predictor from accidentally aiding adversary
+                    # by removing projection of predictor loss grad onto adversary loss grad
+                    param.grad -= (
+                        (param.grad * unit_adversary_loss_grad) * unit_adversary_loss_grad
+                    ).sum()
+                    # make it difficult for adversary to recover protected variables
+                    param.grad -= self.adversary_loss_weight * adversary_loss_grad[name]
 
         return True

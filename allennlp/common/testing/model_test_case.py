@@ -79,6 +79,7 @@ class ModelTestCase(AllenNlpTestCase):
         metric_terminal_value: float = None,
         metric_tolerance: float = 1e-4,
         disable_dropout: bool = True,
+        which_loss: str = "loss",
         seed: int = None,
     ):
         """
@@ -114,6 +115,9 @@ class ModelTestCase(AllenNlpTestCase):
         disable_dropout : `bool`, optional (default = `True`)
             If True we will set all dropout to 0 before checking gradients. (Otherwise, with small
             datasets, you may get zero gradients because of unlucky dropout.)
+        which_loss: `str`, optional (default = `"loss"`)
+            Specifies which loss to test. For example, which_loss may be "adversary_loss" for
+            `adversarial_bias_mitigator`.
         """
         if seed is not None:
             random.seed(seed)
@@ -175,7 +179,7 @@ class ModelTestCase(AllenNlpTestCase):
         # Check gradients are None for non-trainable parameters and check that
         # trainable parameters receive some gradient if they are trainable.
         self.check_model_computes_gradients_correctly(
-            model, model_batch, gradients_to_ignore, disable_dropout
+            model, model_batch, gradients_to_ignore, disable_dropout, which_loss
         )
 
         # The datasets themselves should be identical.
@@ -206,7 +210,7 @@ class ModelTestCase(AllenNlpTestCase):
         # Check loaded model's loss exists and we can compute gradients, for continuing training.
         loaded_model.train()
         loaded_model_predictions = loaded_model(**loaded_batch)
-        loaded_model_loss = loaded_model_predictions["loss"]
+        loaded_model_loss = loaded_model_predictions[which_loss]
         assert loaded_model_loss is not None
         loaded_model_loss.backward()
 
@@ -306,6 +310,7 @@ class ModelTestCase(AllenNlpTestCase):
         model_batch: Dict[str, Union[Any, Dict[str, Any]]],
         params_to_ignore: Set[str] = None,
         disable_dropout: bool = True,
+        which_loss: str = "loss",
     ):
         print("Checking gradients")
         for p in model.parameters():
@@ -322,7 +327,7 @@ class ModelTestCase(AllenNlpTestCase):
                     setattr(module, "p", 0)
 
         result = model(**model_batch)
-        result["loss"].backward()
+        result[which_loss].backward()
         has_zero_or_none_grads = {}
         for name, parameter in model.named_parameters():
             zeros = torch.zeros(parameter.size())
