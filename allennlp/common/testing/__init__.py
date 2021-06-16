@@ -15,12 +15,19 @@ from allennlp.modules.transformer import TransformerModule
 from allennlp.training.metrics import Metric
 
 
-_available_devices = ["cpu"] + (["cuda:0"] if torch.cuda.is_available() else [])
+_available_devices = ["cuda:0"] if torch.cuda.is_available() else ["cpu"]
 
 
 def multi_device(test_method):
     """
-    Decorator that provides an argument `device` of type `str` for each available PyTorch device.
+    Decorator that provides an argument `device` of type `str` to a test function.
+
+    If you have a CUDA capable GPU available, device will be "cuda:0", otherwise the device will
+    be "cpu".
+
+    !!! Note
+        If you have a CUDA capable GPU available, but you want to run the test using CPU only,
+        just set the environment variable "CUDA_CAPABLE_DEVICES=''" before running pytest.
     """
     return pytest.mark.parametrize("device", _available_devices)(pytest.mark.gpu(test_method))
 
