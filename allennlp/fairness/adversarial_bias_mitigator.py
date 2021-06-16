@@ -53,6 +53,9 @@ from allennlp.training.gradient_descent_trainer import GradientDescentTrainer
 
 
 class _AdversaryLabelHook:
+    def __init__(self, predetermined_bias_direction):
+        self.predetermined_bias_direction = predetermined_bias_direction
+
     def __call__(self, module, module_in, module_out):
         """
         Called as forward hook.
@@ -86,7 +89,7 @@ class AdversarialBiasMitigator(Model):
         to adversary.
 
     !!! Note
-        adversary, if it requires a vocab, must use same vocab as predictor.
+        adversary must use same vocab as predictor, if it requires a vocab.
     """
 
     def __init__(
@@ -103,13 +106,12 @@ class AdversarialBiasMitigator(Model):
         self.predictor = predictor
         self.adversary = adversary.construct(vocab)
 
-        # want to keep adversary label computation hook during evaluation
+        # want to keep adversary label hook during evaluation
         embedding_layer = find_embedding_layer(self.predictor)
-        self._adversary_label_hook = _AdversaryLabelHook()
-        embedding_layer.register_forward_hook(self._adversary_label_computation_forward_hook)
-
         self.bias_direction = bias_direction
         self.predetermined_bias_direction = self.bias_direction(embedding_layer)
+        self._adversary_label_hook = _AdversaryLabelHook(self.predetermined_bias_direction)
+        embedding_layer.register_forward_hook(self._adversary_label_hook)
 
         self.vocab = self.predictor.vocab
         self._regularizer = self.predictor._regularizer
@@ -134,10 +136,10 @@ class AdversarialBiasMitigator(Model):
             self._adversary_label_hook.adversary_label,
         )
         # prepend "adversary_" to every key in adversary_output_dict
-        # to distinguish from predictor_output_dict
+        # to distinguish from predictor_output_dict keys
         adversary_output_dict = {("adversary_" + k): v for k, v in adversary_output_dict.items()}
-        predictor_output_dict = {**predictor_output_dict, **adversary_output_dict}
-        return predictor_output_dict
+        output_dict = {**predictor_output_dict, **adversary_output_dict}
+        return output_dict
 
     # Delegate Model function calls to predictor
     # Currently doing this manually because difficult to
