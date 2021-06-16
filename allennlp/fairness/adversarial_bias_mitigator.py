@@ -24,15 +24,20 @@ Z any better than chance.
 
 For common NLP tasks, it's usually clear what X and Y are,
 but Z is not always available. We can construct our own Z by:
-1) computing a bias direction (e.g. for binary gender)
-2) computing the inner product of static sentence embeddings and the bias direction
+
+1. computing a bias direction (e.g. for binary gender)
+
+2. computing the inner product of static sentence embeddings and the bias direction
 
 Training adversarial networks is extremely difficult. It is important to:
-1) lower the step size of both the predictor and adversary to train both
+
+1. lower the step size of both the predictor and adversary to train both
 models slowly to avoid parameters diverging,
-2) initialize the parameters of the adversary to be small to avoid the predictor
+
+2. initialize the parameters of the adversary to be small to avoid the predictor
 overfitting against a sub-optimal adversary,
-3) increase the adversary’s learning rate to prevent divergence if the
+
+3. increase the adversary’s learning rate to prevent divergence if the
 predictor is too good at hiding the protected variable from the adversary.
 """
 
@@ -40,6 +45,7 @@ from overrides import overrides
 from typing import Dict, Optional
 import torch
 
+from allennlp.common.checks import ConfigurationError
 from allennlp.data import Vocabulary
 from allennlp.fairness.bias_direction_wrappers import BiasDirectionWrapper
 from allennlp.modules.feedforward import FeedForward
@@ -49,22 +55,6 @@ from allennlp.nn.util import find_embedding_layer
 from allennlp.training.callbacks.callback import TrainerCallback
 from allennlp.training.callbacks.backward import OnBackwardException
 from allennlp.training.gradient_descent_trainer import GradientDescentTrainer
-
-
-class _AdversaryLabelHook:
-    def __init__(self, predetermined_bias_direction):
-        self.predetermined_bias_direction = predetermined_bias_direction
-
-    def __call__(self, module, module_in, module_out):
-        """
-        Called as forward hook.
-        """
-        with torch.no_grad():
-            # mean pooling over static word embeddings to get sentence embedding
-            module_out = module_out.mean(dim=1)
-            self.adversary_label = torch.matmul(
-                module_out, self.predetermined_bias_direction.to(module_out.device)
-            ).unsqueeze(-1)
 
 
 @Model.register("adversarial_bias_mitigator")
@@ -246,7 +236,7 @@ class AdversarialBiasMitigatorBackwardCallback(TrainerCallback):
     predictor's parameters will not aid the adversary and will
     make it more difficult for the adversary to recover protected variables.
 
-    !!! Note:
+    !!! Note
         Intended to be used with `AdversarialBiasMitigator`.
         trainer.model is expected to have `predictor` and `adversary` data members.
 
@@ -269,6 +259,11 @@ class AdversarialBiasMitigatorBackwardCallback(TrainerCallback):
     ) -> bool:
         if backward_called:
             raise OnBackwardException()
+
+        if not hasattr(trainer.model, "predictor") or not hasattr(trainer.model, "adversary"):
+            raise ConfigurationError(
+                "Model is expected to have `predictor` and `adversary` data members."
+            )
 
         trainer.optimizer.zero_grad()
         # `retain_graph=True` prevents computation graph from being erased
@@ -297,4 +292,22 @@ class AdversarialBiasMitigatorBackwardCallback(TrainerCallback):
                     # make it difficult for adversary to recover protected variables
                     param.grad -= self.adversary_loss_weight * adversary_loss_grad[name]
 
+        # remove adversary_loss from computation graph
+        batch_outputs["adversary_loss"] = batch_outputs["adversary_loss"].detach()
         return True
+
+
+class _AdversaryLabelHook:
+    def __init__(self, predetermined_bias_direction):
+        self.predetermined_bias_direction = predetermined_bias_direction
+
+    def __call__(self, module, module_in, module_out):
+        """
+        Called as forward hook.
+        """
+        with torch.no_grad():
+            # mean pooling over static word embeddings to get sentence embedding
+            module_out = module_out.mean(dim=1)
+            self.adversary_label = torch.matmul(
+                module_out, self.predetermined_bias_direction.to(module_out.device)
+            ).unsqueeze(-1)

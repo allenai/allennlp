@@ -278,7 +278,7 @@ class MultiOptimizer(Optimizer):
                     " Alternatively, you can remove this optimizer from the provided `optimizers`"
                     " if it is not relevant to a particular parameter group."
                 )
-        # default optimizer is required, but may not be used
+        # default optimizer is required, but associating it with model parameters is optional
         if len(optimizer_name_to_model_parameters["default"]) == 0:
             del optimizers["default"]
             del optimizer_name_to_model_parameters["default"]
