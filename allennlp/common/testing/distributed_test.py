@@ -64,7 +64,8 @@ def run_distributed_test(
         `func` needs to be global for spawning the processes, so that it can be pickled.
 
     start_method: `Optional[str]`, optional (default = `None`)
-        The start method to use for starting the workers. Defaults to "spawn".
+        The start method to use for starting the workers. Defaults to "spawn" for GPU
+        processes and fork otherwise.
     """
     device_ids = device_ids or [-1, -1]
     check_for_gpu(device_ids)
