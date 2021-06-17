@@ -104,7 +104,7 @@ class TransformerEmbeddings(Embeddings):
         Optionally apply a linear transform after the dropout, projecting to `output_size`.
     """
 
-    _pretrained_relevant_module = ["embeddings", "bert.embeddings"]
+    _pretrained_relevant_module = ["embeddings", "bert.embeddings", "roberta.embeddings"]
     _pretrained_mapping = {
         "LayerNorm": "layer_norm",
         "word_embeddings": "embeddings.word_embeddings",
