@@ -98,7 +98,11 @@ jobs:
       # Required to use the setup-python action.
       AGENT_TOOLSDIRECTORY: '/opt/hostedtoolcache'
       # Our self-hosted runner currently is currently compatible with CUDA 11.*.
-      TORCH_VERSION: 'torch==1.8.1+cu111 torchvision==0.9.1+cu111 -f https://download.pytorch.org/whl/torch_stable.html'
+      TORCH_VERSION: 'torch==1.9.0+cu111 torchvision==0.10.0+cu111 -f https://download.pytorch.org/whl/torch_stable.html'
+      # Disable tokenizers parallelism because this doesn't help.
+      TOKENIZERS_PARALLELISM: 'false'
+      # Disable multithreading with OMP because this can lead to dead-locks in distributed training.
+      OMP_NUM_THREADS: '1'
 
     steps:
     - uses: actions/checkout@v2
@@ -149,9 +153,15 @@ jobs:
   cpu_tests:
     name: CPU Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     strategy:
       matrix:
         python: ['3.7', '3.8']
+    env:
+      # Disable tokenizers parallelism because this doesn't help.
+      TOKENIZERS_PARALLELISM: 'false'
+      # Disable multithreading with OMP because this can lead to dead-locks in distributed training.
+      OMP_NUM_THREADS: '1'
 
     steps:
     - uses: actions/checkout@v2
@@ -197,7 +207,13 @@ jobs:
 
   model_tests:
     name: Model Tests
+    timeout-minutes: 18
     runs-on: ubuntu-latest
+    env:
+      # Disable tokenizers parallelism because this doesn't help.
+      TOKENIZERS_PARALLELISM: 'false'
+      # Disable multithreading with OMP because this can lead to dead-locks in distributed training.
+      OMP_NUM_THREADS: '1'
 
     steps:
     - uses: actions/checkout@v2
@@ -249,6 +265,7 @@ jobs:
 
   upload_coverage:
     name: Upload Coverage Report
+    timeout-minutes: 18
     if: github.repository == 'allenai/allennlp' && (github.event_name == 'push' || github.event_name == 'pull_request')
     runs-on: ubuntu-latest
     needs: [cpu_tests, gpu_tests, model_tests]
@@ -288,6 +305,7 @@ jobs:
   # Builds package distribution files for PyPI.
   build_package:
     name: Build Package
+    timeout-minutes: 18
     runs-on: ubuntu-latest
 
     steps:
@@ -354,6 +372,7 @@ jobs:
   # Tests installing from the distribution files.
   test_package:
     name: Test Package
+    timeout-minutes: 18
     needs: [build_package]  # needs the package artifact created from 'build_package' job.
     runs-on: ubuntu-latest
     strategy:
@@ -391,6 +410,7 @@ jobs:
   # Builds Docker image from the core distribution files and uploads to Docker Hub.
   docker:
     name: Docker (CUDA ${{ matrix.cuda }})
+    timeout-minutes: 18
     if: github.repository == 'allenai/allennlp'
     # Run on self-hosted to utilize layer caching.
     runs-on: [self-hosted]
@@ -409,9 +429,9 @@ jobs:
         if [[ $CUDA == '10.1' ]]; then
             echo "DOCKER_TORCH_VERSION='torch==1.8.0+cu101 torchvision==0.9.0+cu101 -f https://download.pytorch.org/whl/torch_stable.html'" >> $GITHUB_ENV;
         elif [[ $CUDA == '10.2' ]]; then
-            echo "DOCKER_TORCH_VERSION='torch==1.8.0'" >> $GITHUB_ENV;
+            echo "DOCKER_TORCH_VERSION='torch==1.9.0 torchvision==0.10.0'" >> $GITHUB_ENV;
         elif [[ $CUDA == '11.1' ]]; then
-            echo "DOCKER_TORCH_VERSION='torch==1.8.0+cu111 torchvision==0.9.0+cu111 -f https://download.pytorch.org/whl/torch_stable.html'" >> $GITHUB_ENV;
+            echo "DOCKER_TORCH_VERSION='torch==1.9.0+cu111 torchvision==0.10.0+cu111 -f https://download.pytorch.org/whl/torch_stable.html'" >> $GITHUB_ENV;
         else
             echo "Unhandled CUDA version $CUDA";
             exit 1;
@@ -463,6 +483,7 @@ jobs:
   # allennlp-docs repo.
   docs:
     name: Docs
+    timeout-minutes: 18
     # Don't run for forks.
     if: github.repository == 'allenai/allennlp'
     runs-on: ubuntu-latest
@@ -599,6 +620,7 @@ jobs:
   # Publish the core distribution files to PyPI.
   publish:
     name: PyPI
+    timeout-minutes: 18
     needs: [style, lint, cpu_tests, gpu_tests, model_tests, build_package, test_package, docker, docs]
     # Only publish to PyPI on releases and nightly builds to "allenai/allennlp" (not forks).
     if: github.repository == 'allenai/allennlp' && (github.event_name == 'release' || github.event_name == 'schedule')
