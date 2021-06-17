@@ -44,17 +44,17 @@ check-for-cuda :
 # Testing helpers.
 #
 
-.PHONY : lint
-lint :
-	flake8 .
+.PHONY : flake8
+flake8 :
+	flake8 allennlp tests scripts 
 
 .PHONY : format
 format :
-	black --check .
+	black --check allennlp tests scripts 
 
 .PHONY : typecheck
 typecheck :
-	mypy . --cache-dir=/dev/null
+	mypy allennlp tests scripts --cache-dir=/dev/null
 
 .PHONY : test
 test :
@@ -63,8 +63,8 @@ test :
 			--cov=$(SRC) \
 			--cov-report=xml
 
-.PHONY : gpu-test
-gpu-test : check-for-cuda
+.PHONY : gpu-tests
+gpu-tests : check-for-cuda
 	pytest --color=yes -v -rf --durations=20 \
 			--cov-config=.coveragerc \
 			--cov=$(SRC) \
