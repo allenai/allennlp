@@ -186,7 +186,7 @@ jobs:
     timeout-minutes: 5
     if: github.repository == 'allenai/allennlp' && (github.event_name == 'push' || github.event_name == 'pull_request')
     runs-on: ubuntu-latest
-    needs: [cpu_tests, gpu_tests, model_tests]
+    needs: [checks]
 
     steps:
       # Need to checkout code to get the coverage config.
@@ -593,7 +593,7 @@ jobs:
   publish:
     name: PyPI
     timeout-minutes: 10
-    needs: [style, lint, cpu_tests, gpu_tests, model_tests, build_package, test_package, docker, docs]
+    needs: [style, checks, build_package, test_package, docker, docs]
     # Only publish to PyPI on releases and nightly builds to "allenai/allennlp" (not forks).
     if: github.repository == 'allenai/allennlp' && (github.event_name == 'release' || github.event_name == 'schedule')
     runs-on: ubuntu-latest
