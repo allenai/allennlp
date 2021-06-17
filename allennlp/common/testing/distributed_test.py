@@ -42,7 +42,8 @@ def init_process(
 
     func(global_rank, world_size, gpu_id, *(func_args or []), **(func_kwargs or {}))
 
-    dist.barrier()
+    #  dist.barrier()
+    dist.destroy_process_group()
 
 
 def run_distributed_test(
