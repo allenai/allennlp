@@ -40,3 +40,8 @@ from allennlp.fairness.bias_direction_wrappers import (
     TwoMeansBiasDirectionWrapper,
     ClassificationNormalBiasDirectionWrapper,
 )
+from allennlp.fairness.adversarial_bias_mitigator import (
+    AdversarialBiasMitigator,
+    FeedForwardRegressionAdversary,
+    AdversarialBiasMitigatorBackwardCallback,
+)
