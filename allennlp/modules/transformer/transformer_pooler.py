@@ -41,8 +41,4 @@ class TransformerPooler(ActivationLayer, FromParams):
 
     @classmethod
     def _from_config(cls, config: "PretrainedConfig", **kwargs):
-        return cls(
-            config.hidden_size,
-            config.hidden_size,
-            "tanh"      # BERT has this hardcoded
-        )
+        return cls(config.hidden_size, config.hidden_size, "tanh")  # BERT has this hardcoded
