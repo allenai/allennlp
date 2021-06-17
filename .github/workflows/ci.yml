@@ -135,6 +135,11 @@ jobs:
         . .venv/bin/activate
         make install TORCH_VERSION="torch==${_TORCH_VERSION}+${{ matrix.task.torch_platform }} torchvision==${_TORCH_VISION_VERSION}+${{ matrix.task.torch_platform }} -f https://download.pytorch.org/whl/torch_stable.html"
 
+    - name: Install AllenNLP as editable
+      if: steps.virtualenv-cache.outputs.cache-hit == 'true'
+      run: |
+        pip install --no-deps -e .
+
     # - name: Install requirements
     #   run: |
     #     . .venv/bin/activate
@@ -259,6 +264,11 @@ jobs:
         virtualenv -p $(which python) --copies --reset-app-data .venv
         . .venv/bin/activate
         make install TORCH_VERSION="torch==${_TORCH_VERSION}+cpu torchvision==${_TORCH_VISION_VERSION}+cpu -f https://download.pytorch.org/whl/torch_stable.html"
+
+    - name: Install AllenNLP as editable
+      if: steps.virtualenv-cache.outputs.cache-hit == 'true'
+      run: |
+        pip install --no-deps -e .
 
     # - name: Install requirements
     #   run: |
@@ -475,6 +485,11 @@ jobs:
         virtualenv -p $(which python) --copies --reset-app-data .venv
         . .venv/bin/activate
         make install TORCH_VERSION="torch==${_TORCH_VERSION}+cpu torchvision==${_TORCH_VISION_VERSION}+cpu -f https://download.pytorch.org/whl/torch_stable.html"
+
+    - name: Install AllenNLP as editable
+      if: steps.virtualenv-cache.outputs.cache-hit == 'true'
+      run: |
+        pip install --no-deps -e .
 
     # - name: Install requirements
     #   run: |
