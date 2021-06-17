@@ -92,7 +92,6 @@ class BiModalConnectionLayer(TransformerModule, FromParams):
         input_tensor2,
         attention_mask2,
         co_attention_mask=None,
-        use_co_attention_mask=False,
     ):
 
         bi_output1, bi_output2 = self.bimodal_attention(
@@ -101,7 +100,6 @@ class BiModalConnectionLayer(TransformerModule, FromParams):
             attention_mask1,
             attention_mask2,
             co_attention_mask,
-            use_co_attention_mask,
         )
 
         attention_output1, attention_output2 = self.bimodal_output(
