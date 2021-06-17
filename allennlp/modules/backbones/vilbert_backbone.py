@@ -156,7 +156,6 @@ class VilbertBackbone(Backbone):
 
         # Shape: (rolled_dimensions_product, num_tokens, embedding_dim)
         embedding_output = self.text_embeddings(token_ids, token_type_ids)
-        num_tokens = embedding_output.size(1)
 
         # this attention mask is more simple than the triangular masking of
         # causal attention used in OpenAI GPT, we just need to prepare the
@@ -168,15 +167,6 @@ class VilbertBackbone(Backbone):
 
         extended_image_attention_mask = box_mask
 
-        # Shape: (rolled_dimensions_product, feature_size, num_tokens)
-        # TODO (epwalsh): Why all zeros?? This doesn't seem right.
-        extended_co_attention_mask = torch.zeros(
-            extended_image_attention_mask.shape[0],
-            feature_size,
-            num_tokens,
-            dtype=extended_image_attention_mask.dtype,
-        )
-
         # Shape: (rolled_dimensions_product, num_boxes, image_embedding_dim)
         v_embedding_output = self.image_embeddings(box_features, box_coordinates)
 
@@ -185,7 +175,6 @@ class VilbertBackbone(Backbone):
             v_embedding_output,
             extended_attention_mask,
             extended_image_attention_mask,
-            extended_co_attention_mask,
         )
 
         # Shape: (rolled_dimensions_product, num_tokens, embedding_dim)
