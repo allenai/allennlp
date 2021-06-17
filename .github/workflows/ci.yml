@@ -121,13 +121,12 @@ jobs:
       run: |
         echo "PYTHON_VERSION=$(python --version)" >> $GITHUB_ENV
         echo "RUNNER_ARCH=$(uname -m)" >> $GITHUB_ENV
-        echo "TORCH_VERSION='torch==${_TORCH_VERSION}+${{ matrix.task.torch_platform }} torchvision==${_TORCH_VISION_VERSION}+${{ matrix.task.torch_platform }} -f https://download.pytorch.org/whl/torch_stable.html'" >> $GITHUB_ENV
 
     - uses: actions/cache@v2
       id: virtualenv-cache
       with:
         path: .venv
-        key: v2-${{ runner.os }}-${{ env.RUNNER_ARCH }}-${{ env.PYTHON_VERSION }}-${{ matrix.task.torch_platform }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
+        key: v0-${{ runner.os }}-${{ env.RUNNER_ARCH }}-${{ env.PYTHON_VERSION }}-${{ matrix.task.torch_platform }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
 
     - name: Setup virtual environment
       if: steps.virtualenv-cache.outputs.cache-hit != 'true'
@@ -137,7 +136,7 @@ jobs:
     - name: Install requirements
       run: |
         . .venv/bin/activate
-        make install
+        TORCH_VERSION="torch==${_TORCH_VERSION}+${{ matrix.task.torch_platform }} torchvision==${_TORCH_VISION_VERSION}+${{ matrix.task.torch_platform }} -f https://download.pytorch.org/whl/torch_stable.html" make install
 
     - name: Pull and install models repo
       if: ${{ matrix.task.name }} == 'Model Tests'
@@ -245,13 +244,12 @@ jobs:
       run: |
         echo "PYTHON_VERSION=$(python --version)" >> $GITHUB_ENV
         echo "RUNNER_ARCH=$(uname -m)" >> $GITHUB_ENV
-        echo "TORCH_VERSION='torch==${_TORCH_VERSION}+${{ matrix.task.torch_platform }} torchvision==${_TORCH_VISION_VERSION}+${{ matrix.task.torch_platform }} -f https://download.pytorch.org/whl/torch_stable.html'" >> $GITHUB_ENV
 
     - uses: actions/cache@v2
       id: virtualenv-cache
       with:
         path: .venv
-        key: v2-${{ runner.os }}-${{ env.RUNNER_ARCH }}-${{ env.PYTHON_VERSION }}-${{ matrix.task.torch_platform }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
+        key: v0-${{ runner.os }}-${{ env.RUNNER_ARCH }}-${{ env.PYTHON_VERSION }}-${{ matrix.task.torch_platform }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
 
     - name: Setup virtual environment
       if: steps.virtualenv-cache.outputs.cache-hit != 'true'
@@ -261,7 +259,7 @@ jobs:
     - name: Install requirements
       run: |
         . .venv/bin/activate
-        make install
+        TORCH_VERSION="torch==${_TORCH_VERSION}+${{ matrix.task.torch_platform }} torchvision==${_TORCH_VISION_VERSION}+${{ matrix.task.torch_platform }} -f https://download.pytorch.org/whl/torch_stable.html" make install
 
     - name: Debug info
       run: |
@@ -460,13 +458,12 @@ jobs:
       run: |
         echo "PYTHON_VERSION=$(python --version)" >> $GITHUB_ENV
         echo "RUNNER_ARCH=$(uname -m)" >> $GITHUB_ENV
-        echo "TORCH_VERSION='torch==${_TORCH_VERSION}+${{ matrix.task.torch_platform }} torchvision==${_TORCH_VISION_VERSION}+${{ matrix.task.torch_platform }} -f https://download.pytorch.org/whl/torch_stable.html'" >> $GITHUB_ENV
 
     - uses: actions/cache@v2
       id: virtualenv-cache
       with:
         path: .venv
-        key: v2-${{ runner.os }}-${{ env.RUNNER_ARCH }}-${{ env.PYTHON_VERSION }}-${{ matrix.task.torch_platform }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
+        key: v0-${{ runner.os }}-${{ env.RUNNER_ARCH }}-${{ env.PYTHON_VERSION }}-${{ matrix.task.torch_platform }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
 
     - name: Setup virtual environment
       if: steps.virtualenv-cache.outputs.cache-hit != 'true'
@@ -476,7 +473,7 @@ jobs:
     - name: Install requirements
       run: |
         . .venv/bin/activate
-        make install
+        TORCH_VERSION="torch==${_TORCH_VERSION}+${{ matrix.task.torch_platform }} torchvision==${_TORCH_VISION_VERSION}+${{ matrix.task.torch_platform }} -f https://download.pytorch.org/whl/torch_stable.html" make install
 
     - name: Debug info
       run: |
