@@ -15,8 +15,8 @@ from allennlp.modules.token_embedders import PretrainedTransformerEmbedder
 
 
 class TestPretrainedTransformerEmbedder(AllenNlpTestCase):
-    def teardown_class(self):
-        super().teardown_class()
+    @classmethod
+    def teardown_class(cls):
         cached_transformers._clear_caches()
 
     @requires_gpu
