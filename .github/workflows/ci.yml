@@ -139,7 +139,7 @@ jobs:
         make install TORCH_VERSION="torch==${_TORCH_VERSION}+${{ matrix.task.torch_platform }} torchvision==${_TORCH_VISION_VERSION}+${{ matrix.task.torch_platform }} -f https://download.pytorch.org/whl/torch_stable.html"
 
     - name: Pull and install models repo
-      if: ${{ matrix.task.name }} == 'Model Tests'
+      if: matrix.task.name == 'Model Tests'
       env:
         ALLENNLP_VERSION_OVERRIDE: ""  # Don't replace the core library.
       run: |
@@ -160,13 +160,13 @@ jobs:
         ${{ matrix.task.run }}
 
     - name: Prepare coverage report
-      if: ${{ matrix.task.coverage_report }}
+      if: matrix.task.coverage_report
       run: |
         mkdir coverage
         mv coverage.xml coverage/
 
     - name: Save coverage report
-      if: ${{ matrix.task.coverage_report }}
+      if: matrix.task.coverage_report
       uses: actions/upload-artifact@v1
       with:
         name: ${{ matrix.task.name }}-coverage
