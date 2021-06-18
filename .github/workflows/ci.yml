@@ -18,8 +18,8 @@ on:
 
 env:
   # NOTE: Need to update `TORCH_VERSION` and `TORCH_VISION_VERSION` for new torch releases.
-  _TORCH_VERSION: 1.9.0
-  _TORCH_VISION_VERSION: 0.10.0
+  TORCH_VERSION: 1.9.0
+  TORCH_VISION_VERSION: 0.10.0
   # Change this to invalidate existing cache.
   CACHE_PREFIX: v1
   # Disable tokenizers parallelism because this doesn't help, and can cause issues in distributed tests.
@@ -138,7 +138,7 @@ jobs:
       run: |
         test -d .venv || virtualenv -p $(which python) --copies --reset-app-data .venv
         . .venv/bin/activate
-        make install TORCH_VERSION="torch==${_TORCH_VERSION}+${{ matrix.task.torch_platform }} torchvision==${_TORCH_VISION_VERSION}+${{ matrix.task.torch_platform }} -f https://download.pytorch.org/whl/torch_stable.html"
+        make install TORCH_VERSION="torch==${TORCH_VERSION}+${{ matrix.task.torch_platform }} torchvision==${TORCH_VISION_VERSION}+${{ matrix.task.torch_platform }} -f https://download.pytorch.org/whl/torch_stable.html"
 
     - name: Setup virtual environment (cache hit)
       if: steps.virtualenv-cache.outputs.cache-hit == 'true'
@@ -266,7 +266,7 @@ jobs:
       run: |
         test -d .venv || virtualenv -p $(which python) --copies --reset-app-data .venv
         . .venv/bin/activate
-        make install TORCH_VERSION="torch==${_TORCH_VERSION}+cpu torchvision==${_TORCH_VISION_VERSION}+cpu -f https://download.pytorch.org/whl/torch_stable.html"
+        make install TORCH_VERSION="torch==${TORCH_VERSION}+cpu torchvision==${TORCH_VISION_VERSION}+cpu -f https://download.pytorch.org/whl/torch_stable.html"
 
     - name: Setup virtual environment (cache hit)
       if: steps.virtualenv-cache.outputs.cache-hit == 'true'
@@ -485,7 +485,7 @@ jobs:
       run: |
         test -d .venv || virtualenv -p $(which python) --copies --reset-app-data .venv
         . .venv/bin/activate
-        make install TORCH_VERSION="torch==${_TORCH_VERSION}+cpu torchvision==${_TORCH_VISION_VERSION}+cpu -f https://download.pytorch.org/whl/torch_stable.html"
+        make install TORCH_VERSION="torch==${TORCH_VERSION}+cpu torchvision==${TORCH_VISION_VERSION}+cpu -f https://download.pytorch.org/whl/torch_stable.html"
 
     - name: Setup virtual environment (cache hit)
       if: steps.virtualenv-cache.outputs.cache-hit == 'true'
