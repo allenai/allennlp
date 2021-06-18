@@ -85,7 +85,7 @@ install :
 	pip install --upgrade pip setuptools wheel
 	# Due to a weird thing with pip, we may need egg-info before running `pip install -e`.
 	# See https://github.com/pypa/pip/issues/4537.
-	python setup.py install_egg_info
+	# python setup.py install_egg_info
 	# Install torch ecosystem first.
 	pip install $(TORCH_VERSION)
 	pip install --upgrade --upgrade-strategy eager -e . -r dev-requirements.txt
