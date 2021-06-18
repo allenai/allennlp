@@ -138,6 +138,7 @@ jobs:
     - name: Install AllenNLP as editable
       if: steps.virtualenv-cache.outputs.cache-hit == 'true'
       run: |
+        . .venv/bin/activate
         pip install --no-deps -e .
 
     # - name: Install requirements
@@ -268,6 +269,7 @@ jobs:
     - name: Install AllenNLP as editable
       if: steps.virtualenv-cache.outputs.cache-hit == 'true'
       run: |
+        . .venv/bin/activate
         pip install --no-deps -e .
 
     # - name: Install requirements
@@ -489,6 +491,7 @@ jobs:
     - name: Install AllenNLP as editable
       if: steps.virtualenv-cache.outputs.cache-hit == 'true'
       run: |
+        . .venv/bin/activate
         pip install --no-deps -e .
 
     # - name: Install requirements
