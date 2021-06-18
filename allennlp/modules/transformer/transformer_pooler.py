@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 
 class TransformerPooler(ActivationLayer, FromParams):
 
-    _pretrained_relevant_module = ["pooler", "bert.pooler"]
+    _pretrained_relevant_module = ["pooler", "bert.pooler", "roberta.pooler"]
 
     def __init__(
         self,

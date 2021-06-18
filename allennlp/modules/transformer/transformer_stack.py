@@ -56,7 +56,7 @@ class TransformerStack(TransformerModule, FromParams):
     """
 
     _pretrained_mapping = {"layer": "layers"}
-    _pretrained_relevant_module = ["encoder", "bert.encoder"]
+    _pretrained_relevant_module = ["encoder", "bert.encoder", "roberta.encoder"]
 
     def __init__(
         self,
