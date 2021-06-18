@@ -1,4 +1,4 @@
-from typing import Dict, Optional, Any, Union, TYPE_CHECKING
+from typing import Union, TYPE_CHECKING
 
 import torch
 
@@ -20,24 +20,6 @@ class TransformerPooler(ActivationLayer, FromParams):
         activation: Union[str, torch.nn.Module] = "relu",
     ):
         super().__init__(hidden_size, intermediate_size, activation, pool=True)
-
-    @classmethod
-    def _get_input_arguments(
-        cls,
-        pretrained_module: torch.nn.Module,
-        source: str = "huggingface",
-        mapping: Optional[Dict[str, str]] = None,
-        **kwargs,
-    ) -> Dict[str, Any]:
-        final_kwargs = {}
-
-        final_kwargs["hidden_size"] = pretrained_module.dense.in_features
-        final_kwargs["intermediate_size"] = pretrained_module.dense.out_features
-        final_kwargs["activation"] = pretrained_module.activation
-
-        final_kwargs.update(kwargs)
-
-        return final_kwargs
 
     @classmethod
     def _from_config(cls, config: "PretrainedConfig", **kwargs):
