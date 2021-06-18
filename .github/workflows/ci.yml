@@ -124,14 +124,16 @@ jobs:
         # Get the exact Python version to use in the cache key.
         echo "PYTHON_VERSION=$(python --version)" >> $GITHUB_ENV
         echo "RUNNER_ARCH=$(uname -m)" >> $GITHUB_ENV
+        # Use week number in cache key so we can refresh the cache weekly.
+        echo "WEEK_NUMBER=$(date +%V)" >> $GITHUB_ENV
 
     - uses: actions/cache@v2
       id: virtualenv-cache
       with:
         path: .venv
-        key: ${{ env.CACHE_PREFIX }}-${{ runner.os }}-${{ env.RUNNER_ARCH }}-${{ env.PYTHON_VERSION }}-${{ matrix.task.torch_platform }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
+        key: ${{ env.CACHE_PREFIX }}-${{ env.WEEK_NUMBER }}-${{ runner.os }}-${{ env.RUNNER_ARCH }}-${{ env.PYTHON_VERSION }}-${{ matrix.task.torch_platform }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
         restore-keys: |
-          ${{ env.CACHE_PREFIX }}-${{ runner.os }}-${{ env.RUNNER_ARCH }}-${{ env.PYTHON_VERSION }}-${{ matrix.task.torch_platform }}-
+          ${{ env.CACHE_PREFIX }}-${{ env.WEEK_NUMBER }}-${{ runner.os }}-${{ env.RUNNER_ARCH }}-${{ env.PYTHON_VERSION }}-${{ matrix.task.torch_platform }}-
 
     - name: Setup virtual environment (no cache hit)
       if: steps.virtualenv-cache.outputs.cache-hit != 'true'
@@ -252,14 +254,15 @@ jobs:
       run: |
         echo "PYTHON_VERSION=$(python --version)" >> $GITHUB_ENV
         echo "RUNNER_ARCH=$(uname -m)" >> $GITHUB_ENV
+        echo "WEEK_NUMBER=$(date +%V)" >> $GITHUB_ENV
 
     - uses: actions/cache@v2
       id: virtualenv-cache
       with:
         path: .venv
-        key: ${{ env.CACHE_PREFIX }}-${{ runner.os }}-${{ env.RUNNER_ARCH }}-${{ env.PYTHON_VERSION }}-cpu-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
+        key: ${{ env.CACHE_PREFIX }}-${{ env.WEEK_NUMBER }}-${{ runner.os }}-${{ env.RUNNER_ARCH }}-${{ env.PYTHON_VERSION }}-cpu-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
         restore-keys: |
-          ${{ env.CACHE_PREFIX }}-${{ runner.os }}-${{ env.RUNNER_ARCH }}-${{ env.PYTHON_VERSION }}-cpu-
+          ${{ env.CACHE_PREFIX }}-${{ env.WEEK_NUMBER }}-${{ runner.os }}-${{ env.RUNNER_ARCH }}-${{ env.PYTHON_VERSION }}-cpu-
 
     - name: Setup virtual environment (no cache hit)
       if: steps.virtualenv-cache.outputs.cache-hit != 'true'
@@ -473,14 +476,15 @@ jobs:
       run: |
         echo "PYTHON_VERSION=$(python --version)" >> $GITHUB_ENV
         echo "RUNNER_ARCH=$(uname -m)" >> $GITHUB_ENV
+        echo "WEEK_NUMBER=$(date +%V)" >> $GITHUB_ENV
 
     - uses: actions/cache@v2
       id: virtualenv-cache
       with:
         path: .venv
-        key: ${{ env.CACHE_PREFIX }}-${{ runner.os }}-${{ env.RUNNER_ARCH }}-${{ env.PYTHON_VERSION }}-cpu-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
+        key: ${{ env.CACHE_PREFIX }}-${{ env.WEEK_NUMBER }}-${{ runner.os }}-${{ env.RUNNER_ARCH }}-${{ env.PYTHON_VERSION }}-cpu-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
         restore-keys: |
-          ${{ env.CACHE_PREFIX }}-${{ runner.os }}-${{ env.RUNNER_ARCH }}-${{ env.PYTHON_VERSION }}-cpu-
+          ${{ env.CACHE_PREFIX }}-${{ env.WEEK_NUMBER }}-${{ runner.os }}-${{ env.RUNNER_ARCH }}-${{ env.PYTHON_VERSION }}-cpu-
 
     - name: Setup virtual environment (no cache hit)
       if: steps.virtualenv-cache.outputs.cache-hit != 'true'
