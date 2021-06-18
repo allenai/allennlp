@@ -160,7 +160,6 @@ class TransformerEmbeddings(Embeddings):
     def forward(  # type: ignore
         self,
         input_ids: torch.Tensor,
-        attention_mask: Optional[torch.Tensor] = None,
         token_type_ids: Optional[torch.Tensor] = None,
         position_ids: Optional[torch.Tensor] = None,
         attention_mask: Optional[torch.Tensor] = None,
