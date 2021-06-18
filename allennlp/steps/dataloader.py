@@ -7,7 +7,14 @@ import more_itertools
 import torch
 
 from allennlp.common import Registrable
-from allennlp.data import TensorDict, Instance, allennlp_collate, BatchSampler, DataLoader, Vocabulary
+from allennlp.data import (
+    TensorDict,
+    Instance,
+    allennlp_collate,
+    BatchSampler,
+    DataLoader,
+    Vocabulary,
+)
 from allennlp.nn.util import move_to_device
 
 

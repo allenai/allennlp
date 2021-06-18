@@ -11,7 +11,6 @@ from typing import (
     Any,
     Tuple,
     Iterable,
-    Iterator,
 )
 
 import datasets
@@ -33,7 +32,12 @@ from allennlp.data.fields import ListField, IndexField
 from allennlp.data.fields.transformer_text_field import TransformerTextField
 from allennlp.models import Model
 from allennlp.nn.util import move_to_device
-from allennlp.steps.dataloader import TangoDataLoader, MaxBatchesDataLoader, BatchSizeDataLoader, DataLoaderAdapter
+from allennlp.steps.dataloader import (
+    TangoDataLoader,
+    MaxBatchesDataLoader,
+    BatchSizeDataLoader,
+    DataLoaderAdapter,
+)
 from allennlp.steps.dataset import AllenNlpDataset
 from allennlp.steps.format import TorchFormat
 from allennlp.steps.step import Step
@@ -416,14 +420,16 @@ class EvaluationStep(Step):
     @dataclasses.dataclass
     class EvaluationResult:
         metrics: Dict[str, Any]
-        predictions: List[Dict[str, Any]]   # TODO: This does not make sense as a type. Should be a List with one element per instance?
+        predictions: List[
+            Dict[str, Any]
+        ]  # TODO: This does not make sense as a type. Should be a List with one element per instance?
 
     def run(
         self,
         model: Model,
         dataset: AllenNlpDataset,
         split: Optional[str] = "validation",
-        data_loader: Optional[Lazy[TangoDataLoader]] = None
+        data_loader: Optional[Lazy[TangoDataLoader]] = None,
     ):
         if data_loader is None:
             data_loader = BatchSizeDataLoader(dataset.splits[split], 32, shuffle=False)
