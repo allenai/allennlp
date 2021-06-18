@@ -140,7 +140,6 @@ class BiModalEncoder(TransformerModule, FromParams):
         batch_size, num_words, hidden_size1 = embedding1.size()
         _, num_regions, hidden_size2 = embedding2.size()
 
-        use_co_attention_mask = False
         for layer_id2, layer_id1 in zip(self.biattention_id2, self.biattention_id1):
             end1 = layer_id1
             end2 = layer_id2
@@ -191,12 +190,13 @@ class BiModalEncoder(TransformerModule, FromParams):
                     .contiguous()
                     .view(batch_size * batch_size, 1, 1, num_words)
                 )
-                co_attention_mask = (
-                    co_attention_mask.unsqueeze(1)
-                    .expand(batch_size, batch_size, 1, num_regions, num_words)
-                    .contiguous()
-                    .view(batch_size * batch_size, 1, num_regions, num_words)
-                )
+                if co_attention_mask is not None:
+                    co_attention_mask = (
+                        co_attention_mask.unsqueeze(1)
+                        .expand(batch_size, batch_size, 1, num_regions, num_words)
+                        .contiguous()
+                        .view(batch_size * batch_size, 1, num_regions, num_words)
+                    )
 
             if count == 0 and self.FAST_MODE:
                 embedding1 = embedding1.expand(
@@ -218,7 +218,6 @@ class BiModalEncoder(TransformerModule, FromParams):
                     embedding2,
                     attention_mask2,
                     co_attention_mask,
-                    use_co_attention_mask,
                 )
 
             start2 = end2

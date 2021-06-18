@@ -118,8 +118,7 @@ class BiModalAttention(TransformerModule, FromParams):
         input_tensor2,
         attention_mask1=None,
         attention_mask2=None,
-        co_attention_mask=None,  # TODO: is this flag necessary?
-        use_co_attention_mask=False,
+        co_attention_mask=None,
     ):
         """
         # Parameters
@@ -144,8 +143,6 @@ class BiModalAttention(TransformerModule, FromParams):
             about the interaction between the two modalities. For example,
             if you know which words correspond to which regions in the image,
             this mask can be applied to limit the attention given the bias.
-        use_co_attention_mask : `bool`
-            Whether to use co_attention_mask or not, default = `False`.
         """
 
         # for the first modality:
@@ -170,7 +167,7 @@ class BiModalAttention(TransformerModule, FromParams):
         attention_scores1 = self.attn1(query_layer2, key_layer1.transpose(-1, -2))
         if attention_mask1 is not None:
             attention_scores1 = apply_mask(attention_scores1, attention_mask1)
-        if use_co_attention_mask:
+        if co_attention_mask is not None:
             attention_scores1 = apply_mask(attention_scores1, co_attention_mask.permute(0, 1, 3, 2))
 
         attention_probs1 = torch.nn.Softmax(dim=-1)(attention_scores1)
@@ -189,7 +186,7 @@ class BiModalAttention(TransformerModule, FromParams):
         # we can comment this line for single flow.
         if attention_mask2 is not None:
             attention_scores2 = apply_mask(attention_scores2, attention_mask2)
-        if use_co_attention_mask:
+        if co_attention_mask is not None:
             attention_scores2 = apply_mask(attention_scores2, co_attention_mask)
 
         attention_probs2 = torch.nn.Softmax(dim=-1)(attention_scores2)
