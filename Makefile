@@ -63,6 +63,13 @@ test :
 			--cov=$(SRC) \
 			--cov-report=xml
 
+.PHONY : test-with-cov-html
+test-with-cov-html :
+	pytest --color=yes -rf --durations=40 \
+			--cov-config=.coveragerc \
+			--cov=$(SRC) \
+			--cov-report=html
+
 .PHONY : gpu-test
 gpu-test : check-for-cuda
 	pytest --color=yes -v -rf --durations=20 \

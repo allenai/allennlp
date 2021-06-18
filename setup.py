@@ -76,6 +76,7 @@ setup(
         "wandb>=0.10.0,<0.11.0",
         "huggingface_hub>=0.0.8",
         "google-cloud-storage>=1.38.0,<1.39.0",
+        "datasets>=1.5.0,<1.6.0",
     ],
     entry_points={"console_scripts": ["allennlp=allennlp.__main__:run"]},
     include_package_data=True,
