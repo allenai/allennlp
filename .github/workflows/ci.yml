@@ -147,6 +147,7 @@ jobs:
       run: |
         . .venv/bin/activate
         pip install --no-deps -e .
+        make download-extras
 
     - name: Pull and install models repo
       if: matrix.task.name == 'Model Tests'
@@ -276,6 +277,7 @@ jobs:
       run: |
         . .venv/bin/activate
         pip install --no-deps -e .
+        make download-extras
 
     - name: Debug info
       run: |
@@ -498,6 +500,7 @@ jobs:
       run: |
         . .venv/bin/activate
         pip install --no-deps -e .
+        make download-extras
 
     - name: Debug info
       run: |

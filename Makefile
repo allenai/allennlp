@@ -22,6 +22,11 @@ DOCKER_RUN_CMD = docker run --rm \
 		-v $$HOME/.cache/huggingface:/root/.cache/huggingface \
 		-v $$HOME/nltk_data:/root/nltk_data
 
+# These nltk packages are used by the 'checklist' module. They are downloaded automatically
+# if not found when `checklist` is imported, but it's good to download the ahead of time
+# to avoid potential race conditions.
+NLTK_DOWNLOAD_CMD = python -c 'import nltk; [nltk.download(p) for p in ("wordnet", "wordnet_ic", "sentiwordnet")]'
+
 ifeq ($(shell uname),Darwin)
 ifeq ($(shell which gsed),)
 $(error Please install GNU sed with 'brew install gnu-sed')
@@ -79,6 +84,10 @@ benchmarks :
 # Setup helpers
 #
 
+.PHONY : download-extras
+download-extras :
+	$(NLTK_DOWNLOAD_CMD)
+
 .PHONY : install
 install :
 	# Ensure pip, setuptools, and wheel are up-to-date.
@@ -90,7 +99,7 @@ install :
 	pip install $(TORCH_VERSION)
 	pip install --upgrade --upgrade-strategy eager -e . -r dev-requirements.txt
 	# These nltk packages are used by the 'checklist' module.
-	python -c 'import nltk; [nltk.download(p) for p in ("wordnet", "wordnet_ic", "sentiwordnet")]'
+	$(NLTK_DOWNLOAD_CMD)
 #
 # Documention helpers.
 #
