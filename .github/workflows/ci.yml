@@ -130,11 +130,13 @@ jobs:
       with:
         path: .venv
         key: ${{ env.CACHE_PREFIX }}-${{ runner.os }}-${{ env.RUNNER_ARCH }}-${{ env.PYTHON_VERSION }}-${{ matrix.task.torch_platform }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
+        restore-keys: |
+          ${{ env.CACHE_PREFIX }}-${{ runner.os }}-${{ env.RUNNER_ARCH }}-${{ env.PYTHON_VERSION }}-${{ matrix.task.torch_platform }}-
 
     - name: Setup virtual environment (no cache hit)
       if: steps.virtualenv-cache.outputs.cache-hit != 'true'
       run: |
-        virtualenv -p $(which python) --copies --reset-app-data .venv
+        test -d .venv || virtualenv -p $(which python) --copies --reset-app-data .venv
         . .venv/bin/activate
         make install TORCH_VERSION="torch==${_TORCH_VERSION}+${{ matrix.task.torch_platform }} torchvision==${_TORCH_VISION_VERSION}+${{ matrix.task.torch_platform }} -f https://download.pytorch.org/whl/torch_stable.html"
 
@@ -143,11 +145,6 @@ jobs:
       run: |
         . .venv/bin/activate
         pip install --no-deps -e .
-
-    # - name: Install requirements
-    #   run: |
-    #     . .venv/bin/activate
-    #     make install TORCH_VERSION="torch==${_TORCH_VERSION}+${{ matrix.task.torch_platform }} torchvision==${_TORCH_VISION_VERSION}+${{ matrix.task.torch_platform }} -f https://download.pytorch.org/whl/torch_stable.html"
 
     - name: Pull and install models repo
       if: matrix.task.name == 'Model Tests'
@@ -261,11 +258,13 @@ jobs:
       with:
         path: .venv
         key: ${{ env.CACHE_PREFIX }}-${{ runner.os }}-${{ env.RUNNER_ARCH }}-${{ env.PYTHON_VERSION }}-cpu-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
+        restore-keys: |
+          ${{ env.CACHE_PREFIX }}-${{ runner.os }}-${{ env.RUNNER_ARCH }}-${{ env.PYTHON_VERSION }}-cpu-
 
     - name: Setup virtual environment (no cache hit)
       if: steps.virtualenv-cache.outputs.cache-hit != 'true'
       run: |
-        virtualenv -p $(which python) --copies --reset-app-data .venv
+        test -d .venv || virtualenv -p $(which python) --copies --reset-app-data .venv
         . .venv/bin/activate
         make install TORCH_VERSION="torch==${_TORCH_VERSION}+cpu torchvision==${_TORCH_VISION_VERSION}+cpu -f https://download.pytorch.org/whl/torch_stable.html"
 
@@ -274,11 +273,6 @@ jobs:
       run: |
         . .venv/bin/activate
         pip install --no-deps -e .
-
-    # - name: Install requirements
-    #   run: |
-    #     . .venv/bin/activate
-    #     make install TORCH_VERSION="torch==${_TORCH_VERSION}+cpu torchvision==${_TORCH_VISION_VERSION}+cpu -f https://download.pytorch.org/whl/torch_stable.html"
 
     - name: Debug info
       run: |
@@ -483,11 +477,13 @@ jobs:
       with:
         path: .venv
         key: ${{ env.CACHE_PREFIX }}-${{ runner.os }}-${{ env.RUNNER_ARCH }}-${{ env.PYTHON_VERSION }}-cpu-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
+        restore-keys: |
+          ${{ env.CACHE_PREFIX }}-${{ runner.os }}-${{ env.RUNNER_ARCH }}-${{ env.PYTHON_VERSION }}-cpu-
 
     - name: Setup virtual environment (no cache hit)
       if: steps.virtualenv-cache.outputs.cache-hit != 'true'
       run: |
-        virtualenv -p $(which python) --copies --reset-app-data .venv
+        test -d .venv || virtualenv -p $(which python) --copies --reset-app-data .venv
         . .venv/bin/activate
         make install TORCH_VERSION="torch==${_TORCH_VERSION}+cpu torchvision==${_TORCH_VISION_VERSION}+cpu -f https://download.pytorch.org/whl/torch_stable.html"
 
@@ -496,11 +492,6 @@ jobs:
       run: |
         . .venv/bin/activate
         pip install --no-deps -e .
-
-    # - name: Install requirements
-    #   run: |
-    #     . .venv/bin/activate
-    #     make install TORCH_VERSION="torch==${_TORCH_VERSION}+cpu torchvision==${_TORCH_VISION_VERSION}+cpu -f https://download.pytorch.org/whl/torch_stable.html"
 
     - name: Debug info
       run: |
