@@ -385,11 +385,13 @@ jobs:
       run: |
         # Check the install instructions on https://pytorch.org/ to keep these up-to-date.
         if [[ $CUDA == '10.1' ]]; then
+            # NOTE: We need to use an older version of torch to support CUDA 10.1
             echo "DOCKER_TORCH_VERSION='torch==1.8.0+cu101 torchvision==0.9.0+cu101 -f https://download.pytorch.org/whl/torch_stable.html'" >> $GITHUB_ENV;
         elif [[ $CUDA == '10.2' ]]; then
-            echo "DOCKER_TORCH_VERSION='torch==1.9.0 torchvision==0.10.0'" >> $GITHUB_ENV;
+            # NOTE: 10.2 is still the default but that could change in the next release.
+            echo "DOCKER_TORCH_VERSION='torch==${{ env.TORCH_VERSION }} torchvision==${{ env.TORCH_VISION_VERSION }}'" >> $GITHUB_ENV;
         elif [[ $CUDA == '11.1' ]]; then
-            echo "DOCKER_TORCH_VERSION='torch==1.9.0+cu111 torchvision==0.10.0+cu111 -f https://download.pytorch.org/whl/torch_stable.html'" >> $GITHUB_ENV;
+            echo "DOCKER_TORCH_VERSION='torch==${{ env.TORCH_VERSION }}+cu111 torchvision==${{ env.TORCH_VISION_VERSION }}+cu111 -f https://download.pytorch.org/whl/torch_stable.html'" >> $GITHUB_ENV;
         else
             echo "Unhandled CUDA version $CUDA";
             exit 1;
