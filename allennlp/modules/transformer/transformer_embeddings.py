@@ -104,7 +104,7 @@ class TransformerEmbeddings(Embeddings):
         Optionally apply a linear transform after the dropout, projecting to `output_size`.
     """
 
-    _pretrained_relevant_module = ["embeddings", "bert.embeddings"]
+    _pretrained_relevant_module = ["embeddings", "bert.embeddings", "roberta.embeddings"]
     _pretrained_mapping = {
         "LayerNorm": "layer_norm",
         "word_embeddings": "embeddings.word_embeddings",
@@ -112,7 +112,6 @@ class TransformerEmbeddings(Embeddings):
         "token_type_embeddings": "embeddings.token_type_embeddings",
         # Albert is a special case. A linear projection is applied to the embeddings,
         # but that linear transformation lives in the encoder.
-        "albert.embeddings.LayerNorm": "layer_norm",
         "albert.embeddings.LayerNorm": "layer_norm",
         "albert.embeddings.word_embeddings": "embeddings.word_embeddings",
         "albert.embeddings.position_embeddings": "embeddings.position_embeddings",
@@ -163,12 +162,15 @@ class TransformerEmbeddings(Embeddings):
         input_ids: torch.Tensor,
         token_type_ids: Optional[torch.Tensor] = None,
         position_ids: Optional[torch.Tensor] = None,
+        attention_mask: Optional[torch.Tensor] = None,
     ) -> torch.Tensor:
 
         """
         # Parameters
         input_ids : `torch.Tensor`
             Shape `batch_size x seq_len`
+        attention_mask : `torch.Tensor`
+            Shape `batch_size x seq_len`. This parameter is ignored, but it is here for compatibility.
         token_type_ids : `torch.Tensor`, optional
             Shape `batch_size x seq_len`
         position_ids : `torch.Tensor`, optional
