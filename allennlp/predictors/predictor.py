@@ -321,6 +321,7 @@ class Predictor(Registrable):
         frozen: bool = True,
         import_plugins: bool = True,
         overrides: Union[str, Dict[str, Any]] = "",
+        **kwargs,
     ) -> "Predictor":
         """
         Instantiate a `Predictor` from an archive path.
@@ -350,6 +351,9 @@ class Predictor(Registrable):
             can be found by `allennlp.common.plugins.import_plugins()`.
         overrides : `Union[str, Dict[str, Any]]`, optional (default = `""`)
             JSON overrides to apply to the unarchived `Params` object.
+        **kwargs : `Any`
+            Additional key-word arguments that will be passed to the `Predictor`'s
+            `__init__()` method.
 
         # Returns
 
@@ -363,6 +367,7 @@ class Predictor(Registrable):
             predictor_name,
             dataset_reader_to_load=dataset_reader_to_load,
             frozen=frozen,
+            extra_args=kwargs,
         )
 
     @classmethod

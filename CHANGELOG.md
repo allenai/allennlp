@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `on_backward` training callback which allows for control over backpropagation and gradient manipulation.
 - Added `AdversarialBiasMitigator`, a Model wrapper to adversarially mitigate biases in predictions produced by a pretrained model for a downstream task.
 - Added `which_loss` parameter to `ensure_model_can_train_save_and_load` in `ModelTestCase` to specify which loss to test.
+- Added `**kwargs` to `Predictor.from_path()`. These key-word argument will be passed on to the `Predictor`'s constructor.
 
 ### Fixed
 
