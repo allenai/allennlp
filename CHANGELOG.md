@@ -10,6 +10,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Added `on_backward` training callback which allows for control over backpropagation and gradient manipulation.
+- Added `AdversarialBiasMitigator`, a Model wrapper to adversarially mitigate biases in predictions produced by a pretrained model for a downstream task.
+- Added `which_loss` parameter to `ensure_model_can_train_save_and_load` in `ModelTestCase` to specify which loss to test.
+- The activation layer in the transformer toolkit now can be queried for its output dimension.
+- `TransformerEmbeddings` now takes, but ignores, a parameter for the attention mask. This is needed for compatibility with some other modules that get called the same way and use the mask.
+- `TransformerPooler` can now be instantiated from a pretrained transformer module, just like the other modules in the transformer toolkit.
 
 ### Changed
 
@@ -23,6 +28,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed a mispelling: the parameter `contructor_extras` in `Lazy()` is now correctly called `constructor_extras`.
 - Fixed Broken link in `allennlp.fairness.fairness_metrics.Separation` docs
 - Ensured all `allennlp` submodules are imported with `allennlp.common.plugins.import_plugins()`.
+- Fixed `IndexOutOfBoundsException` in `MultiOptimizer` when checking if optimizer received any parameters.
+- Removed confusing zero mask from VilBERT
+
+### Changed
+
+- Changed behavior of `MultiOptimizer` so that while a default optimizer is still required, an error is not thrown if the default optimizer receives no parameters.
 
 
 ## [v2.5.0](https://github.com/allenai/allennlp/releases/tag/v2.5.0) - 2021-06-03

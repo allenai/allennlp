@@ -1,7 +1,7 @@
 import pytest
 import torch
 
-from allennlp.common import Params
+from allennlp.common import Params, cached_transformers
 from allennlp.common.checks import ConfigurationError
 from allennlp.data import Token, Vocabulary
 from allennlp.data.batch import Batch
@@ -14,6 +14,10 @@ from allennlp.common.testing import AllenNlpTestCase
 
 
 class TestPretrainedTransformerMismatchedEmbedder(AllenNlpTestCase):
+    @classmethod
+    def teardown_class(cls):
+        cached_transformers._clear_caches()
+
     @pytest.mark.parametrize("train_parameters", [True, False])
     def test_end_to_end(self, train_parameters: bool):
         token_indexer = PretrainedTransformerMismatchedIndexer("bert-base-uncased")

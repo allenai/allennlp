@@ -10,18 +10,22 @@ MD_DOCS_CONF_SRC = mkdocs-skeleton.yml
 MD_DOCS_TGT = site/
 MD_DOCS_EXTRAS = $(addprefix $(MD_DOCS_ROOT),README.md CHANGELOG.md CONTRIBUTING.md)
 
-TORCH_VERSION = torch==1.8.1 torchvision==0.9.1
+TORCH_VERSION = torch==1.9.0 torchvision==0.10.0
 
 DOCKER_TAG = latest
 DOCKER_IMAGE_NAME = allennlp/allennlp:$(DOCKER_TAG)
 DOCKER_TEST_IMAGE_NAME = allennlp/test:$(DOCKER_TAG)
-DOCKER_TORCH_VERSION = 'torch==1.7.1 torchvision==0.8.2'
-# Our self-hosted runner currently has CUDA 11.0.
-DOCKER_TEST_TORCH_VERSION = 'torch==1.7.1+cu110 torchvision==0.8.2+cu110 -f https://download.pytorch.org/whl/torch_stable.html'
+DOCKER_TORCH_VERSION = $(TORCH_VERSION)
+DOCKER_TEST_TORCH_VERSION = $(TORCH_VERSION)
 DOCKER_RUN_CMD = docker run --rm \
 		-v $$HOME/.allennlp:/root/.allennlp \
 		-v $$HOME/.cache/huggingface:/root/.cache/huggingface \
 		-v $$HOME/nltk_data:/root/nltk_data
+
+# These nltk packages are used by the 'checklist' module. They are downloaded automatically
+# if not found when `checklist` is imported, but it's good to download the ahead of time
+# to avoid potential race conditions.
+NLTK_DOWNLOAD_CMD = python -c 'import nltk; [nltk.download(p) for p in ("wordnet", "wordnet_ic", "sentiwordnet")]'
 
 ifeq ($(shell uname),Darwin)
 ifeq ($(shell which gsed),)
@@ -45,17 +49,17 @@ check-for-cuda :
 # Testing helpers.
 #
 
-.PHONY : lint
-lint :
-	flake8 .
+.PHONY : flake8
+flake8 :
+	flake8 allennlp tests scripts 
 
 .PHONY : format
 format :
-	black --check .
+	black --check allennlp tests scripts 
 
 .PHONY : typecheck
 typecheck :
-	mypy . --cache-dir=/dev/null
+	mypy allennlp tests scripts --cache-dir=/dev/null
 
 .PHONY : test
 test :
@@ -64,8 +68,8 @@ test :
 			--cov=$(SRC) \
 			--cov-report=xml
 
-.PHONY : gpu-test
-gpu-test : check-for-cuda
+.PHONY : gpu-tests
+gpu-tests : check-for-cuda
 	pytest --color=yes -v -rf --durations=20 \
 			--cov-config=.coveragerc \
 			--cov=$(SRC) \
@@ -80,18 +84,22 @@ benchmarks :
 # Setup helpers
 #
 
+.PHONY : download-extras
+download-extras :
+	$(NLTK_DOWNLOAD_CMD)
+
 .PHONY : install
 install :
 	# Ensure pip, setuptools, and wheel are up-to-date.
 	pip install --upgrade pip setuptools wheel
 	# Due to a weird thing with pip, we may need egg-info before running `pip install -e`.
 	# See https://github.com/pypa/pip/issues/4537.
-	python setup.py install_egg_info
+	# python setup.py install_egg_info
 	# Install torch ecosystem first.
 	pip install $(TORCH_VERSION)
 	pip install --upgrade --upgrade-strategy eager -e .[all] -r dev-requirements.txt
 	# These nltk packages are used by the 'checklist' module.
-	python -c 'import nltk; [nltk.download(p) for p in ("wordnet", "wordnet_ic", "sentiwordnet")]'
+	$(NLTK_DOWNLOAD_CMD)
 
 #
 # Documention helpers.
