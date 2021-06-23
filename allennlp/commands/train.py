@@ -162,7 +162,7 @@ def train_model_from_file(
     file_friendly_logging : `bool`, optional (default=`False`)
         If `True`, we add newlines to tqdm output, even on an interactive terminal, and we slow
         down tqdm's output to only once every 10 seconds.
-    return_model : `Optional[bool]`, optionl (default = `None`)
+    return_model : `Optional[bool]`, optional (default = `None`)
         Whether or not to return the final model. If not specified, this defaults to `False` for
         distributed training and `True` otherwise.
 
@@ -225,7 +225,7 @@ def train_model(
     file_friendly_logging : `bool`, optional (default=`False`)
         If `True`, we add newlines to tqdm output, even on an interactive terminal, and we slow
         down tqdm's output to only once every 10 seconds.
-    return_model : `Optional[bool]`, optionl (default = `None`)
+    return_model : `Optional[bool]`, optional (default = `None`)
         Whether or not to return the final model. If not specified, this defaults to `False` for
         distributed training and `True` otherwise.
 
