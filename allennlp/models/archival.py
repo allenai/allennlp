@@ -114,7 +114,7 @@ def archive_model(
     weights: str = _DEFAULT_WEIGHTS,
     archive_path: Union[str, PathLike] = None,
     include_in_archive: Optional[List[str]] = None,
-) -> None:
+) -> str:
     """
     Archive the model weights, its training configuration, and its vocabulary to `model.tar.gz`.
 
@@ -130,6 +130,10 @@ def archive_model(
         to "model.tar.gz" inside the directory.
     include_in_archive : `List[str]`, optional, (default = `None`)
         Paths relative to `serialization_dir` that should be archived in addition to the default ones.
+
+    # Returns
+
+    The final archive path.
     """
     extra_copy_of_weights_just_for_mypy = Path(weights)
     if extra_copy_of_weights_just_for_mypy.is_absolute():
@@ -137,13 +141,11 @@ def archive_model(
     else:
         weights_file = Path(serialization_dir) / extra_copy_of_weights_just_for_mypy
     if not os.path.exists(weights_file):
-        logger.error("weights file %s does not exist, unable to archive model", weights_file)
-        return
+        raise RuntimeError(f"weights file '{weights_file}' does not exist, unable to archive model")
 
     config_file = os.path.join(serialization_dir, CONFIG_NAME)
     if not os.path.exists(config_file):
-        logger.error("config file %s does not exist, unable to archive model", config_file)
-        return
+        raise RuntimeError(f"config file '{config_file}' does not exist, unable to archive model")
 
     meta_file = os.path.join(serialization_dir, META_NAME)
 
@@ -171,6 +173,8 @@ def archive_model(
                     if os.path.exists(path):
                         arcname = path[len(os.path.join(serialization_dir, "")) :]
                         archive.add(path, arcname=arcname)
+
+    return str(archive_file)
 
 
 def load_archive(

@@ -18,6 +18,7 @@ from torch.nn.utils import clip_grad_norm_
 
 from allennlp.common import Registrable
 from allennlp.common.util import int_to_device
+from allennlp.nn.parallel.sharded_module_mixin import ShardedModuleMixin
 
 if TYPE_CHECKING:
     # To prevent circular imports
@@ -42,19 +43,19 @@ class DdpWrappedModel:
         self.model = model
         self.local_rank: int = local_rank if local_rank is not None else dist.get_rank()
         self.world_size: int = world_size if world_size is not None else dist.get_world_size()
+        self.is_primary: bool = self.local_rank == 0
 
-    def load_local_state_dict(
-        self, state_dict: StateDictType, strict: bool = True
-    ) -> LoadStateDictReturnType:
-        return self.model.load_state_dict(state_dict, strict=strict)  # type: ignore[arg-type]
+    @property
+    def is_sharded(self) -> bool:
+        return isinstance(self.model, ShardedModuleMixin)
+
+    def consolidate_sharded_state(self, sharded_state_files: List[str]) -> StateDictType:
+        raise NotImplementedError
 
     def load_state_dict(
         self, state_dict: StateDictType, strict: bool = True
     ) -> LoadStateDictReturnType:
         return self.model.load_state_dict(state_dict, strict=strict)  # type: ignore[arg-type]
-
-    def local_state_dict(self, *args, **kwargs) -> Optional[StateDictType]:
-        return None
 
     def state_dict(self, *args, **kwargs) -> StateDictType:
         return self.model.state_dict(*args, **kwargs)

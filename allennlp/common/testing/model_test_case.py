@@ -126,7 +126,7 @@ class ModelTestCase(AllenNlpTestCase):
 
         save_dir = self.TEST_DIR / "save_and_load_test"
         archive_file = save_dir / "model.tar.gz"
-        model = train_model_from_file(param_file, save_dir, overrides=overrides)
+        model = train_model_from_file(param_file, save_dir, overrides=overrides, return_model=True)
         assert model is not None
 
         metrics_file = save_dir / "metrics.json"

@@ -1,5 +1,6 @@
 import os
 import time
+from typing import Optional
 
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.common.params import Params
@@ -17,7 +18,7 @@ class FakeTrainer(Trainer):
 
 
 class TestCheckpointer(AllenNlpTestCase):
-    def retrieve_and_delete_saved(self):
+    def retrieve_and_delete_saved(self, shard: Optional[int] = None):
         """
         Helper function for the tests below. Finds the weight and training state files in
         self.TEST_DIR, parses their names for the epochs that were saved, deletes them,
@@ -26,11 +27,15 @@ class TestCheckpointer(AllenNlpTestCase):
         serialization_files = os.listdir(self.TEST_DIR)
 
         model_checkpoints = [x for x in serialization_files if "model_state_" in x]
+        if shard is not None:
+            model_checkpoints = [x for x in model_checkpoints if x.endswith(f"_w{shard}.th")]
         found_model_states = [Checkpointer._parse_model_state_path(x) for x in model_checkpoints]
         for f in model_checkpoints:
             os.remove(os.path.join(self.TEST_DIR, f))
 
         training_checkpoints = [x for x in serialization_files if "training_state_" in x]
+        if shard is not None:
+            training_checkpoints = [x for x in training_checkpoints if x.endswith(f"_w{shard}.th")]
         found_training_states = [
             Checkpointer._parse_training_state_path(x) for x in training_checkpoints
         ]
@@ -116,3 +121,41 @@ class TestCheckpointer(AllenNlpTestCase):
 
     def test_base_class_from_params(self):
         Checkpointer.from_params(Params({}), serialization_dir=self.TEST_DIR)
+
+    def test_default_distributed_with_sharded_state(self):
+        """
+        Simulates using the Checkpointer during distributed training with a sharded model.
+        """
+        world_size = 2
+        default_num_to_keep = 2
+        num_epochs = 5
+        target = [(e, 0) for e in range(num_epochs - default_num_to_keep, num_epochs)]
+
+        checkpointers = [Checkpointer(serialization_dir=self.TEST_DIR) for _ in range(world_size)]
+        for i, checkpointer in enumerate(checkpointers):
+            checkpointer._rank = i
+            checkpointer.state_is_sharded = True
+
+        for epochs_completed in range(num_epochs):
+            for batches_completed in [0, 5, 10]:
+                for i, checkpointer in enumerate(checkpointers):
+                    state = {
+                        "epochs_completed": epochs_completed,
+                        "batches_in_epoch_completed": batches_completed,
+                        "rank": i,
+                    }
+                    checkpointer.maybe_save_checkpoint(
+                        FakeTrainer(model_state=state, training_state=state),
+                        epochs_completed,
+                        batches_completed,
+                    )
+
+        for i, checkpointer in enumerate(checkpointers):
+            checkpoint = checkpointer.load_checkpoint()
+            assert checkpoint is not None
+            model_state, training_state = checkpoint
+            assert model_state["rank"] == i
+            assert training_state["rank"] == i
+
+            models, training = self.retrieve_and_delete_saved(shard=i)
+            assert models == training == target

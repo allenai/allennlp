@@ -26,7 +26,7 @@ from allennlp.common.plugins import import_plugins
 from allennlp.data import DatasetReader, Vocabulary
 from allennlp.data import DataLoader
 from allennlp.models.archival import archive_model, CONFIG_NAME, verify_include_in_archive
-from allennlp.models.model import _DEFAULT_WEIGHTS, Model
+from allennlp.models.model import Model
 from allennlp.nn.parallel import DdpWrapper
 from allennlp.training.trainer import Trainer
 from allennlp.training import util as training_util
@@ -132,6 +132,7 @@ def train_model_from_file(
     include_package: List[str] = None,
     dry_run: bool = False,
     file_friendly_logging: bool = False,
+    return_model: Optional[bool] = None,
 ) -> Optional[Model]:
     """
     A wrapper around [`train_model`](#train_model) which loads the params from a file.
@@ -161,11 +162,16 @@ def train_model_from_file(
     file_friendly_logging : `bool`, optional (default=`False`)
         If `True`, we add newlines to tqdm output, even on an interactive terminal, and we slow
         down tqdm's output to only once every 10 seconds.
+    return_model : `Optional[bool]`, optionl (default = `None`)
+        Whether or not to return the final model. If not specified, this defaults to `False` for
+        distributed training and `True` otherwise.
 
     # Returns
 
+    best_model : `Optional[str]`
+        The path to the archived model with the best weights or `None` if in dry run.
     best_model : `Optional[Model]`
-        The model with the best epoch weights or `None` if in dry run.
+        The model with the best epoch weights or `None`, depending on the value of `return_model` and `dry_run`.
     """
     # Load the experiment config from a file and pass it to `train_model`.
     params = Params.from_file(parameter_filename, overrides)
@@ -178,6 +184,7 @@ def train_model_from_file(
         include_package=include_package,
         dry_run=dry_run,
         file_friendly_logging=file_friendly_logging,
+        return_model=return_model,
     )
 
 
@@ -190,6 +197,7 @@ def train_model(
     include_package: List[str] = None,
     dry_run: bool = False,
     file_friendly_logging: bool = False,
+    return_model: Optional[bool] = None,
 ) -> Optional[Model]:
     """
     Trains the model specified in the given [`Params`](../common/params.md#params) object, using the data
@@ -217,11 +225,14 @@ def train_model(
     file_friendly_logging : `bool`, optional (default=`False`)
         If `True`, we add newlines to tqdm output, even on an interactive terminal, and we slow
         down tqdm's output to only once every 10 seconds.
+    return_model : `Optional[bool]`, optionl (default = `None`)
+        Whether or not to return the final model. If not specified, this defaults to `False` for
+        distributed training and `True` otherwise.
 
     # Returns
 
     best_model : `Optional[Model]`
-        The model with the best epoch weights or `None` if in dry run.
+        The model with the best epoch weights or `None`, depending on the value of `return_model` and `dry_run`.
     """
     common_logging.FILE_FRIENDLY_LOGGING = file_friendly_logging
 
@@ -233,6 +244,8 @@ def train_model(
 
     include_in_archive = params.pop("include_in_archive", None)
     verify_include_in_archive(include_in_archive)
+
+    model: Optional[Model] = None
 
     distributed_params = params.params.pop("distributed", None)
     # If distributed isn't in the config and the config contains strictly
@@ -246,11 +259,6 @@ def train_model(
             dry_run=dry_run,
             file_friendly_logging=file_friendly_logging,
         )
-
-        if not dry_run:
-            archive_model(serialization_dir, include_in_archive=include_in_archive)
-        return model
-
     # Otherwise, we are running multiple processes for training.
     else:
         common_logging.prepare_global_logging(
@@ -328,12 +336,18 @@ def train_model(
             ),
             nprocs=num_procs,
         )
-        if not dry_run and os.path.exists(os.path.join(serialization_dir, _DEFAULT_WEIGHTS)):
-            archive_model(serialization_dir, include_in_archive=include_in_archive)
-            model = Model.load(params, serialization_dir)
-            return model
-        else:
-            return None
+
+    if not dry_run:
+        archive_model(serialization_dir, include_in_archive=include_in_archive)
+    else:
+        return None
+
+    if return_model is None:
+        return model  # model may or may not be `None`.
+    elif return_model is True:
+        return model if model is not None else Model.load(params, serialization_dir)
+    else:
+        return None
 
 
 def _train_worker(
@@ -490,7 +504,7 @@ def _train_worker(
         metrics = train_loop.run()
     except KeyboardInterrupt:
         # if we have completed an epoch, try to create a model archive.
-        if primary and os.path.exists(os.path.join(serialization_dir, _DEFAULT_WEIGHTS)):
+        if primary:
             best_weights_path = train_loop.trainer.get_best_weights_path()
             if best_weights_path is None:
                 logging.info(

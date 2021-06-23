@@ -1,8 +1,10 @@
 import datetime
+import glob
 import logging
 import math
 import os
 import re
+import shutil
 import time
 import warnings
 from typing import Optional, Union, List, Dict, Tuple, Any, Type
@@ -314,6 +316,9 @@ class GradientDescentTrainer(Trainer):
             # so at this point it's too late to wrap the model.
             if ddp_wrapped_model is None:
                 raise ValueError("trainer requires 'ddp_wrapped_model' for distributed training")
+            # Make sure checkpointer knows if we're working with a sharded model.
+            if self._checkpointer is not None:
+                self._checkpointer.state_is_sharded = ddp_wrapped_model.is_sharded
 
         # Enable automatic mixed precision training.
         self._scaler: Optional[amp.GradScaler] = None
@@ -562,10 +567,10 @@ class GradientDescentTrainer(Trainer):
                 description = training_util.description_from_metrics(metrics)
                 batch_group_generator_tqdm.set_description(description, refresh=False)
 
-                if self._checkpointer is not None:
-                    self._checkpointer.maybe_save_checkpoint(
-                        self, self._epochs_completed, self._batches_in_epoch_completed
-                    )
+            if self._checkpointer is not None:
+                self._checkpointer.maybe_save_checkpoint(
+                    self, self._epochs_completed, self._batches_in_epoch_completed
+                )
 
         if self._distributed and not done_early:
             logger.info(
@@ -718,7 +723,7 @@ class GradientDescentTrainer(Trainer):
         Trains the supplied model with the supplied parameters.
         """
         try:
-            self._restore_checkpoint()
+            self._maybe_restore_checkpoint()
         except RuntimeError as e:
             configuration_error = ConfigurationError(
                 "Could not recover training from the checkpoint. Did you mean to output to "
@@ -740,6 +745,8 @@ class GradientDescentTrainer(Trainer):
             metrics, epoch = self._try_train()
             return metrics
         finally:
+            if self._primary:
+                self._finalize_best_model_state()
             for callback in self._callbacks:
                 callback.on_end(self, metrics=metrics, epoch=epoch, is_primary=self._primary)
 
@@ -844,33 +851,45 @@ class GradientDescentTrainer(Trainer):
             self._epochs_completed += 1
             self._batches_in_epoch_completed = 0
 
+            checkpoint_saved = False
             if self._checkpointer is not None:
                 # The checkpointer saves state from the learning rate scheduler, momentum scheduler, moving
                 # average, and callbacks, so we have to make sure those are updated before we save the
                 # checkpoint here.
-                if self._primary:
-                    self._checkpointer.maybe_save_checkpoint(
-                        self, self._epochs_completed, self._batches_in_epoch_completed
-                    )
+                checkpoint_saved = self._checkpointer.maybe_save_checkpoint(
+                    self, self._epochs_completed, self._batches_in_epoch_completed
+                )
 
-                # Wait for the primary process to finish saving the checkpoint
+                # Wait for each primary process to finish saving the checkpoint
                 if self._distributed:
                     dist.barrier()
 
-                if (
-                    self._primary
-                    and self._serialization_dir
-                    and self._metric_tracker.is_best_so_far()
-                ):
+            if self._serialization_dir and self._metric_tracker.is_best_so_far():
+                if self._ddp_wrapped_model is not None and self._ddp_wrapped_model.is_sharded:
+                    # Each worker saves its own shard for now (we combine the shards later).
+                    self._best_model_filename = os.path.join(
+                        self._serialization_dir, f"best_w{self._rank}.th"
+                    )
+                else:
                     self._best_model_filename = os.path.join(self._serialization_dir, "best.th")
-                    if self._moving_average is None:
-                        torch.save(self.model.state_dict(), self._best_model_filename)
+
+                if self._moving_average is None:
+                    # If we're not using a moving average and the checkpointer just saved a checkpoint,
+                    # we can just copy over that model state checkpoint to the '_best_model_filename'.
+                    # Otherwise we need to save the model state on our own.
+                    if self._checkpointer is not None and checkpoint_saved:
+                        last_checkpoint = self._checkpointer.find_latest_checkpoint()
+                        assert last_checkpoint is not None
+                        model_state_file, _ = last_checkpoint
+                        shutil.copyfile(model_state_file, self._best_model_filename)
                     else:
-                        self._moving_average.assign_average_value()
-                        try:
-                            torch.save(self.model.state_dict(), self._best_model_filename)
-                        finally:
-                            self._moving_average.restore()
+                        self._save_model_state(self._best_model_filename)
+                else:
+                    self._moving_average.assign_average_value()
+                    try:
+                        self._save_model_state(self._best_model_filename)
+                    finally:
+                        self._moving_average.restore()
 
             # Wait for the primary process to finish saving the best
             if self._distributed:
@@ -902,17 +921,56 @@ class GradientDescentTrainer(Trainer):
             self._finalize_model()
         else:
             # The model we're loading here has already been finalized.
-            self._pytorch_model.load_state_dict(torch.load(self._best_model_filename))
+            self._load_model_state(self._best_model_filename)
 
         return metrics, epoch
+
+    def _save_model_state(self, path: str) -> None:
+        if self._ddp_wrapped_model is not None:
+            torch.save(self._ddp_wrapped_model.state_dict())
+        else:
+            torch.save(self.model.state_dict(), path)
+
+    def _load_model_state(self, path: str) -> None:
+        if self._ddp_wrapped_model is not None:
+            self._ddp_wrapped_model.load_state_dict(torch.load(path))
+        else:
+            self._pytorch_model.load_state_dict(torch.load(path))
 
     def _finalize_model(self) -> None:
         """If we have a moving average, we have to finalize the model at the end of training."""
         if self._moving_average is not None:
             self._moving_average.assign_average_value()
 
-    def get_checkpoint_state(self) -> TrainerCheckpoint:
-        model_state = self.model.state_dict()
+    def _finalize_best_model_state(self) -> None:
+        """
+        The best model weights might be saved in sharded files, in which case we gather them
+        up and save them to a single 'best.th' file.
+        """
+        if (
+            self._serialization_dir
+            and self._ddp_wrapped_model is not None
+            and self._ddp_wrapped_model.is_sharded
+        ):
+            sharded_model_state_files = [
+                os.path.join(self._serialization_dir, p)
+                for p in glob.iglob(os.path.join(self._serialization_dir, "best_w*.th"))
+            ]
+            full_model_state = self._ddp_wrapped_model.consolidate_sharded_state(
+                sharded_model_state_files
+            )
+            self._best_model_filename = os.path.join(self._serialization_dir, "best.th")
+            torch.save(full_model_state, self._best_model_filename)
+
+    def get_checkpoint_state(self) -> Optional[TrainerCheckpoint]:
+        if self._distributed:
+            assert self._ddp_wrapped_model is not None
+            if self._ddp_wrapped_model.is_sharded or self._primary:
+                model_state = self._ddp_wrapped_model.state_dict()
+            else:
+                return None
+        else:
+            model_state = self.model.state_dict()
 
         # These are the training states we need to persist.
         training_states = {
@@ -935,7 +993,7 @@ class GradientDescentTrainer(Trainer):
 
         return TrainerCheckpoint(model_state, training_states)
 
-    def _restore_checkpoint(self) -> None:
+    def _maybe_restore_checkpoint(self) -> None:
         """
         Restores the model and training state from the last saved checkpoint.
         This includes an epoch count and optimizer state, which is serialized separately
@@ -950,19 +1008,26 @@ class GradientDescentTrainer(Trainer):
         if self._checkpointer is None:
             return
 
-        model_state, training_state = self._checkpointer.load_checkpoint()
-        if len(model_state) <= 0 and len(training_state) <= 0:
+        state = self._checkpointer.load_checkpoint()
+        if state is None:
             self._start_after_epochs_completed = 0
             self._start_after_batches_in_epoch_completed = 0
             self._best_model_filename = None
             return
+
+        model_state, training_state = state
         if training_state["version"] != 1:
             raise ValueError(
                 f"This version of {self.__class__.__name__} only supports checkpoints of version 1. "
                 f"Found version {training_state['version']}"
             )
 
-        self._pytorch_model.load_state_dict(model_state)
+        if self._distributed:
+            assert self._ddp_wrapped_model is not None
+            self._ddp_wrapped_model.state_dict(model_state)
+        else:
+            self._pytorch_model.load_state_dict(model_state)
+
         self._metric_tracker.load_state_dict(training_state["metric_tracker"])
         self.optimizer.load_state_dict(training_state["optimizer"])
 

@@ -1,4 +1,4 @@
-from typing import Tuple, Union, Optional, TYPE_CHECKING
+from typing import Tuple, Union, Optional, TYPE_CHECKING, List, Any, Dict
 
 from fairscale.nn import FullyShardedDataParallel as _FSDP
 from fairscale.nn.wrap import enable_wrap, wrap
@@ -32,14 +32,26 @@ class FSDP(_FSDP, ShardedModuleMixin):
 
 class FairScaleFsdpWrappedModel(DdpWrappedModel):
     @overrides
-    def load_local_state_dict(
-        self, state_dict: StateDictType, strict: bool = True
-    ) -> LoadStateDictReturnType:
-        return self.model.load_local_state_dict(state_dict, strict=strict)  # type: ignore[operator]
+    def consolidate_sharded_state(self, sharded_state_files: List[str]) -> StateDictType:
+        shard_weights: List[StateDictType] = []
+        shard_metadata: List[Dict[str, Any]] = []
+        for path in sharded_state_files:
+            shard_state = torch.load(path, map_location="cpu")
+            shard_weights.append(shard_state["weights"])
+            shard_metadata.append(shard_state["metadata"])
+        return FSDP.consolidate_shard_weights(shard_weights, shard_metadata)
 
     @overrides
-    def local_state_dict(self, *args, **kwargs) -> Optional[StateDictType]:
-        return self.model.local_state_dict(*args, **kwargs)  # type: ignore[operator]
+    def load_state_dict(
+        self, state_dict: StateDictType, strict: bool = True
+    ) -> LoadStateDictReturnType:
+        return self.model.load_local_state_dict(state_dict["weights"], strict=strict)  # type: ignore[operator]
+
+    @overrides
+    def state_dict(self, *args, **kwargs) -> StateDictType:
+        weights = self.model.local_state_dict(*args, **kwargs)  # type: ignore[operator]
+        metadata = self.model.local_metadata_dict()
+        return {"weights": weights, "metadata": metadata}
 
     @overrides
     def clip_grad_norm_(self, max_norm: Union[float, int]) -> torch.Tensor:
