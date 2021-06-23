@@ -119,11 +119,6 @@ class ModelTestCase(AllenNlpTestCase):
             Specifies which loss to test. For example, which_loss may be "adversary_loss" for
             `adversarial_bias_mitigator`.
         """
-        if seed is not None:
-            random.seed(seed)
-            numpy.random.seed(seed)
-            torch.manual_seed(seed)
-
         save_dir = self.TEST_DIR / "save_and_load_test"
         archive_file = save_dir / "model.tar.gz"
         model = train_model_from_file(param_file, save_dir, overrides=overrides)
@@ -158,11 +153,21 @@ class ModelTestCase(AllenNlpTestCase):
         data_loader_params["shuffle"] = False
         data_loader_params2 = Params(copy.deepcopy(data_loader_params.as_dict()))
 
+        if seed is not None:
+            random.seed(seed)
+            numpy.random.seed(seed)
+            torch.manual_seed(seed)
+
         print("Reading with original model")
         data_loader = DataLoader.from_params(
             params=data_loader_params, reader=reader, data_path=params["validation_data_path"]
         )
         data_loader.index_with(model.vocab)
+
+        if seed is not None:
+            random.seed(seed)
+            numpy.random.seed(seed)
+            torch.manual_seed(seed)
 
         print("Reading with loaded model")
         data_loader2 = DataLoader.from_params(
