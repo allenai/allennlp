@@ -84,11 +84,20 @@ class TransformerTextField(Field[torch.Tensor]):
         return result
 
     def human_readable_repr(self) -> Dict[str, Any]:
+        def format_item(x) -> str:
+            return str(x.item())
+
         def readable_tensor(t: torch.Tensor) -> str:
             if len(t) <= 16:
-                return "[" + ", ".join(map(str, t)) + "]"
+                return "[" + ", ".join(map(format_item, t)) + "]"
             else:
-                return "[" + ", ".join(map(str, t[:8])) + ", ".join(map(str, t[-8:])) + "]"
+                return (
+                    "["
+                    + ", ".join(map(format_item, t[:8]))
+                    + ", ..., "
+                    + ", ".join(map(format_item, t[-8:]))
+                    + "]"
+                )
 
         return {
             name: readable_tensor(getattr(self, name))
