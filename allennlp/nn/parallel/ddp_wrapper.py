@@ -1,3 +1,4 @@
+import os
 from typing import (
     Union,
     Tuple,
@@ -7,6 +8,7 @@ from typing import (
     List,
     Optional,
     Any,
+    Sequence,
     TYPE_CHECKING,
 )
 
@@ -49,7 +51,10 @@ class DdpWrappedModel:
     def is_sharded(self) -> bool:
         return isinstance(self.model, ShardedModuleMixin)
 
-    def consolidate_sharded_state(self, sharded_state_files: List[str]) -> StateDictType:
+    @staticmethod
+    def consolidate_sharded_state(
+        sharded_state_files: Sequence[Union[str, os.PathLike]]
+    ) -> StateDictType:
         raise NotImplementedError
 
     def load_state_dict(

@@ -1,4 +1,5 @@
-from typing import Tuple, Union, Optional, TYPE_CHECKING, List, Any, Dict
+import os
+from typing import Tuple, Union, Optional, TYPE_CHECKING, List, Any, Dict, Sequence
 
 from fairscale.nn import FullyShardedDataParallel as _FSDP
 from fairscale.nn.wrap import enable_wrap, wrap
@@ -31,8 +32,11 @@ class FSDP(_FSDP, ShardedModuleMixin):
 
 
 class FairScaleFsdpWrappedModel(DdpWrappedModel):
+    @staticmethod
     @overrides
-    def consolidate_sharded_state(self, sharded_state_files: List[str]) -> StateDictType:
+    def consolidate_sharded_state(
+        sharded_state_files: Sequence[Union[str, os.PathLike]]
+    ) -> StateDictType:
         shard_weights: List[StateDictType] = []
         shard_metadata: List[Dict[str, Any]] = []
         for path in sharded_state_files:
