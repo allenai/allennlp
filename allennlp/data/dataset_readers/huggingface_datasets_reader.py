@@ -1,5 +1,5 @@
 from allennlp.data import DatasetReader, Token, Field, Tokenizer
-from allennlp.data.fields import TextField, LabelField, ListField
+from allennlp.data.fields import TextField, LabelField, ListField, TensorField
 from allennlp.data.instance import Instance
 from datasets import load_dataset, DatasetDict, list_datasets
 from datasets.features import (
@@ -10,6 +10,8 @@ from datasets.features import (
     Value,
     FeatureType,
 )
+
+import torch
 from typing import Iterable, Optional, Dict, List, Union
 
 
@@ -79,8 +81,8 @@ class HuggingfaceDatasetReader(DatasetReader):
         for index in self.shard_iterable(range(len(dataset_split))):
             yield self.text_to_instance(file_path, dataset_split[index])
 
-    def raise_feature_not_supported_value_error(value):
-        raise ValueError(f"Datasets feature type {type(value)} is not supported yet.")
+    def raise_feature_not_supported_value_error(feature_name, feature_type):
+        raise ValueError(f"Datasets feature {feature_name} type {feature_type} is not supported yet.")
 
     def text_to_instance(self, split: str, entry) -> Instance:  # type: ignore
         """
@@ -166,8 +168,11 @@ def _map_Value(
         # If tokenizer is provided we will use it to split it to tokens
         # Else put whole text as a single token
         field = _map_String(value, tokenizer)
+
+    elif feature_type.dtype == "float32" or feature_type.dtype == "float64":
+        field = _map_Float(value)
     else:
-        field = LabelField(value, label_namespace=feature_name, skip_indexing=True)
+        field = LabelField(value, label_namespace=feature_name, skip_indexing=False)
     return field
 
 
@@ -188,6 +193,15 @@ def _map_Sequence(
             field = ListField(field_list)
 
     # datasets Sequence of strings to ListField of LabelField
+    elif isinstance(item_feature_type, str):
+        for item in value:
+            # If tokenizer is provided we will use it to split it to tokens
+            # Else put whole text as a single token
+            item_field = _map_Value(feature_name, item, item_feature_type, tokenizer)
+            field_list.append(item_field)
+        if len(field_list) > 0:
+            field = ListField(field_list)
+
     elif isinstance(item_feature_type, ClassLabel):
         for item in value:
             item_field = _map_to_Label(feature_name, item, skip_indexing=True)
@@ -203,9 +217,9 @@ def _map_Sequence(
 
         if len(field_list) > 0:
             field = ListField(field_list)
-
+    # Add support for Dict
     else:
-        HuggingfaceDatasetReader.raise_feature_not_supported_value_error(feature_name)
+        HuggingfaceDatasetReader.raise_feature_not_supported_value_error(feature_name, item_feature_type)
 
     return field
 
@@ -280,7 +294,12 @@ def _map_String(text: str, tokenizer: Optional[Tokenizer]) -> TextField:
         field = TextField([Token(text)])
     return field
 
+def _map_Float(value: float) -> TensorField:
+    return TensorField(torch.tensor(value))
+
 
 # value mapper - Maps a single value to a LabelField
 def _map_to_Label(namespace, item, skip_indexing=True) -> LabelField:
     return LabelField(label=item, label_namespace=namespace, skip_indexing=skip_indexing)
+
+
