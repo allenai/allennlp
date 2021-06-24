@@ -65,7 +65,7 @@ setup(
         "scikit-learn",
         "scipy",
         "pytest",
-        "transformers>=4.1,<4.8",
+        "transformers>=4.1,<4.9",
         "sentencepiece",
         "dataclasses;python_version<'3.7'",
         "filelock>=3.0,<3.1",
