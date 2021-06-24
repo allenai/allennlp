@@ -12,6 +12,9 @@ class TransformerTextField(Field[torch.Tensor]):
     """
     A `TransformerTextField` is a collection of several tensors that are are a representation of text,
     tokenized and ready to become input to a transformer.
+
+    The naming pattern of the tensors follows the pattern that's produced by the huggingface tokenizers,
+    and expected by the huggingface transformers.
     """
 
     __slots__ = [
