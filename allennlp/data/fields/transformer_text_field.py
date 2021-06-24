@@ -68,7 +68,7 @@ class TransformerTextField(Field[torch.Tensor]):
 
     @overrides
     def empty_field(self):
-        return TransformerTextField(torch.LongTensor())
+        return TransformerTextField(torch.LongTensor(), padding_token_id=self.padding_token_id)
 
     @overrides
     def batch_tensors(self, tensor_list: List[Dict[str, torch.Tensor]]) -> Dict[str, torch.Tensor]:
