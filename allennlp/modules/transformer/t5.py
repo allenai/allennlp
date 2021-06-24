@@ -748,7 +748,7 @@ class T5(TransformerModule, Registrable):
         output_all_hidden_states: bool = False,
         beam_size: int = 3,
         max_decoding_steps: int = 100,
-        tie_word_embeddings: bool = False,
+        tie_word_embeddings: bool = True,
     ):
         super().__init__()
         self._tie_word_embeddings = tie_word_embeddings
@@ -847,7 +847,7 @@ class T5(TransformerModule, Registrable):
             eos_token_id=config.eos_token_id,
             vocab_size=config.vocab_size,
             model_dim=config.d_model,
-            tie_word_embeddings=config.tie_word_embeddings,
+            tie_word_embeddings=kwargs.pop("tie_word_embeddings", config.tie_word_embeddings),
         )
 
     def _shift_right(self, input_ids, start_value: int):

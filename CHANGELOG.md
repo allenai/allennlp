@@ -26,6 +26,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed `IndexOutOfBoundsException` in `MultiOptimizer` when checking if optimizer received any parameters.
 - Removed confusing zero mask from VilBERT.
 - Ensured `ensure_model_can_train_save_and_load` is consistently random.
+- Fixed weight tying logic in `T5` transformer module. Previously input/output embeddings were always tied. Now this is optional,
+  and the default behavior is taken from the `config.tie_word_embeddings` value when instantiating `from_pretrained_module()`.
 
 ### Changed
 
