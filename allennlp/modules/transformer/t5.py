@@ -6,6 +6,7 @@ An implementation of [T5](https://api.semanticscholar.org/CorpusID:204838007), a
 import logging
 from typing import Optional, Tuple, List, Union, Dict, TYPE_CHECKING, NamedTuple
 
+from overrides import overrides
 import torch
 from torch import nn
 import torch.nn.functional as F
@@ -747,13 +748,7 @@ class T5Output(NamedTuple):
 class T5(TransformerModule, Registrable):
 
     _pretrained_mapping = {"shared": "token_embeddings"}
-    _tied_weights = {
-        "token_embeddings.weight": [
-            "encoder.token_embeddings.weight",
-            "decoder.token_embeddings.weight",
-            "lm_head.weight",
-        ]
-    }
+
     # Don't know why HF has this param in their state_dict. It's not used in their model.
     _pretrained_ignore = [
         r"^decoder\.block\.0\.layer\.1\.EncDecAttention\.relative_attention_bias\.weight$"
@@ -776,8 +771,10 @@ class T5(TransformerModule, Registrable):
         beam_search: Lazy[BeamSearch] = Lazy(BeamSearch, beam_size=3, max_steps=100),
         ddp_wrapper: Optional[DdpWrapper] = None,
         checkpoint_wrapper: Optional[CheckpointWrapper] = None,
+        tie_word_embeddings: bool = True,
     ):
         super().__init__()
+        self._tie_word_embeddings = tie_word_embeddings
 
         if ddp_wrapper is not None:
             logger.info("Initializing T5 module with DdpWrapper %s", ddp_wrapper)
@@ -799,7 +796,9 @@ class T5(TransformerModule, Registrable):
         self.lm_head = nn.Linear(
             self.decoder.hidden_size, self.token_embeddings.num_embeddings, bias=False
         )
-        self.lm_head.weight = self.token_embeddings.weight
+        if self._tie_word_embeddings:
+            self.lm_head.weight = self.token_embeddings.weight
+
         self.loss_fct = CrossEntropyLoss(ignore_index=-100)
 
         self.decoder_start_token_id = decoder_start_token_id
@@ -809,6 +808,20 @@ class T5(TransformerModule, Registrable):
         self.output_all_hidden_states = output_all_hidden_states
 
         self.beam_search = beam_search.construct(end_index=self.eos_token_id)
+
+    @overrides
+    def _post_load_pretrained_state_dict_hook(
+        self, missing_keys: List[str], unexpected_keys: List[str]
+    ) -> None:
+        missing_keys_to_ignore = [
+            "encoder.token_embeddings.weight",
+            "decoder.token_embeddings.weight",
+        ]
+        if self._tie_word_embeddings:
+            missing_keys_to_ignore.append("lm_head.weight")
+        for key in missing_keys_to_ignore:
+            if key in missing_keys:
+                missing_keys.remove(key)
 
     @classmethod
     def _from_config(cls, config: "PretrainedConfig", **kwargs):
@@ -865,6 +878,7 @@ class T5(TransformerModule, Registrable):
             eos_token_id=config.eos_token_id,
             vocab_size=config.vocab_size,
             model_dim=config.d_model,
+            tie_word_embeddings=kwargs.pop("tie_word_embeddings", config.tie_word_embeddings),
             **kwargs,
         )
 
