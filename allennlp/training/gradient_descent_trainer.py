@@ -952,10 +952,10 @@ class GradientDescentTrainer(Trainer):
             and self._ddp_wrapped_model is not None
             and self._ddp_wrapped_model.is_sharded
         ):
-            sharded_model_state_files = [
-                os.path.join(self._serialization_dir, p)
-                for p in glob.iglob(os.path.join(self._serialization_dir, "best_w*.th"))
-            ]
+            logger.info("Consolidating sharded model states")
+            sharded_model_state_files = list(
+                glob.iglob(os.path.join(self._serialization_dir, "best_w*.th"))
+            )
             full_model_state = self._ddp_wrapped_model.consolidate_sharded_state(
                 sharded_model_state_files
             )

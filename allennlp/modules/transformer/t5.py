@@ -810,9 +810,7 @@ class T5(TransformerModule, Registrable):
         self.beam_search = beam_search.construct(end_index=self.eos_token_id)
 
     @overrides
-    def _post_load_pretrained_state_dict_hook(
-        self, missing_keys: List[str], unexpected_keys: List[str]
-    ) -> None:
+    def _post_load_state_dict(self, missing_keys: List[str], unexpected_keys: List[str]) -> None:
         missing_keys_to_ignore = [
             "encoder.token_embeddings.weight",
             "decoder.token_embeddings.weight",

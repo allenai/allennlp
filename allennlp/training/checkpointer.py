@@ -143,8 +143,7 @@ class Checkpointer(Registrable):
         for state_name in ("model_state", "training_state"):
             pattern = f"{state_name}_e{epochs_completed}_b{batches_in_epoch_completed}*.th"
             for fname in glob.iglob(os.path.join(self._serialization_dir, pattern)):
-                full_path = os.path.join(self._serialization_dir, fname)
-                os.remove(full_path)
+                os.remove(fname)
 
     def maybe_save_checkpoint(
         self,

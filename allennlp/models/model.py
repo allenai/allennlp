@@ -17,6 +17,7 @@ from allennlp.common.params import Params, remove_keys_from_params
 from allennlp.common.registrable import Registrable
 from allennlp.data import Instance, Vocabulary
 from allennlp.data.batch import Batch
+from allennlp.nn.module import Module
 from allennlp.nn import util
 from allennlp.nn.regularizers import RegularizerApplicator
 
@@ -27,7 +28,7 @@ logger = logging.getLogger(__name__)
 _DEFAULT_WEIGHTS = "best.th"
 
 
-class Model(torch.nn.Module, Registrable):
+class Model(Module, Registrable):
     """
     This abstract class represents a model to be trained. Rather than relying completely
     on the Pytorch Module, we modify the output spec of `forward` to be a dictionary.

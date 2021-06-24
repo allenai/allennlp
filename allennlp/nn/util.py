@@ -2243,9 +2243,36 @@ def _collect_state_dict(
     return current_state_dict, missing_keys, unexpected_keys
 
 
-class _LoadStateDictResult(NamedTuple):
+class _IncompatibleKeys(NamedTuple):
     missing_keys: List[str]
     unexpected_keys: List[str]
+
+    #  def __repr__(self):
+    #      if not self.missing_keys and not self.unexpected_keys:
+    #          return "<All keys matched successfully>"
+    #      return super().__repr__()
+
+
+def _check_incompatible_keys(
+    module, missing_keys: List[str], unexpected_keys: List[str], strict: bool
+):
+    error_msgs: List[str] = []
+    if missing_keys:
+        error_msgs.append(
+            "Missing key(s) in state_dict: {}".format(", ".join(f'"{k}"' for k in missing_keys))
+        )
+    if unexpected_keys:
+        error_msgs.append(
+            "Unexpected key(s) in state_dict: {}".format(
+                ", ".join(f'"{k}"' for k in unexpected_keys)
+            )
+        )
+    if error_msgs and strict:
+        raise RuntimeError(
+            "Error(s) in loading state_dict for {}:\n\t{}".format(
+                module.__class__.__name__, "\n\t".join(error_msgs)
+            )
+        )
 
 
 def load_state_dict_distributed(
@@ -2253,7 +2280,7 @@ def load_state_dict_distributed(
     state_dict: Optional[StateDictType],
     strict: bool = True,
     prefix: str = "",
-) -> _LoadStateDictResult:
+) -> _IncompatibleKeys:
     """
     Load a `state_dict` to the `module` within a distributed process. Only the global
     primary process requires the `state_dict` to not be `None`. All other processes
@@ -2268,9 +2295,8 @@ def load_state_dict_distributed(
 
     # Returns
 
-    `_LoadStateDictResult`
-        A `NamedTuple` with `missing_keys` and `unexpected_keys` fields, both of which
-        are lists of strings.
+    A `NamedTuple` with `missing_keys` and `unexpected_keys` fields, both of which
+    are lists of strings.
 
     # Raises
 
@@ -2360,23 +2386,6 @@ def load_state_dict_distributed(
             update_key_list(missing_keys, [f"{name}.{key}" for key in _missing_keys])
             update_key_list(unexpected_keys, [f"{name}.{key}" for key in _unexpected_keys])
 
-    if strict:
-        error_msgs: List[str] = []
-        if missing_keys:
-            error_msgs.append(
-                "Missing key(s) in state_dict: {}".format(", ".join(f'"{k}"' for k in missing_keys))
-            )
-        if unexpected_keys:
-            error_msgs.append(
-                "Unexpected key(s) in state_dict: {}".format(
-                    ", ".join(f'"{k}"' for k in unexpected_keys)
-                )
-            )
-        if error_msgs:
-            raise RuntimeError(
-                "Error(s) in loading state_dict for {}:\n\t{}".format(
-                    module.__class__.__name__, "\n\t".join(error_msgs)
-                )
-            )
+    _check_incompatible_keys(module, missing_keys, unexpected_keys, strict)
 
-    return _LoadStateDictResult(missing_keys, unexpected_keys)
+    return _IncompatibleKeys(missing_keys, unexpected_keys)
