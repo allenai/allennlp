@@ -18,3 +18,4 @@ from allennlp.data.fields.sequence_label_field import SequenceLabelField
 from allennlp.data.fields.span_field import SpanField
 from allennlp.data.fields.text_field import TextField
 from allennlp.data.fields.array_field import ArrayField
+from allennlp.data.fields.transformer_text_field import TransformerTextField
