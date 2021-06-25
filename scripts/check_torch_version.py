@@ -5,7 +5,21 @@ Ensures currently installed torch version is the newest allowed.
 from typing import Tuple, cast
 
 
-def get_current_installed_torch_version() -> Tuple[str, str, str]:
+def main():
+    current_torch_version = _get_current_installed_torch_version()
+    latest_torch_version = _get_latest_torch_version()
+    torch_version_upper_limit = _get_torch_version_upper_limit()
+
+    if current_torch_version < latest_torch_version < torch_version_upper_limit:
+        raise RuntimeError(
+            f"current torch version {current_torch_version} is behind "
+            f"latest allowed torch version {latest_torch_version}"
+        )
+
+    print("All good!")
+
+
+def _get_current_installed_torch_version() -> Tuple[str, str, str]:
     import torch
 
     version = tuple(torch.version.__version__.split("."))
@@ -13,7 +27,7 @@ def get_current_installed_torch_version() -> Tuple[str, str, str]:
     return cast(Tuple[str, str, str], version)
 
 
-def get_latest_torch_version() -> Tuple[str, str, str]:
+def _get_latest_torch_version() -> Tuple[str, str, str]:
     import requests
 
     r = requests.get("https://api.github.com/repos/pytorch/pytorch/tags")
@@ -30,7 +44,7 @@ def get_latest_torch_version() -> Tuple[str, str, str]:
     return cast(Tuple[str, str, str], version)
 
 
-def get_torch_version_upper_limit() -> Tuple[str, str, str]:
+def _get_torch_version_upper_limit() -> Tuple[str, str, str]:
     with open("setup.py") as f:
         for line in f:
             # The torch version line should look like:
@@ -42,18 +56,6 @@ def get_torch_version_upper_limit() -> Tuple[str, str, str]:
         else:
             raise RuntimeError("could not find torch version spec in setup.py")
     return cast(Tuple[str, str, str], version)
-
-
-def main():
-    current_torch_version = get_current_installed_torch_version()
-    latest_torch_version = get_latest_torch_version()
-    torch_version_upper_limit = get_torch_version_upper_limit()
-    if current_torch_version < latest_torch_version < torch_version_upper_limit:
-        raise RuntimeError(
-            f"current torch version {current_torch_version} is behind "
-            f"latest allowed torch version {latest_torch_version}"
-        )
-    print("All good!")
 
 
 if __name__ == "__main__":
