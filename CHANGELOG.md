@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The activation layer in the transformer toolkit now can be queried for its output dimension.
 - `TransformerEmbeddings` now takes, but ignores, a parameter for the attention mask. This is needed for compatibility with some other modules that get called the same way and use the mask.
 - `TransformerPooler` can now be instantiated from a pretrained transformer module, just like the other modules in the transformer toolkit.
+- `TransformerTextField`, for cases where you don't care about AllenNLP's advanced text handling capabilities.
 - Added `TransformerModule._post_load_pretrained_state_dict_hook()` method. Can be used to modify `missing_keys` and `unexpected_keys` after
   loading a pretrained state dictionary. This is useful when tying weights, for example.
 
