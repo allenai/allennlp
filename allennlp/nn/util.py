@@ -2247,10 +2247,10 @@ class _IncompatibleKeys(NamedTuple):
     missing_keys: List[str]
     unexpected_keys: List[str]
 
-    #  def __repr__(self):
-    #      if not self.missing_keys and not self.unexpected_keys:
-    #          return "<All keys matched successfully>"
-    #      return super().__repr__()
+    def __repr__(self):
+        if not self.missing_keys and not self.unexpected_keys:
+            return "<All keys matched successfully>"
+        return f"(missing_keys = {self.missing_keys}, unexpected_keys = {self.unexpected_keys})"
 
 
 def _check_incompatible_keys(
