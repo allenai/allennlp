@@ -137,7 +137,7 @@ class HuggingfaceDatasetReaderTest:
 
     # TODO pab-vmware skip these once MR is ready to check-in
     @pytest.mark.parametrize(
-        "dataset", (("swahili"), ("conll2003"), ("dbpedia_14"), ("trec"), ("emotion"))
+        "dataset", (("swahili"), ("dbpedia_14"), ("trec"), ("emotion"))
     )
     def test_read_known_supported_datasets_without_config(self, dataset):
         split = "train"
@@ -152,7 +152,71 @@ class HuggingfaceDatasetReaderTest:
         # Confirm all features were mapped
         assert len(instance.fields) == len(entry)
 
-    # def test_air_dialogue(self):
-    #     reader = HuggingfaceDatasetReader(dataset_name="amazon_us_reviews", config_name="Apparel_v1_00")
-    #     instances = list(reader.read("train"))
+
+    # def test_conll2003(self):
+    #     instances = list(HuggingfaceDatasetReader("conll2003").read("test"))
     #     print(instances[0])
+
+
+    @pytest.mark.skip("Requires implementation of Dict")
+    def test_squad(self):
+        instances = list(HuggingfaceDatasetReader("squad").read("train"))
+        print(instances[0])
+
+    @pytest.mark.parametrize("config", (("default"), ("ptb")))
+    def test_sst(self, config):
+        instances = list(HuggingfaceDatasetReader("sst", config).read("test"))
+        print(instances[0])
+
+    def test_open_web_text(self):
+        instances = list(HuggingfaceDatasetReader("openwebtext").read("plain_text"))
+        print(instances[0])
+
+    @pytest.mark.skip("Requires mapping of dict type")
+    def test_mocha(self):
+        instances = list(HuggingfaceDatasetReader("mocha").read("test"))
+        print(instances[0])
+
+    @pytest.mark.skip("Requires implementation of Dict")
+    def test_commonsense_qa(self):
+        instances = list(HuggingfaceDatasetReader("commonsense_qa").read("test"))
+        print(instances[0])
+
+    def test_piqa(self):
+        instances = list(HuggingfaceDatasetReader("piqa").read("test"))
+        print(instances[0])
+
+    def test_swag(self):
+        instances = list(HuggingfaceDatasetReader("swag").read("test"))
+        print(instances[0])
+
+    def test_snli(self):
+        instances = list(HuggingfaceDatasetReader("snli").read("test"))
+        print(instances[0])
+
+    def test_multi_nli(self):
+        instances = list(HuggingfaceDatasetReader("multi_nli").read("test"))
+        print(instances[0])
+
+    def test_super_glue(self):
+        instances = list(HuggingfaceDatasetReader("super_glue").read("test"))
+        print(instances[0])
+
+    @pytest.mark.parametrize("config", (("cola"), ("mnli"), ("ax"), ("mnli_matched"), ("mnli_mismatched"), ("mrpc"), ("qnli"),\
+                                        ("qqp"), ("rte"), ("sst2"), ("stsb"), ("wnli")))
+    def test_glue(self, config):
+        instances = list(HuggingfaceDatasetReader("glue", config).read("test"))
+        print(instances[0])
+
+    def test_drop(self):
+        instances = list(HuggingfaceDatasetReader("drop").read("test"))
+        print(instances[0])
+
+
+
+
+
+
+
+
+
