@@ -30,13 +30,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   which exposes [PyTorch's checkpoint functionality](https://pytorch.org/docs/stable/checkpoint.html).
   The other is `FairScaleCheckpointWrapper` which exposes the more flexible
   [checkpointing funtionality from FairScale](https://fairscale.readthedocs.io/en/latest/api/nn/checkpoint/checkpoint_activations.html).
-
-### Changed
-
-- The type of the `grad_norm` parameter of `GradientDescentTrainer` is now `Union[float, bool]`,
-  with a default value of `False`. `False` means gradients are not rescaled and the gradient
-  norm is never even calculated. `True` means the gradients are still not rescaled but the gradient
-  norm is calculated and passed on to callbacks. A `float` value means gradients are rescaled.
+- The `Model` base class now takes a `ddp_wrapper` parameter (an instance of `DdpWrapper`) which will be available as
+  `self.ddp_wrapper` during distributed training. This is useful when, for example, instantiating submodules in your
+  model's `__init__()` method by wrapping them with `self.ddp_wrapper.wrap_module()`. See the `allennlp.modules.transformer.t5`
+  for an example.
 
 ### Fixed
 
@@ -52,6 +49,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Changed behavior of `MultiOptimizer` so that while a default optimizer is still required, an error is not thrown if the default optimizer receives no parameters.
+- The type of the `grad_norm` parameter of `GradientDescentTrainer` is now `Union[float, bool]`,
+  with a default value of `False`. `False` means gradients are not rescaled and the gradient
+  norm is never even calculated. `True` means the gradients are still not rescaled but the gradient
+  norm is calculated and passed on to callbacks. A `float` value means gradients are rescaled.
 
 ### Removed
 
