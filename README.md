@@ -284,6 +284,7 @@ git clone https://github.com/allenai/allennlp.git
 Create a Python 3.7 or 3.8 virtual environment, and install AllenNLP in `editable` mode by running:
 
 ```bash
+pip install -U pip setuptools wheel
 pip install --editable .
 pip install -r dev-requirements.txt
 ```
