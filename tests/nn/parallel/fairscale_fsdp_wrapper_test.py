@@ -152,10 +152,6 @@ def _dist_load_and_train(
         else:
             assert value.device == torch.device(gpu_id)
         # Either way, tensors returned should be full precision.
-        # TODO (epwalsh): remove this skip once https://github.com/facebookresearch/fairscale/pull/705
-        # is fixed.
-        if mixed_precision and "buffer" in name:
-            continue
         assert value.dtype == torch.float, f"{name} is {value.dtype}"
 
     # Save state dict from each worker.
@@ -213,14 +209,11 @@ class TestFairScaleFsdpWrapper(AllenNlpTestCase):
             ]
         )
 
-        # TODO: Change back when FairScale issue is fixed.
-        #  assert set(original_state.keys()) == set(consolidated_state.keys())
         assert set(original_state.keys()) - set(consolidated_state.keys()) == {
-            "decoder.linear.weight"
+            "decoder.linear.weight"  # won't be in the state dict since param is tied to embedding.weight
         }
 
         for key, tensor0 in original_state.items():
-            # TODO: Remove this.
             if key not in consolidated_state:
                 continue
             # Need to give extra tolerance for buffers when `mixed_precision` is `True`.
@@ -233,15 +226,3 @@ class TestFairScaleFsdpWrapper(AllenNlpTestCase):
                 atol=tolerance,
                 rtol=tolerance,
             )
-
-        # Gather final state to make sure embeddings stayed tied.
-        #  final_consolidated_state = FairScaleFsdpWrappedModel.consolidate_sharded_state(
-        #      [
-        #          self.TEST_DIR / "final_state_worker0.pt",
-        #          self.TEST_DIR / "final_state_worker1.pt",
-        #      ]
-        #  )
-        #  assert_allclose(
-        #      final_consolidated_state["embedding.weight"],
-        #      final_consolidated_state["decoder.linear.weight"],
-        #  )

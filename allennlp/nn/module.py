@@ -27,7 +27,8 @@ class Module(torch.nn.Module):
         """
         Same as [`torch.nn.Module.load_state_dict()`]
         (https://pytorch.org/docs/master/generated/torch.nn.Module.html#torch.nn.Module.load_state_dict)
-        except we also run post loading hooks.
+        except we also run the [`_post_load_state_dict`](#_post_load_state_dict) method before returning,
+        which can be implemented by subclasses to customize the behavior.
         """
         missing_keys, unexpected_keys = super().load_state_dict(state_dict, strict=False)  # type: ignore[arg-type]
 
