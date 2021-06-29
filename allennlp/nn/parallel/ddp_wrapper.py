@@ -36,6 +36,10 @@ class LoadStateDictReturnType(NamedTuple):
 
 
 class DdpWrappedModel:
+    """
+    The type of the wrapped model returned from [`DdpWrapper.wrap_model`](#wrap_model).
+    """
+
     def __init__(
         self,
         model: torch.nn.Module,
@@ -103,14 +107,15 @@ class DdpWrapper(Registrable):
     def wrap_model(self, model: "Model") -> Tuple["Model", DdpWrappedModel]:
         """
         Wrap the AllenNLP `Model`, returning the original model (possibly on a different device)
-        and the wrapper.
+        and the [wrapper model](#ddpwrappedmodel).
         """
         raise NotImplementedError
 
     def wrap_module(self, module: torch.nn.Module) -> torch.nn.Module:
         """
         Wrap an individual module. By default this just returns the module,
-        but some subclass implementations such as `FairScaleFsdpWrapper` do more.
+        but some subclass implementations such as
+        :class:`allennlp.nn.parallel.fairscale_fsdp_wrapper.FairScaleFsdpWrapper` do more.
         """
         return module
 

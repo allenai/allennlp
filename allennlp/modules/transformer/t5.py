@@ -776,9 +776,6 @@ class T5(TransformerModule, Registrable):
         super().__init__()
         self._tie_word_embeddings = tie_word_embeddings
 
-        if ddp_wrapper is not None:
-            logger.info("Initializing T5 module with DdpWrapper %s", ddp_wrapper)
-
         self.model_dim = model_dim
         self.token_embeddings = token_embeddings or nn.Embedding(vocab_size, model_dim)
         if token_embeddings is None:

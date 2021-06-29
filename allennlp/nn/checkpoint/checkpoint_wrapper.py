@@ -34,7 +34,9 @@ class TorchCheckpointWrapper(CheckpointWrapper):
             Currently this `CheckpointWrapper` implementation requires that the wrapped
             module is called with positional arguments only.
 
-            We recommend you use the `FairScaleCheckpointWrapper` is you need more flexibility.
+            We recommend you use the
+            :class:`allennlp.nn.checkpoint.fairscale_checkpoint_wrapper.FairScaleCheckpointWrapper`
+            if you need more flexibility.
 
         """
         # Inspired by FairScale:

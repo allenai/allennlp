@@ -19,6 +19,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `TransformerTextField`, for cases where you don't care about AllenNLP's advanced text handling capabilities.
 - Added `TransformerModule._post_load_pretrained_state_dict_hook()` method. Can be used to modify `missing_keys` and `unexpected_keys` after
   loading a pretrained state dictionary. This is useful when tying weights, for example.
+- Added a module `allennlp.nn.parallel` with a new base class, `DdpWrapper`, which generalizes
+  PyTorch's `DistributedDataParallel` wrapper to support other implementations. Two implementations of
+  this class are provided. The default is `TorchDdpWrapper` (registered at "torch"), which is just a thin wrapper around
+  `DistributedDataParallel`. The other is `FairScaleFsdpWrapper`, which wraps FairScale's
+  [`FullyShardedDataParallel`](https://fairscale.readthedocs.io/en/latest/api/nn/fsdp.html).
+  You can specify the `DdpWrapper` in the "distributed" section of a configuration file under the key "ddp_wrapper".
+- Added a module `allennlp.nn.checkpoint` with a new base class, `CheckpointWrapper`, for implementations
+  of activation/gradient checkpointing. Two implentations are provided. The default implementation is `TorchCheckpointWrapper` (registered as "torch"),
+  which exposes [PyTorch's checkpoint functionality](https://pytorch.org/docs/stable/checkpoint.html).
+  The other is `FairScaleCheckpointWrapper` which exposes the more flexible
+  [checkpointing funtionality from FairScale](https://fairscale.readthedocs.io/en/latest/api/nn/checkpoint/checkpoint_activations.html).
 
 ### Changed
 
@@ -61,12 +72,6 @@ on a downstream task.
   when training models from the command line. This is also now part of the `Archive` named tuple that's returned from `load_archive()`.
 - Added `nn.util.distributed_device()` helper function.
 - Added `allennlp.nn.util.load_state_dict` helper function.
-- Added a module `allennlp.training.data_parallel` with a new base class, `DdpWrapper`, which generalizes
-  PyTorch's `DistributedDataParallel` wrapper to support other implementations. Two implementations of
-  this class are provided. The default is `TorchDdpWrapper`, which is just a thin wrapper around
-  `DistributedDataParallel`. The other is `FairScaleFsdpWrapper`, which wraps FairScale's
-  [`FullyShardedDataParallel`](https://fairscale.readthedocs.io/en/latest/api/nn/fsdp.html).
-  You can specify the `DdpWrapper` to use with the `ddp_wrapper` parameter to the `GradientDescentTrainer`.
 - Added a way to avoid downloading and loading pretrained weights in modules that wrap transformers
   such as the `PretrainedTransformerEmbedder` and `PretrainedTransformerMismatchedEmbedder`.
   You can do this by setting the parameter `load_weights` to `False`.

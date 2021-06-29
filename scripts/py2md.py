@@ -258,7 +258,7 @@ class AllenNlpDocstringProcessor(Struct):
                 if ty == "mod":
                     href = "/api/" + "/".join(path[1:])
                 else:
-                    href = "/api/" + "/".join(path[1:-1]) + "#" + path[-1].lower()
+                    href = "/api/" + "/".join(path[1:-1]) + "/#" + path[-1].lower()
                 cross_ref = f"[`{path[-1]}`]({href})"
             elif "." not in name:
                 cross_ref = f"[`{name}`](#{name.lower()})"

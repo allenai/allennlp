@@ -1,7 +1,7 @@
 import os
 from typing import Tuple, Union, Optional, TYPE_CHECKING, List, Any, Dict, Sequence
 
-from fairscale.nn import FullyShardedDataParallel as _FSDP
+from fairscale.nn import FullyShardedDataParallel as FS_FSDP
 from fairscale.nn.wrap import enable_wrap, wrap
 from fairscale.nn.misc import FlattenParamsWrapper
 from fairscale.optim.grad_scaler import GradScaler
@@ -22,7 +22,13 @@ if TYPE_CHECKING:
     from allennlp.models import Model
 
 
-class FSDP(_FSDP, ShardedModuleMixin):
+class _FSDP(FS_FSDP, ShardedModuleMixin):
+    """
+    Same as FairScale's [`FullyShardedDataParallel`]
+    (https://fairscale.readthedocs.io/en/latest/api/nn/fsdp.html) but also implements
+    the mixin methods from :class:`allennlp.nn.parallel.sharded_module_mixin.ShardedModuleMixin`.
+    """
+
     @overrides
     def get_original_module(self) -> torch.nn.Module:
         module = self.module
@@ -32,6 +38,10 @@ class FSDP(_FSDP, ShardedModuleMixin):
 
 
 class FairScaleFsdpWrappedModel(DdpWrappedModel):
+    """
+    The wrapped model type returned from [`FairScaleFsdpWrappedModel.wrap_model`](#wrap_model).
+    """
+
     @staticmethod
     @overrides
     def consolidate_sharded_state(
@@ -43,7 +53,7 @@ class FairScaleFsdpWrappedModel(DdpWrappedModel):
             shard_state = torch.load(path, map_location="cpu")
             shard_weights.append(shard_state["weights"])
             shard_metadata.append(shard_state["metadata"])
-        return FSDP.consolidate_shard_weights(shard_weights, shard_metadata)
+        return _FSDP.consolidate_shard_weights(shard_weights, shard_metadata)
 
     @overrides
     def load_state_dict(
@@ -69,8 +79,13 @@ class FairScaleFsdpWrappedModel(DdpWrappedModel):
 @DdpWrapper.register("fairscale_fsdp")
 class FairScaleFsdpWrapper(DdpWrapper):
     """
-    A `DdpWrapper` for FairScale's [`FullyShardedDataParallel`]
+    A :class:`allennlp.nn.parallel.ddp_wrapper.DdpWrapper` for FairScale's [`FullyShardedDataParallel`]
     (https://fairscale.readthedocs.io/en/latest/api/nn/fsdp.html).
+
+    To save memory while initializing a model, you should call [`.wrap_module()`](#wrap_module) on submodules
+    as they're created.
+
+    See the :class:`allennlp.modules.transformer.t5.T5` class for an example of how to use this.
     """
 
     def __init__(
@@ -95,17 +110,17 @@ class FairScaleFsdpWrapper(DdpWrapper):
 
     @overrides
     def wrap_model(self, model: "Model") -> Tuple["Model", DdpWrappedModel]:
-        wrapped_model = FSDP(
+        wrapped_model = _FSDP(
             model,
             **self._fsdp_kwargs,
         )
         if not self._fsdp_kwargs["mixed_precision"] and self.cuda_device != torch.device("cpu"):
             wrapped_model = wrapped_model.cuda()
-        # `FSDP._lazy_init()` may have been called already on submodules that were wrapped
+        # `_FSDP._lazy_init()` may have been called already on submodules that were wrapped
         # (through `wrap_module()`), leading those submodules to think they are root submodules.
-        # So we need to call `FSDP._reset_lazy_init()` on any of these now.
+        # So we need to call `_FSDP._reset_lazy_init()` on any of these now.
         for module in wrapped_model.modules():
-            if isinstance(module, FSDP):
+            if isinstance(module, _FSDP):
                 module._reset_lazy_init()
         return model, FairScaleFsdpWrappedModel(
             wrapped_model,
@@ -115,6 +130,6 @@ class FairScaleFsdpWrapper(DdpWrapper):
 
     @overrides
     def wrap_module(self, module: torch.nn.Module) -> torch.nn.Module:
-        with enable_wrap(wrapper_cls=FSDP, **self._fsdp_kwargs):
+        with enable_wrap(wrapper_cls=_FSDP, **self._fsdp_kwargs):
             wrapped_module = wrap(module)
         return wrapped_module
