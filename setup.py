@@ -50,8 +50,8 @@ setup(
         ]
     ),
     install_requires=[
-        "torch>=1.6.0,<1.9.0",
-        "torchvision>=0.8.1,<0.10.0",
+        "torch>=1.6.0,<1.10.0",
+        "torchvision>=0.8.1,<0.11.0",
         "jsonnet>=0.10.0 ; sys.platform != 'win32'",
         "overrides==3.1.0",
         "nltk",
@@ -65,7 +65,7 @@ setup(
         "scikit-learn",
         "scipy",
         "pytest",
-        "transformers>=4.1,<4.7",
+        "transformers>=4.1,<4.9",
         "sentencepiece",
         "dataclasses;python_version<'3.7'",
         "filelock>=3.0,<3.1",
@@ -75,7 +75,7 @@ setup(
         "checklist==0.0.11",
         "wandb>=0.10.0,<0.11.0",
         "huggingface_hub>=0.0.8",
-        "google-cloud-storage>=1.38.0,<1.39.0",
+        "google-cloud-storage>=1.38.0,<1.40.0",
     ],
     entry_points={"console_scripts": ["allennlp=allennlp.__main__:run"]},
     include_package_data=True,

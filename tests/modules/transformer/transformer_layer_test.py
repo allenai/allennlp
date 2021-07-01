@@ -17,6 +17,10 @@ from allennlp.modules.transformer import (
 )
 
 
+def teardown_module(function):
+    cached_transformers._clear_caches()
+
+
 ATTENTION_PARAMS_DICT = {
     "hidden_size": 6,
     "num_attention_heads": 2,

@@ -611,8 +611,10 @@ class TestHFHubDownload(AllenNlpTestCase):
         assert meta.resource == "hf://t5-small/config.json"
 
     def test_snapshot_download_no_user_or_org(self):
-        path = cached_path("hf://t5-small")
+        # This is the smallest snapshot I could find that is not associated with a user / org.
+        model_name = "distilbert-base-german-cased"
+        path = cached_path(f"hf://{model_name}")
         assert os.path.isdir(path)
         assert os.path.isfile(path + ".json")
         meta = _Meta.from_path(path + ".json")
-        assert meta.resource == "hf://t5-small"
+        assert meta.resource == f"hf://{model_name}"

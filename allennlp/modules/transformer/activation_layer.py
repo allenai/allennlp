@@ -24,6 +24,9 @@ class ActivationLayer(TransformerModule, FromParams):
             self.act_fn = activation
         self.pool = pool
 
+    def get_output_dim(self) -> int:
+        return self.dense.out_features
+
     def forward(self, hidden_states):
         if self.pool:
             hidden_states = hidden_states[:, 0]

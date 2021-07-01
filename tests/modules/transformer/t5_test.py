@@ -15,7 +15,9 @@ from allennlp.common.testing import requires_gpu
     ],
 )
 def test_create_t5_from_pretrained(pretrained_model_name: str):
-    T5.from_pretrained_module(pretrained_model_name)
+    model = T5.from_pretrained_module(pretrained_model_name)
+    # Make sure weights are tied.
+    assert id(model.token_embeddings.weight) == id(model.lm_head.weight)
 
 
 @pytest.fixture(scope="module")

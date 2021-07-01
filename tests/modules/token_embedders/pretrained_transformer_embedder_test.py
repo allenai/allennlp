@@ -2,7 +2,7 @@ import math
 import pytest
 import torch
 
-from allennlp.common import Params
+from allennlp.common import Params, cached_transformers
 from allennlp.common.testing import AllenNlpTestCase, requires_gpu
 from allennlp.data import Vocabulary
 from allennlp.data.batch import Batch
@@ -15,6 +15,10 @@ from allennlp.modules.token_embedders import PretrainedTransformerEmbedder
 
 
 class TestPretrainedTransformerEmbedder(AllenNlpTestCase):
+    @classmethod
+    def teardown_class(cls):
+        cached_transformers._clear_caches()
+
     @requires_gpu
     def test_forward_runs_when_initialized_from_params(self):
         # This code just passes things off to `transformers`, so we only have a very simple

@@ -7,10 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+
+- Added `on_backward` training callback which allows for control over backpropagation and gradient manipulation.
+- Added `AdversarialBiasMitigator`, a Model wrapper to adversarially mitigate biases in predictions produced by a pretrained model for a downstream task.
+- Added `which_loss` parameter to `ensure_model_can_train_save_and_load` in `ModelTestCase` to specify which loss to test.
+- Added `**kwargs` to `Predictor.from_path()`. These key-word argument will be passed on to the `Predictor`'s constructor.
+- The activation layer in the transformer toolkit now can be queried for its output dimension.
+- `TransformerEmbeddings` now takes, but ignores, a parameter for the attention mask. This is needed for compatibility with some other modules that get called the same way and use the mask.
+- `TransformerPooler` can now be instantiated from a pretrained transformer module, just like the other modules in the transformer toolkit.
+- `TransformerTextField`, for cases where you don't care about AllenNLP's advanced text handling capabilities.
+- Added `TransformerModule._post_load_pretrained_state_dict_hook()` method. Can be used to modify `missing_keys` and `unexpected_keys` after
+  loading a pretrained state dictionary. This is useful when tying weights, for example.
+
 ### Fixed
 
 - Fixed Broken link in `allennlp.fairness.fairness_metrics.Separation` docs
 - Ensured all `allennlp` submodules are imported with `allennlp.common.plugins.import_plugins()`.
+- Fixed `IndexOutOfBoundsException` in `MultiOptimizer` when checking if optimizer received any parameters.
+- Removed confusing zero mask from VilBERT.
+- Ensured `ensure_model_can_train_save_and_load` is consistently random.
+- Fixed weight tying logic in `T5` transformer module. Previously input/output embeddings were always tied. Now this is optional,
+  and the default behavior is taken from the `config.tie_word_embeddings` value when instantiating `from_pretrained_module()`.
+
+### Changed
+
+- Changed behavior of `MultiOptimizer` so that while a default optimizer is still required, an error is not thrown if the default optimizer receives no parameters.
+
+### Removed
+
+- Removed `TransformerModule._tied_weights`. Weights should now just be tied directly in the `__init__()` method.
+  You can also override `TransformerModule._post_load_pretrained_state_dict_hook()` to remove keys associated with tied weights from `missing_keys`
+  after loading a pretrained state dictionary.
 
 
 ## [v2.5.0](https://github.com/allenai/allennlp/releases/tag/v2.5.0) - 2021-06-03

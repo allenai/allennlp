@@ -16,6 +16,17 @@ on:
   schedule:
   - cron: '37 11 * * 1,2,3,4,5'  # early morning (11:37 UTC / 4:37 AM PDT) Monday - Friday
 
+env:
+  # NOTE: Need to update `TORCH_VERSION` and `TORCH_VISION_VERSION` for new torch releases.
+  TORCH_VERSION: 1.9.0
+  TORCH_VISION_VERSION: 0.10.0
+  # Change this to invalidate existing cache.
+  CACHE_PREFIX: v0
+  # Disable tokenizers parallelism because this doesn't help, and can cause issues in distributed tests.
+  TOKENIZERS_PARALLELISM: 'false'
+  # Disable multithreading with OMP because this can lead to dead-locks in distributed tests.
+  OMP_NUM_THREADS: '1'
+
 jobs:
   changelog:
     name: CHANGELOG
@@ -25,174 +36,270 @@ jobs:
     steps:
     - uses: actions/checkout@v1
 
+    - name: Check if source files have changed
+      run: |
+        git diff --name-only $(git merge-base origin/main HEAD) | grep '^allennlp/.*\.py$' && echo "source_files_changed=true" >> $GITHUB_ENV || echo "source_files_changed=false" >> $GITHUB_ENV
+
     - name: Check that CHANGELOG has been updated
+      if: env.source_files_changed == 'true'
       run: |
         # If this step fails, this means you haven't updated the CHANGELOG.md
         # file with notes on your contribution.
         git diff --name-only $(git merge-base origin/main HEAD) | grep '^CHANGELOG.md$' && echo "Thanks for helping keep our CHANGELOG up-to-date!"
 
-  gpu_checks:
-    name: GPU Checks
-    if: github.repository == 'allenai/allennlp'  # self-hosted runner only available on main repo
-    timeout-minutes: 15
-    runs-on: [self-hosted, GPU]
-
-    steps:
-    - uses: actions/checkout@v2
-
-    - name: Set Docker tag
-      run: |
-        if [[ $GITHUB_EVENT_NAME == 'release' ]]; then
-            echo "DOCKER_TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV;
-        else
-            echo "DOCKER_TAG=$GITHUB_SHA" >> $GITHUB_ENV;
-        fi
-
-    - name: Build test image
-      run: |
-        make docker-test-image DOCKER_TAG=$DOCKER_TAG
-
-    - name: Run GPU tests
-      run: |
-        make docker-test-run DOCKER_TAG=$DOCKER_TAG ARGS='gpu-test'
-
-  check_core:
-    name: Check Core
+  style:
+    name: Style
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python: ['3.7', '3.8']
 
     steps:
     - uses: actions/checkout@v2
 
     - name: Setup Python
-      uses: actions/setup-python@v1
+      uses: actions/setup-python@v2
       with:
-        python-version: ${{ matrix.python }}
-
-    - uses: actions/cache@v2
-      with:
-        path: ${{ env.pythonLocation }}
-        key: ${{ runner.os }}-pydeps-${{ env.pythonLocation }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
+        python-version: 3.8
 
     - name: Install requirements
       run: |
-        make install
+        grep -E '^black' dev-requirements.txt | xargs pip install
 
     - name: Debug info
       run: |
         pip freeze
 
-    - name: Format
-      if: '! cancelled()'
+    - name: Run black
       run: |
-        make format
+        black --check .
 
-    - name: Lint
-      if: '! cancelled()'
-      run: |
-        make lint
+  checks:
+    name: ${{ matrix.task.name }}
+    runs-on: ${{ matrix.task.runs_on }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        task:
+        - name: Lint
+          runs_on: ubuntu-latest
+          coverage_report: false
+          torch_platform: cpu
+          run: |
+            make flake8
+            make typecheck
 
-    - name: Type check
-      if: '! cancelled()'
-      run: |
-        make typecheck
+        - name: CPU Tests
+          runs_on: ubuntu-latest
+          coverage_report: true
+          torch_platform: cpu
+          run: make test
 
-    - name: Run tests
-      if: '! cancelled()'
-      run: |
-        make test-with-cov
+        - name: GPU Tests
+          runs_on: [self-hosted, GPU]
+          coverage_report: true
+          torch_platform: cu111  # Our self-hosted GPU runners currently support CUDA 11.*
+          run: make gpu-tests
 
-    - name: Upload coverage to Codecov
-      if: matrix.python == '3.7' && github.repository == 'allenai/allennlp' && (github.event_name == 'push' || github.event_name == 'pull_request')
-      uses: codecov/codecov-action@v1
+        - name: Model Tests
+          runs_on: ubuntu-latest
+          coverage_report: true
+          torch_platform: cpu
+          run: |
+            cd allennlp-models
+            make test-with-cov COV=allennlp
+            mv coverage.xml ../
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Setup Python
+      uses: actions/setup-python@v2
+      env:
+        # Log useful debugging information.
+        ACTIONS_STEP_DEBUG: 'true'
       with:
-        file: ./coverage.xml
-        # Ignore codecov failures as the codecov server is not
-        # very reliable but we don't want to report a failure
-        # in the github UI just because the coverage report failed to
-        # be published.
-        fail_ci_if_error: false
+        python-version: 3.8
+
+    - name: Install prerequisites
+      run: |
+        pip install --upgrade pip setuptools wheel virtualenv
+
+    - name: Set build variables
+      shell: bash
+      run: |
+        # Get the exact Python version to use in the cache key.
+        echo "PYTHON_VERSION=$(python --version)" >> $GITHUB_ENV
+        echo "RUNNER_ARCH=$(uname -m)" >> $GITHUB_ENV
+        # Use week number in cache key so we can refresh the cache weekly.
+        echo "WEEK_NUMBER=$(date +%V)" >> $GITHUB_ENV
+
+    - uses: actions/cache@v2
+      id: virtualenv-cache
+      with:
+        path: .venv
+        key: ${{ env.CACHE_PREFIX }}-${{ env.WEEK_NUMBER }}-${{ runner.os }}-${{ env.RUNNER_ARCH }}-${{ env.PYTHON_VERSION }}-${{ matrix.task.torch_platform }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
+        restore-keys: |
+          ${{ env.CACHE_PREFIX }}-${{ env.WEEK_NUMBER }}-${{ runner.os }}-${{ env.RUNNER_ARCH }}-${{ env.PYTHON_VERSION }}-${{ matrix.task.torch_platform }}-
+
+    - name: Setup virtual environment (no cache hit)
+      if: steps.virtualenv-cache.outputs.cache-hit != 'true'
+      run: |
+        test -d .venv || virtualenv -p $(which python) --copies --reset-app-data .venv
+        . .venv/bin/activate
+        make install TORCH_VERSION="torch==${TORCH_VERSION}+${{ matrix.task.torch_platform }} torchvision==${TORCH_VISION_VERSION}+${{ matrix.task.torch_platform }} -f https://download.pytorch.org/whl/torch_stable.html"
+
+    - name: Setup virtual environment (cache hit)
+      if: steps.virtualenv-cache.outputs.cache-hit == 'true'
+      run: |
+        . .venv/bin/activate
+        pip install --no-deps -e .
+        make download-extras
+
+    - name: Pull and install models repo
+      if: matrix.task.name == 'Model Tests'
+      env:
+        ALLENNLP_VERSION_OVERRIDE: ""  # Don't replace the core library.
+      run: |
+        . .venv/bin/activate
+        git clone https://github.com/allenai/allennlp-models.git
+        cd allennlp-models
+        pip install --upgrade --upgrade-strategy eager -e . -r dev-requirements.txt
+
+    - name: Debug info
+      run: |
+        . .venv/bin/activate
+        which python
+        pip freeze
+
+    - name: Ensure torch up-to-date
+      run: |
+        . .venv/bin/activate
+        python scripts/check_torch_version.py
+
+    - name: ${{ matrix.task.name }}
+      run: |
+        . .venv/bin/activate
+        ${{ matrix.task.run }}
+
+    - name: Prepare coverage report
+      if: matrix.task.coverage_report
+      run: |
+        mkdir coverage
+        mv coverage.xml coverage/
+
+    - name: Save coverage report
+      if: matrix.task.coverage_report
+      uses: actions/upload-artifact@v1
+      with:
+        name: ${{ matrix.task.name }}-coverage
+        path: ./coverage
 
     - name: Clean up
       if: always()
       run: |
         # Could run into issues with the cache if we don't uninstall the editable.
         # See https://github.com/pypa/pip/issues/4537.
-        pip uninstall --yes allennlp
+        . .venv/bin/activate
+        pip uninstall --yes allennlp allennlp-models
 
-  check_models:
-    name: Check Models
+  upload_coverage:
+    name: Upload Coverage Report
+    timeout-minutes: 5
+    if: github.repository == 'allenai/allennlp' && (github.event_name == 'push' || github.event_name == 'pull_request')
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python: ['3.7', '3.8']
+    needs: [checks]
 
     steps:
+      # Need to checkout code to get the coverage config.
     - uses: actions/checkout@v2
 
-    - name: Setup Python
-      uses: actions/setup-python@v1
+    - name: Download coverage report from CPU tests
+      uses: actions/download-artifact@v1
       with:
-        python-version: ${{ matrix.python }}
+        name: CPU Tests-coverage
+        path: coverage/cpu_tests
 
-    - uses: actions/cache@v2
+    - name: Download coverage report from GPU Tests
+      uses: actions/download-artifact@v1
       with:
-        path: ${{ env.pythonLocation }}
-        key: ${{ runner.os }}-pydeps-${{ env.pythonLocation }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
+        name: GPU Tests-coverage
+        path: coverage/gpu_tests
 
-    - name: Install requirements
-      run: |
-        make install
+    - name: Download coverage report from model tests
+      uses: actions/download-artifact@v1
+      with:
+        name: Model Tests-coverage
+        path: coverage/model_tests
 
-    - name: Debug info
-      run: |
-        pip freeze
-
-    - name: Pull and install models repo
-      env:
-        ALLENNLP_VERSION_OVERRIDE: ""  # Don't replace the core library.
-      run: |
-        git clone https://github.com/allenai/allennlp-models.git
-        cd allennlp-models
-        pip install --upgrade --upgrade-strategy eager -e . -r dev-requirements.txt
-
-    - name: Run models tests
-      run: |
-        cd allennlp-models && make test
-
-    - name: Clean up
-      if: always()
-      run: |
-        pip uninstall --yes allennlp allennlp-models
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v1
+      with:
+        files: coverage/cpu_tests/coverage.xml,coverage/gpu_tests/coverage.xml,coverage/model_tests/coverage.xml
+        # Ignore codecov failures as the codecov server is not
+        # very reliable but we don't want to report a failure
+        # in the github UI just because the coverage report failed to
+        # be published.
+        fail_ci_if_error: false
 
   # Builds package distribution files for PyPI.
   build_package:
     name: Build Package
+    timeout-minutes: 18
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v2
 
     - name: Setup Python
-      uses: actions/setup-python@v1
+      uses: actions/setup-python@v2
+      env:
+        # Log useful debugging information.
+        ACTIONS_STEP_DEBUG: 'true'
       with:
-        python-version: 3.7
+        python-version: 3.8
+
+    - name: Install prerequisites
+      run: |
+        pip install --upgrade pip setuptools wheel virtualenv
+
+    - name: Set build variables
+      shell: bash
+      run: |
+        echo "PYTHON_VERSION=$(python --version)" >> $GITHUB_ENV
+        echo "RUNNER_ARCH=$(uname -m)" >> $GITHUB_ENV
+        echo "WEEK_NUMBER=$(date +%V)" >> $GITHUB_ENV
 
     - uses: actions/cache@v2
+      id: virtualenv-cache
       with:
-        path: ${{ env.pythonLocation }}
-        key: ${{ runner.os }}-pydeps-${{ env.pythonLocation }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
+        path: .venv
+        key: ${{ env.CACHE_PREFIX }}-${{ env.WEEK_NUMBER }}-${{ runner.os }}-${{ env.RUNNER_ARCH }}-${{ env.PYTHON_VERSION }}-cpu-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
+        restore-keys: |
+          ${{ env.CACHE_PREFIX }}-${{ env.WEEK_NUMBER }}-${{ runner.os }}-${{ env.RUNNER_ARCH }}-${{ env.PYTHON_VERSION }}-cpu-
 
-    - name: Install requirements
+    - name: Setup virtual environment (no cache hit)
+      if: steps.virtualenv-cache.outputs.cache-hit != 'true'
       run: |
-        make install
+        test -d .venv || virtualenv -p $(which python) --copies --reset-app-data .venv
+        . .venv/bin/activate
+        make install TORCH_VERSION="torch==${TORCH_VERSION}+cpu torchvision==${TORCH_VISION_VERSION}+cpu -f https://download.pytorch.org/whl/torch_stable.html"
+
+    - name: Setup virtual environment (cache hit)
+      if: steps.virtualenv-cache.outputs.cache-hit == 'true'
+      run: |
+        . .venv/bin/activate
+        pip install --no-deps -e .
+        make download-extras
+
+    - name: Debug info
+      run: |
+        . .venv/bin/activate
+        which python
+        pip freeze
 
     - name: Check and set nightly version
       if: github.event_name == 'schedule'
       run: |
         # Verify that current version is ahead of the last release.
+        . .venv/bin/activate
         LATEST=$(scripts/get_version.py latest)
         CURRENT=$(scripts/get_version.py current)
         if [ "$CURRENT" == "$LATEST" ]; then
@@ -208,6 +315,7 @@ jobs:
       if: github.event_name == 'release'
       run: |
         # Remove 'refs/tags/' to get the actual tag from the release.
+        . .venv/bin/activate
         TAG=${GITHUB_REF#refs/tags/};
         VERSION=$(scripts/get_version.py current)
         if [ "$TAG" != "$VERSION" ]; then
@@ -217,8 +325,8 @@ jobs:
 
     - name: Build core package
       run: |
-        echo "Building packages for core release"
         # Just print out the version for debugging.
+        . .venv/bin/activate
         make version
         python setup.py bdist_wheel sdist
 
@@ -231,11 +339,13 @@ jobs:
     - name: Clean up
       if: always()
       run: |
+        . .venv/bin/activate
         pip uninstall --yes allennlp
 
   # Tests installing from the distribution files.
   test_package:
     name: Test Package
+    timeout-minutes: 10
     needs: [build_package]  # needs the package artifact created from 'build_package' job.
     runs-on: ubuntu-latest
     strategy:
@@ -273,9 +383,10 @@ jobs:
   # Builds Docker image from the core distribution files and uploads to Docker Hub.
   docker:
     name: Docker (CUDA ${{ matrix.cuda }})
+    timeout-minutes: 18
     if: github.repository == 'allenai/allennlp'
     # Run on self-hosted to utilize layer caching.
-    runs-on: [self-hosted]
+    runs-on: [self-hosted, Docker-enabled]
     strategy:
       matrix:
         cuda: ['10.1', '10.2', '11.1']
@@ -289,11 +400,13 @@ jobs:
       run: |
         # Check the install instructions on https://pytorch.org/ to keep these up-to-date.
         if [[ $CUDA == '10.1' ]]; then
+            # NOTE: We need to use an older version of torch to support CUDA 10.1
             echo "DOCKER_TORCH_VERSION='torch==1.8.0+cu101 torchvision==0.9.0+cu101 -f https://download.pytorch.org/whl/torch_stable.html'" >> $GITHUB_ENV;
         elif [[ $CUDA == '10.2' ]]; then
-            echo "DOCKER_TORCH_VERSION='torch==1.8.0'" >> $GITHUB_ENV;
+            # NOTE: 10.2 is still the default but that could change in the next release.
+            echo "DOCKER_TORCH_VERSION='torch==${{ env.TORCH_VERSION }} torchvision==${{ env.TORCH_VISION_VERSION }}'" >> $GITHUB_ENV;
         elif [[ $CUDA == '11.1' ]]; then
-            echo "DOCKER_TORCH_VERSION='torch==1.8.0+cu111 torchvision==0.9.0+cu111 -f https://download.pytorch.org/whl/torch_stable.html'" >> $GITHUB_ENV;
+            echo "DOCKER_TORCH_VERSION='torch==${{ env.TORCH_VERSION }}+cu111 torchvision==${{ env.TORCH_VISION_VERSION }}+cu111 -f https://download.pytorch.org/whl/torch_stable.html'" >> $GITHUB_ENV;
         else
             echo "Unhandled CUDA version $CUDA";
             exit 1;
@@ -345,10 +458,10 @@ jobs:
   # allennlp-docs repo.
   docs:
     name: Docs
+    timeout-minutes: 15
     # Don't run for forks.
     if: github.repository == 'allenai/allennlp'
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v1
 
@@ -359,21 +472,50 @@ jobs:
         ssh-private-key: ${{ secrets.DOCS_DEPLOY_KEY }}
 
     - name: Setup Python
-      uses: actions/setup-python@v1
+      uses: actions/setup-python@v2
+      env:
+        # Log useful debugging information.
+        ACTIONS_STEP_DEBUG: 'true'
       with:
-        python-version: 3.7
+        python-version: 3.8
+
+    - name: Install prerequisites
+      run: |
+        pip install --upgrade pip setuptools wheel virtualenv
+
+    - name: Set build variables
+      shell: bash
+      run: |
+        echo "PYTHON_VERSION=$(python --version)" >> $GITHUB_ENV
+        echo "RUNNER_ARCH=$(uname -m)" >> $GITHUB_ENV
+        echo "WEEK_NUMBER=$(date +%V)" >> $GITHUB_ENV
 
     - uses: actions/cache@v2
+      id: virtualenv-cache
       with:
-        path: ${{ env.pythonLocation }}
-        key: ${{ runner.os }}-pydeps-${{ env.pythonLocation }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
+        path: .venv
+        key: ${{ env.CACHE_PREFIX }}-${{ env.WEEK_NUMBER }}-${{ runner.os }}-${{ env.RUNNER_ARCH }}-${{ env.PYTHON_VERSION }}-cpu-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
+        restore-keys: |
+          ${{ env.CACHE_PREFIX }}-${{ env.WEEK_NUMBER }}-${{ runner.os }}-${{ env.RUNNER_ARCH }}-${{ env.PYTHON_VERSION }}-cpu-
 
-    - name: Install requirements
+    - name: Setup virtual environment (no cache hit)
+      if: steps.virtualenv-cache.outputs.cache-hit != 'true'
       run: |
-        make install
+        test -d .venv || virtualenv -p $(which python) --copies --reset-app-data .venv
+        . .venv/bin/activate
+        make install TORCH_VERSION="torch==${TORCH_VERSION}+cpu torchvision==${TORCH_VISION_VERSION}+cpu -f https://download.pytorch.org/whl/torch_stable.html"
+
+    - name: Setup virtual environment (cache hit)
+      if: steps.virtualenv-cache.outputs.cache-hit == 'true'
+      run: |
+        . .venv/bin/activate
+        pip install --no-deps -e .
+        make download-extras
 
     - name: Debug info
       run: |
+        . .venv/bin/activate
+        which python
         pip freeze
 
     - name: Prepare environment
@@ -388,6 +530,7 @@ jobs:
 
     - name: Build docs
       run: |
+        . .venv/bin/activate
         ./scripts/build_docs.sh
 
     - name: Print the ref
@@ -419,6 +562,7 @@ jobs:
       run: |
         # Fail immediately if any step fails.
         set -e
+        . .venv/bin/activate
 
         LATEST=$(./scripts/get_version.py latest)
         STABLE=$(./scripts/get_version.py stable)
@@ -476,12 +620,14 @@ jobs:
     - name: Clean up
       if: always()
       run: |
+        . .venv/bin/activate
         pip uninstall --yes allennlp
 
   # Publish the core distribution files to PyPI.
   publish:
     name: PyPI
-    needs: [check_core, check_models, gpu_checks, build_package, test_package, docker, docs]
+    timeout-minutes: 10
+    needs: [style, checks, build_package, test_package, docker, docs]
     # Only publish to PyPI on releases and nightly builds to "allenai/allennlp" (not forks).
     if: github.repository == 'allenai/allennlp' && (github.event_name == 'release' || github.event_name == 'schedule')
     runs-on: ubuntu-latest
