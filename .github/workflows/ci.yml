@@ -170,6 +170,11 @@ jobs:
         which python
         pip freeze
 
+    - name: Ensure torch up-to-date
+      run: |
+        . .venv/bin/activate
+        python scripts/check_torch_version.py
+
     - name: ${{ matrix.task.name }}
       run: |
         . .venv/bin/activate
