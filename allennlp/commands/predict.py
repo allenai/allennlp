@@ -13,7 +13,7 @@ from overrides import overrides
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common import logging as common_logging
 from allennlp.common.checks import check_for_gpu, ConfigurationError
-from allennlp.common.file_utils import cached_path
+from allennlp.common.file_utils import cached_path, open_compressed
 from allennlp.common.util import lazy_groups_of
 from allennlp.data.dataset_readers import MultiTaskDatasetReader
 from allennlp.models.archival import load_archive
@@ -71,6 +71,14 @@ class Predict(Subcommand):
             default="validation",
             help="Indicates which model dataset reader to use if the --use-dataset-reader "
             "flag is set.",
+        )
+
+        subparser.add_argument(
+            "--compression-type",
+            type=str,
+            choices=["gz", "bz2", "lzma"],
+            default=None,
+            help="Indicates the compressed format of the input file.",
         )
 
         subparser.add_argument(
@@ -152,6 +160,7 @@ class _PredictManager:
         batch_size: int,
         print_to_console: bool,
         has_dataset_reader: bool,
+        compression_type: str = None,
         multitask_head: Optional[str] = None,
     ) -> None:
         self._predictor = predictor
@@ -160,7 +169,7 @@ class _PredictManager:
         self._batch_size = batch_size
         self._print_to_console = print_to_console
         self._dataset_reader = None if not has_dataset_reader else predictor._dataset_reader
-
+        self.compression_type = compression_type
         self._multitask_head = multitask_head
         if self._multitask_head is not None:
             if self._dataset_reader is None:
@@ -212,10 +221,21 @@ class _PredictManager:
                     yield self._predictor.load_line(line)
         else:
             input_file = cached_path(self._input_file)
-            with open(input_file, "r") as file_input:
-                for line in file_input:
-                    if not line.isspace():
-                        yield self._predictor.load_line(line)
+            try:
+                with open_compressed(input_file) as file_input:
+                    for line in file_input:
+                        if not line.isspace():
+                            yield self._predictor.load_line(line)
+            except OSError:
+                if self.compression_type:
+                    with open_compressed(input_file, self.compression_type) as file_input:
+                        for line in file_input:
+                            if not line.isspace():
+                                yield self._predictor.load_line(line)
+                else:
+                    print(
+                        "Automatic detection of compression type failed, please specify the compression type argument"
+                    )
 
     def _get_instance_data(self) -> Iterator[Instance]:
         if self._input_file == "-":

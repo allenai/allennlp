@@ -1085,20 +1085,26 @@ def get_file_extension(path: str, dot=True, lower: bool = True):
 
 
 def open_compressed(
-    filename: Union[str, PathLike], mode: str = "rt", encoding: Optional[str] = "UTF-8", **kwargs
+    filename: Union[str, PathLike],
+    compression_type: str = None,
+    mode: str = "rt",
+    encoding: Optional[str] = "UTF-8",
+    **kwargs,
 ):
     if not isinstance(filename, str):
         filename = str(filename)
     open_fn: Callable = open
 
-    if filename.endswith(".gz"):
-        import gzip
+    compression_modules = {"gz": "gzip", "bz2": "bz2", "lzma": "lzma"}
+    if not compression_type:
+        for extension in compression_modules:
+            if filename.endswith(extension):
+                module = __import__(compression_modules[extension])
+                open_fn = module.open
+    else:
+        module = __import__(compression_modules[extension])
+        open_fn = module.open
 
-        open_fn = gzip.open
-    elif filename.endswith(".bz2"):
-        import bz2
-
-        open_fn = bz2.open
     return open_fn(cached_path(filename), mode=mode, encoding=encoding, **kwargs)
 
 
