@@ -1101,6 +1101,7 @@ def open_compressed(
             if filename.endswith(extension):
                 module = __import__(compression_modules[extension])
                 open_fn = module.open
+                break 
     else:
         module = __import__(compression_modules[extension])
         open_fn = module.open
