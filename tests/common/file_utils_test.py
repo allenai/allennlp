@@ -347,7 +347,7 @@ class TestFileUtils(AllenNlpTestCase):
         with open_compressed(uncompressed_file) as f:
             uncompressed_lines = [line.strip() for line in f]
 
-        for suffix in ["bz2", "gz"]:
+        for suffix in ["bz2", "gz", "lzma"]:
             compressed_file = f"{uncompressed_file}.{suffix}"
             with open_compressed(compressed_file) as f:
                 compressed_lines = [line.strip() for line in f]
