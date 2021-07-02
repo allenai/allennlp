@@ -555,17 +555,23 @@ class GradientDescentTrainer(Trainer):
         if self._distributed:
             dist.barrier()
 
-        metrics = training_util.get_metrics(
-            self.model,
-            train_loss,
-            train_reg_loss,
-            batch_loss=None,
-            batch_reg_loss=None,
-            num_batches=self._batches_in_epoch_completed,
-            reset=True,
-            world_size=self._world_size,
-            cuda_device=self.cuda_device,
-        )
+        if self._epochs_completed < self._start_after_epochs_completed or (
+            self._epochs_completed == self._start_after_epochs_completed
+            and self._batches_in_epoch_completed - 1 < self._start_after_batches_in_epoch_completed
+        ):
+            metrics = {}
+        else:
+            metrics = training_util.get_metrics(
+                self.model,
+                train_loss,
+                train_reg_loss,
+                batch_loss=None,
+                batch_reg_loss=None,
+                num_batches=self._batches_in_epoch_completed,
+                reset=True,
+                world_size=self._world_size,
+                cuda_device=self.cuda_device,
+            )
 
         for (worker, memory) in cpu_memory_usage:
             metrics["worker_" + str(worker) + "_memory_MB"] = memory / (1024 * 1024)
