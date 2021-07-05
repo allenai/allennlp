@@ -30,9 +30,9 @@ class IntegratedGradient(SaliencyInterpreter):
             # Normalize results
             for key, grad in grads.items():
                 # The [0] here is undo-ing the batching that happens in get_gradients.
-                embedding_grad = numpy.sum(grad[0], axis=1)
-                norm = numpy.linalg.norm(embedding_grad, ord=1)
-                normalized_grad = [math.fabs(e) / norm for e in embedding_grad]
+                embedding_grad = numpy.sum(grad[0], axis=-1)
+                norm = numpy.linalg.norm(embedding_grad, ord=1, keepdims=True)
+                normalized_grad = embedding_grad / norm
                 grads[key] = normalized_grad
 
             instances_with_grads["instance_" + str(idx + 1)] = grads
