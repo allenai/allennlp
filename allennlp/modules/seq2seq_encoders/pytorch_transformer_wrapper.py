@@ -38,10 +38,12 @@ class PytorchTransformer(Seq2SeqEncoder):
         Without positional encoding, the self attention layers have no idea of absolute or relative
         position (as they are just computing pairwise similarity between vectors of elements),
         which can be important features for many tasks.
+    positional_embedding_size : `int`, optional, (default = `512`)
+        The number of positional embeddings.
     dropout_prob : `float`, optional, (default = `0.1`)
         The dropout probability for the feedforward network.
     activation : `str`, (default = `"relu"`)
-        The activation function of intermediate layers, must be either `"relu"` or `"gelu"`.
+        The activation function of intermediate layers. Must be either `"relu"` or `"gelu"`.
     """  # noqa
 
     def __init__(
