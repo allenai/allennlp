@@ -1,3 +1,4 @@
+import pytest
 import torch
 from torch.testing import assert_allclose
 from overrides import overrides
@@ -7,7 +8,7 @@ from transformers.models.albert.modeling_albert import AlbertEmbeddings
 from allennlp.common import cached_transformers
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.modules.token_embedders import Embedding, TokenEmbedder
-from allennlp.modules.transformer import TransformerStack, TransformerEmbeddings
+from allennlp.modules.transformer import TransformerStack, TransformerEmbeddings, TransformerPooler
 from allennlp.common.testing import AllenNlpTestCase
 
 
@@ -168,3 +169,27 @@ class TestTransformerToolkit(AllenNlpTestCase):
         almost = AlmostRegularTransformer()
         assert len(almost.transformer.layers) == 12
         assert isinstance(almost.embeddings, AlbertEmbeddings)
+
+    @pytest.mark.parametrize("model_name", ["bert-base-cased", "roberta-base", "albert-base-v2"])
+    def test_end_to_end(self, model_name: str):
+        data = [
+            ("I'm against picketing", "but I don't know how to show it."),
+            ("I saw a human pyramid once.", "It was very unnecessary."),
+        ]
+        tokenizer = cached_transformers.get_tokenizer(model_name)
+        batch = tokenizer.batch_encode_plus(data, padding=True, return_tensors="pt")
+
+        with torch.no_grad():
+            huggingface_model = cached_transformers.get(model_name, make_copy=False).eval()
+            huggingface_output = huggingface_model(**batch)
+
+            embeddings = TransformerEmbeddings.from_pretrained_module(model_name).eval()
+            transformer_stack = TransformerStack.from_pretrained_module(model_name).eval()
+            pooler = TransformerPooler.from_pretrained_module(model_name).eval()
+            output = embeddings(**batch)
+            output = transformer_stack(output, batch["attention_mask"])
+
+            assert_allclose(output.final_hidden_states, huggingface_output.last_hidden_state)
+
+            output = pooler(output.final_hidden_states)
+            assert_allclose(output, huggingface_output.pooler_output)
