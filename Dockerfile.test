@@ -35,7 +35,7 @@ COPY setup.py .
 COPY dev-requirements.txt .
 RUN touch allennlp/__init__.py \
     && touch README.md \
-    && pip install --no-cache-dir -e .[all] -r dev-requirements.txt
+    && pip install --no-cache-dir -e . -r dev-requirements.txt
 
 # Now add the full package source and re-install just the package.
 COPY . .

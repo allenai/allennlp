@@ -177,25 +177,6 @@ AllenNLP requires Python 3.6.1 or later and [PyTorch](https://pytorch.org/).
 It's recommended that you install the PyTorch ecosystem **before** installing AllenNLP by following the instructions on [pytorch.org](https://pytorch.org/).
 
 The preferred way to install AllenNLP is via `pip`. Just run `pip install allennlp`.
-This will install the base version of AllenNLP without any extras. To install with extras, see the table below.
-
-<table>
-<tr>
-    <td><b> extra </b></td>
-    <td><b> install command <b></td>
-    <td><b> description <b></td>
-</tr>
-<tr>
-    <td> all </td>
-    <td><code> pip install allennlp[all] </code></td>
-    <td> all extras </td>
-</tr>
-<tr>
-    <td> fairscale </td>
-    <td><code> pip install allennlp[fairscale] </code></td>
-    <td> utilities for scalable training through <a href="https://github.com/facebookresearch/fairscale">FairScale</a></td>
-</tr>
-</table>
 
 > ⚠️ If you're using Python 3.7 or greater, you should ensure that you don't have the PyPI version of `dataclasses` installed after running the above command, as this could cause issues on certain platforms. You can quickly check this by running `pip freeze | grep dataclasses`. If you see something like `dataclasses=0.6` in the output, then just run `pip uninstall -y dataclasses`.
 

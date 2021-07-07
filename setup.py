@@ -1,4 +1,3 @@
-from typing import Dict, List, Set
 from setuptools import find_packages, setup
 
 # PEP0440 compatible formatted version, see:
@@ -19,29 +18,6 @@ from setuptools import find_packages, setup
 VERSION = {}  # type: ignore
 with open("allennlp/version.py", "r") as version_file:
     exec(version_file.read(), VERSION)
-
-
-EXTRAS: Dict[str, List[str]] = {
-    "fairscale": [
-        "fairscale @ git+https://github.com/facebookresearch/fairscale@308f1057cf979380746f24e538d1cdaddc36174b#egg=fairscale"  # noqa: E501
-    ]
-}
-
-
-def add_all_extras():
-    """
-    Compiles all of the requirements listed under extras and adds them to an additional
-    extra called 'all'.
-    """
-    all_extras: Set[str] = set()
-    for extras in EXTRAS.values():
-        for requirement in extras:
-            all_extras.add(requirement)
-    EXTRAS["all"] = list(all_extras)
-
-
-add_all_extras()
-
 
 setup(
     name="allennlp",
@@ -76,6 +52,7 @@ setup(
     install_requires=[
         "torch>=1.6.0,<1.10.0",
         "torchvision>=0.8.1,<0.11.0",
+        "fairscale @ git+https://github.com/facebookresearch/fairscale@308f1057cf979380746f24e538d1cdaddc36174b#egg=fairscale",
         "jsonnet>=0.10.0 ; sys.platform != 'win32'",
         "overrides==3.1.0",
         "nltk",
@@ -101,7 +78,6 @@ setup(
         "huggingface_hub>=0.0.8",
         "google-cloud-storage>=1.38.0,<1.40.0",
     ],
-    extras_require=EXTRAS,
     entry_points={"console_scripts": ["allennlp=allennlp.__main__:run"]},
     include_package_data=True,
     python_requires=">=3.6.1",

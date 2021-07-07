@@ -97,7 +97,7 @@ install :
 	# python setup.py install_egg_info
 	# Install torch ecosystem first.
 	pip install $(TORCH_VERSION)
-	pip install --upgrade --upgrade-strategy eager -e .[all] -r dev-requirements.txt
+	pip install --upgrade --upgrade-strategy eager -e . -r dev-requirements.txt
 	# These nltk packages are used by the 'checklist' module.
 	$(NLTK_DOWNLOAD_CMD)
 

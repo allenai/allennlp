@@ -346,15 +346,7 @@ def import_module_and_submodules(package_name: str, exclude: Optional[Set[str]] 
     # the end won't hurt anything.
     with push_python_path("."):
         # Import at top level
-        try:
-            module = importlib.import_module(package_name)
-        except ModuleNotFoundError as exc:
-            # Ignore import errors of optional dependencies.
-            if exc.name == "fairscale":
-                logger.warning("Cannot import %s since %s is not installed", package_name, exc.name)
-                return None
-            else:
-                raise
+        module = importlib.import_module(package_name)
         path = getattr(module, "__path__", [])
         path_string = "" if not path else path[0]
 
