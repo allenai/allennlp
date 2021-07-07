@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `TransformerTextField`, for cases where you don't care about AllenNLP's advanced text handling capabilities.
 - Added `TransformerModule._post_load_pretrained_state_dict_hook()` method. Can be used to modify `missing_keys` and `unexpected_keys` after
   loading a pretrained state dictionary. This is useful when tying weights, for example.
+- Added an end-to-end test for the Transformer Toolkit.
 
 ### Fixed
 
@@ -31,10 +32,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and the default behavior is taken from the `config.tie_word_embeddings` value when instantiating `from_pretrained_module()`.
 - Fixed the docs for `PytorchTransformerWrapper`
 - Fixed recovering training jobs with models that expect `get_metrics()` to not be called until they have seen at least one batch.
+- Made the Transformer Toolkit compatible with transformers that don't start their positional embeddings at 0.
 
 ### Changed
 
 - Changed behavior of `MultiOptimizer` so that while a default optimizer is still required, an error is not thrown if the default optimizer receives no parameters.
+- Made the epsilon parameter for the layer normalization in token embeddings configurable. 
 
 ### Removed
 
