@@ -26,7 +26,7 @@ from allennlp.modules.transformer.util import (
     BoolT,
 )
 from allennlp.nn.beam_search import BeamSearch
-from allennlp.nn.parallel import DdpWrapper
+from allennlp.nn.parallel import DdpAccelerator
 from allennlp.nn.checkpoint import CheckpointWrapper
 
 if TYPE_CHECKING:
@@ -588,11 +588,11 @@ class T5EncoderStack(T5Stack, FromParams):
         final_layer_norm: Optional[T5LayerNorm] = None,
         block_ff: Lazy[T5LayerFF] = Lazy(T5LayerFF),
         dropout: float = 0.1,
-        ddp_wrapper: Optional[DdpWrapper] = None,
+        ddp_accelerator: Optional[DdpAccelerator] = None,
         checkpoint_wrapper: Optional[CheckpointWrapper] = None,
     ) -> "T5EncoderStack":
-        if ddp_wrapper is not None:
-            logger.info("Initializing T5 encoder with DdpWrapper %s", ddp_wrapper)
+        if ddp_accelerator is not None:
+            logger.info("Initializing T5 encoder with DdpAccelerator %s", ddp_accelerator)
         blocks: List[T5Block] = []
         for i in range(num_blocks):
             block = T5Block(
@@ -606,8 +606,8 @@ class T5EncoderStack(T5Stack, FromParams):
             )
             if checkpoint_wrapper is not None:
                 block = checkpoint_wrapper.wrap_module(block)
-            if ddp_wrapper is not None:
-                block = ddp_wrapper.wrap_module(block)
+            if ddp_accelerator is not None:
+                block = ddp_accelerator.wrap_module(block)
             blocks.append(block)
         return cls(token_embeddings, blocks, final_layer_norm=final_layer_norm, dropout=dropout)
 
@@ -640,11 +640,11 @@ class T5DecoderStack(T5Stack, FromParams):
         final_layer_norm: Optional[T5LayerNorm] = None,
         block_ff: Lazy[T5LayerFF] = Lazy(T5LayerFF),
         dropout: float = 0.1,
-        ddp_wrapper: Optional[DdpWrapper] = None,
+        ddp_accelerator: Optional[DdpAccelerator] = None,
         checkpoint_wrapper: Optional[CheckpointWrapper] = None,
     ) -> "T5DecoderStack":
-        if ddp_wrapper is not None:
-            logger.info("Initializing T5 decoder with DdpWrapper %s", ddp_wrapper)
+        if ddp_accelerator is not None:
+            logger.info("Initializing T5 decoder with DdpAccelerator %s", ddp_accelerator)
         blocks: List[T5Block] = []
         for i in range(num_blocks):
             block = T5Block(
@@ -663,8 +663,8 @@ class T5DecoderStack(T5Stack, FromParams):
             )
             if checkpoint_wrapper is not None:
                 block = checkpoint_wrapper.wrap_module(block)
-            if ddp_wrapper is not None:
-                block = ddp_wrapper.wrap_module(block)
+            if ddp_accelerator is not None:
+                block = ddp_accelerator.wrap_module(block)
             blocks.append(block)
         return cls(token_embeddings, blocks, final_layer_norm=final_layer_norm, dropout=dropout)
 
@@ -769,7 +769,7 @@ class T5(TransformerModule, Registrable):
         output_attentions: bool = False,
         output_all_hidden_states: bool = False,
         beam_search: Lazy[BeamSearch] = Lazy(BeamSearch, beam_size=3, max_steps=100),
-        ddp_wrapper: Optional[DdpWrapper] = None,
+        ddp_accelerator: Optional[DdpAccelerator] = None,
         checkpoint_wrapper: Optional[CheckpointWrapper] = None,
         tie_word_embeddings: bool = True,
     ):
@@ -782,12 +782,12 @@ class T5(TransformerModule, Registrable):
             self.token_embeddings.weight.data.normal_(mean=0.0, std=1.0)
         self.encoder: T5EncoderStack = encoder.construct(
             token_embeddings=self.token_embeddings,
-            ddp_wrapper=ddp_wrapper,
+            ddp_accelerator=ddp_accelerator,
             checkpoint_wrapper=checkpoint_wrapper,
         )
         self.decoder: T5DecoderStack = decoder.construct(
             token_embeddings=self.token_embeddings,
-            ddp_wrapper=ddp_wrapper,
+            ddp_accelerator=ddp_accelerator,
             checkpoint_wrapper=checkpoint_wrapper,
         )
         self.lm_head = nn.Linear(

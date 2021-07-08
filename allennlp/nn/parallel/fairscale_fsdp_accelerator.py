@@ -10,8 +10,8 @@ import torch
 from torch.cuda import amp
 
 from allennlp.nn.parallel.sharded_module_mixin import ShardedModuleMixin
-from allennlp.nn.parallel.ddp_wrapper import (
-    DdpWrapper,
+from allennlp.nn.parallel.ddp_accelerator import (
+    DdpAccelerator,
     DdpWrappedModel,
     StateDictType,
     LoadStateDictReturnType,
@@ -76,10 +76,10 @@ class FairScaleFsdpWrappedModel(DdpWrappedModel):
         return GradScaler()
 
 
-@DdpWrapper.register("fairscale_fsdp")
-class FairScaleFsdpWrapper(DdpWrapper):
+@DdpAccelerator.register("fairscale_fsdp")
+class FairScaleFsdpAccelerator(DdpAccelerator):
     """
-    A :class:`allennlp.nn.parallel.ddp_wrapper.DdpWrapper` for FairScale's [`FullyShardedDataParallel`]
+    A :class:`allennlp.nn.parallel.ddp_accelerator.DdpAccelerator` for FairScale's [`FullyShardedDataParallel`]
     (https://fairscale.readthedocs.io/en/latest/api/nn/fsdp.html).
 
     To save memory while initializing a model, you should call [`.wrap_module()`](#wrap_module) on submodules

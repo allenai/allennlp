@@ -19,7 +19,7 @@ from allennlp.data import Instance, Vocabulary
 from allennlp.data.batch import Batch
 from allennlp.nn import util
 from allennlp.nn.module import Module
-from allennlp.nn.parallel import DdpWrapper
+from allennlp.nn.parallel import DdpAccelerator
 from allennlp.nn.regularizers import RegularizerApplicator
 
 logger = logging.getLogger(__name__)
@@ -76,12 +76,12 @@ class Model(Module, Registrable):
         In a typical AllenNLP configuration file, this parameter does not get an entry under the
         "model".
 
-    ddp_wrapper : `Optional[DdpWrapper]`, optional
-        The :class:`allennlp.nn.parallel.ddp_wrapper.DdpWrapper` used in distributing training.
+    ddp_accelerator : `Optional[DdpAccelerator]`, optional
+        The :class:`allennlp.nn.parallel.ddp_accelerator.DdpAccelerator` used in distributing training.
         If not in distributed training, this will be `None`.
 
         In a typical AllenNLP configuration file, this parameter does not get an entry under the
-        "model", it gets specified as "ddp_wrapper" in the "distributed" part of the config, and is then
+        "model", it gets specified as "ddp_accelerator" in the "distributed" part of the config, and is then
         passed in to the model automatically.
     """
 
@@ -93,13 +93,13 @@ class Model(Module, Registrable):
         vocab: Vocabulary,
         regularizer: RegularizerApplicator = None,
         serialization_dir: Optional[str] = None,
-        ddp_wrapper: Optional[DdpWrapper] = None,
+        ddp_accelerator: Optional[DdpAccelerator] = None,
     ) -> None:
         super().__init__()
         self.vocab = vocab
         self._regularizer = regularizer
         self.serialization_dir = serialization_dir
-        self.ddp_wrapper = ddp_wrapper
+        self.ddp_accelerator = ddp_accelerator
 
     def get_regularization_penalty(self) -> Optional[torch.Tensor]:
         """

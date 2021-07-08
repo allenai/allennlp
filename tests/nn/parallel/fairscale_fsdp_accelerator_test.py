@@ -9,7 +9,7 @@ import pytest
 
 from allennlp.common.testing import AllenNlpTestCase, run_distributed_test, requires_multi_gpu
 from allennlp.nn.util import load_state_dict_distributed
-from allennlp.nn.parallel import FairScaleFsdpWrapper, FairScaleFsdpWrappedModel, ShardedModuleMixin
+from allennlp.nn.parallel import FairScaleFsdpAccelerator, FairScaleFsdpWrappedModel, ShardedModuleMixin
 
 
 class EncoderDecoderModel(torch.nn.Module):
@@ -18,7 +18,7 @@ class EncoderDecoderModel(torch.nn.Module):
     embeddings to make sure we cover enough edge cases.
     """
 
-    def __init__(self, fsdp_wrapper: FairScaleFsdpWrapper) -> None:
+    def __init__(self, fsdp_wrapper: FairScaleFsdpAccelerator) -> None:
         super().__init__()
         self.embedding = torch.nn.Embedding(12, 4)
         self.emb_proj = fsdp_wrapper.wrap_module(torch.nn.Linear(4, 4))
@@ -56,7 +56,7 @@ class Encoder(torch.nn.Module):
 
 
 class Decoder(torch.nn.Module):
-    def __init__(self, embedding: torch.nn.Embedding, fsdp_wrapper: FairScaleFsdpWrapper) -> None:
+    def __init__(self, embedding: torch.nn.Embedding, fsdp_wrapper: FairScaleFsdpAccelerator) -> None:
         super().__init__()
         self.ff = fsdp_wrapper.wrap_module(FeedForward())
         # Don't want to wrap this linear layer since we are tying the weights to the embedding.
@@ -91,7 +91,7 @@ def _dist_load_and_train(
     # make sure everything is deterministic.
     torch.manual_seed(global_rank)
 
-    fsdp_wrapper = FairScaleFsdpWrapper(
+    fsdp_wrapper = FairScaleFsdpAccelerator(
         local_rank=global_rank,
         world_size=world_size,
         cuda_device=gpu_id,
@@ -179,7 +179,7 @@ def _dist_load_and_train(
     torch.save(wrapped_model.state_dict(), os.path.join(test_dir, f"final_state_worker{gpu_id}.pt"))
 
 
-class TestFairScaleFsdpWrapper(AllenNlpTestCase):
+class TestFairScaleFsdpAccelerator(AllenNlpTestCase):
     @pytest.mark.parametrize(
         "mixed_precision",
         (True, False),

@@ -37,7 +37,7 @@ class LoadStateDictReturnType(NamedTuple):
 
 class DdpWrappedModel:
     """
-    The type of the wrapped model returned from [`DdpWrapper.wrap_model`](#wrap_model).
+    The type of the wrapped model returned from [`DdpAccelerator.wrap_model`](#wrap_model).
     """
 
     def __init__(
@@ -76,9 +76,9 @@ class DdpWrappedModel:
         return amp.GradScaler()
 
 
-class DdpWrapper(Registrable):
+class DdpAccelerator(Registrable):
     """
-    A `DdpWrapper` is a generalization of PyTorch's `DistributedDataParallel` class.
+    A `DdpAccelerator` is a generalization of PyTorch's `DistributedDataParallel` class.
 
     This is primarly used within the :class:`allennlp.training.trainer.GradientDescentTrainer` to allow
     for different DDP implementations, such as FairScale's [`FullyShardedDataParallel`]
@@ -115,15 +115,15 @@ class DdpWrapper(Registrable):
         """
         Wrap an individual module. By default this just returns the module,
         but some subclass implementations such as
-        :class:`allennlp.nn.parallel.fairscale_fsdp_wrapper.FairScaleFsdpWrapper` do more.
+        :class:`allennlp.nn.parallel.fairscale_fsdp_accelerator.FairScaleFsdpAccelerator` do more.
         """
         return module
 
 
-@DdpWrapper.register("torch")
-class TorchDdpWrapper(DdpWrapper):
+@DdpAccelerator.register("torch")
+class TorchDdpAccelerator(DdpAccelerator):
     """
-    The default implementation of `DdpWrapper`, which is just a thin wrapper
+    The default implementation of `DdpAccelerator`, which is just a thin wrapper
     around PyTorch's `DistributedDataParallel`.
     """
 
@@ -152,8 +152,8 @@ class TorchDdpWrapper(DdpWrapper):
         # Add hooks to remove the 'module.' prefix from all keys in the state dict returned
         # from the DistrubtedDataParallel model's `state_dict()` method,
         # and add it back on when loading a state dict.
-        wrapped_model._register_state_dict_hook(TorchDdpWrapper._remove_torch_ddp_prefix)
-        wrapped_model._register_load_state_dict_pre_hook(TorchDdpWrapper._add_torch_ddp_prefix)
+        wrapped_model._register_state_dict_hook(TorchDdpAccelerator._remove_torch_ddp_prefix)
+        wrapped_model._register_load_state_dict_pre_hook(TorchDdpAccelerator._add_torch_ddp_prefix)
         return model, DdpWrappedModel(
             wrapped_model,
             local_rank=self.local_rank,

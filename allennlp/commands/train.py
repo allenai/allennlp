@@ -27,7 +27,7 @@ from allennlp.data import DatasetReader, Vocabulary
 from allennlp.data import DataLoader
 from allennlp.models.archival import archive_model, CONFIG_NAME, verify_include_in_archive
 from allennlp.models.model import Model
-from allennlp.nn.parallel import DdpWrapper
+from allennlp.nn.parallel import DdpAccelerator
 from allennlp.training.trainer import Trainer
 from allennlp.training import util as training_util
 
@@ -423,7 +423,7 @@ def _train_worker(
 
     include_package = include_package or []
 
-    ddp_wrapper: Optional[DdpWrapper] = None
+    ddp_accelerator: Optional[DdpAccelerator] = None
 
     if distributed:
         assert distributed_device_ids is not None
@@ -473,10 +473,10 @@ def _train_worker(
                 rank=global_rank,
             )
 
-        if "ddp_wrapper" in distributed_params:
-            ddp_wrapper_params = distributed_params.pop("ddp_wrapper")
-            ddp_wrapper = DdpWrapper.from_params(
-                ddp_wrapper_params,
+        if "ddp_accelerator" in distributed_params:
+            ddp_accelerator_params = distributed_params.pop("ddp_accelerator")
+            ddp_accelerator = DdpAccelerator.from_params(
+                ddp_accelerator_params,
                 local_rank=process_rank,
                 world_size=world_size,
                 cuda_device=gpu_id,
@@ -491,7 +491,7 @@ def _train_worker(
         params=params,
         serialization_dir=serialization_dir,
         local_rank=process_rank,
-        ddp_wrapper=ddp_wrapper,
+        ddp_accelerator=ddp_accelerator,
     )
 
     if dry_run:
@@ -615,7 +615,7 @@ class TrainModel(Registrable):
         test_data_path: Any = None,
         evaluate_on_test: bool = False,
         batch_weight_key: str = "",
-        ddp_wrapper: Optional[DdpWrapper] = None,
+        ddp_accelerator: Optional[DdpAccelerator] = None,
     ) -> "TrainModel":
         """
         This method is intended for use with our `FromParams` logic, to construct a `TrainModel`
@@ -703,8 +703,8 @@ class TrainModel(Registrable):
             The name of metric used to weight the loss on a per-batch basis.  This is only used
             during evaluation on final test data, if you've specified `evaluate_on_test=True`.
 
-        ddp_wrapper : `Optional[DdpWrapper]`, optional (default = `None`)
-            A `DdpWrapper` to use in distributed trainer. Passed to the model and the trainer.
+        ddp_accelerator : `Optional[DdpAccelerator]`, optional (default = `None`)
+            A `DdpAccelerator` to use in distributed trainer. Passed to the model and the trainer.
 
         """
         # Train data loader.
@@ -764,7 +764,7 @@ class TrainModel(Registrable):
         vocabulary_ = vocabulary.construct(instances=instance_generator)
 
         model_ = model.construct(
-            vocab=vocabulary_, serialization_dir=serialization_dir, ddp_wrapper=ddp_wrapper
+            vocab=vocabulary_, serialization_dir=serialization_dir, ddp_accelerator=ddp_accelerator
         )
 
         # Initializing the model can have side effect of expanding the vocabulary.
@@ -785,7 +785,7 @@ class TrainModel(Registrable):
             data_loader=data_loaders["train"],
             validation_data_loader=data_loaders.get("validation"),
             local_rank=local_rank,
-            ddp_wrapper=ddp_wrapper,
+            ddp_accelerator=ddp_accelerator,
         )
         assert trainer_ is not None
 

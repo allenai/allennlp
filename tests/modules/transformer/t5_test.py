@@ -2,7 +2,7 @@ import pytest
 from transformers.models import t5 as hf_t5
 
 from allennlp.modules.transformer.t5 import T5
-from allennlp.nn.parallel import FairScaleFsdpWrapper
+from allennlp.nn.parallel import FairScaleFsdpAccelerator
 from allennlp.common.testing import requires_gpu, run_distributed_test, requires_multi_gpu
 
 
@@ -127,7 +127,7 @@ def test_t5_forward_beam_search(model: T5, tokenizer: hf_t5.T5Tokenizer):
 def _test_distributed_load_state_dict(global_rank, world_size, gpu_id):
     T5.from_pretrained_module(
         "t5-small",
-        ddp_wrapper=FairScaleFsdpWrapper(
+        ddp_accelerator=FairScaleFsdpAccelerator(
             local_rank=global_rank, world_size=world_size, cuda_device=gpu_id
         ),
     )

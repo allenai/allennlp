@@ -19,12 +19,12 @@ class FairScaleCheckpointWrapper(CheckpointWrapper):
     to `.wrap_module()`.
 
     This can also be used in conjunction with the
-    :class:`allennlp.nn.parallel.fairscale_fsdp_wrapper.FairScaleFsdpWrapper`.
+    :class:`allennlp.nn.parallel.fairscale_fsdp_accelerator.FairScaleFsdpAccelerator`.
     See the [T5 implementation](/api/modules/transformer/t5/) for an example
     of how to use the two together.
 
     !!! Note
-        If using the `FairScaleFsdpWrapper`, you need to set `maintain_forward_counter` to `True`.
+        If using the `FairScaleFsdpAccelerator`, you need to set `maintain_forward_counter` to `True`.
         For convenience, if `maintain_forward_counter` is not set, internally it will be
         set to `True` if training in a distributed setup, or `False` otherwise.
     """
