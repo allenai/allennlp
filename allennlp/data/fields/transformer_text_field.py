@@ -59,7 +59,7 @@ class TransformerTextField(Field[torch.Tensor]):
             result[name] = torch.nn.functional.pad(
                 tensor,
                 (0, padding_length - len(tensor)),
-                value=self.padding_token_id if name == "token_ids" else 0,
+                value=self.padding_token_id if name == "input_ids" else 0,
             )
         if "attention_mask" not in result:
             result["attention_mask"] = torch.tensor(
