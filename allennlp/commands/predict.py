@@ -221,21 +221,25 @@ class _PredictManager:
                     yield self._predictor.load_line(line)
         else:
             input_file = cached_path(self._input_file)
-            try:
-                with open_compressed(input_file) as file_input:
-                    for line in file_input:
-                        if not line.isspace():
-                            yield self._predictor.load_line(line)
-            except OSError:
-                if self.compression_type:
-                    with open_compressed(input_file, self.compression_type) as file_input:
+            if self.compression_type is None:
+                try:
+                    with open_compressed(input_file) as file_input:
                         for line in file_input:
                             if not line.isspace():
                                 yield self._predictor.load_line(line)
-                else:
+                except OSError:
                     print(
-                        "Automatic detection of compression type failed, please specify the compression type argument"
+                        "Automatic detection failed, please specify the compression type argument."
                     )
+
+            else:
+                try:
+                    with open_compressed(input_file, compression_type=self.compression_type) as file_input:
+                        for line in file_input:
+                            if not line.isspace():
+                                yield self._predictor.load_line(line)
+                except OSError:
+                    print("please specify the correct compression type argument.")
 
     def _get_instance_data(self) -> Iterator[Instance]:
         if self._input_file == "-":
