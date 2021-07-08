@@ -36,7 +36,12 @@ jobs:
     steps:
     - uses: actions/checkout@v1
 
+    - name: Check if source files have changed
+      run: |
+        git diff --name-only $(git merge-base origin/main HEAD) | grep '^allennlp/.*\.py$' && echo "source_files_changed=true" >> $GITHUB_ENV || echo "source_files_changed=false" >> $GITHUB_ENV
+
     - name: Check that CHANGELOG has been updated
+      if: env.source_files_changed == 'true'
       run: |
         # If this step fails, this means you haven't updated the CHANGELOG.md
         # file with notes on your contribution.
@@ -164,6 +169,11 @@ jobs:
         . .venv/bin/activate
         which python
         pip freeze
+
+    - name: Ensure torch up-to-date
+      run: |
+        . .venv/bin/activate
+        python scripts/check_torch_version.py
 
     - name: ${{ matrix.task.name }}
       run: |

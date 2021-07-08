@@ -59,7 +59,7 @@ class MultiProcessDataLoader(DataLoader):
         When `batch_sampler` is unspecified, this option can be combined with `batch_size`
         and `shuffle` to control automatic batch sampling.
 
-        If `True`, the last batch will be dropped it doesn't contain a full `batch_size`
+        If `True`, the last batch will be dropped if it doesn't contain a full `batch_size`
         number of `Instance`s.
 
     shuffle: `bool`, optional (default = `False`)

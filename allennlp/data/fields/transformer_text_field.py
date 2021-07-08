@@ -12,6 +12,9 @@ class TransformerTextField(Field[torch.Tensor]):
     """
     A `TransformerTextField` is a collection of several tensors that are are a representation of text,
     tokenized and ready to become input to a transformer.
+
+    The naming pattern of the tensors follows the pattern that's produced by the huggingface tokenizers,
+    and expected by the huggingface transformers.
     """
 
     __slots__ = [
@@ -68,7 +71,7 @@ class TransformerTextField(Field[torch.Tensor]):
 
     @overrides
     def empty_field(self):
-        return TransformerTextField(torch.LongTensor())
+        return TransformerTextField(torch.LongTensor(), padding_token_id=self.padding_token_id)
 
     @overrides
     def batch_tensors(self, tensor_list: List[Dict[str, torch.Tensor]]) -> Dict[str, torch.Tensor]:
@@ -81,11 +84,20 @@ class TransformerTextField(Field[torch.Tensor]):
         return result
 
     def human_readable_repr(self) -> Dict[str, Any]:
+        def format_item(x) -> str:
+            return str(x.item())
+
         def readable_tensor(t: torch.Tensor) -> str:
             if len(t) <= 16:
-                return "[" + ", ".join(map(str, t)) + "]"
+                return "[" + ", ".join(map(format_item, t)) + "]"
             else:
-                return "[" + ", ".join(map(str, t[:8])) + ", ".join(map(str, t[-8:])) + "]"
+                return (
+                    "["
+                    + ", ".join(map(format_item, t[:8]))
+                    + ", ..., "
+                    + ", ".join(map(format_item, t[-8:]))
+                    + "]"
+                )
 
         return {
             name: readable_tensor(getattr(self, name))
