@@ -5,7 +5,6 @@ import re
 from typing import (
     Set,
     Optional,
-    Union,
     List,
     Dict,
     Any,
@@ -15,37 +14,13 @@ from typing import (
 
 import datasets
 import torch.optim
-from torch import cuda
 from datasets import Dataset
 
-from allennlp.common import cached_transformers, Lazy, Tqdm
-from allennlp.common.checks import check_for_gpu
-from allennlp.common.util import log_frozen_and_tunable_parameter_names, sanitize
-from allennlp.data import (
-    DataLoader,
-    Vocabulary,
-    Instance,
-    TensorDict,
-    Field,
-)
-from allennlp.data.fields import ListField, IndexField
+from allennlp.common import cached_transformers
+from allennlp.data import Vocabulary
 from allennlp.data.fields.transformer_text_field import TransformerTextField
-from allennlp.models import Model
-from allennlp.nn.util import move_to_device
-from allennlp.steps.dataloader import (
-    TangoDataLoader,
-    MaxBatchesDataLoader,
-    BatchSizeDataLoader,
-    DataLoaderAdapter,
-)
-from allennlp.steps.dataset import AllenNlpDataset
-from allennlp.steps.format import TorchFormat
-from allennlp.steps.step import Step
-from allennlp.training import Checkpointer, TrainerCallback, GradientDescentTrainer
-from allennlp.training.learning_rate_schedulers import LearningRateScheduler
-from allennlp.training.momentum_schedulers import MomentumScheduler
-from allennlp.training.moving_average import MovingAverage
-from allennlp.training.optimizers import Optimizer
+from allennlp.tango.dataset import AllenNlpDataset
+from allennlp.tango.step import Step
 
 
 logger = logging.getLogger(__name__)
