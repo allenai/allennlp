@@ -9,7 +9,11 @@ import pytest
 
 from allennlp.common.testing import AllenNlpTestCase, run_distributed_test, requires_multi_gpu
 from allennlp.nn.util import load_state_dict_distributed
-from allennlp.nn.parallel import FairScaleFsdpAccelerator, FairScaleFsdpWrappedModel, ShardedModuleMixin
+from allennlp.nn.parallel import (
+    FairScaleFsdpAccelerator,
+    FairScaleFsdpWrappedModel,
+    ShardedModuleMixin,
+)
 
 
 class EncoderDecoderModel(torch.nn.Module):
@@ -56,7 +60,9 @@ class Encoder(torch.nn.Module):
 
 
 class Decoder(torch.nn.Module):
-    def __init__(self, embedding: torch.nn.Embedding, fsdp_wrapper: FairScaleFsdpAccelerator) -> None:
+    def __init__(
+        self, embedding: torch.nn.Embedding, fsdp_wrapper: FairScaleFsdpAccelerator
+    ) -> None:
         super().__init__()
         self.ff = fsdp_wrapper.wrap_module(FeedForward())
         # Don't want to wrap this linear layer since we are tying the weights to the embedding.
