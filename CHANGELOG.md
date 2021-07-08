@@ -34,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `self.ddp_accelerator` during distributed training. This is useful when, for example, instantiating submodules in your
   model's `__init__()` method by wrapping them with `self.ddp_accelerator.wrap_module()`. See the `allennlp.modules.transformer.t5`
   for an example.
+- Added an end-to-end test for the Transformer Toolkit.
 
 ### Fixed
 
@@ -45,6 +46,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Ensured `ensure_model_can_train_save_and_load` is consistently random.
 - Fixed weight tying logic in `T5` transformer module. Previously input/output embeddings were always tied. Now this is optional,
   and the default behavior is taken from the `config.tie_word_embeddings` value when instantiating `from_pretrained_module()`.
+- Implemented slightly faster label smoothing.
+- Fixed the docs for `PytorchTransformerWrapper`
+- Fixed recovering training jobs with models that expect `get_metrics()` to not be called until they have seen at least one batch.
+- Made the Transformer Toolkit compatible with transformers that don't start their positional embeddings at 0.
 
 ### Changed
 
@@ -53,6 +58,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   with a default value of `False`. `False` means gradients are not rescaled and the gradient
   norm is never even calculated. `True` means the gradients are still not rescaled but the gradient
   norm is calculated and passed on to callbacks. A `float` value means gradients are rescaled.
+- Made the epsilon parameter for the layer normalization in token embeddings configurable. 
 
 ### Removed
 
