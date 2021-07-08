@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 from overrides import overrides
 import torch
@@ -16,11 +16,13 @@ class Module(torch.nn.Module):
     This is just `torch.nn.Module` with some extra functionality.
     """
 
-    def _post_load_state_dict(self, missing_keys: List[str], unexpected_keys: List[str]) -> None:
+    def _post_load_state_dict(
+        self, missing_keys: List[str], unexpected_keys: List[str]
+    ) -> Tuple[List[str], List[str]]:
         """
-        Subclasses can override this and potentially modify `missing_keys` or `unexpected_keys` in place.
+        Subclasses can override this and potentially modify `missing_keys` or `unexpected_keys`.
         """
-        pass
+        return missing_keys, unexpected_keys
 
     @overrides
     def load_state_dict(self, state_dict: StateDictType, strict: bool = True) -> _IncompatibleKeys:
@@ -31,20 +33,14 @@ class Module(torch.nn.Module):
         which can be implemented by subclasses to customize the behavior.
         """
         missing_keys, unexpected_keys = super().load_state_dict(state_dict, strict=False)  # type: ignore[arg-type]
-
-        self._post_load_state_dict(missing_keys, unexpected_keys)
-
+        missing_keys, unexpected_keys = self._post_load_state_dict(missing_keys, unexpected_keys)
         _check_incompatible_keys(self, missing_keys, unexpected_keys, strict)
-
         return _IncompatibleKeys(missing_keys, unexpected_keys)
 
     def load_state_dict_distributed(
         self, state_dict: Optional[StateDictType], strict: bool = True
     ) -> _IncompatibleKeys:
         missing_keys, unexpected_keys = load_state_dict_distributed(self, state_dict, strict=strict)
-
-        self._post_load_state_dict(missing_keys, unexpected_keys)
-
+        missing_keys, unexpected_keys = self._post_load_state_dict(missing_keys, unexpected_keys)
         _check_incompatible_keys(self, missing_keys, unexpected_keys, strict)
-
         return _IncompatibleKeys(missing_keys, unexpected_keys)

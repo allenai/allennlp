@@ -807,7 +807,9 @@ class T5(TransformerModule, Registrable):
         self.beam_search = beam_search.construct(end_index=self.eos_token_id)
 
     @overrides
-    def _post_load_state_dict(self, missing_keys: List[str], unexpected_keys: List[str]) -> None:
+    def _post_load_state_dict(
+        self, missing_keys: List[str], unexpected_keys: List[str]
+    ) -> Tuple[List[str], List[str]]:
         missing_keys_to_ignore = [
             "encoder.token_embeddings.weight",
             "decoder.token_embeddings.weight",
@@ -817,6 +819,7 @@ class T5(TransformerModule, Registrable):
         for key in missing_keys_to_ignore:
             if key in missing_keys:
                 missing_keys.remove(key)
+        return missing_keys, unexpected_keys
 
     @classmethod
     def _from_config(cls, config: "PretrainedConfig", **kwargs):
