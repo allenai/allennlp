@@ -1,4 +1,3 @@
-import math
 from typing import Dict, Any
 
 import numpy
@@ -39,7 +38,7 @@ class SmoothGradient(SaliencyInterpreter):
                 # Fine for now, but should fix for consistency.
 
                 # The [0] here is undo-ing the batching that happens in get_gradients.
-                embedding_grad = numpy.sum(grad[0], axis=-1)
+                embedding_grad = numpy.sum(numpy.abs(grad[0]), axis=-1)
                 norm = numpy.linalg.norm(embedding_grad, ord=1, keepdims=True)
                 normalized_grad = embedding_grad / norm
                 grads[key] = normalized_grad

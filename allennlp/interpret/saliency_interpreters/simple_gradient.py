@@ -1,5 +1,3 @@
-import math
-
 from typing import List
 import numpy
 import torch
@@ -48,7 +46,7 @@ class SimpleGradient(SaliencyInterpreter):
                 # gradient and its respective embedding.
                 input_idx = int(key[-1]) - 1
                 # The [0] here is undo-ing the batching that happens in get_gradients.
-                emb_grad = numpy.sum(grad[0] * embeddings_list[input_idx][0], axis=-1)
+                emb_grad = numpy.sum(numpy.abs(grad[0] * embeddings_list[input_idx][0]), axis=-1)
                 norm = numpy.linalg.norm(emb_grad, ord=1, keepdims=True)
                 normalized_grad = emb_grad / norm
                 grads[key] = normalized_grad
