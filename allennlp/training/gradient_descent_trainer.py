@@ -701,9 +701,9 @@ class GradientDescentTrainer(Trainer):
             self._restore_checkpoint()
         except RuntimeError as e:
             configuration_error = ConfigurationError(
-                "Could not recover training from the checkpoint. Did you mean to output to "
-                "a different serialization directory or delete the existing serialization "
-                "directory?"
+                f"Could not recover training from the checkpoint in {self._serialization_dir}. "
+                "Did you mean to output to a different serialization directory or delete the "
+                "existing serialization directory?"
             )
             configuration_error.__cause__ = e
             raise configuration_error
