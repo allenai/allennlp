@@ -152,30 +152,30 @@ class TorchDdpWrapper(DdpWrapper):
         # Add hooks to remove the 'module.' prefix from all keys in the state dict returned
         # from the DistrubtedDataParallel model's `state_dict()` method,
         # and add it back on when loading a state dict.
-        wrapped_model._register_state_dict_hook(_remove_torch_ddp_prefix)
-        wrapped_model._register_load_state_dict_pre_hook(_add_torch_ddp_prefix)
+        wrapped_model._register_state_dict_hook(TorchDdpWrapper._remove_torch_ddp_prefix)
+        wrapped_model._register_load_state_dict_pre_hook(TorchDdpWrapper._add_torch_ddp_prefix)
         return model, DdpWrappedModel(
             wrapped_model,
             local_rank=self.local_rank,
             world_size=self.world_size,
         )
 
+    @staticmethod
+    def _add_torch_ddp_prefix(state_dict: StateDictType, prefix: str, *args: Any) -> None:
+        for key in list(state_dict.keys()):
+            if key.startswith(prefix + "module."):
+                continue
+            new_key = prefix + "module." + key
+            state_dict[new_key] = state_dict[key]
+            del state_dict[key]
 
-def _add_torch_ddp_prefix(state_dict: StateDictType, prefix: str, *args: Any) -> None:
-    for key in list(state_dict.keys()):
-        if key.startswith(prefix + "module."):
-            continue
-        new_key = prefix + "module." + key
-        state_dict[new_key] = state_dict[key]
-        del state_dict[key]
-
-
-def _remove_torch_ddp_prefix(
-    module: torch.nn.Module, state_dict: StateDictType, prefix: str, *args: Any
-) -> None:
-    for key in list(state_dict.keys()):
-        if not key.startswith(prefix + "module."):
-            continue
-        new_key = key.replace(prefix + "module.", "", 1)
-        state_dict[new_key] = state_dict[key]
-        del state_dict[key]
+    @staticmethod
+    def _remove_torch_ddp_prefix(
+        module: torch.nn.Module, state_dict: StateDictType, prefix: str, *args: Any
+    ) -> None:
+        for key in list(state_dict.keys()):
+            if not key.startswith(prefix + "module."):
+                continue
+            new_key = key.replace(prefix + "module.", "", 1)
+            state_dict[new_key] = state_dict[key]
+            del state_dict[key]
