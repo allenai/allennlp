@@ -4,7 +4,6 @@ import logging
 import math
 import os
 import re
-import shutil
 import time
 import warnings
 from typing import Optional, Union, List, Dict, Tuple, Any, Type
@@ -865,31 +864,37 @@ class GradientDescentTrainer(Trainer):
                     dist.barrier()
 
             if self._serialization_dir and self._metric_tracker.is_best_so_far():
+                should_save_model_state: bool
                 if self._ddp_wrapped_model is not None and self._ddp_wrapped_model.is_sharded:
                     # Each worker saves its own shard for now (we combine the shards later).
                     self._best_model_filename = os.path.join(
                         self._serialization_dir, f"best_w{self._rank}.th"
                     )
+                    should_save_model_state = True
                 else:
                     self._best_model_filename = os.path.join(self._serialization_dir, "best.th")
+                    should_save_model_state = self._primary
 
-                if self._moving_average is None:
-                    # If we're not using a moving average and the checkpointer just saved a checkpoint,
-                    # we can just copy over that model state checkpoint to the '_best_model_filename'.
-                    # Otherwise we need to save the model state on our own.
-                    if self._checkpointer is not None and checkpoint_saved:
-                        last_checkpoint = self._checkpointer.find_latest_checkpoint()
-                        assert last_checkpoint is not None
-                        model_state_file, _ = last_checkpoint
-                        shutil.copyfile(model_state_file, self._best_model_filename)
+                if should_save_model_state:
+                    if self._moving_average is None:
+                        # If we're not using a moving average and the checkpointer just saved a checkpoint,
+                        # we can just copy over that model state checkpoint to the '_best_model_filename'.
+                        # Otherwise we need to save the model state on our own.
+                        if self._checkpointer is not None and checkpoint_saved:
+                            last_checkpoint = self._checkpointer.find_latest_checkpoint()
+                            assert last_checkpoint is not None
+                            model_state_file, _ = last_checkpoint
+                            if os.path.exists(self._best_model_filename):
+                                os.remove(self._best_model_filename)
+                            os.link(model_state_file, self._best_model_filename)
+                        else:
+                            self._save_model_state(self._best_model_filename)
                     else:
-                        self._save_model_state(self._best_model_filename)
-                else:
-                    self._moving_average.assign_average_value()
-                    try:
-                        self._save_model_state(self._best_model_filename)
-                    finally:
-                        self._moving_average.restore()
+                        self._moving_average.assign_average_value()
+                        try:
+                            self._save_model_state(self._best_model_filename)
+                        finally:
+                            self._moving_average.restore()
 
             # Wait for the primary process to finish saving the best
             if self._distributed:
@@ -927,7 +932,7 @@ class GradientDescentTrainer(Trainer):
 
     def _save_model_state(self, path: str) -> None:
         if self._ddp_wrapped_model is not None:
-            torch.save(self._ddp_wrapped_model.state_dict())
+            torch.save(self._ddp_wrapped_model.state_dict(), path)
         else:
             torch.save(self.model.state_dict(), path)
 
