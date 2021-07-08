@@ -65,7 +65,7 @@ class Model(Module, Registrable):
 
         In a typical AllenNLP configuration file, this parameter does not get an entry under the
         "model", it gets specified as a top-level parameter, then is passed in to the model
-        separately.
+        automatically.
 
     regularizer: `RegularizerApplicator`, optional
         If given, the `Trainer` will use this to regularize model parameters.
@@ -82,7 +82,7 @@ class Model(Module, Registrable):
 
         In a typical AllenNLP configuration file, this parameter does not get an entry under the
         "model", it gets specified as "ddp_wrapper" in the "distributed" part of the config, and is then
-        passed in to the model separately.
+        passed in to the model automatically.
     """
 
     _warn_for_unseparable_batches: Set[str] = set()
