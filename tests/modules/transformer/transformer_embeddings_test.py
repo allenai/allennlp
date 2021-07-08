@@ -109,7 +109,7 @@ def test_sanity():
     torch.manual_seed(23)
     text = TextEmbeddings(10, 5, 2, 3, 7, 0.0)
     torch.manual_seed(23)
-    transformer = TransformerEmbeddings(10, 5, 2, 3, 7, 0.0)
+    transformer = TransformerEmbeddings(10, 5, 2, 3, None, 7, 0.0)
 
     input_ids = torch.tensor([[1, 2]])
     token_type_ids = torch.tensor([[1, 0]], dtype=torch.long)
