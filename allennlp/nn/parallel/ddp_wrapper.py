@@ -72,7 +72,7 @@ class DdpWrappedModel:
     def clip_grad_norm_(self, max_norm: Union[float, int]) -> torch.Tensor:
         return clip_grad_norm_([p for p in self.model.parameters() if p.grad is not None], max_norm)
 
-    def get_grad_scaler(self) -> amp.GradScaler:
+    def init_grad_scaler(self) -> amp.GradScaler:
         return amp.GradScaler()
 
 
@@ -129,10 +129,11 @@ class TorchDdpWrapper(DdpWrapper):
 
     def __init__(
         self,
+        *,
+        find_unused_parameters: bool = False,
         local_rank: Optional[int] = None,
         world_size: Optional[int] = None,
         cuda_device: Union[torch.device, int] = -1,
-        find_unused_parameters: bool = False,
     ) -> None:
         super().__init__(local_rank=local_rank, world_size=world_size, cuda_device=cuda_device)
         self._ddp_kwargs = {

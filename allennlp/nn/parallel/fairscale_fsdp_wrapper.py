@@ -72,7 +72,7 @@ class FairScaleFsdpWrappedModel(DdpWrappedModel):
         return self.model.clip_grad_norm_(max_norm)  # type: ignore[operator]
 
     @overrides
-    def get_grad_scaler(self) -> amp.GradScaler:
+    def init_grad_scaler(self) -> amp.GradScaler:
         return GradScaler()
 
 
@@ -90,12 +90,13 @@ class FairScaleFsdpWrapper(DdpWrapper):
 
     def __init__(
         self,
-        local_rank: Optional[int] = None,
-        world_size: Optional[int] = None,
-        cuda_device: Union[torch.device, int] = -1,
+        *,
         mixed_precision: bool = False,
         reshard_after_forward: bool = True,
         flatten_parameters: bool = True,
+        local_rank: Optional[int] = None,
+        world_size: Optional[int] = None,
+        cuda_device: Union[torch.device, int] = -1,
     ) -> None:
         super().__init__(local_rank=local_rank, world_size=world_size, cuda_device=cuda_device)
         self._fsdp_kwargs = {

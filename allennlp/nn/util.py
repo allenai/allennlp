@@ -2193,7 +2193,6 @@ def _collect_state_dict(
     # This is the device we'll use for the broadcast operation.
     dist_device = distributed_device()
     # We'll keep tensors on CPU in the returned state dict.
-    # TODO (epwalsh): maybe make this configurable?
     state_dict_device = int_to_device(-1)
 
     missing_keys: List[str] = []
@@ -2235,7 +2234,7 @@ def _collect_state_dict(
                 tensor = state_dict[key]
             else:
                 missing_keys.append(key)
-        logger.info("Broadcasting distributed parameter '%s'", prefix + key)
+        logger.debug("Broadcasting distributed parameter '%s'", prefix + key)
         tensor = tensor.to(dist_device)
         dist.broadcast(tensor, 0)
         current_state_dict[key] = tensor.to(state_dict_device)
@@ -2322,7 +2321,6 @@ def load_state_dict_distributed(
             if key not in original:
                 original.append(key)
 
-    # Import here to prevent circular imports.
     from allennlp.nn.parallel.sharded_module_mixin import ShardedModuleMixin
 
     # If we've found a sharded module or there aren't any more submodules of the current module,

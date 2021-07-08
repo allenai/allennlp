@@ -330,7 +330,7 @@ class GradientDescentTrainer(Trainer):
                 if self._ddp_wrapped_model is None:
                     self._scaler = amp.GradScaler()
                 else:
-                    self._scaler = self._ddp_wrapped_model.get_grad_scaler()
+                    self._scaler = self._ddp_wrapped_model.init_grad_scaler()
 
         # training state management
         self._epochs_completed: int = 0

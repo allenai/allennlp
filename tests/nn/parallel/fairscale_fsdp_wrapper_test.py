@@ -138,7 +138,7 @@ def _dist_load_and_train(
     model, wrapped_model = fsdp_wrapper.wrap_model(model)
 
     # TODO: grad scaler doesn't work now due to https://github.com/facebookresearch/fairscale/issues/421.
-    #  scaler = wrapped_model.get_grad_scaler()
+    #  scaler = wrapped_model.init_grad_scaler()
     scaler: Optional[amp.GradScaler] = None
 
     # Checkpoint each worker's state.
