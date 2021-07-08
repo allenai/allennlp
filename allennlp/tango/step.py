@@ -36,7 +36,7 @@ from allennlp.common.from_params import (
     pop_and_construct_arg,
 )
 from allennlp.common.util import hash_object
-from allennlp.steps.format import Format, DillFormat
+from allennlp.tango.format import Format, DillFormat
 
 logger = logging.getLogger(__name__)
 
