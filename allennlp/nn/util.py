@@ -822,10 +822,9 @@ def sequence_cross_entropy_with_logits(
         num_classes = logits.size(-1)
         smoothing_value = label_smoothing / num_classes
         # Fill all the correct indices with 1 - smoothing value.
-        one_hot_targets = torch.zeros_like(log_probs_flat).scatter_(
-            -1, targets_flat, 1.0 - label_smoothing
+        smoothed_targets = torch.full_like(log_probs_flat, smoothing_value).scatter_(
+            -1, targets_flat, 1.0 - label_smoothing + smoothing_value
         )
-        smoothed_targets = one_hot_targets + smoothing_value
         negative_log_likelihood_flat = -log_probs_flat * smoothed_targets
         negative_log_likelihood_flat = negative_log_likelihood_flat.sum(-1, keepdim=True)
     else:

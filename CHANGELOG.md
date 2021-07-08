@@ -29,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Ensured `ensure_model_can_train_save_and_load` is consistently random.
 - Fixed weight tying logic in `T5` transformer module. Previously input/output embeddings were always tied. Now this is optional,
   and the default behavior is taken from the `config.tie_word_embeddings` value when instantiating `from_pretrained_module()`.
+- Implemented slightly faster label smoothing.
 - Fixed the docs for `PytorchTransformerWrapper`
 - Fixed recovering training jobs with models that expect `get_metrics()` to not be called until they have seen at least one batch.
 
