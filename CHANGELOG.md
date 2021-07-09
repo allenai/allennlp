@@ -34,11 +34,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed the docs for `PytorchTransformerWrapper`
 - Fixed recovering training jobs with models that expect `get_metrics()` to not be called until they have seen at least one batch.
 - Made the Transformer Toolkit compatible with transformers that don't start their positional embeddings at 0.
-
 ### Changed
 
 - Changed behavior of `MultiOptimizer` so that while a default optimizer is still required, an error is not thrown if the default optimizer receives no parameters.
 - Made the epsilon parameter for the layer normalization in token embeddings configurable. 
+- Change the behavior of gradient normalization so when input sequence is more than 1d it does not throw an error.
+- Take the abs value of embeding gradient per token before summing and normalizing.
 
 ### Removed
 
