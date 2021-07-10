@@ -1,58 +1,14 @@
 import copy
-import dataclasses
-import logging
 import re
-from typing import (
-    Set,
-    Optional,
-    List,
-    Dict,
-    Any,
-    Tuple,
-    Iterable,
-)
+from typing import Optional, List, Any, Iterable, Tuple, Dict
 
-import datasets
-import torch.optim
-from datasets import Dataset
-
+import torch
 from allennlp.common import cached_transformers
 from allennlp.data import Vocabulary
-from allennlp.data.fields.transformer_text_field import TransformerTextField
+from allennlp.data.fields import TransformerTextField
 from allennlp.tango.dataset import AllenNlpDataset
 from allennlp.tango.step import Step
-
-
-logger = logging.getLogger(__name__)
-
-
-@Step.register("hf_dataset")
-class HuggingfaceDataset(Step):
-    DETERMINISTIC = True
-    VERSION = "001"
-    CACHEABLE = False  # These are already cached by huggingface.
-
-    def run(self, dataset_name: str) -> AllenNlpDataset:  # type: ignore
-        return AllenNlpDataset(datasets.load_dataset(dataset_name), None, {"source": "huggingface"})
-
-
-@Step.register("text_only")
-class TextOnlyDataset(Step):
-    DETERMINISTIC = True
-
-    def run(self, input: AllenNlpDataset, fields_to_keep: Set[str]) -> AllenNlpDataset:  # type: ignore
-        return dataclasses.replace(
-            input,
-            splits={
-                split_name: [
-                    {"text": field_value}
-                    for instance in split
-                    for field_name, field_value in instance.items()
-                    if field_name in fields_to_keep
-                ]
-                for split_name, split in input.splits.items()
-            },
-        )
+from datasets import Dataset
 
 
 @Step.register("hf_tokenizer")
@@ -113,7 +69,7 @@ class Tokenize(Step):
                     strings.append(string)
 
         for field_name in sorted(field_names_used):
-            logging.info("Tokenizing field %s", field_name)
+            self.logger.info("Tokenizing field %s", field_name)
 
         # This thing is so complicated because we want to call `batch_encode_plus` with all
         # the strings at once.
