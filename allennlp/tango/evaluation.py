@@ -25,17 +25,18 @@ class EvaluationStep(Step):
             Dict[str, Any]
         ]  # TODO: This does not make sense as a type. Should be a List with one element per instance?
 
-    def run(
+    def run(  # type: ignore
         self,
         model: Model,
         dataset: AllenNlpDataset,
-        split: Optional[str] = "validation",
+        split: str = "validation",
         data_loader: Optional[Lazy[TangoDataLoader]] = None,
     ):
+        concrete_data_loader: TangoDataLoader
         if data_loader is None:
-            data_loader = BatchSizeDataLoader(dataset.splits[split], 32, shuffle=False)
+            concrete_data_loader = BatchSizeDataLoader(dataset.splits[split], 32, shuffle=False)
         else:
-            data_loader = data_loader.construct(instances=dataset.splits[split])
+            concrete_data_loader = data_loader.construct(instances=dataset.splits[split])
 
         if torch.cuda.device_count() > 0:
             cuda_device = torch.device(0)
@@ -43,7 +44,7 @@ class EvaluationStep(Step):
             cuda_device = torch.device("cpu")
         check_for_gpu(cuda_device)
 
-        generator_tqdm = Tqdm.tqdm(iter(data_loader))
+        generator_tqdm = Tqdm.tqdm(iter(concrete_data_loader))
 
         # Number of batches in instances.
         batch_results = []
@@ -55,7 +56,7 @@ class EvaluationStep(Step):
         with torch.no_grad():
             model.eval()
 
-            for batch in data_loader:
+            for batch in concrete_data_loader:
                 batch = move_to_device(batch, cuda_device)
                 output_dict = model(**batch)
                 batch_results.append(sanitize(output_dict))

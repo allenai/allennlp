@@ -6,6 +6,7 @@ import logging
 import random
 import re
 import weakref
+from abc import abstractmethod
 from os import PathLike
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -27,14 +28,17 @@ from typing import (
     get_origin,
     get_args,
     MutableMapping,
+    Iterator,
 )
 
 from allennlp.common import Registrable, Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.from_params import (
-    infer_params,
     pop_and_construct_arg,
+    infer_method_params,
+    infer_constructor_params,
 )
+from allennlp.common.logging import AllenNlpLogger
 from allennlp.common.util import hash_object
 from allennlp.tango.format import Format, DillFormat
 
@@ -57,9 +61,11 @@ class StepCache(Registrable):
         except KeyError:
             return False
 
+    @abstractmethod
     def __getitem__(self, step: "Step") -> Any:
         raise NotImplementedError()
 
+    @abstractmethod
     def __setitem__(self, step: "Step", value: Any) -> None:
         raise NotImplementedError()
 
@@ -178,22 +184,26 @@ class Step(Registrable, Generic[T]):
           `False`, the step is recomputed every time it is needed. If this is not set at all,
           we cache if the step is marked as `DETERMINISTIC`, and we don't cache otherwise.
         """
+        self.logger = cast(AllenNlpLogger, logging.getLogger(self.__class__.__name__))
+
         if self.VERSION is not None:
             assert _version_re.match(
                 self.VERSION
             ), f"Invalid characters in version '{self.VERSION}'"
-        self.name = step_name
         self.kwargs = kwargs
 
         self.unique_id_cache: Optional[str] = None
-        if self.name is None:
+        if step_name is None:
             self.name = self.unique_id()
+        else:
+            self.name = step_name
 
         self.produce_results = produce_results
 
-        self.format = step_format
-        if self.format is None:
+        if step_format is None:
             self.format = self.FORMAT
+        else:
+            self.format = step_format
 
         if cache_results is True:
             if not self.CACHEABLE:
@@ -279,9 +289,10 @@ class Step(Registrable, Generic[T]):
         subclass, constructor_name = as_registrable.resolve_class_name(choice)
         kwargs: Dict[str, Any] = {}
 
-        parameters = infer_params(subclass, subclass.run)
+        assert issubclass(subclass, Step)
+        parameters = infer_method_params(subclass, subclass.run)
         del parameters["self"]
-        init_parameters = infer_params(subclass)
+        init_parameters = infer_constructor_params(subclass)
         del init_parameters["self"]
         del init_parameters["kwargs"]
         parameter_overlap = parameters.keys() & init_parameters.keys()
@@ -300,7 +311,7 @@ class Step(Registrable, Generic[T]):
                 accepts_kwargs = True
                 continue
 
-            annotation = Union[Step[param.annotation], param.annotation]
+            annotation: Type = Union[Step[param.annotation], param.annotation]
 
             explicitly_set = param_name in params
             constructed_arg = pop_and_construct_arg(
@@ -359,6 +370,7 @@ class Step(Registrable, Generic[T]):
 
         return subclass(**kwargs)
 
+    @abstractmethod
     def run(self, **kwargs) -> T:
         raise NotImplementedError()
 
@@ -385,6 +397,8 @@ class Step(Registrable, Generic[T]):
 
     def temp_dir(self) -> PathLike:
         """Returns a temporary directory that a step can use while its `run()` method runs."""
+        if self.temp_dir_for_run is None:
+            raise ValueError("You can only call this method while the step is running.")
         return self.temp_dir_for_run
 
     @classmethod
@@ -409,11 +423,12 @@ class Step(Registrable, Generic[T]):
         kwargs = self._replace_steps_with_results(self.kwargs, cache)
         result = self._run_with_temp_dir(cache, **kwargs)
         if self.cache_results:
-            # If we have an iterator as a result, we have to copy it into a list first,
-            # otherwise we can't cache it.
-            if hasattr(result, "__next__"):
-                result = list(result)
             cache[self] = result
+            if hasattr(result, "__next__"):
+                assert isinstance(result, Iterator)
+                # Caching the iterator will consume it, so we write it to the cache and then read from the cache
+                # for the return value.
+                return cache[self]
         return result
 
     def ensure_result(self, cache: Optional[StepCache] = None) -> None:
@@ -429,10 +444,6 @@ class Step(Registrable, Generic[T]):
 
         kwargs = self._replace_steps_with_results(self.kwargs, cache)
         result = self._run_with_temp_dir(cache, **kwargs)
-        # If we have an iterator as a result, we have to copy it into a list first,
-        # otherwise we can't cache it.
-        if hasattr(result, "__next__"):
-            result = list(result)
         cache[self] = result
 
     def dry_run(self, cached_steps: MutableSet["Step"]) -> Iterable[Tuple[str, bool]]:
@@ -523,10 +534,10 @@ class Step(Registrable, Generic[T]):
 
 
 @Step.register("ref")
-class _RefStep(Step[T]):
-    def run(self, ref: str) -> T:
+class _RefStep(Step[T], Generic[T]):
+    def run(self, *, ref: str) -> T:  # type: ignore
         raise ConfigurationError(
-            f"Step {self.name} is still a RefStep (referring to {ref}). RefSteps cannot be executed. "
+            f"Step {self.name} is a RefStep (referring to {ref}). RefSteps cannot be executed. "
             "They are only useful while parsing an experiment."
         )
 

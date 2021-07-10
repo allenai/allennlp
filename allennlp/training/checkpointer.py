@@ -45,14 +45,14 @@ class Checkpointer(Registrable):
 
     def __init__(
         self,
-        serialization_dir: str,
+        serialization_dir: Union[str, os.PathLike],
         save_completed_epochs: bool = True,
         save_every_num_seconds: Optional[float] = None,
         save_every_num_batches: Optional[int] = None,
         keep_most_recent_by_count: Optional[int] = 2,
         keep_most_recent_by_age: Optional[int] = None,
     ) -> None:
-        self._serialization_dir = serialization_dir
+        self._serialization_dir = str(serialization_dir)
         self._save_completed_epochs = save_completed_epochs
         self._save_every_num_seconds = save_every_num_seconds
         self._save_every_num_batches = save_every_num_batches

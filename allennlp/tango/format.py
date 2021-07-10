@@ -3,9 +3,19 @@ import gzip
 import lzma
 import mmap
 import pathlib
-from collections import abc
+from abc import abstractmethod
 from os import PathLike
-from typing import TypeVar, Generic, Union, Optional, Callable, Dict, Iterable, cast
+from typing import (
+    TypeVar,
+    Generic,
+    Union,
+    Optional,
+    Callable,
+    Dict,
+    Iterable,
+    cast,
+    Iterator,
+)
 
 import dill
 import torch
@@ -24,9 +34,11 @@ class Format(Registrable, Generic[T]):
     VERSION: int = NotImplemented
     default_implementation = "dill"
 
+    @abstractmethod
     def write(self, artifact: T, dir: Union[str, PathLike]):
         raise NotImplementedError()
 
+    @abstractmethod
     def read(self, dir: Union[str, PathLike]) -> T:
         raise NotImplementedError()
 
@@ -52,7 +64,7 @@ class Format(Registrable, Generic[T]):
 
 
 @Format.register("dill")
-class DillFormat(Format):
+class DillFormat(Format[T], Generic[T]):
     """This format writes the artifact as a single file using dill (a drop-in replacement for pickle).
     Optionally, it can compress the data."""
 
@@ -114,11 +126,12 @@ class DillFormat(Format):
                 return unpickler.load()
 
 
-class DillFormatIterator(abc.Iterator):
+class DillFormatIterator(Iterator[T], Generic[T]):
     """This class is used so we can return an iterator from `DillFormat.read()`."""
 
     def __init__(self, filename: Union[str, PathLike]):
         filename = str(filename)
+        open_fn: Callable
         if filename.endswith(".gz"):
             open_fn = gzip.open
         elif filename.endswith(".bz2"):
@@ -138,10 +151,10 @@ class DillFormatIterator(abc.Iterator):
                 f"Tried to open {filename} as an iterator, but it does not store an iterator."
             )
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[T]:
         return self
 
-    def __next__(self):
+    def __next__(self) -> T:
         if self.f is None:
             raise StopIteration()
         try:
@@ -153,7 +166,7 @@ class DillFormatIterator(abc.Iterator):
 
 
 @Format.register("torch")
-class TorchFormat(Format):
+class TorchFormat(Format[T], Generic[T]):
     """
     This format writes the artifact using torch.save().
     Optionally, it can compress the data.

@@ -9,7 +9,7 @@ from allennlp.common.util import log_frozen_and_tunable_parameter_names
 from allennlp.models import Model
 from allennlp.tango.dataloader import TangoDataLoader, MaxBatchesDataLoader, DataLoaderAdapter
 from allennlp.tango.dataset import AllenNlpDataset
-from allennlp.tango.format import TorchFormat
+from allennlp.tango.format import TorchFormat, Format
 from allennlp.tango.step import Step
 from allennlp.training import Checkpointer, TrainerCallback, GradientDescentTrainer
 from allennlp.training.learning_rate_schedulers import LearningRateScheduler
@@ -22,7 +22,7 @@ from allennlp.training.optimizers import Optimizer
 class TrainingStep(Step):
     DETERMINISTIC = True
     VERSION = "003"
-    FORMAT = TorchFormat()
+    FORMAT: Format = TorchFormat()
 
     # TODO: distributed training
     # TODO: recovery of failed jobs (this should be done but needs verification)
@@ -40,7 +40,7 @@ class TrainingStep(Step):
     # method, not in __init__(), and allow multiple calls to that method (even multiple concurrent ones). That
     # would be a sane API.
 
-    def run(
+    def run(  # type: ignore
         self,
         model: Lazy[Model],
         dataset: AllenNlpDataset,
@@ -73,19 +73,23 @@ class TrainingStep(Step):
         if validation_split is None:
             validation_loader = None
         else:
-            validation_data_loader = validation_data_loader.construct(
+            concrete_validation_data_loader = validation_data_loader.construct(
                 instances=dataset.splits[validation_split]
             )
+            del validation_data_loader
             if limit_batches_per_epoch is not None:
-                validation_data_loader = MaxBatchesDataLoader(
-                    validation_data_loader, limit_batches_per_epoch
+                concrete_validation_data_loader = MaxBatchesDataLoader(
+                    concrete_validation_data_loader, limit_batches_per_epoch
                 )
-            validation_loader = DataLoaderAdapter(validation_data_loader)
+            validation_loader = DataLoaderAdapter(concrete_validation_data_loader)
 
-        data_loader = data_loader.construct(instances=dataset.splits[training_split])
+        concrete_data_loader = data_loader.construct(instances=dataset.splits[training_split])
+        del data_loader
         if limit_batches_per_epoch is not None:
-            data_loader = MaxBatchesDataLoader(data_loader, limit_batches_per_epoch)
-        loader = DataLoaderAdapter(data_loader)
+            concrete_data_loader = MaxBatchesDataLoader(
+                concrete_data_loader, limit_batches_per_epoch
+            )
+        loader = DataLoaderAdapter(concrete_data_loader)
 
         if torch.cuda.device_count() > 0:
             cuda_device = torch.device(0)
@@ -96,55 +100,67 @@ class TrainingStep(Step):
         if validation_loader is not None:
             validation_loader.set_target_device(cuda_device)
 
-        model = model.construct(vocab=dataset.vocab).to(cuda_device)
+        concrete_model = model.construct(vocab=dataset.vocab).to(cuda_device)
+        del model
         if no_grad:
-            for name, parameter in model.named_parameters():
+            for name, parameter in concrete_model.named_parameters():
                 if any(re.search(regex, name) for regex in no_grad):
                     parameter.requires_grad_(False)
-        parameters = [[n, p] for n, p in model.named_parameters() if p.requires_grad]
-        optimizer = optimizer.construct(model_parameters=parameters)
-        log_frozen_and_tunable_parameter_names(model)
-        moving_average = (
+        parameters = [[n, p] for n, p in concrete_model.named_parameters() if p.requires_grad]
+        concrete_optimizer = optimizer.construct(model_parameters=parameters)
+        del optimizer
+        log_frozen_and_tunable_parameter_names(concrete_model)
+
+        concrete_moving_average = (
             None if moving_average is None else moving_average.construct(parameters=parameters)
         )
-        learning_rate_scheduler = (
+        del moving_average
+
+        concrete_learning_rate_scheduler = (
             None
             if learning_rate_scheduler is None
             else learning_rate_scheduler.construct(
-                optimizer=optimizer,
+                optimizer=concrete_optimizer,
                 num_epochs=num_epochs,
-                num_steps_per_epoch=data_loader.num_batches_per_epoch(),
+                num_steps_per_epoch=concrete_data_loader.num_batches_per_epoch(),
             )
         )
-        momentum_scheduler = (
+        del learning_rate_scheduler
+
+        concrete_momentum_scheduler = (
             None
             if momentum_scheduler is None
-            else momentum_scheduler.construct(optimizer=optimizer)
+            else momentum_scheduler.construct(optimizer=concrete_optimizer)
         )
+        del momentum_scheduler
+
         if checkpointer is not None:
-            checkpointer = checkpointer.construct(serialization_dir=serialization_dir)
+            concrete_checkpointer = checkpointer.construct(serialization_dir=serialization_dir)
         else:
-            checkpointer = Checkpointer(serialization_dir)
-        callbacks: List[TrainerCallback] = [
+            concrete_checkpointer = Checkpointer(serialization_dir)
+        del checkpointer
+
+        concrete_callbacks: List[TrainerCallback] = [
             cb.construct(serialization_dir=serialization_dir) for cb in callbacks or []
         ]
+        del callbacks
 
         trainer = GradientDescentTrainer(
-            model,
-            optimizer=optimizer,
+            concrete_model,
+            optimizer=concrete_optimizer,
             data_loader=loader,
             patience=patience,
             validation_metric=validation_metric,
             validation_data_loader=validation_loader,
             num_epochs=num_epochs,
             serialization_dir=serialization_dir,
-            checkpointer=checkpointer,
+            checkpointer=concrete_checkpointer,
             grad_norm=grad_norm,
             grad_clipping=grad_clipping,
-            learning_rate_scheduler=learning_rate_scheduler,
-            momentum_scheduler=momentum_scheduler,
-            moving_average=moving_average,
-            callbacks=callbacks,
+            learning_rate_scheduler=concrete_learning_rate_scheduler,
+            momentum_scheduler=concrete_momentum_scheduler,
+            moving_average=concrete_moving_average,
+            callbacks=concrete_callbacks,
             num_gradient_accumulation_steps=num_gradient_accumulation_steps,
             use_amp=use_amp,
             enable_default_callbacks=enable_default_callbacks,

@@ -113,13 +113,19 @@ def remove_optional(annotation: type):
         return annotation
 
 
-def infer_params(
+def infer_constructor_params(
     cls: Type[T], constructor: Union[Callable[..., T], Callable[[T], None]] = None
-) -> Dict[str, Any]:
+) -> Dict[str, inspect.Parameter]:
     if constructor is None:
         constructor = cls.__init__
+    return infer_method_params(cls, constructor)
 
-    signature = inspect.signature(constructor)
+
+infer_params = infer_constructor_params  # Legacy name
+
+
+def infer_method_params(cls: Type[T], method: Callable) -> Dict[str, inspect.Parameter]:
+    signature = inspect.signature(method)
     parameters = dict(signature.parameters)
 
     has_kwargs = False

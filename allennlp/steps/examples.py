@@ -32,7 +32,7 @@ class HuggingfaceDataset(Step):
     VERSION = "001"
     CACHEABLE = False  # These are already cached by huggingface.
 
-    def run(self, dataset_name: str) -> AllenNlpDataset:
+    def run(self, dataset_name: str) -> AllenNlpDataset:  # type: ignore
         return AllenNlpDataset(datasets.load_dataset(dataset_name), None, {"source": "huggingface"})
 
 
@@ -40,7 +40,7 @@ class HuggingfaceDataset(Step):
 class TextOnlyDataset(Step):
     DETERMINISTIC = True
 
-    def run(self, input: AllenNlpDataset, fields_to_keep: Set[str]) -> AllenNlpDataset:
+    def run(self, input: AllenNlpDataset, fields_to_keep: Set[str]) -> AllenNlpDataset:  # type: ignore
         return dataclasses.replace(
             input,
             splits={
@@ -63,7 +63,7 @@ class Tokenize(Step):
     VERSION = "001"
     CACHEABLE = True
 
-    def run(
+    def run(  # type: ignore
         self,
         tokenizer_name: str,
         input: AllenNlpDataset,
@@ -81,15 +81,15 @@ class Tokenize(Step):
         # find all the strings
         if fields_to_tokenize is None:
 
-            def should_tokenize_field(_: str) -> bool:
+            def should_tokenize_field(fname: str) -> bool:
                 return True
 
         else:
             regexes_to_tokenize = [re.compile(r) for r in fields_to_tokenize]
 
-            def should_tokenize_field(field_name: str) -> bool:
+            def should_tokenize_field(fname: str) -> bool:
                 for r in regexes_to_tokenize:
-                    if r.fullmatch(field_name):
+                    if r.fullmatch(fname):
                         return True
                 return False
 

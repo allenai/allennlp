@@ -44,7 +44,14 @@ class DataLoaderAdapter(DataLoader):
         self.target_device: Optional[torch.device] = None
 
     def __len__(self) -> int:
-        return self.tango_data_loader.num_batches_per_epoch()
+        result = self.tango_data_loader.num_batches_per_epoch()
+        if result is None:
+            raise ValueError(
+                "DataLoaderAdapter cannot be used with TangoDataLoaders "
+                "that don't have a defined epoch length. Old-school AllenNLP "
+                "DataLoaders don't support this feature, so we can't adapt to it."
+            )
+        return result
 
     def __iter__(self) -> Iterator[TensorDict]:
         if self.target_device is None:
@@ -85,11 +92,13 @@ class BatchSizeDataLoader(TangoDataLoader):
             return ceil(batch_count)
 
     def __iter__(self) -> Iterator[TensorDict]:
+        instances: Sequence[Instance]
         if self.shuffle:
-            instances = list(
+            instances_as_list_just_to_make_mypy_happy = list(
                 self.instances
             )  # make a new list pointing to the same instance objects
-            random.shuffle(instances)
+            random.shuffle(instances_as_list_just_to_make_mypy_happy)
+            instances = instances_as_list_just_to_make_mypy_happy
         else:
             instances = self.instances
 
