@@ -121,7 +121,7 @@ class DillFormat(Format[T], Generic[T]):
                 )
             iterator = unpickler.load()
             if iterator:
-                return DillFormatIterator(filename)
+                return DillFormatIterator(filename)  # type: ignore
             else:
                 return unpickler.load()
 

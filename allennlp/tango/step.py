@@ -311,7 +311,7 @@ class Step(Registrable, Generic[T]):
                 accepts_kwargs = True
                 continue
 
-            annotation: Type = Union[Step[param.annotation], param.annotation]
+            annotation: Type = Union[Step[param.annotation], param.annotation]  # type: ignore
 
             explicitly_set = param_name in params
             constructed_arg = pop_and_construct_arg(
