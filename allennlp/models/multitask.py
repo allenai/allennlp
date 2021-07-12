@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Set, Union, Mapping
 from overrides import overrides
 import torch
 
-from allennlp.data import Vocabulary
+from allennlp.data import Vocabulary, TextFieldTensors
 from allennlp.modules import Backbone
 from allennlp.models.model import Model
 from allennlp.models.heads import Head
@@ -111,7 +111,14 @@ class MultiTaskModel(Model):
             task: torch.LongTensor(indices) for task, indices in task_indices_just_for_mypy.items()
         }
 
-        def make_inputs_for_task(task: str, whole_batch_input: Union[torch.Tensor, List]):
+        def make_inputs_for_task(task: str, whole_batch_input: Union[torch.Tensor, TextFieldTensors, List]):
+            if isinstance(whole_batch_input, dict):
+                for k1, v1 in whole_batch_input.items():
+                    for k2, v2 in v1.items():
+                        whole_batch_input[k1][k2] = make_inputs_for_task(task, v2)
+
+                return whole_batch_input
+
             if isinstance(whole_batch_input, torch.Tensor):
                 task_indices[task] = task_indices[task].to(whole_batch_input.device)
                 return torch.index_select(whole_batch_input, 0, task_indices[task])
