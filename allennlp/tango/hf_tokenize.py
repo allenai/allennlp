@@ -11,8 +11,8 @@ from allennlp.tango.step import Step
 from datasets import Dataset
 
 
-@Step.register("hf_tokenizer")
-class Tokenize(Step):
+@Step.register("hf_tokenize")
+class HuggingfaceTokenize(Step):
     """This step converts strings in the original dataset into `TransformerTextField`s."""
 
     DETERMINISTIC = True
