@@ -1035,7 +1035,7 @@ class GradientDescentTrainer(Trainer):
 
         if self._distributed:
             assert self._ddp_wrapped_model is not None
-            self._ddp_wrapped_model.state_dict(model_state)
+            self._ddp_wrapped_model.load_state_dict(model_state)
         else:
             self._pytorch_model.load_state_dict(model_state)
 
