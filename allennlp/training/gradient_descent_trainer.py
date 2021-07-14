@@ -1203,7 +1203,10 @@ class GradientDescentTrainer(Trainer):
         )
 
     def get_best_weights_path(self) -> Optional[str]:
-        return self._best_model_filename
+        if self._best_model_filename is not None:
+            return os.path.abspath(self._best_model_filename)
+        else:
+            return None
 
 
 DEFAULT_CALLBACKS: Tuple[Type[TrainerCallback]] = (ConsoleLoggerCallback,)

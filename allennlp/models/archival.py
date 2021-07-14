@@ -141,11 +141,15 @@ def archive_model(
     else:
         weights_file = Path(serialization_dir) / extra_copy_of_weights_just_for_mypy
     if not os.path.exists(weights_file):
-        raise RuntimeError(f"weights file '{weights_file}' does not exist, unable to archive model")
+        err_msg = f"weights file '{weights_file}' does not exist, unable to archive model"
+        logger.error(err_msg)
+        raise RuntimeError(err_msg)
 
     config_file = os.path.join(serialization_dir, CONFIG_NAME)
     if not os.path.exists(config_file):
-        raise RuntimeError(f"config file '{config_file}' does not exist, unable to archive model")
+        err_msg = f"config file '{config_file}' does not exist, unable to archive model"
+        logger.error(err_msg)
+        raise RuntimeError(err_msg)
 
     meta_file = os.path.join(serialization_dir, META_NAME)
 
