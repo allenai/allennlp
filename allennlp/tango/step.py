@@ -59,6 +59,8 @@ T = TypeVar("T")
 
 
 class StepCache(Registrable):
+    """This is a mapping from instances of `Step` to the results of that step."""
+
     def __contains__(self, step: object) -> bool:
         """This is a generic implementation of __contains__. If you are writing your own
         `StepCache`, you might want to write a faster one yourself."""
@@ -72,18 +74,30 @@ class StepCache(Registrable):
 
     @abstractmethod
     def __getitem__(self, step: "Step") -> Any:
+        """Returns the results for the given step."""
         raise NotImplementedError()
 
     @abstractmethod
     def __setitem__(self, step: "Step", value: Any) -> None:
+        """Writes the results for the given step. Throws an exception if the step is already cached."""
+        raise NotImplementedError()
+
+    @abstractmethod
+    def __len__(self) -> int:
+        """Returns the number of results saved in this cache."""
         raise NotImplementedError()
 
     def path_for_step(self, step: "Step") -> Optional[Path]:
+        """Steps that can be restarted (like a training job that gets interrupted half-way through)
+        must save their state somewhere. A `StepCache` can help by providing a suitable location
+        in this method."""
         return None
 
 
 @StepCache.register("memory")
 class MemoryStepCache(StepCache):
+    """This is a `StepCache` that stores results in memory. It is little more than a Python dictionary."""
+
     def __init__(self):
         self.cache: Dict[str, Any] = {}
 
@@ -91,6 +105,8 @@ class MemoryStepCache(StepCache):
         return self.cache[step.unique_id()]
 
     def __setitem__(self, step: "Step", value: Any) -> None:
+        if step in self:
+            raise ValueError(f"{step.unique_id()} is already cached! Will not overwrite.")
         if step.cache_results:
             self.cache[step.unique_id()] = value
         else:
@@ -111,6 +127,14 @@ default_step_cache = MemoryStepCache()
 
 @StepCache.register("directory")
 class DirectoryStepCache(StepCache):
+    """This is a `StepCache` that stores its results on disk, in the location given in `dir`.
+
+    Every cached step gets a directory under `dir` with that step's `unique_id()`. In that
+    directory we store the results themselves in some format according to the step's `FORMAT`,
+    and we also write a `metadata.json` file that stores some metadata. The presence of
+    `metadata.json` signifies that the cache entry is complete and has been written successfully.
+    """
+
     def __init__(self, dir: Union[str, PathLike]):
         self.dir = Path(dir)
         self.dir.mkdir(parents=True, exist_ok=True)
@@ -169,10 +193,48 @@ class DirectoryStepCache(StepCache):
 
 
 class Step(Registrable, Generic[T]):
+    """
+    This class defines one step in your experiment. To write your own step, just derive from this class
+    and overwrite the `run()` method. The `run()` method must have parameters with type hints.
+
+    `Step.__init__()` takes all the arguments we want to run the step with. They get passed
+    to `Step.run()` (almost) as they are. If the arguments are other instances of `Step`, those
+    will be replaced with the step's results before calling `run()`. Further, there are four special
+    parameters:
+
+    * `step_name` contains an optional human-readable name for the step. This name is used for
+      error messages and the like, and has no consequence on the actual computation.
+    * `cache_results` specifies whether the results of this step should be cached. If this is
+      `False`, the step is recomputed every time it is needed. If this is not set at all,
+      we cache if the step is marked as `DETERMINISTIC`, and we don't cache otherwise.
+    * `step_format` gives you a way to override the step's default format (which is given in `FORMAT`).
+    * `produce_results` specifies whether this is a step where we care about the the results.
+      For example, you might build a long pipeline of steps, but you really only want to look at the
+      evaluation at the end. In that case, the evaluation step is the only step where you would set
+      `produce_results` to `True`. If none of your steps have `produce_results` set to `True`, AllenNLP
+      will do nothing. It will only run steps that are necessary to produce the results you need.
+    """
+
     DETERMINISTIC: bool = False
+    """This describes whether this step can be relied upon to produce the same results every time
+    when given the same inputs. If this is `False`, the step can't be cached, and neither can any
+    step that depends on it."""
+
     CACHEABLE: Optional[bool] = None
+    """This provides a direct way to turn off caching. For example, a step that reads a HuggingFace
+    dataset doesn't need to be cached, because HuggingFace datasets already have their own caching
+    mechanism. But it's still a deterministic step, and all following steps are allowed to cache.
+    If it is `None`, the step figures out by itself whether it should be cacheable or not."""
+
     VERSION: Optional[str] = None
+    """This is optional, but recommended. Specifying a version gives you a way to tell AllenNLP that
+    a step has changed during development, and should now be recomputed. This doesn't invalidate
+    the old results, so when you revert your code, the old cache entries will stick around and be
+    picked up."""
+
     FORMAT: Format = DillFormat("gz")
+    """This specifies the format the results of this step will be serialized in. See the documentation
+    for `Format` for details."""
 
     def __init__(
         self,
@@ -182,17 +244,6 @@ class Step(Registrable, Generic[T]):
         produce_results: bool = False,
         **kwargs,
     ):
-        """
-        `Step.__init__()` takes all the arguments we want to run the step with. They get passed
-        to `Step.run()` (almost) as they are. If the arguments are other instances of `Step`, those
-        will be replaced with the step's results before calling `run()`. Further, there are two special
-        parameters:
-        * `step_name` contains an optional human-readable name for the step. This name is used for
-          error messages and the like, and has no consequence on the actual computation.
-        * `cache_results` specifies whether the results of this step should be cached. If this is
-          `False`, the step is recomputed every time it is needed. If this is not set at all,
-          we cache if the step is marked as `DETERMINISTIC`, and we don't cache otherwise.
-        """
         self.logger = cast(AllenNlpLogger, logging.getLogger(self.__class__.__name__))
 
         if self.VERSION is not None:
