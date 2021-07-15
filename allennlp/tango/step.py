@@ -320,7 +320,6 @@ class Step(Registrable, Generic[T]):
         # supplied directly. from_params() doesn't know anything about these shenanigans, so
         # we have to supply the necessary logic here.
 
-        # TODO: Maybe we figure out later if we need this and what to do about it?
         if constructor_to_call is not None:
             raise ConfigurationError(
                 f"{cls.__name__}.from_params cannot be called with a constructor_to_call."
@@ -432,6 +431,7 @@ class Step(Registrable, Generic[T]):
 
     @abstractmethod
     def run(self, **kwargs) -> T:
+        """This is the main method of a step. Overwrite this method to define your step's action."""
         raise NotImplementedError()
 
     def _run_with_temp_dir(self, cache: StepCache, **kwargs) -> T:
@@ -475,6 +475,8 @@ class Step(Registrable, Generic[T]):
             return o
 
     def result(self, cache: Optional[StepCache] = None) -> T:
+        """Returns the result of this step. If the results are cached, it returns those. Otherwise it
+        runs the step and returns the result from there."""
         if cache is None:
             cache = default_step_cache
         if self in cache:
@@ -492,6 +494,8 @@ class Step(Registrable, Generic[T]):
         return result
 
     def ensure_result(self, cache: Optional[StepCache] = None) -> None:
+        """This makes sure that the result of this step is in the cache. It does
+        not return the result."""
         if not self.cache_results:
             raise ValueError(
                 "It does not make sense to call ensure_result() on a step that's not cacheable."
@@ -507,6 +511,11 @@ class Step(Registrable, Generic[T]):
         cache[self] = result
 
     def dry_run(self, cached_steps: MutableSet["Step"]) -> Iterable[Tuple[str, bool]]:
+        """Returns the list of steps that will be run, or read from cache, if you call
+        this step's `result()` method.
+
+        Steps come out as tuples `(step_name, read_from_cache)`, so you can see which
+        steps will be read from cache, and which have to be run."""
         if self in cached_steps:
             yield self.name, True
             return
@@ -528,6 +537,10 @@ class Step(Registrable, Generic[T]):
         cached_steps.add(self)
 
     def unique_id(self) -> str:
+        """Returns the unique ID for this step.
+
+        Unique IDs are of the shape `$class_name-$version-$hash`, where the hash is the has of the
+        inputs for deterministic steps, and a random string of characters for non-deterministic ones."""
         if self.unique_id_cache is None:
             self.unique_id_cache = self.__class__.__name__
             if self.VERSION is not None:
@@ -567,6 +580,10 @@ class Step(Registrable, Generic[T]):
             return False
 
     def dependencies(self) -> Set["Step"]:
+        """Returns a set of steps that this step depends on.
+
+        Does not return recursive dependencies."""
+
         def dependencies_internal(o: Any) -> Iterable[Step]:
             if isinstance(o, Step):
                 yield o
@@ -582,6 +599,10 @@ class Step(Registrable, Generic[T]):
         return set(dependencies_internal(self.kwargs.values()))
 
     def recursive_dependencies(self) -> Set["Step"]:
+        """Returns a set of steps that this step depends on.
+
+        This returns recursive dependencies."""
+
         seen = set()
         steps = list(self.dependencies())
         while len(steps) > 0:
@@ -610,6 +631,10 @@ class _RefStep(Step[T], Generic[T]):
 
 
 def step_graph_from_params(params: Dict[str, Params]) -> Dict[str, Step]:
+    """Given a mapping from strings to `Params` objects, this parses each `Params` object
+    into a `Step`, and resolved dependencies between the steps. Returns a dictionary
+    mapping step names to instances of `Step`."""
+
     # This algorithm for resolving step dependencies is O(n^2). Since we're
     # anticipating the number of steps to be in the dozens at most, we choose
     # simplicity over cleverness.
