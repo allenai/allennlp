@@ -2,31 +2,25 @@ import pytest
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
-from allennlp.steps.examples import HuggingfaceDataset, TextOnlyDataset
+from allennlp.tango.hf_dataset import HuggingfaceDataset
 from allennlp.tango.step import Step, step_graph_from_params
 
 import logging
 
+from allennlp.tango.text_only import TextOnlyDataset
+
 logging.basicConfig(level=logging.INFO)
 
 
-def test_steps():
-    dataset = HuggingfaceDataset(dataset_name="squad")
-    flattened_dataset = TextOnlyDataset(input=dataset, fields_to_keep={"context", "question"})
-    result = flattened_dataset.result()
-    assert "train" in result.splits
-    assert len(result.splits["train"]) == 2 * len(dataset.result().splits["train"])
-
-
 def test_from_params():
-    params = Params({"type": "huggingface_dataset", "dataset_name": "squad"})
+    params = Params({"type": "hf_dataset", "dataset_name": "squad"})
     step = Step.from_params(params)
     result = step.result()
     assert "train" in result.splits
 
 
 def test_from_params_wrong_type():
-    params = Params({"type": "huggingface_dataset", "dataset_name": 1.1})
+    params = Params({"type": "hf_dataset", "dataset_name": 1.1})
     with pytest.raises(ConfigurationError):
         Step.from_params(params)
 
@@ -34,12 +28,10 @@ def test_from_params_wrong_type():
 def test_nested_steps():
     @Step.register("string")
     class StringStep(Step):
-        def run(self, result: str) -> str:
+        def run(self, result: str) -> str:  # type: ignore
             return result
 
-    params = Params(
-        {"type": "huggingface_dataset", "dataset_name": {"type": "string", "result": "squad"}}
-    )
+    params = Params({"type": "hf_dataset", "dataset_name": {"type": "string", "result": "squad"}})
     step = Step.from_params(params)
     assert "train" in step.result().splits
 
@@ -47,12 +39,10 @@ def test_nested_steps():
 def test_nested_steps_wrong_type():
     @Step.register("float")
     class FloatStep(Step):
-        def run(self, result: float) -> float:
+        def run(self, result: float) -> float:  # type: ignore
             return result
 
-    params = Params(
-        {"type": "huggingface_dataset", "dataset_name": {"type": "float", "result": 1.1}}
-    )
+    params = Params({"type": "hf_dataset", "dataset_name": {"type": "float", "result": 1.1}})
     with pytest.raises(ConfigurationError):
         Step.from_params(params)
 
@@ -61,7 +51,7 @@ def test_make_step_graph():
     params = Params(
         {
             "steps": {
-                "dataset": {"type": "huggingface_dataset", "dataset_name": "squad"},
+                "dataset": {"type": "hf_dataset", "dataset_name": "squad"},
                 "dataset_text_only": {
                     "type": "text_only",
                     "input": {"type": "ref", "ref": "dataset"},
@@ -79,16 +69,18 @@ def test_make_step_graph():
 
 @pytest.mark.parametrize("ordered_ascending", [True, False])
 def test_make_step_graph_simple_ref(ordered_ascending: bool):
-    params = {
-        "dataset": {"type": "huggingface_dataset", "dataset_name": "squad"},
+    params_as_dict_because_mypy_is_lame = {
+        "dataset": {"type": "hf_dataset", "dataset_name": "squad"},
         "dataset_text_only": {
             "type": "text_only",
             "input": "dataset",
             "fields_to_keep": ["context", "question"],
         },
     }
-    params = dict(sorted(params.items(), reverse=ordered_ascending))
-    params = Params({"steps": params})
+    params_as_dict_because_mypy_is_lame = dict(
+        sorted(params_as_dict_because_mypy_is_lame.items(), reverse=ordered_ascending)
+    )
+    params = Params({"steps": params_as_dict_because_mypy_is_lame})
     step_graph = step_graph_from_params(params.pop("steps"))
     assert len(step_graph) == 2
     assert isinstance(step_graph["dataset"], HuggingfaceDataset)
