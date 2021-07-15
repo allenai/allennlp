@@ -29,6 +29,24 @@ class HuggingfaceTokenize(Step):
         special_tokens_mask: bool = False,
         offset_mapping: bool = False,
     ) -> AllenNlpDataset:
+        """
+        Reads a dataset and converts all strings in it into `TransformerTextField`.
+
+        * `tokenizer_name` is the name of the tokenizer to use. For example, `"roberta-large"`.
+        * `input` is the dataset to transform in this way.
+        * By default, this step tokenizes all strings it finds, but if you specify
+          `fields_to_tokenize`, it will only tokenize the named fields.
+        * `add_special_tokens` specifies whether or not to add special tokens to the tokenized strings.
+        * `max_length` is the maximum length the resulting `TransformerTextField` will have.
+          If there is too much text, it will be truncated.
+        * `special_tokens_mask` specifies whether to add the special token mask as one of the
+           tensors in `TransformerTextField`.
+        * `offset_mapping` specifies whether to add a mapping from tokens to original string
+           offsets to the tensors in `TransformerTextField`.
+
+        This function returns a new dataset with new `TransformerTextField`s.
+        """
+
         tokenizer = cached_transformers.get_tokenizer(tokenizer_name)
         assert tokenizer.pad_token_type_id == 0
 

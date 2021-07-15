@@ -29,22 +29,38 @@ T = TypeVar("T")
 
 
 class Format(Registrable, Generic[T]):
-    """Formats write objects to directories and read them back out."""
+    """
+    Formats write objects to directories and read them back out.
+
+    In the context of AllenNLP, the objects that are written by formats are usually
+    results from `Step`s.
+    """
 
     VERSION: int = NotImplemented
+    """
+    Formats can have versions. Versions are part of a step's unique signature, part of `Step.unique_id()`,
+    so when a step's format changes, that will cause the step to be recomputed.
+    """
+
     default_implementation = "dill"
 
     @abstractmethod
     def write(self, artifact: T, dir: Union[str, PathLike]):
+        """Writes the `artifact` to the directory at `dir`."""
         raise NotImplementedError()
 
     @abstractmethod
     def read(self, dir: Union[str, PathLike]) -> T:
+        """Reads an artifact from the directory at `dir` and returns it."""
         raise NotImplementedError()
 
     def checksum(self, dir: Union[str, PathLike]) -> str:
-        """The default checksum mechanism computes a checksum of all the files in the
-        directory except for `metadata.json`."""
+        """
+        Produces a checksum of a serialized artifact.
+
+        The default checksum mechanism computes a checksum of all the files in the
+        directory except for `metadata.json`.
+        """
         dir = pathlib.Path(dir)
         files = []
         for file in dir.rglob("*"):
@@ -66,7 +82,11 @@ class Format(Registrable, Generic[T]):
 @Format.register("dill")
 class DillFormat(Format[T], Generic[T]):
     """This format writes the artifact as a single file using dill (a drop-in replacement for pickle).
-    Optionally, it can compress the data."""
+    Optionally, it can compress the data. This is very flexible, but not always the fastest.
+
+    This format has special support for iterables. If you write an iterator, it will consume the
+    iterator. If you read an iterator, it will read the iterator lazily.
+    """
 
     VERSION = 1
 
@@ -169,7 +189,8 @@ class DillFormatIterator(Iterator[T], Generic[T]):
 class TorchFormat(Format[T], Generic[T]):
     """
     This format writes the artifact using torch.save().
-    Optionally, it can compress the data.
+
+    Unlike `DillFormat`, this has no special support for iterators.
     """
 
     VERSION = 1
