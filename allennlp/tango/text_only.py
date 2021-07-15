@@ -16,7 +16,7 @@ class TextOnlyDataset(Step):
 
     DETERMINISTIC = True
 
-    def run(
+    def run(  # type: ignore
         self,
         input: AllenNlpDataset,
         *,
@@ -33,7 +33,7 @@ class TextOnlyDataset(Step):
                     new_prefix = f"{prefix}.{name}"
                     yield from find_nested_strings(item, new_prefix)
             elif isinstance(o, str):
-                if prefix in fields_to_keep:
+                if fields_to_keep is None or prefix in fields_to_keep:
                     if min_length is None or len(o) >= min_length:
                         yield o
 
