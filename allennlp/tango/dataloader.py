@@ -19,6 +19,10 @@ from allennlp.nn.util import move_to_device
 
 
 class TangoDataLoader(Registrable):
+    """A Tango data loader in AllenNLP is anything that produces an iterator of batches.
+    You would usually initialize a data loader with a `Sequence[Instance]` to do this, but
+    some Tango data loaders can be initialized in other ways and still produce batches."""
+
     default_implementation = "batch_size"
 
     def num_batches_per_epoch(self) -> Optional[int]:
@@ -26,6 +30,7 @@ class TangoDataLoader(Registrable):
         raise NotImplementedError()
 
     def __iter__(self) -> Iterator[TensorDict]:
+        """Override this function in your own data loader to make batches."""
         raise NotImplementedError()
 
     def __len__(self) -> Optional[int]:
@@ -72,6 +77,15 @@ class DataLoaderAdapter(DataLoader):
 
 @TangoDataLoader.register("batch_size")
 class BatchSizeDataLoader(TangoDataLoader):
+    """A data loader that turns instances into batches with a constant number of instances
+    per batch.
+
+    * `instances` contains the instances we want to make batches out of.
+    * `batch_size` is the number of instances per batch
+    * `drop_last` specifies whether to keep the last batch in case it is smaller than
+      `batch_size
+    * `shuffle` specifies whether to shuffle the instances before making batches"""
+
     def __init__(
         self,
         instances: Sequence[Instance],
@@ -109,6 +123,8 @@ class BatchSizeDataLoader(TangoDataLoader):
 
 @TangoDataLoader.register("sampler")
 class SamplerDataLoader(TangoDataLoader):
+    """This dataloader uses a `BatchSampler` to make batches out of the instances given in `instances`."""
+
     def __init__(self, instances: Sequence[Instance], batch_sampler: BatchSampler):
         self.instances = instances
         self.batch_sampler = batch_sampler
@@ -123,6 +139,9 @@ class SamplerDataLoader(TangoDataLoader):
 
 @TangoDataLoader.register("batches_per_epoch")
 class BatchesPerEpochDataLoader(TangoDataLoader):
+    """This dataloader wraps another data loader, but changes the length of the epoch. It ends
+    one epoch and starts another every `batches_per_epoch` batches."""
+
     def __init__(self, inner: TangoDataLoader, batches_per_epoch: int):
         self.inner = inner
         self.iter = iter(inner)
@@ -143,6 +162,9 @@ class BatchesPerEpochDataLoader(TangoDataLoader):
 
 @TangoDataLoader.register("max_batches")
 class MaxBatchesDataLoader(TangoDataLoader):
+    """This dataloader wraps another data loader, but only returns the first
+    `max_batches_per_epoch` batches for every epoch. This is useful for debugging."""
+
     def __init__(self, inner: TangoDataLoader, max_batches_per_epoch: int):
         self.inner = inner
         self.max_batches_per_epoch = max_batches_per_epoch

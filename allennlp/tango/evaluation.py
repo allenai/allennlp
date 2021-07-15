@@ -15,6 +15,8 @@ from allennlp.tango.step import Step
 
 @Step.register("evaluation")
 class EvaluationStep(Step):
+    """This step evaluates a given model on a given dataset."""
+
     DETERMINISTIC = True
     VERSION = "001"
 
@@ -31,7 +33,17 @@ class EvaluationStep(Step):
         dataset: AllenNlpDataset,
         split: str = "validation",
         data_loader: Optional[Lazy[TangoDataLoader]] = None,
-    ):
+    ) -> EvaluationResult:
+        """
+        Runs an evaluation on a dataset.
+
+        * `model` is the model we want to evaluate.
+        * `dataset` is the dataset we want to evaluate on.
+        * `split` is the name of the split we want to evaluate on.
+        * `data_loader` gives you the chance to choose a custom dataloader for the evaluation.
+          By default this step evaluates on batches of 32 instances each.
+        """
+
         concrete_data_loader: TangoDataLoader
         if data_loader is None:
             concrete_data_loader = BatchSizeDataLoader(dataset.splits[split], 32, shuffle=False)
