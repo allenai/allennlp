@@ -252,6 +252,11 @@ class Step(Registrable, Generic[T]):
             ), f"Invalid characters in version '{self.VERSION}'"
         self.kwargs = kwargs
 
+        if step_format is None:
+            self.format = self.FORMAT
+        else:
+            self.format = step_format
+
         self.unique_id_cache: Optional[str] = None
         if step_name is None:
             self.name = self.unique_id()
@@ -259,11 +264,6 @@ class Step(Registrable, Generic[T]):
             self.name = step_name
 
         self.produce_results = produce_results
-
-        if step_format is None:
-            self.format = self.FORMAT
-        else:
-            self.format = step_format
 
         if cache_results is True:
             if not self.CACHEABLE:
@@ -562,7 +562,13 @@ class Step(Registrable, Generic[T]):
                     else:
                         return o
 
-                self.unique_id_cache += hash_object(replace_steps_with_hashes(self.kwargs))[:32]
+                self.unique_id_cache += hash_object(
+                    (
+                        self.format.__class__.__name__,
+                        self.format.VERSION,
+                        replace_steps_with_hashes(self.kwargs),
+                    )
+                )[:32]
             else:
                 self.unique_id_cache += hash_object(random.getrandbits((58 ** 32).bit_length()))[
                     :32
