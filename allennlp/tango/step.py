@@ -25,11 +25,20 @@ from typing import (
     Iterable,
     Tuple,
     MutableSet,
-    get_origin,
-    get_args,
     MutableMapping,
     Iterator,
 )
+
+try:
+    from typing import get_origin, get_args
+except ImportError:
+
+    def get_origin(tp):  # type: ignore
+        return getattr(tp, "__origin__", None)
+
+    def get_args(tp):  # type: ignore
+        return getattr(tp, "__args__", ())
+
 
 from allennlp.common import Registrable, Params
 from allennlp.common.checks import ConfigurationError
