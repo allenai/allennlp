@@ -193,13 +193,13 @@ class TorchFormat(Format[T], Generic[T]):
     Unlike `DillFormat`, this has no special support for iterators.
     """
 
-    VERSION = 1
+    VERSION = 2
 
     def write(self, artifact: T, dir: Union[str, PathLike]):
         filename = pathlib.Path(dir) / "data.pt"
         with open(filename, "wb") as f:
-            torch.save(self.VERSION, f)
-            torch.save(artifact, f)
+            torch.save(self.VERSION, f, _use_new_zipfile_serialization=False)
+            torch.save(artifact, f, _use_new_zipfile_serialization=False)
 
     def read(self, dir: Union[str, PathLike]) -> T:
         filename = pathlib.Path(dir) / "data.pt"
