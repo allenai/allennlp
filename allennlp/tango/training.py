@@ -20,12 +20,11 @@ from allennlp.training.optimizers import Optimizer
 
 @Step.register("training")
 class TrainingStep(Step):
+    """This step trains a model given the model, the dataset, and various hyperparameters."""
+
     DETERMINISTIC = True
     VERSION = "003"
     FORMAT: Format = TorchFormat()
-
-    # TODO: distributed training
-    # TODO: recovery of failed jobs (this should be done but needs verification)
 
     # Development notes:
     #

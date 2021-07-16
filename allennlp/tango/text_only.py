@@ -23,6 +23,16 @@ class TextOnlyDataset(Step):
         fields_to_keep: Optional[Set[str]] = None,
         min_length: Optional[int] = None,
     ) -> AllenNlpDataset:
+        """
+        Turns the `input` dataset into another dataset that contains only the strings from the
+        original dataset.
+
+        * `fields_to_keep` is an optional list of field names that you want to keep in the result.
+          If this is `None`, all fields are kept.
+        * `min_length` specifies the minimum length that a string must have to be part of the
+          result. If this is `None`, all strings are considered.
+        """
+
         def find_nested_strings(o: Any, prefix: str = "") -> Iterable[str]:
             if isinstance(o, list) or isinstance(o, tuple):
                 for i, item in enumerate(o):
