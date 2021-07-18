@@ -191,3 +191,7 @@ class TestMakeVocabFromParams(AllenNlpTestCase):
 
         assert metrics["loss"] == float(total_loss / num_batches)
         assert "batch_loss" not in metrics
+
+    def test_exception_serialization(self):
+        e = ConfigurationError('example')
+        assert {'message': 'example'} == vars(pickle.loads(pickle.dumps(e)))
