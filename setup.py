@@ -75,7 +75,7 @@ setup(
         "checklist==0.0.11",
         "wandb>=0.10.0,<0.12.0",
         "huggingface_hub>=0.0.8",
-        "google-cloud-storage>=1.38.0,<1.41.0",
+        "google-cloud-storage>=1.38.0,<1.42.0",
     ],
     entry_points={"console_scripts": ["allennlp=allennlp.__main__:run"]},
     include_package_data=True,
