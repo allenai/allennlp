@@ -9,21 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Nothing so far!
 
-
-## [v2.6.0](https://github.com/allenai/allennlp/releases/tag/v2.6.0) - 2021-07-19
-
 ### Added
 
-- Added `on_backward` training callback which allows for control over backpropagation and gradient manipulation.
-- Added `AdversarialBiasMitigator`, a Model wrapper to adversarially mitigate biases in predictions produced by a pretrained model for a downstream task.
-- Added `which_loss` parameter to `ensure_model_can_train_save_and_load` in `ModelTestCase` to specify which loss to test.
-- Added `**kwargs` to `Predictor.from_path()`. These key-word argument will be passed on to the `Predictor`'s constructor.
-- The activation layer in the transformer toolkit now can be queried for its output dimension.
-- `TransformerEmbeddings` now takes, but ignores, a parameter for the attention mask. This is needed for compatibility with some other modules that get called the same way and use the mask.
-- `TransformerPooler` can now be instantiated from a pretrained transformer module, just like the other modules in the transformer toolkit.
-- `TransformerTextField`, for cases where you don't care about AllenNLP's advanced text handling capabilities.
-- Added `TransformerModule._post_load_pretrained_state_dict_hook()` method. Can be used to modify `missing_keys` and `unexpected_keys` after
-  loading a pretrained state dictionary. This is useful when tying weights, for example.
 - Added a module `allennlp.nn.parallel` with a new base class, `DdpAccelerator`, which generalizes
   PyTorch's `DistributedDataParallel` wrapper to support other implementations. Two implementations of
   this class are provided. The default is `TorchDdpAccelerator` (registered at "torch"), which is just a thin wrapper around
@@ -39,12 +26,38 @@ Nothing so far!
   `self.ddp_accelerator` during distributed training. This is useful when, for example, instantiating submodules in your
   model's `__init__()` method by wrapping them with `self.ddp_accelerator.wrap_module()`. See the `allennlp.modules.transformer.t5`
   for an example.
+
+### Fixed
+
+- Fixed a mispelling: the parameter `contructor_extras` in `Lazy()` is now correctly called `constructor_extras`.
+
+### Changed
+
+- The type of the `grad_norm` parameter of `GradientDescentTrainer` is now `Union[float, bool]`,
+  with a default value of `False`. `False` means gradients are not rescaled and the gradient
+  norm is never even calculated. `True` means the gradients are still not rescaled but the gradient
+  norm is calculated and passed on to callbacks. A `float` value means gradients are rescaled.
+
+
+## [v2.6.0](https://github.com/allenai/allennlp/releases/tag/v2.6.0) - 2021-07-19
+
+### Added
+
+- Added `on_backward` training callback which allows for control over backpropagation and gradient manipulation.
+- Added `AdversarialBiasMitigator`, a Model wrapper to adversarially mitigate biases in predictions produced by a pretrained model for a downstream task.
+- Added `which_loss` parameter to `ensure_model_can_train_save_and_load` in `ModelTestCase` to specify which loss to test.
+- Added `**kwargs` to `Predictor.from_path()`. These key-word argument will be passed on to the `Predictor`'s constructor.
+- The activation layer in the transformer toolkit now can be queried for its output dimension.
+- `TransformerEmbeddings` now takes, but ignores, a parameter for the attention mask. This is needed for compatibility with some other modules that get called the same way and use the mask.
+- `TransformerPooler` can now be instantiated from a pretrained transformer module, just like the other modules in the transformer toolkit.
+- `TransformerTextField`, for cases where you don't care about AllenNLP's advanced text handling capabilities.
+- Added `TransformerModule._post_load_pretrained_state_dict_hook()` method. Can be used to modify `missing_keys` and `unexpected_keys` after
+  loading a pretrained state dictionary. This is useful when tying weights, for example.
 - Added an end-to-end test for the Transformer Toolkit.
 - Added `vocab` argument to `BeamSearch`, which is passed to each contraint in `constraints` (if provided).
 
 ### Fixed
 
-- Fixed a mispelling: the parameter `contructor_extras` in `Lazy()` is now correctly called `constructor_extras`.
 - Fixed missing device mapping in the `allennlp.modules.conditional_random_field.py` file.
 - Fixed Broken link in `allennlp.fairness.fairness_metrics.Separation` docs
 - Ensured all `allennlp` submodules are imported with `allennlp.common.plugins.import_plugins()`.
@@ -62,10 +75,6 @@ Nothing so far!
 ### Changed
 
 - Changed behavior of `MultiOptimizer` so that while a default optimizer is still required, an error is not thrown if the default optimizer receives no parameters.
-- The type of the `grad_norm` parameter of `GradientDescentTrainer` is now `Union[float, bool]`,
-  with a default value of `False`. `False` means gradients are not rescaled and the gradient
-  norm is never even calculated. `True` means the gradients are still not rescaled but the gradient
-  norm is calculated and passed on to callbacks. A `float` value means gradients are rescaled.
 - Made the epsilon parameter for the layer normalization in token embeddings configurable. 
 
 ### Removed
