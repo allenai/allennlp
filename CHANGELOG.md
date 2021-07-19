@@ -21,9 +21,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   loading a pretrained state dictionary. This is useful when tying weights, for example.
 - Added an end-to-end test for the Transformer Toolkit.
 - Added Tango components, to be explored in detail in a later post.
+- Added `vocab` argument to `BeamSearch`, which is passed to each contraint in `constraints` (if provided).
 
 ### Fixed
 
+- Fixed missing device mapping in the `allennlp.modules.conditional_random_field.py` file.
 - Fixed Broken link in `allennlp.fairness.fairness_metrics.Separation` docs
 - Ensured all `allennlp` submodules are imported with `allennlp.common.plugins.import_plugins()`.
 - Fixed `IndexOutOfBoundsException` in `MultiOptimizer` when checking if optimizer received any parameters.
