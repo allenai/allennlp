@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `TransformerModule._post_load_pretrained_state_dict_hook()` method. Can be used to modify `missing_keys` and `unexpected_keys` after
   loading a pretrained state dictionary. This is useful when tying weights, for example.
 - Added an end-to-end test for the Transformer Toolkit.
+- Added `vocab` argument to `BeamSearch`, which is passed to each contraint in `constraints` (if provided).
 
 ### Fixed
 
