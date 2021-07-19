@@ -36,6 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed the docs for `PytorchTransformerWrapper`
 - Fixed recovering training jobs with models that expect `get_metrics()` to not be called until they have seen at least one batch.
 - Made the Transformer Toolkit compatible with transformers that don't start their positional embeddings at 0.
+- Weights & Biases training callback ("wandb") now works when resuming training jobs.
 
 ### Changed
 
