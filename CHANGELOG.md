@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+Nothing so far!
+
+
+## [v2.6.0](https://github.com/allenai/allennlp/releases/tag/v2.6.0) - 2021-07-19
+
 ### Added
 
 - Added `on_backward` training callback which allows for control over backpropagation and gradient manipulation.
@@ -35,6 +40,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   model's `__init__()` method by wrapping them with `self.ddp_accelerator.wrap_module()`. See the `allennlp.modules.transformer.t5`
   for an example.
 - Added an end-to-end test for the Transformer Toolkit.
+- Added `vocab` argument to `BeamSearch`, which is passed to each contraint in `constraints` (if provided).
 
 ### Fixed
 
@@ -51,6 +57,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed the docs for `PytorchTransformerWrapper`
 - Fixed recovering training jobs with models that expect `get_metrics()` to not be called until they have seen at least one batch.
 - Made the Transformer Toolkit compatible with transformers that don't start their positional embeddings at 0.
+- Weights & Biases training callback ("wandb") now works when resuming training jobs.
 
 ### Changed
 
