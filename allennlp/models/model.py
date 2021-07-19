@@ -18,6 +18,8 @@ from allennlp.common.registrable import Registrable
 from allennlp.data import Instance, Vocabulary
 from allennlp.data.batch import Batch
 from allennlp.nn import util
+from allennlp.nn.module import Module
+from allennlp.nn.parallel import DdpAccelerator
 from allennlp.nn.regularizers import RegularizerApplicator
 
 logger = logging.getLogger(__name__)
@@ -27,7 +29,7 @@ logger = logging.getLogger(__name__)
 _DEFAULT_WEIGHTS = "best.th"
 
 
-class Model(torch.nn.Module, Registrable):
+class Model(Module, Registrable):
     """
     This abstract class represents a model to be trained. Rather than relying completely
     on the Pytorch Module, we modify the output spec of `forward` to be a dictionary.
@@ -63,11 +65,26 @@ class Model(torch.nn.Module, Registrable):
 
         In a typical AllenNLP configuration file, this parameter does not get an entry under the
         "model", it gets specified as a top-level parameter, then is passed in to the model
-        separately.
+        automatically.
+
     regularizer: `RegularizerApplicator`, optional
         If given, the `Trainer` will use this to regularize model parameters.
+
     serialization_dir: `str`, optional
         The directory in which the training output is saved to, or the directory the model is loaded from.
+
+        In a typical AllenNLP configuration file, this parameter does not get an entry under the
+        "model".
+
+    ddp_accelerator : `Optional[DdpAccelerator]`, optional
+        The :class:`allennlp.nn.parallel.ddp_accelerator.DdpAccelerator` used in distributing training.
+        If not in distributed training, this will be `None`.
+
+        In a typical AllenNLP configuration file, this parameter does not get an entry under the
+        "model", it gets specified as "ddp_accelerator" in the "distributed" part of the config, and is then
+        passed in to the model automatically.
+
+        It will be available to `Model` instances as `self.ddp_accelerator`.
     """
 
     _warn_for_unseparable_batches: Set[str] = set()
@@ -78,11 +95,13 @@ class Model(torch.nn.Module, Registrable):
         vocab: Vocabulary,
         regularizer: RegularizerApplicator = None,
         serialization_dir: Optional[str] = None,
+        ddp_accelerator: Optional[DdpAccelerator] = None,
     ) -> None:
         super().__init__()
         self.vocab = vocab
         self._regularizer = regularizer
         self.serialization_dir = serialization_dir
+        self.ddp_accelerator = ddp_accelerator
 
     def get_regularization_penalty(self) -> Optional[torch.Tensor]:
         """

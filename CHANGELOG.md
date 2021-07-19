@@ -9,6 +9,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Nothing so far!
 
+### Added
+
+- Added a module `allennlp.nn.parallel` with a new base class, `DdpAccelerator`, which generalizes
+  PyTorch's `DistributedDataParallel` wrapper to support other implementations. Two implementations of
+  this class are provided. The default is `TorchDdpAccelerator` (registered at "torch"), which is just a thin wrapper around
+  `DistributedDataParallel`. The other is `FairScaleFsdpAccelerator`, which wraps FairScale's
+  [`FullyShardedDataParallel`](https://fairscale.readthedocs.io/en/latest/api/nn/fsdp.html).
+  You can specify the `DdpAccelerator` in the "distributed" section of a configuration file under the key "ddp_accelerator".
+- Added a module `allennlp.nn.checkpoint` with a new base class, `CheckpointWrapper`, for implementations
+  of activation/gradient checkpointing. Two implentations are provided. The default implementation is `TorchCheckpointWrapper` (registered as "torch"),
+  which exposes [PyTorch's checkpoint functionality](https://pytorch.org/docs/stable/checkpoint.html).
+  The other is `FairScaleCheckpointWrapper` which exposes the more flexible
+  [checkpointing funtionality from FairScale](https://fairscale.readthedocs.io/en/latest/api/nn/checkpoint/checkpoint_activations.html).
+- The `Model` base class now takes a `ddp_accelerator` parameter (an instance of `DdpAccelerator`) which will be available as
+  `self.ddp_accelerator` during distributed training. This is useful when, for example, instantiating submodules in your
+  model's `__init__()` method by wrapping them with `self.ddp_accelerator.wrap_module()`. See the `allennlp.modules.transformer.t5`
+  for an example.
+
+### Fixed
+
+- Fixed a mispelling: the parameter `contructor_extras` in `Lazy()` is now correctly called `constructor_extras`.
+
+### Changed
+
+- The type of the `grad_norm` parameter of `GradientDescentTrainer` is now `Union[float, bool]`,
+  with a default value of `False`. `False` means gradients are not rescaled and the gradient
+  norm is never even calculated. `True` means the gradients are still not rescaled but the gradient
+  norm is calculated and passed on to callbacks. A `float` value means gradients are rescaled.
+
 
 ## [v2.6.0](https://github.com/allenai/allennlp/releases/tag/v2.6.0) - 2021-07-19
 
