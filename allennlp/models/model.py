@@ -83,6 +83,8 @@ class Model(Module, Registrable):
         In a typical AllenNLP configuration file, this parameter does not get an entry under the
         "model", it gets specified as "ddp_accelerator" in the "distributed" part of the config, and is then
         passed in to the model automatically.
+
+        It will be available to `Model` instances as `self.ddp_accelerator`.
     """
 
     _warn_for_unseparable_batches: Set[str] = set()
