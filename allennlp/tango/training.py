@@ -61,7 +61,7 @@ class TrainingStep(Step):
         num_gradient_accumulation_steps: int = 1,
         use_amp: bool = False,
         enable_default_callbacks: bool = True,
-        run_sanity_checks: bool = True,
+        run_confidence_checks: bool = True,
         no_grad: Optional[List[str]] = None,
         limit_batches_per_epoch: Optional[int] = None,
     ) -> Model:
@@ -163,7 +163,7 @@ class TrainingStep(Step):
             num_gradient_accumulation_steps=num_gradient_accumulation_steps,
             use_amp=use_amp,
             enable_default_callbacks=enable_default_callbacks,
-            run_sanity_checks=run_sanity_checks,
+            run_confidence_checks=run_confidence_checks,
         )
         trainer.train()
 
