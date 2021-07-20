@@ -21,7 +21,7 @@ The available initialization functions are
 * ["block_orthogonal"](./initializers.md#block_orthogonal)
 * ["uniform_unit_scaling"](./initializers.md#uniform_unit_scaling)
 * ["pretrained"](./initializers.md#pretrainedmodelinitializer)
-"""
+"""  # noqa: E501
 import logging
 import re
 import math
