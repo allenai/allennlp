@@ -71,6 +71,7 @@ Nothing so far!
 - Fixed recovering training jobs with models that expect `get_metrics()` to not be called until they have seen at least one batch.
 - Made the Transformer Toolkit compatible with transformers that don't start their positional embeddings at 0.
 - Weights & Biases training callback ("wandb") now works when resuming training jobs.
+- Fixed broken links in `allennlp.nn.initializers` docs.
 
 ### Changed
 
