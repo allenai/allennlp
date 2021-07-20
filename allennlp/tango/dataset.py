@@ -31,16 +31,6 @@ class DatasetReaderAdapterStep(Step):
     This step creates an `AllenNlpDataset` from old-school dataset readers. If you're
     tempted to write a new `DatasetReader`, and then use this step with it, don't.
     Just write a `Step` that creates the `AllenNlpDataset` you need directly.
-
-    * `reader` specifies the old-school dataset reader to use.
-    * `splits` maps the names of the splits to the filenames to use for the
-       dataset reader. It might look like this:
-       ```
-       {
-           "train": "/path/to/train.json",
-           "validation": "/path/to/validation.json"
-       }
-       ```
     """
 
     DETERMINISTIC = True  # We're giving the dataset readers some credit here.
@@ -48,6 +38,17 @@ class DatasetReaderAdapterStep(Step):
     VERSION = "002"
 
     def run(self, reader: DatasetReader, splits: Dict[str, str]) -> AllenNlpDataset:  # type: ignore
+        """
+        * `reader` specifies the old-school dataset reader to use.
+        * `splits` maps the names of the splits to the filenames to use for the
+          dataset reader. It might look like this:
+          ```
+          {
+              "train": "/path/to/train.json",
+              "validation": "/path/to/validation.json"
+          }
+          ```
+        """
         instances_map: Dict[str, Sequence[Instance]] = {
             split_name: list(tqdm(reader.read(path), desc=f"Reading {path}"))
             for split_name, path in splits.items()
