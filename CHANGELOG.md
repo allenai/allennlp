@@ -7,8 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-Nothing so far!
-
 ### Added
 
 - Added a module `allennlp.nn.parallel` with a new base class, `DdpAccelerator`, which generalizes
@@ -30,6 +28,7 @@ Nothing so far!
 ### Fixed
 
 - Fixed a mispelling: the parameter `contructor_extras` in `Lazy()` is now correctly called `constructor_extras`.
+- Fixed broken links in `allennlp.nn.initializers` docs.
 
 ### Changed
 
