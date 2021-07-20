@@ -47,7 +47,7 @@ class DatasetReaderAdapterStep(Step):
     CACHEABLE = True
     VERSION = "002"
 
-    def run(self, reader: DatasetReader, splits: Dict[str, str]):  # type: ignore
+    def run(self, reader: DatasetReader, splits: Dict[str, str]) -> AllenNlpDataset:  # type: ignore
         instances_map: Dict[str, Sequence[Instance]] = {
             split_name: list(tqdm(reader.read(path), desc=f"Reading {path}"))
             for split_name, path in splits.items()
