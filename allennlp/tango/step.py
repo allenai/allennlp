@@ -405,7 +405,7 @@ class Step(Registrable, Generic[T]):
                     logger.warning(
                         "Step %s has no return type annotation. Those are really helpful when "
                         "debugging, so we recommend them highly.",
-                        subclass.__name__,
+                        constructed_arg.__class__.__name__,
                     )
                 elif not issubclass(return_type, param.annotation):
                     raise ConfigurationError(
