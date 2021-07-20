@@ -59,4 +59,4 @@ class DatasetReaderAdapterStep(Step):
             for instance in tqdm(instances, desc=f"Indexing {split_name}"):
                 instance.index_fields(vocab)
 
-        return AllenNlpDataset(splits=splits, vocab=vocab)
+        return AllenNlpDataset(splits=instances_map, vocab=vocab)
