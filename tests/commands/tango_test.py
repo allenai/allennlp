@@ -33,7 +33,7 @@ class TestTangoCommand(AllenNlpTestCase):
             is_iterator = dill.load(f)
             assert is_iterator is False
             evaluation_result = dill.load(f)
-            assert evaluation_result.metrics['accuracy'] == 1.0
+            assert evaluation_result.metrics["accuracy"] == 1.0
 
         # If we try again, it should run faster, because everything is cached.
         start = time.time()
