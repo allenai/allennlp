@@ -52,7 +52,7 @@ class TrainingStep(Step):
         validation_metric: Union[str, List[str]] = "-loss",
         num_epochs: int = 20,
         checkpointer: Optional[Lazy[Checkpointer]] = None,
-        grad_norm: Optional[float] = None,
+        grad_norm: Union[float, bool] = False,
         grad_clipping: Optional[float] = None,
         learning_rate_scheduler: Optional[Lazy[LearningRateScheduler]] = None,
         momentum_scheduler: Optional[Lazy[MomentumScheduler]] = None,

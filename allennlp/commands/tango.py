@@ -127,7 +127,7 @@ def run_tango(
         cached_steps = SetWithFallback()
 
         for step in step_graph.values():
-            if step.produce_results:
+            if not step.only_if_needed:
                 for step_name, cached in step.dry_run(cached_steps):
                     if cached:
                         print(f"Getting {step_name} from cache")
@@ -147,7 +147,7 @@ def run_tango(
 
         # produce results
         for name, step in step_graph.items():
-            if step.produce_results:
+            if not step.only_if_needed:
                 step.ensure_result(step_cache)
 
         # symlink everything that has been computed

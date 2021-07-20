@@ -208,11 +208,8 @@ class Step(Registrable, Generic[T]):
       `False`, the step is recomputed every time it is needed. If this is not set at all,
       we cache if the step is marked as `DETERMINISTIC`, and we don't cache otherwise.
     * `step_format` gives you a way to override the step's default format (which is given in `FORMAT`).
-    * `produce_results` specifies whether this is a step where we care about the the results.
-      For example, you might build a long pipeline of steps, but you really only want to look at the
-      evaluation at the end. In that case, the evaluation step is the only step where you would set
-      `produce_results` to `True`. If none of your steps have `produce_results` set to `True`, AllenNLP
-      will do nothing. It will only run steps that are necessary to produce the results you need.
+    * `only_if_needed` specifies whether we can skip this step if no other step depends on it. The
+      default for this setting is to set it for all steps that don't have an explicit name.
     """
 
     DETERMINISTIC: bool = False
@@ -241,7 +238,7 @@ class Step(Registrable, Generic[T]):
         step_name: Optional[str] = None,
         cache_results: Optional[bool] = None,
         step_format: Optional[Format] = None,
-        produce_results: bool = False,
+        only_if_needed: Optional[bool] = None,
         **kwargs,
     ):
         self.logger = cast(AllenNlpLogger, logging.getLogger(self.__class__.__name__))
@@ -260,10 +257,13 @@ class Step(Registrable, Generic[T]):
         self.unique_id_cache: Optional[str] = None
         if step_name is None:
             self.name = self.unique_id()
+            self.only_if_needed = False
         else:
             self.name = step_name
+            self.only_if_needed = True
 
-        self.produce_results = produce_results
+        if only_if_needed is not None:
+            self.only_if_needed = only_if_needed
 
         if cache_results is True:
             if not self.CACHEABLE:
