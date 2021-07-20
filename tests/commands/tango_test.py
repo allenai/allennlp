@@ -4,21 +4,25 @@ import sys
 import time
 
 import dill
+import pytest
 
 from allennlp.commands import main
 from allennlp.common.testing import AllenNlpTestCase
 
 
 class TestTangoCommand(AllenNlpTestCase):
-    def test_tango(self):
-        output_path = self.TEST_DIR / "tango_serialization_dir"
+    @pytest.mark.parametrize("config", ["train_tagger", "train_tagger_complicated"])
+    def test_tango(self, config: str):
+        output_path = self.TEST_DIR / f"tango_{config}"
         sys.argv = [
             "allennlp",
             "tango",
-            str(self.FIXTURES_ROOT / "tango" / "train_tagger.jsonnet"),
+            str(self.FIXTURES_ROOT / "tango" / f"{config}.jsonnet"),
             "-s",
             str(output_path),
         ]
+
+        assert not os.path.exists(output_path)
 
         start = time.time()
         main()

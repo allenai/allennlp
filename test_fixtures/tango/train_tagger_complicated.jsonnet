@@ -5,22 +5,26 @@
             "reader": "sequence_tagging",
             "splits": {
               "train": "test_fixtures/data/sequence_tagging.tsv",
-              "validation": "test_fixtures/data/sequence_tagging.tsv",
+              "validation": "test_fixtures/data/sequence_tagging.tsv"
             }
         },
         "trained_model": {
             "type": "training",
             "dataset": "dataset",
             "training_split": "train",
+            "validation_split": "validation",
             "data_loader": {
-               "type": "sampler",
-               "batch_sampler": {
-                    "type": "bucket",
-                    "sorting_keys": ["tokens"],
-                    "padding_noise": 0.0,
-                    "batch_size" : 80
-               }
+                "type": "batches_per_epoch",
+                "inner": {
+                    "batch_size": 1,
+                },
+                "batches_per_epoch": 20
             },
+            "validation_data_loader": {
+                "batch_size": 16
+            },
+            "no_grad": ['text_field_embedder.token_embedder_tokens._projection.weight'],
+            "limit_batches_per_epoch": 10,
             "model": {
                 "type": "simple_tagger",
                 "text_field_embedder": {
@@ -48,6 +52,9 @@
             "grad_norm": 1.0,
             "num_epochs": 40,
             "patience": 500,
+            "checkpointer": {
+              "keep_most_recent_by_count": null
+            }
         },
         "evaluation": {
             "type": "evaluation",
@@ -58,7 +65,10 @@
             "model": {
                 "type": "ref",
                 "ref": "trained_model"
-            }   # TODO: Figure out why this doesn't work as a string.
+            },   # TODO: Figure out why this doesn't work as a string.
+            "data_loader": {
+                "batch_size": 16
+            },
         }
     }
 }
