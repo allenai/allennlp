@@ -198,15 +198,14 @@ class TorchFormat(Format[T], Generic[T]):
     def write(self, artifact: T, dir: Union[str, PathLike]):
         filename = pathlib.Path(dir) / "data.pt"
         with open(filename, "wb") as f:
-            torch.save(self.VERSION, f, _use_new_zipfile_serialization=False)
-            torch.save(artifact, f, _use_new_zipfile_serialization=False)
+            torch.save((self.VERSION, artifact), f, pickle_module=dill)
 
     def read(self, dir: Union[str, PathLike]) -> T:
         filename = pathlib.Path(dir) / "data.pt"
         with open(filename, "rb") as f:
-            version = torch.load(f)
+            version, artifact = torch.load(f, pickle_module=dill, map_location=torch.device("cpu"))
             if version > self.VERSION:
                 raise ValueError(
                     f"File {filename} is too recent for this version of {self.__class__}."
                 )
-            return torch.load(f, map_location=torch.device("cpu"))
+            return artifact
