@@ -387,6 +387,7 @@ class TestTrainer(TrainerTestBase):
             validation_data_loader=self.validation_data_loader,
             num_epochs=1,
             serialization_dir=self.TEST_DIR,
+            checkpointer=Checkpointer(self.TEST_DIR),
         )
         trainer.train()
 
@@ -397,8 +398,9 @@ class TestTrainer(TrainerTestBase):
             validation_data_loader=self.validation_data_loader,
             num_epochs=3,
             serialization_dir=self.TEST_DIR,
+            checkpointer=Checkpointer(self.TEST_DIR),
         )
-        new_trainer._restore_checkpoint()
+        new_trainer._maybe_restore_checkpoint()
 
         assert new_trainer._start_after_epochs_completed == 1
 
@@ -419,6 +421,7 @@ class TestTrainer(TrainerTestBase):
             num_epochs=1,
             serialization_dir=self.TEST_DIR,
             moving_average=moving_average,
+            checkpointer=Checkpointer(self.TEST_DIR),
         )
         trainer.train()
 
@@ -431,9 +434,10 @@ class TestTrainer(TrainerTestBase):
             num_epochs=3,
             serialization_dir=self.TEST_DIR,
             moving_average=new_moving_average,
+            checkpointer=Checkpointer(self.TEST_DIR),
         )
 
-        new_trainer._restore_checkpoint()
+        new_trainer._maybe_restore_checkpoint()
         assert new_trainer._start_after_epochs_completed == 1
 
         tracker = trainer._metric_tracker
@@ -662,6 +666,7 @@ class TestTrainer(TrainerTestBase):
             validation_data_loader=self.validation_data_loader,
             num_epochs=4,
             serialization_dir=self.TEST_DIR,
+            checkpointer=Checkpointer(self.TEST_DIR),
         )
         trainer.train()
 
@@ -678,8 +683,9 @@ class TestTrainer(TrainerTestBase):
             validation_data_loader=self.validation_data_loader,
             num_epochs=6,
             serialization_dir=self.TEST_DIR,
+            checkpointer=Checkpointer(self.TEST_DIR),
         )
-        new_trainer._restore_checkpoint()
+        new_trainer._maybe_restore_checkpoint()
         new_trainer._start_after_epochs_completed = 4
         assert new_trainer._momentum_scheduler.last_epoch == 3
         new_trainer.train()
@@ -733,6 +739,7 @@ class TestTrainer(TrainerTestBase):
             validation_data_loader=self.validation_data_loader,
             num_epochs=2,
             serialization_dir=self.TEST_DIR,
+            checkpointer=Checkpointer(self.TEST_DIR),
         )
         trainer.train()
 
@@ -745,8 +752,9 @@ class TestTrainer(TrainerTestBase):
             validation_data_loader=self.validation_data_loader,
             num_epochs=4,
             serialization_dir=self.TEST_DIR,
+            checkpointer=Checkpointer(self.TEST_DIR),
         )
-        new_trainer._restore_checkpoint()
+        new_trainer._maybe_restore_checkpoint()
         assert new_trainer._start_after_epochs_completed == 2
         assert new_trainer._learning_rate_scheduler.last_epoch == 1
         new_trainer.train()
@@ -1000,9 +1008,10 @@ class TestTrainer(TrainerTestBase):
             validation_metric="-loss",
             num_epochs=1,
             serialization_dir=self.TEST_DIR,
+            checkpointer=Checkpointer(self.TEST_DIR),
         )
         trainer.train()
-        _ = trainer._restore_checkpoint()
+        _ = trainer._maybe_restore_checkpoint()
         best_epoch_1 = trainer._metric_tracker.best_epoch
         best_validation_metrics_epoch_1 = trainer._metric_tracker.best_epoch_metrics
         # best_validation_metrics_epoch_1: {'accuracy': 0.75, 'accuracy3': 1.0, 'loss': 0.6243013441562653}
@@ -1018,9 +1027,10 @@ class TestTrainer(TrainerTestBase):
             validation_metric="-loss",
             num_epochs=2,
             serialization_dir=self.TEST_DIR,
+            checkpointer=Checkpointer(self.TEST_DIR),
         )
         restore_trainer.train()
-        _ = restore_trainer._restore_checkpoint()
+        _ = restore_trainer._maybe_restore_checkpoint()
         best_epoch_2 = restore_trainer._metric_tracker.best_epoch
         best_validation_metrics_epoch_2 = restore_trainer._metric_tracker.best_epoch_metrics
 
@@ -1039,10 +1049,11 @@ class TestTrainer(TrainerTestBase):
             validation_metric="+loss",
             num_epochs=1,
             serialization_dir=self.TEST_DIR,
+            checkpointer=Checkpointer(self.TEST_DIR),
         )
         trainer.train()
 
-        _ = trainer._restore_checkpoint()
+        _ = trainer._maybe_restore_checkpoint()
         best_epoch_1 = trainer._metric_tracker.best_epoch
         best_validation_metrics_epoch_1 = trainer._metric_tracker.best_epoch_metrics
         # best_validation_metrics_epoch_1: {'accuracy': 0.75, 'accuracy3': 1.0, 'loss': 0.6243013441562653}
@@ -1058,9 +1069,10 @@ class TestTrainer(TrainerTestBase):
             validation_metric="+loss",
             num_epochs=2,
             serialization_dir=self.TEST_DIR,
+            checkpointer=Checkpointer(self.TEST_DIR),
         )
         restore_trainer.train()
-        _ = restore_trainer._restore_checkpoint()
+        _ = restore_trainer._maybe_restore_checkpoint()
         best_epoch_2 = restore_trainer._metric_tracker.best_epoch
         best_validation_metrics_epoch_2 = restore_trainer._metric_tracker.best_epoch_metrics
 
@@ -1081,6 +1093,7 @@ class TestTrainer(TrainerTestBase):
             validation_metric="+loss",
             num_epochs=1,
             serialization_dir=self.TEST_DIR,
+            checkpointer=Checkpointer(self.TEST_DIR),
         )
         training_metrics = original_trainer.train()
 
@@ -1093,6 +1106,7 @@ class TestTrainer(TrainerTestBase):
             validation_metric="+loss",
             num_epochs=2,
             serialization_dir=self.TEST_DIR,
+            checkpointer=Checkpointer(self.TEST_DIR),
         )
         restored_metrics = restored_trainer.train()
 

@@ -1,5 +1,5 @@
 import glob
-from typing import Dict, Any, Tuple, Optional, Set, Union
+from typing import Tuple, Optional, Set, Union
 
 import logging
 import os
@@ -7,10 +7,12 @@ import re
 import time
 
 import torch
+import torch.distributed as dist
 
 from allennlp.common import Registrable
+from allennlp.common.util import is_distributed
 from allennlp.nn import util as nn_util
-from allennlp.training.trainer import Trainer
+from allennlp.training.trainer import Trainer, TrainerCheckpoint
 
 logger = logging.getLogger(__name__)
 
@@ -61,21 +63,42 @@ class Checkpointer(Registrable):
         self._last_save_time = time.time()
         self._last_save_num_epochs_completed = 0
         self._last_save_num_batches_in_epoch_completed = 0
+        self._rank = 0 if not is_distributed() else dist.get_rank()
+        self.state_is_sharded = False
+
+        if is_distributed() and save_every_num_seconds is not None:
+            # This would involve extra overhead to keep syncronized between workers,
+            # so we don't support it.
+            raise ValueError(
+                "Checkointer parameter 'save_every_num_seconds' is not supported in distributed training"
+            )
+
+    @property
+    def _is_primary(self) -> bool:
+        return self._rank == 0
 
     def _model_state_path(self, epochs_completed: int, batches_in_epoch_completed: int) -> str:
-        return os.path.join(
+        path = os.path.join(
             self._serialization_dir,
-            f"model_state_e{epochs_completed}_b{batches_in_epoch_completed}.th",
+            f"model_state_e{epochs_completed}_b{batches_in_epoch_completed}",
         )
+        if self.state_is_sharded:
+            return path + f"_w{self._rank}.th"
+        else:
+            return path + ".th"
 
     def _training_state_path(self, epochs_completed: int, batches_in_epoch_completed: int) -> str:
-        return os.path.join(
+        path = os.path.join(
             self._serialization_dir,
-            f"training_state_e{epochs_completed}_b{batches_in_epoch_completed}.th",
+            f"training_state_e{epochs_completed}_b{batches_in_epoch_completed}",
         )
+        if self.state_is_sharded:
+            return path + f"_w{self._rank}.th"
+        else:
+            return path + ".th"
 
-    _model_state_file_re = re.compile(r"(.*/)?model_state_e(\d+)_b(\d+)\.th$")
-    _training_state_file_re = re.compile(r"(.*/)?training_state_e(\d+)_b(\d+)\.th$")
+    _model_state_file_re = re.compile(r"(.*/)?model_state_e(\d+)_b(\d+)(_w\d+)?\.th$")
+    _training_state_file_re = re.compile(r"(.*/)?training_state_e(\d+)_b(\d+)(_w\d+)?\.th$")
 
     @classmethod
     def _parse_model_state_path(cls, path: Union[str, os.PathLike]) -> Optional[Tuple[int, int]]:
@@ -103,9 +126,12 @@ class Checkpointer(Registrable):
         """Returns a set of integers, each of which is a number of batches that were completed at the
         time a checkpoint wsa saved."""
         checkpoints = set()
-        for model_state_file in glob.iglob(
-            os.path.join(self._serialization_dir, "model_state_e*_b*.th")
-        ):
+        pattern = (
+            f"model_state_e*_b*_w{self._rank}.th"
+            if self.state_is_sharded
+            else "model_state_e*_b*.th"
+        )
+        for model_state_file in glob.iglob(os.path.join(self._serialization_dir, pattern)):
             point_in_time = self._parse_model_state_path(model_state_file)
             if point_in_time is None:
                 continue
@@ -113,12 +139,18 @@ class Checkpointer(Registrable):
                 checkpoints.add(point_in_time)
         return checkpoints
 
+    def _remove_checkpoint(self, epochs_completed: int, batches_in_epoch_completed: int):
+        for state_name in ("model_state", "training_state"):
+            pattern = f"{state_name}_e{epochs_completed}_b{batches_in_epoch_completed}*.th"
+            for fname in glob.iglob(os.path.join(self._serialization_dir, pattern)):
+                os.remove(fname)
+
     def maybe_save_checkpoint(
         self,
         trainer: Trainer,
         num_epochs_completed: int,
         num_batches_in_epoch_completed: int,
-    ) -> None:
+    ) -> bool:
         """
         Figures out whether we need to save a checkpoint, and does so if necessary.
         """
@@ -147,6 +179,8 @@ class Checkpointer(Registrable):
 
         if should_save:
             self.save_checkpoint(trainer)
+            return True
+        return False
 
     def save_checkpoint(
         self,
@@ -156,14 +190,26 @@ class Checkpointer(Registrable):
             return
 
         tcps = trainer.get_checkpoint_state()
+        if tcps is None:
+            # This should only happen from a non-primary node in distributed training with a
+            # regular non-sharded model.
+            assert not self._is_primary and not self.state_is_sharded
+            return
+
         epochs_completed = tcps.trainer_state["epochs_completed"]
         batches_in_epoch_completed = tcps.trainer_state["batches_in_epoch_completed"]
 
-        model_state_path = self._model_state_path(epochs_completed, batches_in_epoch_completed)
+        model_state_path = self._model_state_path(
+            epochs_completed,
+            batches_in_epoch_completed,
+        )
         if not os.path.isfile(model_state_path):
             torch.save(tcps.model_state, model_state_path)
 
-        trainer_state_path = self._training_state_path(epochs_completed, batches_in_epoch_completed)
+        trainer_state_path = self._training_state_path(
+            epochs_completed,
+            batches_in_epoch_completed,
+        )
         if not os.path.isfile(trainer_state_path):
             torch.save(tcps.trainer_state, trainer_state_path)
 
@@ -171,7 +217,9 @@ class Checkpointer(Registrable):
         self._last_save_num_epochs_completed = epochs_completed
         self._last_save_num_batches_in_epoch_completed = batches_in_epoch_completed
 
-        if self._keep_most_recent_by_age is not None or self._keep_most_recent_by_count is not None:
+        if self._is_primary and (
+            self._keep_most_recent_by_age is not None or self._keep_most_recent_by_count is not None
+        ):
             checkpoints = list(self._find_all_checkpoints())
             checkpoints.sort(reverse=True)
 
@@ -198,10 +246,9 @@ class Checkpointer(Registrable):
             # Remove everything we're not keeping
             for checkpoint in checkpoints:
                 if checkpoint not in checkpoints_to_keep:
-                    os.remove(self._model_state_path(*checkpoint))
-                    os.remove(self._training_state_path(*checkpoint))
+                    self._remove_checkpoint(*checkpoint)
 
-    def _find_latest_checkpoint(self) -> Optional[Tuple[str, str]]:
+    def find_latest_checkpoint(self) -> Optional[Tuple[str, str]]:
         """
         Return the location of the latest model and training state files.
         If there isn't a valid checkpoint then return None.
@@ -212,7 +259,7 @@ class Checkpointer(Registrable):
         last_checkpoint = max(checkpoints)
         return self._model_state_path(*last_checkpoint), self._training_state_path(*last_checkpoint)
 
-    def load_checkpoint(self) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+    def load_checkpoint(self) -> Optional[TrainerCheckpoint]:
         """
         Loads model state from a `serialization_dir` corresponding to the last saved checkpoint.
         This includes a training state, which is serialized separately from model parameters. This function
@@ -228,9 +275,10 @@ class Checkpointer(Registrable):
         states : `Tuple[Dict[str, Any], Dict[str, Any]]`
             The model state and the training state.
         """
-        latest_checkpoint = self._find_latest_checkpoint()
+        latest_checkpoint = self.find_latest_checkpoint()
         if latest_checkpoint is None:
-            return {}, {}
+            return None
+
         model_path, training_state_path = latest_checkpoint
 
         # Load the parameters onto CPU, then transfer to GPU.
@@ -239,7 +287,7 @@ class Checkpointer(Registrable):
         # buffer. The GPU transfer happens implicitly in load_state_dict.
         model_state = torch.load(model_path, map_location=nn_util.device_mapping(-1))
         training_state = torch.load(training_state_path, map_location=nn_util.device_mapping(-1))
-        return model_state, training_state
+        return TrainerCheckpoint(model_state, training_state)
 
 
 Checkpointer.register("default")(Checkpointer)

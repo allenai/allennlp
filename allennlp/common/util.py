@@ -419,12 +419,14 @@ def peak_gpu_memory() -> Dict[int, int]:
     if not torch.cuda.is_available():
         return {}
 
+    device = torch.cuda.current_device()
+
+    results_dict: Dict[int, int] = {}
     if is_distributed():
         # If the backend is not 'nccl', we're training on CPU.
         if dist.get_backend() != "nccl":
             return {}
 
-        device = torch.cuda.current_device()
         global_rank = dist.get_rank()
         world_size = dist.get_world_size()
         peak_bytes = torch.cuda.max_memory_allocated(device)
@@ -434,13 +436,15 @@ def peak_gpu_memory() -> Dict[int, int]:
 
         dist.all_gather(gather_results, peak_bytes_tensor)
 
-        results_dict: Dict[int, int] = {}
         for peak_bytes_tensor in gather_results:
             results_dict[int(peak_bytes_tensor[0])] = int(peak_bytes_tensor[1])
-
-        return results_dict
     else:
-        return {0: torch.cuda.max_memory_allocated()}
+        results_dict = {0: torch.cuda.max_memory_allocated()}
+
+    # Reset peak stats.
+    torch.cuda.reset_max_memory_allocated(device)
+
+    return results_dict
 
 
 def ensure_list(iterable: Iterable[A]) -> List[A]:

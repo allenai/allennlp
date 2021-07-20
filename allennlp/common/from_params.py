@@ -471,7 +471,7 @@ def construct_arg(
 
         value_cls = args[0]
         subextras = create_extras(value_cls, extras)
-        return Lazy(value_cls, params=deepcopy(popped_params), contructor_extras=subextras)  # type: ignore
+        return Lazy(value_cls, params=deepcopy(popped_params), constructor_extras=subextras)  # type: ignore
 
     # For any other kind of iterable, we will just assume that a list is good enough, and treat
     # it the same as List. This condition needs to be at the end, so we don't catch other kinds
