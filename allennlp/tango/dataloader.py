@@ -69,7 +69,9 @@ class DataLoaderAdapter(DataLoader):
         raise NotImplementedError()
 
     def index_with(self, vocab: Vocabulary) -> None:
-        raise NotImplementedError()
+        raise NotImplementedError(
+            "In AllenNLP Tango, your instances have to be indexed before they get to the data loader."
+        )
 
     def set_target_device(self, device: torch.device) -> None:
         self.target_device = device
