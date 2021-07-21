@@ -24,9 +24,9 @@ from typing import (
     Generic,
     Iterable,
     Tuple,
-    MutableSet,
     MutableMapping,
     Iterator,
+    MutableSet,
 )
 
 try:
@@ -510,32 +510,6 @@ class Step(Registrable, Generic[T]):
         result = self._run_with_temp_dir(cache, **kwargs)
         cache[self] = result
 
-    def dry_run(self, cached_steps: MutableSet["Step"]) -> Iterable[Tuple[str, bool]]:
-        """Returns the list of steps that will be run, or read from cache, if you call
-        this step's `result()` method.
-
-        Steps come out as tuples `(step_name, read_from_cache)`, so you can see which
-        steps will be read from cache, and which have to be run."""
-        if self in cached_steps:
-            yield self.name, True
-            return
-
-        def find_steps_from_inputs(o: Any):
-            if isinstance(o, Step):
-                yield from o.dry_run(cached_steps)
-            elif isinstance(o, List):
-                yield from itertools.chain.from_iterable(find_steps_from_inputs(i) for i in o)
-            elif isinstance(o, Set):
-                yield from itertools.chain.from_iterable(find_steps_from_inputs(i) for i in o)
-            elif isinstance(o, Dict):
-                yield from itertools.chain.from_iterable(
-                    find_steps_from_inputs(i) for i in o.values()
-                )
-
-        yield from find_steps_from_inputs(self.kwargs)
-        yield self.name, False
-        cached_steps.add(self)
-
     def unique_id(self) -> str:
         """Returns the unique ID for this step.
 
@@ -585,11 +559,7 @@ class Step(Registrable, Generic[T]):
         else:
             return False
 
-    def dependencies(self) -> Set["Step"]:
-        """Returns a set of steps that this step depends on.
-
-        Does not return recursive dependencies."""
-
+    def _ordered_dependencies(self) -> Iterable["Step"]:
         def dependencies_internal(o: Any) -> Iterable[Step]:
             if isinstance(o, Step):
                 yield o
@@ -602,7 +572,13 @@ class Step(Registrable, Generic[T]):
             else:
                 return
 
-        return set(dependencies_internal(self.kwargs.values()))
+        return dependencies_internal(self.kwargs.values())
+
+    def dependencies(self) -> Set["Step"]:
+        """Returns a set of steps that this step depends on.
+
+        Does not return recursive dependencies."""
+        return set(self._ordered_dependencies())
 
     def recursive_dependencies(self) -> Set["Step"]:
         """Returns a set of steps that this step depends on.
@@ -686,3 +662,48 @@ def step_graph_from_params(params: Dict[str, Params]) -> Dict[str, Step]:
                 break
 
     return parsed_steps
+
+
+def tango_dry_run(
+    step_or_steps: Union[Step, Iterable[Step]], step_cache: Optional[StepCache]
+) -> List[Tuple[Step, bool]]:
+    """
+    Returns the list of steps that will be run, or read from cache, if you call
+    a step's `result()` method.
+
+    Steps come out as tuples `(step, read_from_cache)`, so you can see which
+    steps will be read from cache, and which have to be run.
+    """
+    if isinstance(step_or_steps, Step):
+        steps = [step_or_steps]
+    else:
+        steps = list(step_or_steps)
+
+    cached_steps: MutableSet[Step]
+    if step_cache is None:
+        cached_steps = set()
+    else:
+
+        class SetWithFallback(set):
+            def __contains__(self, item):
+                return item in step_cache or super().__contains__(item)
+
+        cached_steps = SetWithFallback()
+
+    result = []
+    seen_steps = set()
+    steps.reverse()
+    while len(steps) > 0:
+        step = steps.pop()
+        if step in seen_steps:
+            continue
+        dependencies = [s for s in step._ordered_dependencies() if s not in seen_steps]
+        if len(dependencies) <= 0:
+            result.append((step, step in cached_steps))
+            cached_steps.add(step)
+            seen_steps.add(step)
+        else:
+            steps.append(step)
+            steps.extend(dependencies)
+
+    return result

@@ -15,7 +15,7 @@ from allennlp.commands.subcommand import Subcommand
 from allennlp.common.params import Params
 from allennlp.common import logging as common_logging
 from allennlp.common import util as common_util
-from allennlp.tango.step import step_graph_from_params
+from allennlp.tango.step import step_graph_from_params, tango_dry_run
 from allennlp.tango.step import DirectoryStepCache
 
 logger = logging.getLogger(__name__)
@@ -119,20 +119,13 @@ def run_tango(
     step_cache = DirectoryStepCache(serialization_dir / "step_cache")
 
     if dry_run:
-
-        class SetWithFallback(set):
-            def __contains__(self, item):
-                return item in step_cache or super().__contains__(item)
-
-        cached_steps = SetWithFallback()
-
-        for step in step_graph.values():
-            if not step.only_if_needed:
-                for step_name, cached in step.dry_run(cached_steps):
-                    if cached:
-                        print(f"Getting {step_name} from cache")
-                    else:
-                        print(f"Computing {step_name}")
+        for step, cached in tango_dry_run(
+            (s for s in step_graph.values() if not s.only_if_needed), step_cache
+        ):
+            if cached:
+                print(f"Getting {step.name} from cache")
+            else:
+                print(f"Computing {step.name}")
     else:
         # remove symlinks to old results
         for filename in serialization_dir.glob("*"):
