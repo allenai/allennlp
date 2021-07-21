@@ -7,7 +7,13 @@ from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.tango.format import DillFormat
 from allennlp.tango.hf_dataset import HuggingfaceDataset
-from allennlp.tango.step import Step, step_graph_from_params
+from allennlp.tango.step import (
+    Step,
+    step_graph_from_params,
+    MemoryStepCache,
+    DirectoryStepCache,
+    tango_dry_run,
+)
 
 import logging
 
@@ -117,3 +123,84 @@ def test_iterable_dill_format(compress: Optional[str]):
         format.write(r, d)
         r2 = format.read(d)
         assert [x + 1 for x in range(10)] == list(r2)
+
+
+@pytest.mark.parametrize("step_cache_class", [MemoryStepCache, DirectoryStepCache])
+def test_run_steps_programmatically(step_cache_class):
+    from allennlp.data.dataset_readers import SequenceTaggingDatasetReader
+    from allennlp.tango.dataset import DatasetReaderAdapterStep
+    from allennlp.tango import TrainingStep
+    from allennlp.common import Lazy
+    from allennlp.training.optimizers import AdamOptimizer
+    from allennlp.tango.dataloader import BatchSizeDataLoader
+    from allennlp.models import SimpleTagger
+    from allennlp.tango import EvaluationStep
+
+    dataset_step = DatasetReaderAdapterStep(
+        reader=SequenceTaggingDatasetReader(),
+        splits={
+            "train": "test_fixtures/data/sequence_tagging.tsv",
+            "validation": "test_fixtures/data/sequence_tagging.tsv",
+        },
+    )
+    training_step = TrainingStep(
+        model=Lazy(
+            SimpleTagger,
+            Params(
+                {
+                    "text_field_embedder": {
+                        "token_embedders": {
+                            "tokens": {
+                                "type": "embedding",
+                                "projection_dim": 2,
+                                "pretrained_file": "test_fixtures/embeddings/glove.6B.100d.sample.txt.gz",
+                                "embedding_dim": 100,
+                                "trainable": True,
+                            }
+                        }
+                    },
+                    "encoder": {"type": "lstm", "input_size": 2, "hidden_size": 4, "num_layers": 1},
+                }
+            ),
+        ),
+        dataset=dataset_step,
+        data_loader=Lazy(BatchSizeDataLoader, Params({"batch_size": 2})),
+        optimizer=Lazy(AdamOptimizer),
+    )
+    evaluation_step = EvaluationStep(
+        dataset=dataset_step, model=training_step, step_name="evaluation"
+    )
+
+    with TemporaryDirectory(prefix="test_run_steps_programmatically-") as d:
+        if step_cache_class == DirectoryStepCache:
+            cache = DirectoryStepCache(d)
+        else:
+            cache = step_cache_class()
+
+        assert "random object" not in cache
+        assert dataset_step not in cache
+        assert training_step not in cache
+        assert evaluation_step not in cache
+        assert len(cache) == 0
+        with pytest.raises(KeyError):
+            _ = cache[evaluation_step]
+
+        assert tango_dry_run(evaluation_step, cache) == [
+            (dataset_step, False),
+            (training_step, False),
+            (evaluation_step, False),
+        ]
+        training_step.ensure_result(cache)
+        assert tango_dry_run(evaluation_step, cache) == [
+            (dataset_step, True),
+            (training_step, True),
+            (evaluation_step, False),
+        ]
+
+        assert "random object" not in cache
+        assert dataset_step in cache
+        assert training_step in cache
+        assert evaluation_step not in cache
+        assert len(cache) == 2
+        with pytest.raises(KeyError):
+            _ = cache[evaluation_step]
