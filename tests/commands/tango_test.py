@@ -7,6 +7,8 @@ import dill
 import pytest
 
 from allennlp.commands import main
+from allennlp.commands.tango import run_tango
+from allennlp.common import Params
 from allennlp.common.testing import AllenNlpTestCase
 
 
@@ -45,3 +47,15 @@ class TestTangoCommand(AllenNlpTestCase):
         second_run_time = time.time() - start
 
         assert second_run_time * 2 < first_run_time
+
+    def test_dry_run(self):
+        params_as_dict_because_mypy_is_lame = {
+            "dataset": {"type": "hf_dataset", "dataset_name": "squad"},
+            "dataset_text_only": {
+                "type": "text_only",
+                "input": "dataset",
+                "fields_to_keep": ["context", "question"],
+            },
+        }
+        params = Params({"steps": params_as_dict_because_mypy_is_lame})
+        run_tango(params, self.TEST_DIR / f"tango_dry_run", dry_run=True)
