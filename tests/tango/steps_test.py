@@ -1,7 +1,11 @@
+from tempfile import TemporaryDirectory
+from typing import Iterable, Optional
+
 import pytest
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
+from allennlp.tango.format import DillFormat
 from allennlp.tango.hf_dataset import HuggingfaceDataset
 from allennlp.tango.step import Step, step_graph_from_params
 
@@ -102,3 +106,14 @@ def test_make_step_graph_missing_step():
     )
     with pytest.raises(ConfigurationError):
         step_graph_from_params(params.pop("steps"))
+
+
+@pytest.mark.parametrize("compress", DillFormat.OPEN_FUNCTIONS.keys())
+def test_iterable_dill_format(compress: Optional[str]):
+    r = (x + 1 for x in range(10))
+
+    with TemporaryDirectory(prefix="test_iterable_dill_format-") as d:
+        format = DillFormat[Iterable[int]](compress)
+        format.write(r, d)
+        r2 = format.read(d)
+        assert [x + 1 for x in range(10)] == list(r2)
