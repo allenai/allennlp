@@ -58,4 +58,4 @@ class TestTangoCommand(AllenNlpTestCase):
             },
         }
         params = Params({"steps": params_as_dict_because_mypy_is_lame})
-        run_tango(params, self.TEST_DIR / f"tango_dry_run", dry_run=True)
+        run_tango(params, self.TEST_DIR / "tango_dry_run", dry_run=True)
