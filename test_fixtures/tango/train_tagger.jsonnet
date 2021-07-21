@@ -51,10 +51,7 @@
         },
         "evaluation": {
             "type": "evaluation",
-            "dataset": {
-                "type": "ref",
-                "ref": "dataset"
-            },  # TODO: Figure out why this doesn't work as a string.
+            "dataset": "dataset",
             "model": {
                 "type": "ref",
                 "ref": "trained_model"
