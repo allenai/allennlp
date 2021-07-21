@@ -160,7 +160,7 @@ class DillFormatIterator(Iterator[T], Generic[T]):
             open_fn = lzma.open
         else:
             open_fn = open
-        self.f = open_fn(filename)
+        self.f = open_fn(filename, "rb")
         self.unpickler = dill.Unpickler(self.f)
         version = self.unpickler.load()
         if version > DillFormat.VERSION:
