@@ -1,4 +1,4 @@
-from typing import Dict, Optional, List, Any
+from typing import Dict, Optional, List, Any, Union
 
 from overrides import overrides
 import torch
@@ -6,6 +6,12 @@ import torch.nn.functional
 
 from allennlp.data.fields.field import Field
 from allennlp.nn import util
+
+
+def _tensorize(x: Union[torch.Tensor, List[int]]) -> torch.Tensor:
+    if not isinstance(x, torch.Tensor):
+        return torch.tensor(x)
+    return x
 
 
 class TransformerTextField(Field[torch.Tensor]):
@@ -28,19 +34,21 @@ class TransformerTextField(Field[torch.Tensor]):
 
     def __init__(
         self,
-        input_ids: torch.Tensor,
+        input_ids: Union[torch.Tensor, List[int]],
         # I wish input_ids were called `token_ids` for clarity, but we want to be compatible with huggingface.
-        token_type_ids: Optional[torch.Tensor] = None,
-        attention_mask: Optional[torch.Tensor] = None,
-        special_tokens_mask: Optional[torch.Tensor] = None,
-        offsets_mapping: Optional[torch.Tensor] = None,
+        token_type_ids: Optional[Union[torch.Tensor, List[int]]] = None,
+        attention_mask: Optional[Union[torch.Tensor, List[int]]] = None,
+        special_tokens_mask: Optional[Union[torch.Tensor, List[int]]] = None,
+        offsets_mapping: Optional[Union[torch.Tensor, List[int]]] = None,
         padding_token_id: int = 0,
     ) -> None:
-        self.input_ids = input_ids
-        self.token_type_ids = token_type_ids
-        self.attention_mask = attention_mask
-        self.special_tokens_mask = special_tokens_mask
-        self.offsets_mapping = offsets_mapping
+        self.input_ids = _tensorize(input_ids)
+        self.token_type_ids = None if token_type_ids is None else _tensorize(token_type_ids)
+        self.attention_mask = None if attention_mask is None else _tensorize(attention_mask)
+        self.special_tokens_mask = (
+            None if special_tokens_mask is None else _tensorize(special_tokens_mask)
+        )
+        self.offsets_mapping = None if offsets_mapping is None else _tensorize(offsets_mapping)
         self.padding_token_id = padding_token_id
 
     @overrides
