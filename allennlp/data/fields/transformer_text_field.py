@@ -46,7 +46,7 @@ class TransformerTextField(Field[torch.Tensor]):
     @overrides
     def get_padding_lengths(self) -> Dict[str, int]:
         return {
-            name: len(getattr(self, name))
+            name: getattr(self, name).shape[-1]
             for name in self.__slots__
             if isinstance(getattr(self, name), torch.Tensor)
         }
@@ -56,15 +56,17 @@ class TransformerTextField(Field[torch.Tensor]):
         result = {}
         for name, padding_length in padding_lengths.items():
             tensor = getattr(self, name)
+            if len(tensor.shape) > 1:
+                tensor = tensor.squeeze(0)
             result[name] = torch.nn.functional.pad(
                 tensor,
-                (0, padding_length - len(tensor)),
+                (0, padding_length - tensor.shape[-1]),
                 value=self.padding_token_id if name == "input_ids" else 0,
             )
         if "attention_mask" not in result:
             result["attention_mask"] = torch.tensor(
-                [True] * len(self.input_ids)
-                + [False] * (padding_lengths["input_ids"] - len(self.input_ids)),
+                [True] * self.input_ids.shape[-1]
+                + [False] * (padding_lengths["input_ids"] - self.input_ids.shape[-1]),
                 dtype=torch.bool,
             )
         return result
@@ -88,7 +90,7 @@ class TransformerTextField(Field[torch.Tensor]):
             return str(x.item())
 
         def readable_tensor(t: torch.Tensor) -> str:
-            if len(t) <= 16:
+            if t.shape[-1] <= 16:
                 return "[" + ", ".join(map(format_item, t)) + "]"
             else:
                 return (

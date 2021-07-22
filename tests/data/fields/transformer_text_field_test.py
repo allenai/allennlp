@@ -1,5 +1,6 @@
 import torch
 
+from allennlp.common.cached_transformers import get_tokenizer
 from allennlp.data import Batch, Instance
 from allennlp.data.fields import TransformerTextField
 
@@ -38,3 +39,19 @@ def test_transformer_text_field_batching():
     assert tensors["text"]["attention_mask"][0, -1] == torch.Tensor([False])
     assert torch.all(tensors["text"]["input_ids"][-1] == 0)
     assert torch.all(tensors["text"]["attention_mask"][-1] == torch.tensor([False]))
+
+
+def test_transformer_text_field_from_huggingface():
+    tokenizer = get_tokenizer("bert-base-cased")
+    batch = Batch(
+        [
+            Instance({"text": TransformerTextField(**tokenizer(text, return_tensors="pt"))})
+            for text in [
+                "Hello, World!",
+                "The fox jumped over the fence",
+                "Humpty dumpty sat on a wall",
+            ]
+        ]
+    )
+    tensors = batch.as_tensor_dict(batch.get_padding_lengths())
+    assert tensors["text"]["input_ids"].shape == (3, 11)
