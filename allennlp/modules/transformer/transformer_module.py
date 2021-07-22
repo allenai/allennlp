@@ -9,7 +9,13 @@ import torch
 import torch.distributed as dist
 
 from allennlp.common.util import is_distributed, is_global_primary
-from allennlp.nn.util import StateDictType, read_state_dict, load_state_dict_distributed
+from allennlp.nn.parallel import ShardedModuleMixin
+from allennlp.nn.module import Module
+from allennlp.nn.util import (
+    StateDictType,
+    read_state_dict,
+    _check_incompatible_keys,
+)
 
 if TYPE_CHECKING:
     from transformers.configuration_utils import PretrainedConfig
@@ -21,7 +27,7 @@ logger = logging.getLogger(__name__)
 _T = TypeVar("_T", bound="TransformerModule")
 
 
-class TransformerModule(torch.nn.Module):
+class TransformerModule(Module):
     """
     Base class to help with generalized loading of pretrained weights.
 
@@ -171,15 +177,6 @@ class TransformerModule(torch.nn.Module):
         """
         raise NotImplementedError
 
-    def _post_load_pretrained_state_dict_hook(
-        self, missing_keys: List[str], unexpected_keys: List[str]
-    ) -> None:
-        """
-        Subclasses can override this method to modify `missing_keys` or `unexpected_keys` after
-        loading a pretrained state dictionary.
-        """
-        pass
-
     @classmethod
     def from_pretrained_module(
         cls: Type[_T],
@@ -267,12 +264,12 @@ class TransformerModule(torch.nn.Module):
                 # this class. This is called recursively on each submodule of the current module.
                 state_dict = model._get_mapped_state_dict(pretrained_state_dict, mapping=mapping)
 
+            logger.info("Loading state_dict into module")
+
             missing_keys: List[str]
             unexpected_keys: List[str]
-            error_msgs: List[str] = []
             if not is_distributed():
                 assert state_dict is not None
-                logger.info("Loading state_dict into module")
                 missing_keys, unexpected_keys = model.load_state_dict(state_dict, strict=False)
             else:
                 # We're in distributed training. `state_dict` is `None` for all process groups
@@ -281,13 +278,9 @@ class TransformerModule(torch.nn.Module):
                 # to load the state_dict into memory.
                 dist.barrier()
                 # Now load the state dict into the model.
-                logger.info("Loading state_dict into module (MEMORY_EFFICIENT strategy)")
-                missing_keys, unexpected_keys = load_state_dict_distributed(
-                    model, state_dict, strict=False
+                missing_keys, unexpected_keys = model.load_state_dict_distributed(
+                    state_dict, strict=False
                 )
-
-            # Run post load hook.
-            model._post_load_pretrained_state_dict_hook(missing_keys, unexpected_keys)
 
             # Exclude any keys in `missing_keys` that match with the `allow_missing`
             # regular expressions.
@@ -298,30 +291,7 @@ class TransformerModule(torch.nn.Module):
                     k for k in missing_keys if not any(re.match(p, k) for p in allow_missing)
                 ]
 
-            if missing_keys:
-                error_msgs.append(
-                    "Missing key(s) in state_dict: {}".format(
-                        ", ".join(f'"{k}"' for k in missing_keys)
-                    )
-                )
-            if unexpected_keys:
-                error_msgs.append(
-                    "Unexpected key(s) in state_dict: {}".format(
-                        ", ".join(f'"{k}"' for k in unexpected_keys)
-                    )
-                )
-
-            if error_msgs and strict:
-                raise RuntimeError(
-                    "Error(s) in loading state_dict for {}:\n\t{}".format(
-                        cls.__name__, "\n\t".join(error_msgs)
-                    )
-                )
-
-            # If there were error messages but we're not loading in 'strict' mode,
-            # we just issue warnings from the logger.
-            for msg in error_msgs:
-                logger.warning(msg)
+            _check_incompatible_keys(model, missing_keys, unexpected_keys, strict)
 
         return model
 
@@ -351,6 +321,10 @@ def _get_mapped_state_dict(
 
     # Now loop through the submodules, calling this function on each submodule.
     for name, submodule in module.named_children():
+        # Submodule might be a wrapped, sharded module.
+        if isinstance(submodule, ShardedModuleMixin):
+            submodule = submodule.get_original_module()
+
         # Pull-out the part of the state_dict corresponding to just this submodule.
         relevant_keys = set([key for key in state_dict.keys() if key.startswith(name + ".")])
         module_state_dict = {
