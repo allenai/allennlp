@@ -56,7 +56,7 @@ repeated_ngram_transition_probabilities_0 = torch.tensor(
         [0.0, 0.0, 0.0, 0.0, 0.0, 1.0],   # END -> j (doesn't matter)
     ]
 )
- 
+
 # Another transition matrix that favors repeated ngrams
 repeated_ngram_transition_probabilities_1 = torch.tensor(
     [  # START 1    2    3    4   END
