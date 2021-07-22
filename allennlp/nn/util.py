@@ -24,12 +24,6 @@ logger = logging.getLogger(__name__)
 T = TypeVar("T")
 StateDictType = Union[Dict[str, torch.Tensor], "OrderedDict[str, torch.Tensor]"]
 
-_MODULE_SHARDED_FLAG = "_is_sharded_allennlp"
-"""
-This flag is used to indicate when a module's parameters have been sharded across
-distributed workers.
-"""
-
 
 def move_to_device(obj, device: Union[torch.device, int]):
     """
@@ -822,10 +816,9 @@ def sequence_cross_entropy_with_logits(
         num_classes = logits.size(-1)
         smoothing_value = label_smoothing / num_classes
         # Fill all the correct indices with 1 - smoothing value.
-        one_hot_targets = torch.zeros_like(log_probs_flat).scatter_(
-            -1, targets_flat, 1.0 - label_smoothing
+        smoothed_targets = torch.full_like(log_probs_flat, smoothing_value).scatter_(
+            -1, targets_flat, 1.0 - label_smoothing + smoothing_value
         )
-        smoothed_targets = one_hot_targets + smoothing_value
         negative_log_likelihood_flat = -log_probs_flat * smoothed_targets
         negative_log_likelihood_flat = negative_log_likelihood_flat.sum(-1, keepdim=True)
     else:
@@ -2179,7 +2172,10 @@ def dist_reduce_sum(value: _V, **kwargs) -> _V:
 
 
 def _collect_state_dict(
-    module: torch.nn.Module, state_dict: Optional[StateDictType], recurse: bool = True
+    module: torch.nn.Module,
+    state_dict: Optional[StateDictType],
+    recurse: bool = True,
+    prefix: str = "",
 ) -> Tuple[StateDictType, List[str], List[str]]:
     """
     Collect a module's state dict across distributed processes.
@@ -2195,10 +2191,8 @@ def _collect_state_dict(
     """
     # This is the device we'll use for the broadcast operation.
     dist_device = distributed_device()
-    # This is the device we'll put all tensors on in the returned state dict.
-    state_dict_device = (
-        int_to_device(-1) if not state_dict else state_dict[list(state_dict.keys())[0]].device
-    )
+    # We'll keep tensors on CPU in the returned state dict.
+    state_dict_device = int_to_device(-1)
 
     missing_keys: List[str] = []
     unexpected_keys: List[str] = []
@@ -2207,6 +2201,7 @@ def _collect_state_dict(
     # We iterate over this state dict instead of `state_dict` so we can be sure
     # that the order is consistent across processes.
     # We'll also update this state dict as we go and return it at the end.
+
     if recurse:
         current_state_dict = module.state_dict()
     else:
@@ -2225,9 +2220,8 @@ def _collect_state_dict(
     # Gather unexpected_keys.
     if is_global_primary():
         assert state_dict is not None
-        module_keys = set(module.state_dict().keys())
         for key in state_dict:
-            if key not in module_keys:
+            if key not in keys:
                 unexpected_keys.append(key)
 
     for key in keys:
@@ -2239,6 +2233,7 @@ def _collect_state_dict(
                 tensor = state_dict[key]
             else:
                 missing_keys.append(key)
+        logger.debug("Broadcasting distributed parameter '%s'", prefix + key)
         tensor = tensor.to(dist_device)
         dist.broadcast(tensor, 0)
         current_state_dict[key] = tensor.to(state_dict_device)
@@ -2246,14 +2241,44 @@ def _collect_state_dict(
     return current_state_dict, missing_keys, unexpected_keys
 
 
-class _LoadStateDictResult(NamedTuple):
+class _IncompatibleKeys(NamedTuple):
     missing_keys: List[str]
     unexpected_keys: List[str]
 
+    def __repr__(self):
+        if not self.missing_keys and not self.unexpected_keys:
+            return "<All keys matched successfully>"
+        return f"(missing_keys = {self.missing_keys}, unexpected_keys = {self.unexpected_keys})"
+
+
+def _check_incompatible_keys(
+    module, missing_keys: List[str], unexpected_keys: List[str], strict: bool
+):
+    error_msgs: List[str] = []
+    if missing_keys:
+        error_msgs.append(
+            "Missing key(s) in state_dict: {}".format(", ".join(f'"{k}"' for k in missing_keys))
+        )
+    if unexpected_keys:
+        error_msgs.append(
+            "Unexpected key(s) in state_dict: {}".format(
+                ", ".join(f'"{k}"' for k in unexpected_keys)
+            )
+        )
+    if error_msgs and strict:
+        raise RuntimeError(
+            "Error(s) in loading state_dict for {}:\n\t{}".format(
+                module.__class__.__name__, "\n\t".join(error_msgs)
+            )
+        )
+
 
 def load_state_dict_distributed(
-    module: torch.nn.Module, state_dict: Optional[StateDictType], strict: bool = True
-) -> _LoadStateDictResult:
+    module: torch.nn.Module,
+    state_dict: Optional[StateDictType],
+    strict: bool = True,
+    prefix: str = "",
+) -> _IncompatibleKeys:
     """
     Load a `state_dict` to the `module` within a distributed process. Only the global
     primary process requires the `state_dict` to not be `None`. All other processes
@@ -2268,9 +2293,8 @@ def load_state_dict_distributed(
 
     # Returns
 
-    `_LoadStateDictResult`
-        A `NamedTuple` with `missing_keys` and `unexpected_keys` fields, both of which
-        are lists of strings.
+    A `NamedTuple` with `missing_keys` and `unexpected_keys` fields, both of which
+    are lists of strings.
 
     # Raises
 
@@ -2296,11 +2320,15 @@ def load_state_dict_distributed(
             if key not in original:
                 original.append(key)
 
+    from allennlp.nn.parallel.sharded_module_mixin import ShardedModuleMixin
+
     # If we've found a sharded module or there aren't any more submodules of the current module,
     # we collect the state_dict and load it now instead of recursing further.
-    if getattr(module, _MODULE_SHARDED_FLAG, False) or not submodules:
+    if isinstance(module, ShardedModuleMixin) or not submodules:
         # Collect.
-        state_dict, _missing_keys, _unexpected_keys = _collect_state_dict(module, state_dict)
+        state_dict, _missing_keys, _unexpected_keys = _collect_state_dict(
+            module, state_dict, prefix=prefix
+        )
         assert state_dict is not None
         update_key_list(missing_keys, _missing_keys)
         update_key_list(unexpected_keys, _unexpected_keys)
@@ -2312,8 +2340,16 @@ def load_state_dict_distributed(
         # We'll recursively call this function on each submodule, but first we need
         # to collect any parameters that are direct members of this module.
         direct_member_state_dict, _missing_keys, _unexpected_keys = _collect_state_dict(
-            module, state_dict, recurse=False
+            module,
+            state_dict,
+            recurse=False,
+            prefix=prefix,
         )
+        # `_unexpected_keys` will contain keys corresponding to submodules (not direct members)
+        # that may be legitimate, so we ignore any `_unexpected_keys` here that correspond to submodules.
+        _unexpected_keys = [
+            k for k in _unexpected_keys if "." not in k or k.split(".")[0] not in submodules.keys()
+        ]
         update_key_list(missing_keys, _missing_keys)
         update_key_list(unexpected_keys, _unexpected_keys)
 
@@ -2339,28 +2375,14 @@ def load_state_dict_distributed(
                     if key.startswith(name + ".")
                 }
             _missing_keys, _unexpected_keys = load_state_dict_distributed(
-                submodule, submodule_state_dict, strict=False
+                submodule,
+                submodule_state_dict,
+                strict=False,
+                prefix=prefix + name + ".",
             )
             update_key_list(missing_keys, [f"{name}.{key}" for key in _missing_keys])
             update_key_list(unexpected_keys, [f"{name}.{key}" for key in _unexpected_keys])
 
-    if strict:
-        error_msgs: List[str] = []
-        if missing_keys:
-            error_msgs.append(
-                "Missing key(s) in state_dict: {}".format(", ".join(f'"{k}"' for k in missing_keys))
-            )
-        if unexpected_keys:
-            error_msgs.append(
-                "Unexpected key(s) in state_dict: {}".format(
-                    ", ".join(f'"{k}"' for k in unexpected_keys)
-                )
-            )
-        if error_msgs:
-            raise RuntimeError(
-                "Error(s) in loading state_dict for {}:\n\t{}".format(
-                    module.__class__.__name__, "\n\t".join(error_msgs)
-                )
-            )
+    _check_incompatible_keys(module, missing_keys, unexpected_keys, strict)
 
-    return _LoadStateDictResult(missing_keys, unexpected_keys)
+    return _IncompatibleKeys(missing_keys, unexpected_keys)

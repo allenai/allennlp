@@ -100,6 +100,7 @@ install :
 	pip install --upgrade --upgrade-strategy eager -e . -r dev-requirements.txt
 	# These nltk packages are used by the 'checklist' module.
 	$(NLTK_DOWNLOAD_CMD)
+
 #
 # Documention helpers.
 #
@@ -175,4 +176,4 @@ docker-test-image :
 
 .PHONY : docker-test-run
 docker-test-run :
-	$(DOCKER_RUN_CMD) $(DOCKER_GPUS) $(DOCKER_TEST_IMAGE_NAME) $(ARGS)
+	$(DOCKER_RUN_CMD) --shm-size 2G $(DOCKER_GPUS) $(DOCKER_TEST_IMAGE_NAME) $(ARGS)

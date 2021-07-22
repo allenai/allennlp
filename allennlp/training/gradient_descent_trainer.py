@@ -1,4 +1,5 @@
 import datetime
+import glob
 import logging
 import math
 import os
@@ -9,7 +10,6 @@ from typing import Optional, Union, List, Dict, Tuple, Any, Type
 
 import torch
 from torch.cuda import amp
-from torch.nn.parallel import DistributedDataParallel
 from torch.nn.utils import clip_grad_norm_
 import torch.distributed as dist
 
@@ -17,6 +17,7 @@ from allennlp.common.checks import ConfigurationError, check_for_gpu
 from allennlp.common import util as common_util, Tqdm, Lazy
 from allennlp.data.data_loaders.data_loader import DataLoader, TensorDict
 from allennlp.models.model import Model
+from allennlp.nn.parallel import DdpAccelerator, DdpWrappedModel, TorchDdpAccelerator
 from allennlp.training.callbacks import ConsoleLoggerCallback
 from allennlp.training.callbacks.confidence_checks import ConfidenceChecksCallback
 from allennlp.training.callbacks.backward import MixedPrecisionBackwardCallback
@@ -121,10 +122,13 @@ class GradientDescentTrainer(Trainer):
         !!! Note
             Data parallelism is controlled at the allennlp train level, so each trainer will have a single GPU.
 
-    grad_norm : `float`, optional, (default = `None`).
-        If provided, gradient norms will be rescaled to have a maximum of this value.
+    grad_norm : `Union[float, bool]`, optional (default = `False`)
+        If a float, gradient norms will be rescaled to have a maximum of this value.
+        If `True`, the gradient norms will be calculated and passed through to any `TrainerCallbacks`,
+        but won't be rescaled.
+        If `False`, gradient norms will not be calculated or rescaled.
 
-    grad_clipping : `float`, optional (default = `None`).
+    grad_clipping : `float`, optional (default = `None`)
         If provided, gradients will be clipped `during the backward pass` to have an (absolute)
         maximum of this value.  If you are getting `NaNs` in your gradients during training
         that are not solved by using `grad_norm`, you may need this.
@@ -195,6 +199,19 @@ class GradientDescentTrainer(Trainer):
     run_sanity_checks : `bool`, optional (default = `True`)
         This parameter is deprecated. Please use `run_confidence_checks` instead.
 
+    grad_scaling : `bool`, optional (default = `True`)
+        When `use_amp` is `True`, this determines whether or not to use a [`GradScaler`]
+        (https://pytorch.org/docs/stable/amp.html?highlight=gradscaler#torch.cuda.amp.GradScaler).
+
+        !!! Note
+            This parameter is ignored when `use_amp` is `False`.
+
+    ddp_wrapped_model : `Optional[DdpWrappedModel]`, optional (default = `None`)
+        The `model` wrapped with a `DdpAccelerator` for distributed training.
+
+        !!! Note
+            This is required for distributed training.
+
     """
 
     def __init__(
@@ -207,9 +224,9 @@ class GradientDescentTrainer(Trainer):
         validation_data_loader: DataLoader = None,
         num_epochs: int = 20,
         serialization_dir: Optional[str] = None,
-        checkpointer: Checkpointer = None,
+        checkpointer: Optional[Checkpointer] = None,
         cuda_device: Optional[Union[int, torch.device]] = None,
-        grad_norm: Optional[float] = None,
+        grad_norm: Union[float, bool] = False,
         grad_clipping: Optional[float] = None,
         learning_rate_scheduler: Optional[LearningRateScheduler] = None,
         momentum_scheduler: Optional[MomentumScheduler] = None,
@@ -222,6 +239,8 @@ class GradientDescentTrainer(Trainer):
         use_amp: bool = False,
         enable_default_callbacks: bool = True,
         run_confidence_checks: bool = True,
+        grad_scaling: bool = True,
+        ddp_wrapped_model: Optional[DdpWrappedModel] = None,
         **kwargs,
     ) -> None:
         super().__init__(
@@ -268,8 +287,6 @@ class GradientDescentTrainer(Trainer):
         self._num_epochs = num_epochs
 
         self._checkpointer: Optional[Checkpointer] = checkpointer
-        if checkpointer is None and serialization_dir is not None:
-            self._checkpointer = Checkpointer(serialization_dir)
 
         self._grad_norm = grad_norm
         self._grad_clipping = grad_clipping
@@ -292,29 +309,27 @@ class GradientDescentTrainer(Trainer):
 
         self._num_gradient_accumulation_steps = num_gradient_accumulation_steps
 
+        self._ddp_wrapped_model = ddp_wrapped_model
+        if distributed:
+            # The model needs to be wrapped before initializing the optimizer,
+            # so at this point it's too late to wrap the model.
+            if ddp_wrapped_model is None:
+                raise ValueError("trainer requires 'ddp_wrapped_model' for distributed training")
+            # Make sure checkpointer knows if we're working with a sharded model.
+            if self._checkpointer is not None:
+                self._checkpointer.state_is_sharded = ddp_wrapped_model.is_sharded
+
         # Enable automatic mixed precision training.
         self._scaler: Optional[amp.GradScaler] = None
         self._use_amp = use_amp
         if self._use_amp:
             if self.cuda_device == torch.device("cpu"):
                 raise ValueError("Using AMP requires a cuda device")
-            self._scaler = amp.GradScaler()
-
-        # Using `DistributedDataParallel`(ddp) brings in a quirk wrt AllenNLP's `Model` interface and its
-        # usage. A `Model` object is wrapped by `ddp`, but assigning the wrapped model to `self.model`
-        # will break the usages such as `Model.get_regularization_penalty`, `Model.get_metrics`, etc.
-        #
-        # Hence a reference to Pytorch's object is maintained in the case of distributed training and in the
-        # normal case, reference to `Model` is retained. This reference is only used in
-        # these places: `model.__call__`, `model.train` and `model.eval`.
-        if self._distributed:
-            self._pytorch_model = DistributedDataParallel(
-                self.model,
-                device_ids=None if self.cuda_device == torch.device("cpu") else [self.cuda_device],
-                find_unused_parameters=True,
-            )
-        else:
-            self._pytorch_model = self.model
+            if grad_scaling:
+                if self._ddp_wrapped_model is None:
+                    self._scaler = amp.GradScaler()
+                else:
+                    self._scaler = self._ddp_wrapped_model.init_grad_scaler()
 
         # training state management
         self._epochs_completed: int = 0
@@ -327,22 +342,37 @@ class GradientDescentTrainer(Trainer):
         # re-create it with `epochs_completed` and `batches_in_epoch_completed`.
         self._total_batches_completed: int = 0
 
-    def rescale_gradients(self) -> float:
+    @property
+    def _pytorch_model(self):
+        if self._ddp_wrapped_model is None:
+            return self.model
+        return self._ddp_wrapped_model.model
+
+    def rescale_gradients(self) -> Optional[float]:
         """
         Performs gradient rescaling. Is a no-op if gradient rescaling is not enabled.
 
-        Returns the norm of the gradients.
+        Returns the norm of the gradients if `grad_norm` is `True` or a `float`,
+        otherwise returns `None`.
         """
-        parameters_to_clip = [p for p in self.model.parameters() if p.grad is not None]
-        if self._grad_norm:
+        if not isinstance(self._grad_norm, bool):
             if self._scaler is not None:
                 # Need to first unscale gradients in order to clip as usual.
                 self._scaler.unscale_(self.optimizer)
-            return clip_grad_norm_(parameters_to_clip, self._grad_norm)
-        else:
+            # Sometimes logic for clipping has to implemented within the model, like
+            # with FairScale's FullyShardedDataParallel.
+            if self._ddp_wrapped_model is not None:
+                return self._ddp_wrapped_model.clip_grad_norm_(self._grad_norm).item()
+            else:
+                parameters_to_clip = [p for p in self.model.parameters() if p.grad is not None]
+                return clip_grad_norm_(parameters_to_clip, self._grad_norm).item()
+        elif self._grad_norm:
+            parameters_to_clip = [p for p in self.model.parameters() if p.grad is not None]
             return torch.norm(
                 torch.stack([torch.norm(p.grad.detach()) for p in parameters_to_clip])
-            )
+            ).item()
+        else:
+            return None
 
     def batch_outputs(self, batch: TensorDict, for_training: bool) -> Dict[str, torch.Tensor]:
         """
@@ -536,13 +566,13 @@ class GradientDescentTrainer(Trainer):
                 description = training_util.description_from_metrics(metrics)
                 batch_group_generator_tqdm.set_description(description, refresh=False)
 
-                if self._checkpointer is not None:
-                    self._checkpointer.maybe_save_checkpoint(
-                        self, self._epochs_completed, self._batches_in_epoch_completed
-                    )
+            if self._checkpointer is not None:
+                self._checkpointer.maybe_save_checkpoint(
+                    self, self._epochs_completed, self._batches_in_epoch_completed
+                )
 
         if self._distributed and not done_early:
-            logger.warning(
+            logger.info(
                 f"Worker {torch.distributed.get_rank()} completed its entire epoch (training)."
             )
             # Indicate that we're done so that any workers that have remaining data stop the epoch early.
@@ -555,17 +585,23 @@ class GradientDescentTrainer(Trainer):
         if self._distributed:
             dist.barrier()
 
-        metrics = training_util.get_metrics(
-            self.model,
-            train_loss,
-            train_reg_loss,
-            batch_loss=None,
-            batch_reg_loss=None,
-            num_batches=self._batches_in_epoch_completed,
-            reset=True,
-            world_size=self._world_size,
-            cuda_device=self.cuda_device,
-        )
+        if self._epochs_completed < self._start_after_epochs_completed or (
+            self._epochs_completed == self._start_after_epochs_completed
+            and self._batches_in_epoch_completed - 1 < self._start_after_batches_in_epoch_completed
+        ):
+            metrics = {}
+        else:
+            metrics = training_util.get_metrics(
+                self.model,
+                train_loss,
+                train_reg_loss,
+                batch_loss=None,
+                batch_reg_loss=None,
+                num_batches=self._batches_in_epoch_completed,
+                reset=True,
+                world_size=self._world_size,
+                cuda_device=self.cuda_device,
+            )
 
         for (worker, memory) in cpu_memory_usage:
             metrics["worker_" + str(worker) + "_memory_MB"] = memory / (1024 * 1024)
@@ -692,7 +728,7 @@ class GradientDescentTrainer(Trainer):
         Trains the supplied model with the supplied parameters.
         """
         try:
-            self._restore_checkpoint()
+            self._maybe_restore_checkpoint()
         except RuntimeError as e:
             configuration_error = ConfigurationError(
                 "Could not recover training from the checkpoint. Did you mean to output to "
@@ -714,6 +750,8 @@ class GradientDescentTrainer(Trainer):
             metrics, epoch = self._try_train()
             return metrics
         finally:
+            if self._primary:
+                self._finalize_best_model_state()
             for callback in self._callbacks:
                 callback.on_end(self, metrics=metrics, epoch=epoch, is_primary=self._primary)
 
@@ -818,27 +856,52 @@ class GradientDescentTrainer(Trainer):
             self._epochs_completed += 1
             self._batches_in_epoch_completed = 0
 
-            # The checkpointer saves state from the learning rate scheduler, momentum scheduler, moving
-            # average, and callbacks, so we have to make sure those are updated before we save the
-            # checkpoint here.
-            if self._primary and self._checkpointer is not None:
-                self._checkpointer.maybe_save_checkpoint(
+            checkpoint_saved = False
+            if self._checkpointer is not None:
+                # The checkpointer saves state from the learning rate scheduler, momentum scheduler, moving
+                # average, and callbacks, so we have to make sure those are updated before we save the
+                # checkpoint here.
+                checkpoint_saved = self._checkpointer.maybe_save_checkpoint(
                     self, self._epochs_completed, self._batches_in_epoch_completed
                 )
-            # Wait for the primary process to finish saving the checkpoint
-            if self._distributed:
-                dist.barrier()
 
-            if self._primary and self._serialization_dir and self._metric_tracker.is_best_so_far():
-                self._best_model_filename = os.path.join(self._serialization_dir, "best.th")
-                if self._moving_average is None:
-                    torch.save(self.model.state_dict(), self._best_model_filename)
+                # Wait for each primary process to finish saving the checkpoint
+                if self._distributed:
+                    dist.barrier()
+
+            if self._serialization_dir and self._metric_tracker.is_best_so_far():
+                should_save_model_state: bool
+                if self._ddp_wrapped_model is not None and self._ddp_wrapped_model.is_sharded:
+                    # Each worker saves its own shard for now (we combine the shards later).
+                    self._best_model_filename = os.path.join(
+                        self._serialization_dir, f"best_w{self._rank}.th"
+                    )
+                    should_save_model_state = True
                 else:
-                    self._moving_average.assign_average_value()
-                    try:
-                        torch.save(self.model.state_dict(), self._best_model_filename)
-                    finally:
-                        self._moving_average.restore()
+                    self._best_model_filename = os.path.join(self._serialization_dir, "best.th")
+                    should_save_model_state = self._primary
+
+                if should_save_model_state:
+                    if self._moving_average is None:
+                        # If we're not using a moving average and the checkpointer just saved a checkpoint,
+                        # we can just copy over that model state checkpoint to the '_best_model_filename'.
+                        # Otherwise we need to save the model state on our own.
+                        if self._checkpointer is not None and checkpoint_saved:
+                            last_checkpoint = self._checkpointer.find_latest_checkpoint()
+                            assert last_checkpoint is not None
+                            model_state_file, _ = last_checkpoint
+                            if os.path.exists(self._best_model_filename):
+                                os.remove(self._best_model_filename)
+                            os.link(model_state_file, self._best_model_filename)
+                        else:
+                            self._save_model_state(self._best_model_filename)
+                    else:
+                        self._moving_average.assign_average_value()
+                        try:
+                            self._save_model_state(self._best_model_filename)
+                        finally:
+                            self._moving_average.restore()
+
             # Wait for the primary process to finish saving the best
             if self._distributed:
                 dist.barrier()
@@ -869,17 +932,56 @@ class GradientDescentTrainer(Trainer):
             self._finalize_model()
         else:
             # The model we're loading here has already been finalized.
-            self.model.load_state_dict(torch.load(self._best_model_filename))
+            self._load_model_state(self._best_model_filename)
 
         return metrics, epoch
+
+    def _save_model_state(self, path: str) -> None:
+        if self._ddp_wrapped_model is not None:
+            torch.save(self._ddp_wrapped_model.state_dict(), path)
+        else:
+            torch.save(self.model.state_dict(), path)
+
+    def _load_model_state(self, path: str) -> None:
+        if self._ddp_wrapped_model is not None:
+            self._ddp_wrapped_model.load_state_dict(torch.load(path))
+        else:
+            self._pytorch_model.load_state_dict(torch.load(path))
 
     def _finalize_model(self) -> None:
         """If we have a moving average, we have to finalize the model at the end of training."""
         if self._moving_average is not None:
             self._moving_average.assign_average_value()
 
-    def get_checkpoint_state(self) -> TrainerCheckpoint:
-        model_state = self.model.state_dict()
+    def _finalize_best_model_state(self) -> None:
+        """
+        The best model weights might be saved in sharded files, in which case we gather them
+        up and save them to a single 'best.th' file.
+        """
+        if (
+            self._serialization_dir
+            and self._ddp_wrapped_model is not None
+            and self._ddp_wrapped_model.is_sharded
+        ):
+            logger.info("Consolidating sharded model states")
+            sharded_model_state_files = list(
+                glob.iglob(os.path.join(self._serialization_dir, "best_w*.th"))
+            )
+            full_model_state = self._ddp_wrapped_model.consolidate_sharded_state(
+                sharded_model_state_files
+            )
+            self._best_model_filename = os.path.join(self._serialization_dir, "best.th")
+            torch.save(full_model_state, self._best_model_filename)
+
+    def get_checkpoint_state(self) -> Optional[TrainerCheckpoint]:
+        if self._distributed:
+            assert self._ddp_wrapped_model is not None
+            if self._ddp_wrapped_model.is_sharded or self._primary:
+                model_state = self._ddp_wrapped_model.state_dict()
+            else:
+                return None
+        else:
+            model_state = self.model.state_dict()
 
         # These are the training states we need to persist.
         training_states = {
@@ -902,7 +1004,7 @@ class GradientDescentTrainer(Trainer):
 
         return TrainerCheckpoint(model_state, training_states)
 
-    def _restore_checkpoint(self) -> None:
+    def _maybe_restore_checkpoint(self) -> None:
         """
         Restores the model and training state from the last saved checkpoint.
         This includes an epoch count and optimizer state, which is serialized separately
@@ -917,19 +1019,26 @@ class GradientDescentTrainer(Trainer):
         if self._checkpointer is None:
             return
 
-        model_state, training_state = self._checkpointer.load_checkpoint()
-        if len(model_state) <= 0 and len(training_state) <= 0:
+        state = self._checkpointer.load_checkpoint()
+        if state is None:
             self._start_after_epochs_completed = 0
             self._start_after_batches_in_epoch_completed = 0
             self._best_model_filename = None
             return
+
+        model_state, training_state = state
         if training_state["version"] != 1:
             raise ValueError(
                 f"This version of {self.__class__.__name__} only supports checkpoints of version 1. "
                 f"Found version {training_state['version']}"
             )
 
-        self.model.load_state_dict(model_state)
+        if self._distributed:
+            assert self._ddp_wrapped_model is not None
+            self._ddp_wrapped_model.load_state_dict(model_state)
+        else:
+            self._pytorch_model.load_state_dict(model_state)
+
         self._metric_tracker.load_state_dict(training_state["metric_tracker"])
         self.optimizer.load_state_dict(training_state["optimizer"])
 
@@ -959,7 +1068,7 @@ class GradientDescentTrainer(Trainer):
         validation_metric: Union[str, List[str]] = "-loss",
         num_epochs: int = 20,
         cuda_device: Optional[Union[int, torch.device]] = None,
-        grad_norm: float = None,
+        grad_norm: Union[float, bool] = False,
         grad_clipping: float = None,
         distributed: bool = False,
         world_size: int = 1,
@@ -970,10 +1079,12 @@ class GradientDescentTrainer(Trainer):
         learning_rate_scheduler: Lazy[LearningRateScheduler] = None,
         momentum_scheduler: Lazy[MomentumScheduler] = None,
         moving_average: Lazy[MovingAverage] = None,
-        checkpointer: Lazy[Checkpointer] = Lazy(Checkpointer),
+        checkpointer: Optional[Lazy[Checkpointer]] = Lazy(Checkpointer),
         callbacks: List[Lazy[TrainerCallback]] = None,
         enable_default_callbacks: bool = True,
         run_confidence_checks: bool = True,
+        grad_scaling: bool = True,
+        ddp_accelerator: Optional[DdpAccelerator] = None,
         **kwargs,
     ) -> Trainer:
         """
@@ -1000,20 +1111,35 @@ class GradientDescentTrainer(Trainer):
                 cuda_device = -1
 
         check_for_gpu(cuda_device)
-        if cuda_device >= 0:
-            # Moving model to GPU here so that the optimizer state gets constructed on
-            # the right device.
-            model = model.cuda(cuda_device)
+        # Need to wrap model with a DdpAccelerator ("Distributed data-parallel wrapper")
+        # or move model to right device before initializing the optimizer.
+        # Using DDP brings in a quirk wrt AllenNLP's `Model` interface and its
+        # usage. A `Model` object is wrapped by `DdpAccelerator`, but assigning the wrapped model to `self.model`
+        # will break the usages such as `Model.get_regularization_penalty`, `Model.get_metrics`, etc.
+        # Hence a reference to Pytorch's object is maintained in the case of distributed training and in the
+        # normal case, reference to `Model` is retained. This reference is only used in
+        # these places: `model.__call__`, `model.train` and `model.eval`.
+        ddp_wrapped_model: Optional[DdpWrappedModel] = None
+        if distributed:
+            if ddp_accelerator is None:
+                ddp_accelerator = TorchDdpAccelerator(cuda_device=cuda_device)
+            # DdpAccelerator will move the model to the right device(s).
+            model, ddp_wrapped_model = ddp_accelerator.wrap_model(model)
+        else:
+            if cuda_device >= 0:
+                model = model.cuda(cuda_device)
+
+        pytorch_model = model if ddp_wrapped_model is None else ddp_wrapped_model.model
 
         if no_grad:
-            for name, parameter in model.named_parameters():
+            for name, parameter in pytorch_model.named_parameters():
                 if any(re.search(regex, name) for regex in no_grad):
                     parameter.requires_grad_(False)
 
-        parameters = [[n, p] for n, p in model.named_parameters() if p.requires_grad]
+        parameters = [[n, p] for n, p in pytorch_model.named_parameters() if p.requires_grad]
         optimizer_ = optimizer.construct(model_parameters=parameters)
 
-        common_util.log_frozen_and_tunable_parameter_names(model)
+        common_util.log_frozen_and_tunable_parameter_names(pytorch_model)
 
         batches_per_epoch: Optional[int]
         try:
@@ -1037,7 +1163,11 @@ class GradientDescentTrainer(Trainer):
             if momentum_scheduler is None
             else momentum_scheduler.construct(optimizer=optimizer_)
         )
-        checkpointer_ = checkpointer.construct(serialization_dir=serialization_dir)
+        checkpointer_ = (
+            None
+            if checkpointer is None
+            else checkpointer.construct(serialization_dir=serialization_dir)
+        )
 
         callbacks_: List[TrainerCallback] = []
         for callback_ in callbacks or []:
@@ -1067,11 +1197,16 @@ class GradientDescentTrainer(Trainer):
             use_amp=use_amp,
             enable_default_callbacks=enable_default_callbacks,
             run_confidence_checks=run_confidence_checks,
+            grad_scaling=grad_scaling,
+            ddp_wrapped_model=ddp_wrapped_model,
             **kwargs,
         )
 
     def get_best_weights_path(self) -> Optional[str]:
-        return self._best_model_filename
+        if self._best_model_filename is not None:
+            return os.path.abspath(self._best_model_filename)
+        else:
+            return None
 
 
 DEFAULT_CALLBACKS: Tuple[Type[TrainerCallback]] = (ConsoleLoggerCallback,)
