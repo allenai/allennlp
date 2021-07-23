@@ -1,5 +1,6 @@
 import logging
 import os
+import pickle
 
 import pytest
 
@@ -193,5 +194,5 @@ class TestMakeVocabFromParams(AllenNlpTestCase):
         assert "batch_loss" not in metrics
 
     def test_exception_serialization(self):
-        e = ConfigurationError('example')
-        assert {'message': 'example'} == vars(pickle.loads(pickle.dumps(e)))
+        e = ConfigurationError("example")
+        assert {"message": "example"} == vars(pickle.loads(pickle.dumps(e)))
