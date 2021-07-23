@@ -70,7 +70,6 @@ setup(
         "sentencepiece",
         "dataclasses;python_version<'3.7'",
         "filelock>=3.0,<3.1",
-        "lmdb",
         "more-itertools",
         "termcolor==1.1.0",
         "checklist==0.0.11",

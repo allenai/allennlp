@@ -39,6 +39,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   with a default value of `False`. `False` means gradients are not rescaled and the gradient
   norm is never even calculated. `True` means the gradients are still not rescaled but the gradient
   norm is calculated and passed on to callbacks. A `float` value means gradients are rescaled.
+- `TensorCache` is now based on HDF5. This breaks compatibility with existing `TensorCache` files.
 
 
 ## [v2.6.0](https://github.com/allenai/allennlp/releases/tag/v2.6.0) - 2021-07-19

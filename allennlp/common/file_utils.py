@@ -4,7 +4,6 @@ Utilities for working with the local dataset cache.
 
 from contextlib import contextmanager
 import glob
-import io
 import os
 import logging
 import tempfile
@@ -43,6 +42,7 @@ import warnings
 
 import boto3
 import botocore
+import h5py
 import torch
 from filelock import FileLock as _FileLock
 from google.cloud import storage
@@ -52,7 +52,6 @@ from overrides import overrides
 import requests
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
-import lmdb
 from torch import Tensor
 import huggingface_hub as hf_hub
 
@@ -581,7 +580,6 @@ class TensorCache(MutableMapping[str, Tensor], ABC):
         self,
         filename: Union[str, PathLike],
         *,
-        map_size: int = 1024 * 1024 * 1024 * 1024,
         read_only: bool = False,
     ) -> None:
         """
@@ -591,19 +589,11 @@ class TensorCache(MutableMapping[str, Tensor], ABC):
 
         Parameters
         ----------
-        filename: `str`
+        filename: `Union[str, PathLike]`
             Path to the location of the cache
-        map_size: `int`, optional, defaults to 1TB
-            This is the maximum size the cache will ever grow to. On reasonable operating
-            systems, there is no penalty to making this a large value.
-            `TensorCache` uses a memory-mapped file to store the data. When the file is
-            first opened, we have to give the maximum size it can ever grow to. This is
-            that number. Reasonable operating systems don't actually allocate that space
-            until it is really needed.
         """
         filename = str(filename)
 
-        cpu_count = os.cpu_count() or 1
         if os.path.exists(filename):
             if os.path.isfile(filename):
                 # If the file is not writable, set read_only to True, but issue a warning.
@@ -616,40 +606,11 @@ class TensorCache(MutableMapping[str, Tensor], ABC):
                     read_only = True
             else:
                 # If it's not a file, raise an error.
-                raise ValueError("Expect a file, found a directory instead")
+                raise ValueError(
+                    f"Expected a file at {filename}, found a something that's not a file instead"
+                )
 
-        use_lock = True
-        if read_only:
-            # Check if the lock file is writable. If it's not, then we won't be able to use the lock.
-
-            # This is always how lmdb names the lock file.
-            lock_filename = filename + "-lock"
-            if os.path.isfile(lock_filename):
-                use_lock = os.access(lock_filename, os.W_OK)
-            else:
-                # If the lock file doesn't exist yet, then the directory needs to be writable in
-                # order to create and use the lock file.
-                use_lock = os.access(os.path.dirname(lock_filename), os.W_OK)
-
-        if not use_lock:
-            warnings.warn(
-                f"Lacking permissions to use lock file on cache '{filename}'.\nUse at your own risk!",
-                UserWarning,
-            )
-
-        self.lmdb_env = lmdb.open(
-            str(filename),
-            subdir=False,
-            map_size=map_size,
-            max_readers=cpu_count * 2,
-            max_spare_txns=cpu_count * 2,
-            metasync=False,
-            sync=True,
-            readahead=False,
-            meminit=False,
-            readonly=read_only,
-            lock=use_lock,
-        )
+        self.h5 = h5py.File(filename, "r" if read_only else "a")
 
         # We have another cache here that makes sure we return the same object for the same key. Without it,
         # you would get a different tensor, using different memory, every time you call __getitem__(), even
@@ -661,67 +622,40 @@ class TensorCache(MutableMapping[str, Tensor], ABC):
 
     @property
     def read_only(self) -> bool:
-        return self.lmdb_env.flags()["readonly"]
+        return self.h5.mode == "r"
 
     def __contains__(self, key: object):
         if not isinstance(key, str):
             return False
         if key in self.cache_cache:
             return True
-        encoded_key = key.encode()
-        with self.lmdb_env.begin(write=False) as txn:
-            result = txn.get(encoded_key)
-            return result is not None
+        return key in self.h5
 
     def __getitem__(self, key: str):
         try:
             return self.cache_cache[key]
         except KeyError:
-            encoded_key = key.encode()
-            with self.lmdb_env.begin(write=False) as txn:
-                buffer = txn.get(encoded_key)
-                if buffer is None:
-                    raise KeyError()
-                tensor = torch.load(io.BytesIO(buffer), map_location="cpu")
+            tensor = torch.from_numpy(self.h5[key][:])
             self.cache_cache[key] = tensor
             return tensor
 
     def __setitem__(self, key: str, tensor: torch.Tensor):
         if self.read_only:
             raise ValueError("cannot write to a read-only cache")
-
         tensor = tensor.cpu()
-        encoded_key = key.encode()
-        buffer = io.BytesIO()
-        if tensor.storage().size() != np.prod(tensor.size()):
-            tensor = tensor.clone()
-        assert tensor.storage().size() == np.prod(tensor.size())
-        torch.save(tensor.detach(), buffer, pickle_protocol=pickle.HIGHEST_PROTOCOL)
-        with self.lmdb_env.begin(write=True) as txn:
-            txn.put(encoded_key, buffer.getbuffer())
-
-        self.cache_cache[key] = tensor
+        self.h5.create_dataset(key, data=tensor.numpy())
 
     def __delitem__(self, key: str):
         if self.read_only:
             raise ValueError("cannot write to a read-only cache")
-
-        encoded_key = key.encode()
-        with self.lmdb_env.begin(write=True) as txn:
-            txn.delete(encoded_key)
-
+        del self.h5[key]
         try:
             del self.cache_cache[key]
         except KeyError:
             pass
 
-    def __del__(self):
-        if self.lmdb_env is not None:
-            self.lmdb_env.close()
-            self.lmdb_env = None
-
     def __len__(self):
-        return self.lmdb_env.stat()["entries"]
+        return len(self.h5)
 
     def __iter__(self):
         # It is not hard to implement this, but we have not needed it so far.

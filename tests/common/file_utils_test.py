@@ -545,13 +545,21 @@ class TestLocalCacheResource(AllenNlpTestCase):
             assert data["a"] == 1
 
 
-class TestTensorCace(AllenNlpTestCase):
+class TestTensorCache(AllenNlpTestCase):
     def test_tensor_cache(self):
         cache = TensorCache(self.TEST_DIR / "cache")
         assert not cache.read_only
 
         # Insert some stuff into the cache.
         cache["a"] = torch.tensor([1, 2, 3])
+        assert len(cache) == 1
+
+        random_float_tensor = torch.rand(13, 17)
+        cache["b"] = random_float_tensor
+        assert torch.allclose(random_float_tensor, cache["b"])
+        assert len(cache) == 2
+        del cache["b"]
+        assert len(cache) == 1
 
         # Close cache.
         del cache
@@ -559,6 +567,8 @@ class TestTensorCace(AllenNlpTestCase):
         # Now let's open another one in read-only mode.
         cache = TensorCache(self.TEST_DIR / "cache", read_only=True)
         assert cache.read_only
+        assert len(cache) == 1
+        assert "b" not in cache
 
         # If we try to write we should get a ValueError
         with pytest.raises(ValueError, match="cannot write"):
@@ -572,7 +582,6 @@ class TestTensorCace(AllenNlpTestCase):
 
         # Now we're going to tell the OS to make the cache file read-only.
         os.chmod(self.TEST_DIR / "cache", 0o444)
-        os.chmod(self.TEST_DIR / "cache-lock", 0o444)
 
         # This time when we open the cache, it should automatically be set to read-only.
         with pytest.warns(UserWarning, match="cache will be read-only"):
