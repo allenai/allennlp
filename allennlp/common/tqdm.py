@@ -88,3 +88,11 @@ class Tqdm:
         }
 
         return _tqdm(*args, **new_kwargs)
+
+    @staticmethod
+    def set_lock(lock):
+        _tqdm.set_lock(lock)
+
+    @staticmethod
+    def get_lock():
+        return _tqdm.get_lock()
