@@ -111,7 +111,9 @@ class MultiTaskModel(Model):
             task: torch.LongTensor(indices) for task, indices in task_indices_just_for_mypy.items()
         }
 
-        def make_inputs_for_task(task: str, whole_batch_input: Union[torch.Tensor, TextFieldTensors, List]):
+        def make_inputs_for_task(
+            task: str, whole_batch_input: Union[torch.Tensor, TextFieldTensors, List]
+        ):
             if isinstance(whole_batch_input, dict):
                 for k1, v1 in whole_batch_input.items():
                     for k2, v2 in v1.items():
