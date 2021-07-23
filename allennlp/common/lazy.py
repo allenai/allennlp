@@ -50,11 +50,13 @@ class Lazy(Generic[T]):
         self,
         constructor: Union[Type[T], Callable[..., T]],
         params: Optional[Params] = None,
-        contructor_extras: Optional[Dict[str, Any]] = None,
+        constructor_extras: Optional[Dict[str, Any]] = None,
+        **kwargs,
     ) -> None:
         self._constructor = constructor
         self._params = params or Params({})
-        self._constructor_extras = contructor_extras or {}
+        self._constructor_extras = constructor_extras or {}
+        self._constructor_extras.update(kwargs)
 
     @property
     def constructor(self) -> Callable[..., T]:

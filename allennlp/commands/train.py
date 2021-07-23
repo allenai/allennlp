@@ -26,7 +26,8 @@ from allennlp.common.plugins import import_plugins
 from allennlp.data import DatasetReader, Vocabulary
 from allennlp.data import DataLoader
 from allennlp.models.archival import archive_model, CONFIG_NAME, verify_include_in_archive
-from allennlp.models.model import _DEFAULT_WEIGHTS, Model
+from allennlp.models.model import Model
+from allennlp.nn.parallel import DdpAccelerator
 from allennlp.training.trainer import Trainer
 from allennlp.training import util as training_util
 
@@ -131,6 +132,7 @@ def train_model_from_file(
     include_package: List[str] = None,
     dry_run: bool = False,
     file_friendly_logging: bool = False,
+    return_model: Optional[bool] = None,
 ) -> Optional[Model]:
     """
     A wrapper around [`train_model`](#train_model) which loads the params from a file.
@@ -160,11 +162,16 @@ def train_model_from_file(
     file_friendly_logging : `bool`, optional (default=`False`)
         If `True`, we add newlines to tqdm output, even on an interactive terminal, and we slow
         down tqdm's output to only once every 10 seconds.
+    return_model : `Optional[bool]`, optional (default = `None`)
+        Whether or not to return the final model. If not specified, this defaults to `False` for
+        distributed training and `True` otherwise.
 
     # Returns
 
+    best_model : `Optional[str]`
+        The path to the archived model with the best weights or `None` if in dry run.
     best_model : `Optional[Model]`
-        The model with the best epoch weights or `None` if in dry run.
+        The model with the best epoch weights or `None`, depending on the value of `return_model` and `dry_run`.
     """
     # Load the experiment config from a file and pass it to `train_model`.
     params = Params.from_file(parameter_filename, overrides)
@@ -177,6 +184,7 @@ def train_model_from_file(
         include_package=include_package,
         dry_run=dry_run,
         file_friendly_logging=file_friendly_logging,
+        return_model=return_model,
     )
 
 
@@ -189,6 +197,7 @@ def train_model(
     include_package: List[str] = None,
     dry_run: bool = False,
     file_friendly_logging: bool = False,
+    return_model: Optional[bool] = None,
 ) -> Optional[Model]:
     """
     Trains the model specified in the given [`Params`](../common/params.md#params) object, using the data
@@ -216,11 +225,14 @@ def train_model(
     file_friendly_logging : `bool`, optional (default=`False`)
         If `True`, we add newlines to tqdm output, even on an interactive terminal, and we slow
         down tqdm's output to only once every 10 seconds.
+    return_model : `Optional[bool]`, optional (default = `None`)
+        Whether or not to return the final model. If not specified, this defaults to `False` for
+        distributed training and `True` otherwise.
 
     # Returns
 
     best_model : `Optional[Model]`
-        The model with the best epoch weights or `None` if in dry run.
+        The model with the best epoch weights or `None`, depending on the value of `return_model` and `dry_run`.
     """
     common_logging.FILE_FRIENDLY_LOGGING = file_friendly_logging
 
@@ -232,6 +244,8 @@ def train_model(
 
     include_in_archive = params.pop("include_in_archive", None)
     verify_include_in_archive(include_in_archive)
+
+    model: Optional[Model] = None
 
     distributed_params = params.params.pop("distributed", None)
     # If distributed isn't in the config and the config contains strictly
@@ -245,11 +259,6 @@ def train_model(
             dry_run=dry_run,
             file_friendly_logging=file_friendly_logging,
         )
-
-        if not dry_run:
-            archive_model(serialization_dir, include_in_archive=include_in_archive)
-        return model
-
     # Otherwise, we are running multiple processes for training.
     else:
         common_logging.prepare_global_logging(
@@ -323,15 +332,22 @@ def train_model(
                 device_ids,
                 file_friendly_logging,
                 include_in_archive,
+                Params(distributed_params),
             ),
             nprocs=num_procs,
         )
-        if dry_run:
-            return None
-        else:
-            archive_model(serialization_dir, include_in_archive=include_in_archive)
-            model = Model.load(params, serialization_dir)
-            return model
+
+    if not dry_run:
+        archive_model(serialization_dir, include_in_archive=include_in_archive)
+    else:
+        return None
+
+    if return_model is None:
+        return model  # model may or may not be `None`.
+    elif return_model is True:
+        return model if model is not None else Model.load(params, serialization_dir)
+    else:
+        return None
 
 
 def _train_worker(
@@ -347,6 +363,7 @@ def _train_worker(
     distributed_device_ids: List[int] = None,
     file_friendly_logging: bool = False,
     include_in_archive: List[str] = None,
+    distributed_params: Optional[Params] = None,
 ) -> Optional[Model]:
     """
     Helper to train the configured model/experiment. In distributed mode, this is spawned as a
@@ -383,6 +400,8 @@ def _train_worker(
         down tqdm's output to only once every 10 seconds.
     include_in_archive : `List[str]`, optional
         Paths relative to `serialization_dir` that should be archived in addition to the default ones.
+    distributed_params : `Optional[Params]`, optional
+        Additional distributed params.
 
     # Returns
 
@@ -404,8 +423,11 @@ def _train_worker(
 
     include_package = include_package or []
 
+    ddp_accelerator: Optional[DdpAccelerator] = None
+
     if distributed:
         assert distributed_device_ids is not None
+        assert distributed_params is not None
 
         # Since the worker is spawned and not forked, the extra imports need to be done again.
         # Both the ones from the plugins and the ones from `include_package`.
@@ -426,16 +448,17 @@ def _train_worker(
         # In distributed training, the configured device is always going to be a list.
         # The corresponding gpu id for the particular worker is obtained by picking the id
         # from the device list with the rank as index
-        gpu_id = distributed_device_ids[process_rank]  # type: ignore
+        gpu_id = int(distributed_device_ids[process_rank])  # type: ignore
 
         # Till now, "cuda_device" might not be set in the trainer params.
         # But a worker trainer needs to only know about its specific GPU id.
+        params["trainer"]["local_rank"] = process_rank
         params["trainer"]["cuda_device"] = gpu_id
         params["trainer"]["world_size"] = world_size
         params["trainer"]["distributed"] = True
 
         if gpu_id >= 0:
-            torch.cuda.set_device(int(gpu_id))
+            torch.cuda.set_device(gpu_id)
             dist.init_process_group(
                 backend="nccl",
                 init_method=f"tcp://{primary_addr}:{primary_port}",
@@ -449,6 +472,16 @@ def _train_worker(
                 world_size=world_size,
                 rank=global_rank,
             )
+
+        if "ddp_accelerator" in distributed_params:
+            ddp_accelerator_params = distributed_params.pop("ddp_accelerator")
+            ddp_accelerator = DdpAccelerator.from_params(
+                ddp_accelerator_params,
+                local_rank=process_rank,
+                world_size=world_size,
+                cuda_device=gpu_id,
+            )
+
         logging.info(
             f"Process group of world size {world_size} initialized "
             f"for distributed training in worker {global_rank}"
@@ -458,6 +491,7 @@ def _train_worker(
         params=params,
         serialization_dir=serialization_dir,
         local_rank=process_rank,
+        ddp_accelerator=ddp_accelerator,
     )
 
     if dry_run:
@@ -470,7 +504,7 @@ def _train_worker(
         metrics = train_loop.run()
     except KeyboardInterrupt:
         # if we have completed an epoch, try to create a model archive.
-        if primary and os.path.exists(os.path.join(serialization_dir, _DEFAULT_WEIGHTS)):
+        if primary:
             best_weights_path = train_loop.trainer.get_best_weights_path()
             if best_weights_path is None:
                 logging.info(
@@ -581,6 +615,7 @@ class TrainModel(Registrable):
         test_data_path: Any = None,
         evaluate_on_test: bool = False,
         batch_weight_key: str = "",
+        ddp_accelerator: Optional[DdpAccelerator] = None,
     ) -> "TrainModel":
         """
         This method is intended for use with our `FromParams` logic, to construct a `TrainModel`
@@ -667,6 +702,10 @@ class TrainModel(Registrable):
         batch_weight_key: `str`, optional (default=`""`)
             The name of metric used to weight the loss on a per-batch basis.  This is only used
             during evaluation on final test data, if you've specified `evaluate_on_test=True`.
+
+        ddp_accelerator : `Optional[DdpAccelerator]`, optional (default = `None`)
+            A `DdpAccelerator` to use in distributed trainer. Passed to the model and the trainer.
+
         """
         # Train data loader.
         data_loaders: Dict[str, DataLoader] = {
@@ -724,7 +763,9 @@ class TrainModel(Registrable):
 
         vocabulary_ = vocabulary.construct(instances=instance_generator)
 
-        model_ = model.construct(vocab=vocabulary_, serialization_dir=serialization_dir)
+        model_ = model.construct(
+            vocab=vocabulary_, serialization_dir=serialization_dir, ddp_accelerator=ddp_accelerator
+        )
 
         # Initializing the model can have side effect of expanding the vocabulary.
         # Save the vocab only in the primary. In the degenerate non-distributed
@@ -744,6 +785,7 @@ class TrainModel(Registrable):
             data_loader=data_loaders["train"],
             validation_data_loader=data_loaders.get("validation"),
             local_rank=local_rank,
+            ddp_accelerator=ddp_accelerator,
         )
         assert trainer_ is not None
 

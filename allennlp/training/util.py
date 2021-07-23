@@ -302,7 +302,7 @@ def get_train_and_validation_metrics(metrics: Dict) -> Tuple[Dict[str, Any], Dic
 def evaluate(
     model: Model,
     data_loader: DataLoader,
-    cuda_device: int = -1,
+    cuda_device: Union[int, torch.device] = -1,
     batch_weight_key: str = None,
     output_file: str = None,
     predictions_output_file: str = None,
@@ -315,7 +315,7 @@ def evaluate(
     data_loader : `DataLoader`
         The `DataLoader` that will iterate over the evaluation data (data loaders already contain
         their data).
-    cuda_device : `int`, optional (default=`-1`)
+    cuda_device : `Union[int, torch.device]`, optional (default=`-1`)
         The cuda device to use for this evaluation.  The model is assumed to already be using this
         device; this parameter is only used for moving the input data to the correct device.
     batch_weight_key : `str`, optional (default=`None`)
