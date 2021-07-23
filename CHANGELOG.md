@@ -30,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed a mispelling: the parameter `contructor_extras` in `Lazy()` is now correctly called `constructor_extras`.
 - Fixed broken links in `allennlp.nn.initializers` docs.
 - Fixed bug in `BeamSearch` where `last_backpointers` was not being passed to any `Constraint`s.
+- `TransformerTextField` can now take tensors of shape `(1, n)` like the tensors produced from a HuggingFace tokenizer.
 
 ### Changed
 
