@@ -27,7 +27,13 @@ class Embeddings(TransformerModule, FromParams):
         The probability of an element to be zeroed.
     """
 
-    def __init__(self, embeddings: torch.nn.ModuleDict, embedding_size: int, dropout: float):
+    def __init__(
+        self,
+        embeddings: torch.nn.ModuleDict,
+        embedding_size: int,
+        dropout: float,
+        layer_norm_eps: float = 1e-12,  # different from Huggingface!
+    ):
         super().__init__()
         for name, embedding_layer in embeddings.named_children():
             if isinstance(embedding_layer, torch.nn.Embedding):
@@ -41,7 +47,7 @@ class Embeddings(TransformerModule, FromParams):
                     )
                 )
         self.embeddings = embeddings
-        self.layer_norm = LayerNorm(embedding_size, eps=1e-12)
+        self.layer_norm = LayerNorm(embedding_size, eps=layer_norm_eps)
         self.dropout = torch.nn.Dropout(dropout)
 
     def forward(self, *inputs) -> torch.Tensor:
@@ -131,8 +137,10 @@ class TransformerEmbeddings(Embeddings):
         embedding_size: int,
         pad_token_id: int = 0,
         max_position_embeddings: int = 512,
+        position_pad_token_id: Optional[int] = None,
         type_vocab_size: int = 2,
         dropout: float = 0.1,
+        layer_norm_eps: float = 1e-12,  # different from Huggingface!
         output_size: Optional[int] = None,
     ):
         embedding_dict = {}
@@ -141,7 +149,9 @@ class TransformerEmbeddings(Embeddings):
         embedding_dict["word_embeddings"] = word_embeddings
 
         if max_position_embeddings > 0:
-            position_embeddings = torch.nn.Embedding(max_position_embeddings, embedding_size)
+            position_embeddings = torch.nn.Embedding(
+                max_position_embeddings, embedding_size, padding_idx=position_pad_token_id
+            )
             embedding_dict["position_embeddings"] = position_embeddings
 
         if type_vocab_size > 0:
@@ -150,7 +160,7 @@ class TransformerEmbeddings(Embeddings):
 
         embeddings = torch.nn.ModuleDict(embedding_dict)
 
-        super().__init__(embeddings, embedding_size, dropout)
+        super().__init__(embeddings, embedding_size, dropout, layer_norm_eps=layer_norm_eps)
 
         # For Albert, the embedding size is different than the hidden size used
         # in the model, so a linear transform is applied.
@@ -183,10 +193,21 @@ class TransformerEmbeddings(Embeddings):
 
         embedding_inputs = [input_ids]
 
+        if attention_mask is None:
+            attention_mask = input_ids != self.embeddings["word_embeddings"].padding_idx
+
         if "position_embeddings" in self.embeddings:
             if position_ids is None:
-                position_ids = torch.arange(seq_length, dtype=torch.long, device=device)
-                position_ids = position_ids.unsqueeze(0).expand(input_shape)
+                padding_idx = self.embeddings["position_embeddings"].padding_idx
+                if padding_idx is None:
+                    position_ids = torch.arange(seq_length, dtype=torch.long, device=device)
+                    position_ids = position_ids.unsqueeze(0).expand(input_shape)
+                else:
+                    # In the RoBERTa case, position indices start with padding_idx + 1. Also, RoBERTa likes
+                    # to respect padding in its position ids.
+                    position_ids = torch.arange(seq_length, dtype=torch.long, device=device) + 1
+                    position_ids = position_ids.unsqueeze(0).expand(input_shape) * attention_mask
+                    position_ids += padding_idx
             embedding_inputs.append(position_ids)
 
         if "token_type_embeddings" in self.embeddings:
@@ -203,8 +224,13 @@ class TransformerEmbeddings(Embeddings):
 
     @classmethod
     def _from_config(cls, config: "PretrainedConfig", **kwargs):
-        final_kwargs = {}
-        final_kwargs["vocab_size"] = config.vocab_size
+        final_kwargs = {
+            "vocab_size": config.vocab_size,
+            "pad_token_id": config.pad_token_id,
+            "max_position_embeddings": config.max_position_embeddings,
+            "type_vocab_size": config.type_vocab_size,
+            "layer_norm_eps": config.layer_norm_eps,
+        }
         # For Albert, the embedding size is different than the hidden size used
         # in the model, so a linear transform is applied.
         if hasattr(config, "embedding_size"):
@@ -212,8 +238,7 @@ class TransformerEmbeddings(Embeddings):
             final_kwargs["output_size"] = config.hidden_size
         else:
             final_kwargs["embedding_size"] = config.hidden_size
-        final_kwargs["pad_token_id"] = config.pad_token_id
-        final_kwargs["max_position_embeddings"] = config.max_position_embeddings
-        final_kwargs["type_vocab_size"] = config.type_vocab_size
+        if config.model_type == "roberta":
+            final_kwargs["position_pad_token_id"] = config.pad_token_id
         final_kwargs.update(**kwargs)
         return cls(**final_kwargs)

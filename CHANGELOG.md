@@ -9,6 +9,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added a module `allennlp.nn.parallel` with a new base class, `DdpAccelerator`, which generalizes
+  PyTorch's `DistributedDataParallel` wrapper to support other implementations. Two implementations of
+  this class are provided. The default is `TorchDdpAccelerator` (registered at "torch"), which is just a thin wrapper around
+  `DistributedDataParallel`. The other is `FairScaleFsdpAccelerator`, which wraps FairScale's
+  [`FullyShardedDataParallel`](https://fairscale.readthedocs.io/en/latest/api/nn/fsdp.html).
+  You can specify the `DdpAccelerator` in the "distributed" section of a configuration file under the key "ddp_accelerator".
+- Added a module `allennlp.nn.checkpoint` with a new base class, `CheckpointWrapper`, for implementations
+  of activation/gradient checkpointing. Two implentations are provided. The default implementation is `TorchCheckpointWrapper` (registered as "torch"),
+  which exposes [PyTorch's checkpoint functionality](https://pytorch.org/docs/stable/checkpoint.html).
+  The other is `FairScaleCheckpointWrapper` which exposes the more flexible
+  [checkpointing funtionality from FairScale](https://fairscale.readthedocs.io/en/latest/api/nn/checkpoint/checkpoint_activations.html).
+- The `Model` base class now takes a `ddp_accelerator` parameter (an instance of `DdpAccelerator`) which will be available as
+  `self.ddp_accelerator` during distributed training. This is useful when, for example, instantiating submodules in your
+  model's `__init__()` method by wrapping them with `self.ddp_accelerator.wrap_module()`. See the `allennlp.modules.transformer.t5`
+  for an example.
+
+### Fixed
+
+- Fixed a mispelling: the parameter `contructor_extras` in `Lazy()` is now correctly called `constructor_extras`.
+- Fixed broken links in `allennlp.nn.initializers` docs.
+- `TransformerTextField` can now take tensors of shape `(1, n)` like the tensors produced from a HuggingFace tokenizer.
+
+### Changed
+
+- The type of the `grad_norm` parameter of `GradientDescentTrainer` is now `Union[float, bool]`,
+  with a default value of `False`. `False` means gradients are not rescaled and the gradient
+  norm is never even calculated. `True` means the gradients are still not rescaled but the gradient
+  norm is calculated and passed on to callbacks. A `float` value means gradients are rescaled.
+
+
+## [v2.6.0](https://github.com/allenai/allennlp/releases/tag/v2.6.0) - 2021-07-19
+
+### Added
+
 - Added `on_backward` training callback which allows for control over backpropagation and gradient manipulation.
 - Added `AdversarialBiasMitigator`, a Model wrapper to adversarially mitigate biases in predictions produced by a pretrained model for a downstream task.
 - Added `which_loss` parameter to `ensure_model_can_train_save_and_load` in `ModelTestCase` to specify which loss to test.
@@ -19,9 +53,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `TransformerTextField`, for cases where you don't care about AllenNLP's advanced text handling capabilities.
 - Added `TransformerModule._post_load_pretrained_state_dict_hook()` method. Can be used to modify `missing_keys` and `unexpected_keys` after
   loading a pretrained state dictionary. This is useful when tying weights, for example.
+- Added an end-to-end test for the Transformer Toolkit.
+- Added `vocab` argument to `BeamSearch`, which is passed to each contraint in `constraints` (if provided).
 
 ### Fixed
 
+- Fixed missing device mapping in the `allennlp.modules.conditional_random_field.py` file.
 - Fixed Broken link in `allennlp.fairness.fairness_metrics.Separation` docs
 - Ensured all `allennlp` submodules are imported with `allennlp.common.plugins.import_plugins()`.
 - Fixed `IndexOutOfBoundsException` in `MultiOptimizer` when checking if optimizer received any parameters.
@@ -29,11 +66,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Ensured `ensure_model_can_train_save_and_load` is consistently random.
 - Fixed weight tying logic in `T5` transformer module. Previously input/output embeddings were always tied. Now this is optional,
   and the default behavior is taken from the `config.tie_word_embeddings` value when instantiating `from_pretrained_module()`.
+- Implemented slightly faster label smoothing.
+- Fixed the docs for `PytorchTransformerWrapper`
 - Fixed recovering training jobs with models that expect `get_metrics()` to not be called until they have seen at least one batch.
+- Made the Transformer Toolkit compatible with transformers that don't start their positional embeddings at 0.
+- Weights & Biases training callback ("wandb") now works when resuming training jobs.
 
 ### Changed
 
 - Changed behavior of `MultiOptimizer` so that while a default optimizer is still required, an error is not thrown if the default optimizer receives no parameters.
+- Made the epsilon parameter for the layer normalization in token embeddings configurable. 
 
 ### Removed
 

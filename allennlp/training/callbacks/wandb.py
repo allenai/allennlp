@@ -88,6 +88,7 @@ class WandBCallback(LogWriterCallback):
 
         self._watch_model = watch_model
         self._files_to_save = files_to_save
+        self._run_id: Optional[str] = None
         self._wandb_kwargs: Dict[str, Any] = dict(
             dir=os.path.abspath(serialization_dir),
             project=project,
@@ -141,7 +142,11 @@ class WandBCallback(LogWriterCallback):
         import wandb
 
         self.wandb = wandb
-        self.wandb.init(**self._wandb_kwargs)
+
+        if self._run_id is None:
+            self._run_id = self.wandb.util.generate_id()
+
+        self.wandb.init(id=self._run_id, **self._wandb_kwargs)
 
         for fpath in self._files_to_save:
             self.wandb.save(  # type: ignore
@@ -155,3 +160,12 @@ class WandBCallback(LogWriterCallback):
     def close(self) -> None:
         super().close()
         self.wandb.finish()  # type: ignore
+
+    def state_dict(self) -> Dict[str, Any]:
+        return {
+            "run_id": self._run_id,
+        }
+
+    def load_state_dict(self, state_dict: Dict[str, Any]) -> None:
+        self._wandb_kwargs["resume"] = "auto"
+        self._run_id = state_dict["run_id"]
