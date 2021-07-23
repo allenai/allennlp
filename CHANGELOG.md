@@ -31,6 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed broken links in `allennlp.nn.initializers` docs.
 - `TransformerTextField` can now take tensors of shape `(1, n)` like the tensors produced from a HuggingFace tokenizer.
 - `ConfigurationError` is now pickleable.
+- Multitask models now support `TextFieldTensor` in heads, not just in the backbone
 
 ### Changed
 
