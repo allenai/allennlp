@@ -4,6 +4,7 @@ import pathlib
 import json
 import time
 import shutil
+from typing import Sequence
 
 from filelock import Timeout
 import pytest
@@ -33,6 +34,7 @@ from allennlp.common import Params
 from allennlp.modules.token_embedders import ElmoTokenEmbedder
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.predictors import Predictor
+import torch.multiprocessing as mp
 
 
 def set_up_glove(url: str, byt: bytes, change_etag_every: int = 1000):
@@ -587,6 +589,47 @@ class TestTensorCache(AllenNlpTestCase):
         with pytest.warns(UserWarning, match="cache will be read-only"):
             cache = TensorCache(self.TEST_DIR / "cache")
             assert cache.read_only
+
+    @classmethod
+    def fill_tensor_cache(cls, filename: os.PathLike, indices: Sequence[int]):
+        cache = TensorCache(filename)
+        for index in indices:
+            cache[str(index)] = torch.arange(0, index)
+
+    @classmethod
+    def read_tensor_cache(cls, filename: os.PathLike, indices: Sequence[int]):
+        cache = TensorCache(filename, read_only=True)
+        for index in indices:
+            assert torch.allclose(torch.arange(0, index), cache[str(index)])
+
+    def test_tensor_cache_distributed(self):
+        cache_file = self.TEST_DIR / "distributed_cache"
+
+        processes = [
+            mp.Process(
+                target=TestTensorCache.fill_tensor_cache,
+                args=(cache_file, range(i * 100, (i + 1) * 100)),
+            )
+            for i in range(5)
+        ]
+        for p in processes:
+            p.start()
+        for p in processes:
+            p.join()
+            assert p.exitcode == 0
+
+        processes = [
+            mp.Process(
+                target=TestTensorCache.read_tensor_cache,
+                args=(cache_file, range(i * 100, (i + 1) * 100)),
+            )
+            for i in range(5)
+        ]
+        for p in processes:
+            p.start()
+        for p in processes:
+            p.join()
+            assert p.exitcode == 0
 
 
 class TestHFHubDownload(AllenNlpTestCase):
