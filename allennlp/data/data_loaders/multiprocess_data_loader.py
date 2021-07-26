@@ -428,20 +428,22 @@ class MultiProcessDataLoader(DataLoader):
                 self._join_workers(workers, queue)
 
     def _start_instance_workers(self, queue: mp.JoinableQueue, ctx) -> List[BaseProcess]:
+        Tqdm.set_lock(mp.RLock())
         workers: List[BaseProcess] = []
         for worker_id in range(self.num_workers):
             worker: BaseProcess = ctx.Process(
-                target=self._instance_worker, args=(worker_id, queue), daemon=True
+                target=self._instance_worker, args=(worker_id, queue, Tqdm.get_lock()), daemon=True
             )
             worker.start()
             workers.append(worker)
         return workers
 
     def _start_batch_workers(self, queue: mp.JoinableQueue, ctx) -> List[BaseProcess]:
+        Tqdm.set_lock(mp.RLock())
         workers: List[BaseProcess] = []
         for worker_id in range(self.num_workers):
             worker: BaseProcess = ctx.Process(
-                target=self._batch_worker, args=(worker_id, queue), daemon=True
+                target=self._batch_worker, args=(worker_id, queue, Tqdm.get_lock()), daemon=True
             )
             worker.start()
             workers.append(worker)
@@ -463,7 +465,8 @@ class MultiProcessDataLoader(DataLoader):
             if worker.is_alive():
                 worker.terminate()
 
-    def _instance_worker(self, worker_id: int, queue: mp.JoinableQueue) -> None:
+    def _instance_worker(self, worker_id: int, queue: mp.JoinableQueue, lock) -> None:
+        Tqdm.set_lock(lock)
         try:
             self.reader._set_worker_info(WorkerInfo(self.num_workers, worker_id))
             instances = self.reader.read(self.data_path)
@@ -495,7 +498,8 @@ class MultiProcessDataLoader(DataLoader):
         # Wait until this process can safely exit.
         queue.join()
 
-    def _batch_worker(self, worker_id: int, queue: mp.JoinableQueue) -> None:
+    def _batch_worker(self, worker_id: int, queue: mp.JoinableQueue, lock) -> None:
+        Tqdm.set_lock(lock)
         try:
             self.reader._set_worker_info(WorkerInfo(self.num_workers, worker_id))
             instances = self.reader.read(self.data_path)
