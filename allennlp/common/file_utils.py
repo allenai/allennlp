@@ -610,7 +610,10 @@ class TensorCache(MutableMapping[str, Tensor], ABC):
                     f"Expected a file at {filename}, found a something that's not a file instead"
                 )
 
-        self.h5 = h5py.File(filename, "r" if read_only else "a")
+        self.h5 = h5py.File(filename, "r" if read_only else "a", libver="latest", swmr=read_only)
+        if not read_only:
+            # I'm not sure why h5py has such a weird API for setting this flag.
+            self.h5.swmr_mode = True
 
         # We have another cache here that makes sure we return the same object for the same key. Without it,
         # you would get a different tensor, using different memory, every time you call __getitem__(), even
