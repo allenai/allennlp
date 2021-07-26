@@ -608,7 +608,7 @@ class TestTensorCache(AllenNlpTestCase):
         processes = [
             mp.Process(
                 target=TestTensorCache.fill_tensor_cache,
-                args=(cache_file, range(i * 100, (i + 1) * 100)),
+                args=(cache_file, range(i * 32, (i + 1) * 32)),
             )
             for i in range(5)
         ]
@@ -621,7 +621,7 @@ class TestTensorCache(AllenNlpTestCase):
         processes = [
             mp.Process(
                 target=TestTensorCache.read_tensor_cache,
-                args=(cache_file, range(i * 100, (i + 1) * 100)),
+                args=(cache_file, range(i * 32, (i + 1) * 32)),
             )
             for i in range(5)
         ]
