@@ -186,7 +186,7 @@ class ConditionalRandomField(torch.nn.Module):
         self.num_tags = num_tags
 
         # transitions[i, j] is the logit for transitioning from state i to state j.
-        self.transitions = torch.nn.Parameter(torch.Tensor(num_tags, num_tags))
+        self.transitions = torch.nn.Parameter(torch.empty(num_tags, num_tags))
 
         # _constraint_mask indicates valid transitions (based on supplied constraints).
         # Include special start of sequence (num_tags + 1) and end of sequence tags (num_tags + 2)
@@ -364,7 +364,7 @@ class ConditionalRandomField(torch.nn.Module):
         # Augment transitions matrix with start and end transitions
         start_tag = num_tags
         end_tag = num_tags + 1
-        transitions = torch.Tensor(num_tags + 2, num_tags + 2).fill_(-10000.0)
+        transitions = torch.empty(num_tags + 2, num_tags + 2, device=logits.device).fill_(-10000.0)
 
         # Apply transition constraints
         constrained_transitions = self.transitions * self._constraint_mask[
@@ -393,7 +393,7 @@ class ConditionalRandomField(torch.nn.Module):
 
         best_paths = []
         # Pad the max sequence length by 2 to account for start_tag + end_tag.
-        tag_sequence = torch.Tensor(max_seq_length + 2, num_tags + 2)
+        tag_sequence = torch.empty(max_seq_length + 2, num_tags + 2, device=logits.device)
 
         for prediction, prediction_mask in zip(logits, mask):
             mask_indices = prediction_mask.nonzero(as_tuple=False).squeeze()
