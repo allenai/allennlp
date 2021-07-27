@@ -301,7 +301,7 @@ class Step(Registrable, Generic[T]):
                 f"Step {step_name}'s cache_results parameter is set to an invalid value."
             )
 
-        self.temp_dir_for_run: Optional[
+        self.work_dir_for_run: Optional[
             PathLike
         ] = None  # This is set only while the run() method runs.
 
@@ -434,8 +434,8 @@ class Step(Registrable, Generic[T]):
         """This is the main method of a step. Overwrite this method to define your step's action."""
         raise NotImplementedError()
 
-    def _run_with_temp_dir(self, cache: StepCache, **kwargs) -> T:
-        if self.temp_dir_for_run is not None:
+    def _run_with_work_dir(self, cache: StepCache, **kwargs) -> T:
+        if self.work_dir_for_run is not None:
             raise ValueError("You can only run a Step's run() method once at a time.")
 
         if self.DETERMINISTIC:
@@ -457,27 +457,32 @@ class Step(Registrable, Generic[T]):
 
         step_dir = cache.path_for_step(self)
         if step_dir is None:
-            temp_dir = TemporaryDirectory(prefix=self.unique_id() + "-", suffix=".temp")
-            self.temp_dir_for_run = Path(temp_dir.name)
+            work_dir = TemporaryDirectory(prefix=self.unique_id() + "-", suffix=".work")
+            self.work_dir_for_run = Path(work_dir.name)
             try:
                 return self.run(**kwargs)
             finally:
-                self.temp_dir_for_run = None
-                temp_dir.cleanup()
+                self.work_dir_for_run = None
+                work_dir.cleanup()
         else:
-            self.temp_dir_for_run = step_dir / "run"
+            self.work_dir_for_run = step_dir / "work"
             try:
-                self.temp_dir_for_run.mkdir(exist_ok=True, parents=True)
+                self.work_dir_for_run.mkdir(exist_ok=True, parents=True)
                 return self.run(**kwargs)
             finally:
                 # No cleanup, as we want to keep the directory for restarts or serialization.
-                self.temp_dir_for_run = None
+                self.work_dir_for_run = None
 
-    def temp_dir(self) -> PathLike:
-        """Returns a temporary directory that a step can use while its `run()` method runs."""
-        if self.temp_dir_for_run is None:
+    def work_dir(self) -> PathLike:
+        """
+        Returns a work directory that a step can use while its `run()` method runs.
+
+        This directory stays around across restarts. You cannot assume that it is empty when your
+        step runs, but you can use it to store information that helps you restart a step if it
+        got killed half-way through the last time it ran."""
+        if self.work_dir_for_run is None:
             raise ValueError("You can only call this method while the step is running.")
-        return self.temp_dir_for_run
+        return self.work_dir_for_run
 
     @classmethod
     def _replace_steps_with_results(cls, o: Any, cache: StepCache):
@@ -501,7 +506,7 @@ class Step(Registrable, Generic[T]):
             return cache[self]
 
         kwargs = self._replace_steps_with_results(self.kwargs, cache)
-        result = self._run_with_temp_dir(cache, **kwargs)
+        result = self._run_with_work_dir(cache, **kwargs)
         if self.cache_results:
             cache[self] = result
             if hasattr(result, "__next__"):
@@ -525,7 +530,7 @@ class Step(Registrable, Generic[T]):
             return
 
         kwargs = self._replace_steps_with_results(self.kwargs, cache)
-        result = self._run_with_temp_dir(cache, **kwargs)
+        result = self._run_with_work_dir(cache, **kwargs)
         cache[self] = result
 
     def unique_id(self) -> str:

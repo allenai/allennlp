@@ -65,7 +65,7 @@ class TrainingStep(Step):
         no_grad: Optional[List[str]] = None,
         limit_batches_per_epoch: Optional[int] = None,
     ) -> Model:
-        serialization_dir = self.temp_dir()
+        serialization_dir = self.work_dir()
 
         if validation_data_loader is None:
             validation_data_loader = data_loader
