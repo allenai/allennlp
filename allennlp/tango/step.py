@@ -437,6 +437,24 @@ class Step(Registrable, Generic[T]):
     def _run_with_temp_dir(self, cache: StepCache, **kwargs) -> T:
         if self.temp_dir_for_run is not None:
             raise ValueError("You can only run a Step's run() method once at a time.")
+
+        if self.DETERMINISTIC:
+            random.seed(784507111)
+
+            try:
+                import numpy
+
+                numpy.random.seed(784507111)
+            except ImportError:
+                pass
+
+            try:
+                import torch
+
+                torch.manual_seed(784507111)
+            except ImportError:
+                pass
+
         step_dir = cache.path_for_step(self)
         if step_dir is None:
             temp_dir = TemporaryDirectory(prefix=self.unique_id() + "-", suffix=".temp")

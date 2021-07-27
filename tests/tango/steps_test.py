@@ -1,5 +1,5 @@
 from tempfile import TemporaryDirectory
-from typing import Iterable, Optional
+from typing import Iterable, Optional, Tuple
 
 import pytest
 
@@ -204,3 +204,29 @@ def test_run_steps_programmatically(step_cache_class):
         assert len(cache) == 2
         with pytest.raises(KeyError):
             _ = cache[evaluation_step]
+
+
+@pytest.mark.parametrize("deterministic", [True, False])
+def test_random_seeds_are_initialized(deterministic: bool):
+    class RandomNumberStep(Step[Tuple[int, int, int]]):
+        DETERMINISTIC = deterministic
+        CACHEABLE = False
+
+        def run(self) -> Tuple[int, int, int]:
+            import random
+            import numpy
+            import torch
+
+            return (
+                random.randint(0, 2 ** 32),
+                numpy.random.randint(0, 2 ** 32),
+                torch.randint(2 ** 32, [1])[0].item(),
+            )
+
+    step1_result = RandomNumberStep().result()
+    step2_result = RandomNumberStep().result()
+
+    if deterministic:
+        assert step1_result == step2_result
+    else:
+        assert step1_result != step2_result
