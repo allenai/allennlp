@@ -43,12 +43,12 @@ authors:
     given-names: Dirk
   -
     affiliation: "Allen Institute for Artificial Intelligence"
-    family-names: Bhagia
-    given-names: Akshita
-  -
-    affiliation: "Allen Institute for Artificial Intelligence"
     family-names: Walsh
     given-names: Pete
+  -
+    affiliation: "Allen Institute for Artificial Intelligence"
+    family-names: Bhagia
+    given-names: Akshita
   -
     affiliation: "Allen Institute for Artificial Intelligence"
     family-names: Zettlemoyer
