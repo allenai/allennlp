@@ -15,5 +15,6 @@ from allennlp.tango.evaluation import EvaluationStep
 import warnings
 
 warnings.warn(
-    "AllenNLP Tango is an experimental API and parts of it might change or disappear every time we release a new version."
+    "AllenNLP Tango is an experimental API and parts of it might change or disappear "
+    "every time we release a new version."
 )
