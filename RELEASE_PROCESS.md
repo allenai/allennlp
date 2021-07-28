@@ -31,6 +31,8 @@ to `git@github.com:allenai/allennlp.git` (or the `HTTPS` equivalent).
 
 3. Update the `CHANGELOG.md` so that everything under the "Unreleased" section is now under a section corresponding to this release.
 
+4. Update the `CITATION.cff` file to refer to the right version.
+
 4. Commit and push these changes with:
 
     ```
