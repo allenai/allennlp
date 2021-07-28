@@ -5,6 +5,8 @@ every time we release a new version.*
 
 import bz2
 import gzip
+import json
+import logging
 import lzma
 import mmap
 import pathlib
@@ -29,6 +31,7 @@ from typing.io import IO
 
 from allennlp.common import Registrable
 from allennlp.common.checks import ConfigurationError
+from allennlp.common.logging import AllenNlpLogger
 
 T = TypeVar("T")
 
@@ -184,6 +187,116 @@ class DillFormatIterator(Iterator[T], Generic[T]):
             raise StopIteration()
         try:
             return self.unpickler.load()
+        except EOFError:
+            self.f.close()
+            self.f = None
+            raise StopIteration()
+
+
+@Format.register("json")
+class JsonFormat(Format[T], Generic[T]):
+    """This format writes the artifact as a single file in json format.
+    Optionally, it can compress the data. This is very flexible, but not always the fastest.
+
+    This format has special support for iterables. If you write an iterator, it will consume the
+    iterator. If you read an iterator, it will read the iterator lazily.
+    """
+
+    VERSION = 1
+
+    OPEN_FUNCTIONS: Dict[Optional[str], Callable[[PathLike, str], IO]] = {
+        None: open,
+        "None": open,
+        "none": open,
+        "null": open,
+        "gz": gzip.open,
+        "gzip": gzip.open,
+        "bz": bz2.open,
+        "bz2": bz2.open,
+        "bzip": bz2.open,
+        "bzip2": bz2.open,
+        "lzma": lzma.open,
+    }
+
+    SUFFIXES = {
+        open: "",
+        gzip.open: ".gz",
+        bz2.open: ".bz2",
+        lzma.open: ".xz",
+    }
+
+    def __init__(self, compress: Optional[str] = None):
+        self.logger = cast(AllenNlpLogger, logging.getLogger(self.__class__.__name__))
+        try:
+            self.open = self.OPEN_FUNCTIONS[compress]
+        except KeyError:
+            raise ConfigurationError(f"The {compress} compression format does not exist.")
+
+    def write(self, artifact: T, dir: Union[str, PathLike]):
+        if hasattr(artifact, "__next__"):
+            filename = pathlib.Path(dir) / ("data.jsonl" + self.SUFFIXES[self.open])
+            with self.open(filename, "wt") as f:
+                for item in cast(Iterable, artifact):
+                    json.dump(item, f)
+                    f.write("\n")
+        else:
+            filename = pathlib.Path(dir) / ("data.json" + self.SUFFIXES[self.open])
+            with self.open(filename, "wt") as f:
+                json.dump(artifact, f)
+
+    def read(self, dir: Union[str, PathLike]) -> T:
+        iterator_filename = pathlib.Path(dir) / ("data.jsonl" + self.SUFFIXES[self.open])
+        iterator_exists = iterator_filename.exists()
+        non_iterator_filename = pathlib.Path(dir) / ("data.json" + self.SUFFIXES[self.open])
+        non_iterator_exists = non_iterator_filename.exists()
+
+        if iterator_exists and non_iterator_exists:
+            self.logger.warning(
+                "Both %s and %s exist. Ignoring %s.",
+                iterator_filename,
+                non_iterator_filename,
+                iterator_filename,
+            )
+            iterator_exists = False
+
+        if not iterator_exists and not non_iterator_exists:
+            raise IOError("Attempting to read non-existing data from %s", dir)
+        if iterator_exists and not non_iterator_exists:
+            return JsonFormatIterator(iterator_filename)  # type: ignore
+        elif not iterator_exists and non_iterator_exists:
+            with self.open(non_iterator_filename, "rt") as f:
+                return json.load(f)
+        else:
+            raise RuntimeError("This should be impossible.")
+
+
+class JsonFormatIterator(Iterator[T], Generic[T]):
+    """This class is used so we can return an iterator from `JsonFormat.read()`."""
+
+    def __init__(self, filename: Union[str, PathLike]):
+        filename = str(filename)
+        open_fn: Callable
+        if filename.endswith(".gz"):
+            open_fn = gzip.open
+        elif filename.endswith(".bz2"):
+            open_fn = bz2.open
+        elif filename.endswith(".xz"):
+            open_fn = lzma.open
+        else:
+            open_fn = open
+        self.f = open_fn(filename, "rt")
+
+    def __iter__(self) -> Iterator[T]:
+        return self
+
+    def __next__(self) -> T:
+        if self.f is None:
+            raise StopIteration()
+        try:
+            line = self.f.readline()
+            if len(line) <= 0:
+                raise EOFError()
+            return json.loads(line)
         except EOFError:
             self.f.close()
             self.f = None
