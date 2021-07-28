@@ -101,12 +101,23 @@ _OPEN_FUNCTIONS: Dict[Optional[str], Callable[[PathLike, str], IO]] = {
     "lzma": lzma.open,
 }
 
-_SUFFIXES = {
+_SUFFIXES: Dict[Callable, str] = {
     open: "",
     gzip.open: ".gz",
     bz2.open: ".bz2",
     lzma.open: ".xz",
 }
+
+
+def _open_compressed(filename: Union[str, PathLike], mode: str) -> IO:
+    open_fn: Callable
+    filename = str(filename)
+    for open_fn, suffix in _SUFFIXES.items():
+        if len(suffix) > 0 and filename.endswith(suffix):
+            break
+    else:
+        open_fn = open
+    return open_fn(filename, mode)
 
 
 @Format.register("dill")
@@ -159,17 +170,7 @@ class DillFormatIterator(Iterator[T], Generic[T]):
     """This class is used so we can return an iterator from `DillFormat.read()`."""
 
     def __init__(self, filename: Union[str, PathLike]):
-        filename = str(filename)
-        open_fn: Callable
-        if filename.endswith(".gz"):
-            open_fn = gzip.open
-        elif filename.endswith(".bz2"):
-            open_fn = bz2.open
-        elif filename.endswith(".xz"):
-            open_fn = lzma.open
-        else:
-            open_fn = open
-        self.f = open_fn(filename, "rb")
+        self.f = _open_compressed(filename, "rb")
         self.unpickler = dill.Unpickler(self.f)
         version = self.unpickler.load()
         if version > DillFormat.VERSION:
@@ -254,17 +255,7 @@ class JsonFormatIterator(Iterator[T], Generic[T]):
     """This class is used so we can return an iterator from `JsonFormat.read()`."""
 
     def __init__(self, filename: Union[str, PathLike]):
-        filename = str(filename)
-        open_fn: Callable
-        if filename.endswith(".gz"):
-            open_fn = gzip.open
-        elif filename.endswith(".bz2"):
-            open_fn = bz2.open
-        elif filename.endswith(".xz"):
-            open_fn = lzma.open
-        else:
-            open_fn = open
-        self.f = open_fn(filename, "rt")
+        self.f = _open_compressed(filename, "rt")
 
     def __iter__(self) -> Iterator[T]:
         return self
