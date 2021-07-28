@@ -87,6 +87,28 @@ class Format(Registrable, Generic[T]):
         return h.hexdigest()
 
 
+_OPEN_FUNCTIONS: Dict[Optional[str], Callable[[PathLike, str], IO]] = {
+    None: open,
+    "None": open,
+    "none": open,
+    "null": open,
+    "gz": gzip.open,
+    "gzip": gzip.open,
+    "bz": bz2.open,
+    "bz2": bz2.open,
+    "bzip": bz2.open,
+    "bzip2": bz2.open,
+    "lzma": lzma.open,
+}
+
+_SUFFIXES = {
+    open: "",
+    gzip.open: ".gz",
+    bz2.open: ".bz2",
+    lzma.open: ".xz",
+}
+
+
 @Format.register("dill")
 class DillFormat(Format[T], Generic[T]):
     """This format writes the artifact as a single file using dill (a drop-in replacement for pickle).
@@ -98,35 +120,14 @@ class DillFormat(Format[T], Generic[T]):
 
     VERSION = 1
 
-    OPEN_FUNCTIONS: Dict[Optional[str], Callable[[PathLike, str], IO]] = {
-        None: open,
-        "None": open,
-        "none": open,
-        "null": open,
-        "gz": gzip.open,
-        "gzip": gzip.open,
-        "bz": bz2.open,
-        "bz2": bz2.open,
-        "bzip": bz2.open,
-        "bzip2": bz2.open,
-        "lzma": lzma.open,
-    }
-
-    SUFFIXES = {
-        open: "",
-        gzip.open: ".gz",
-        bz2.open: ".bz2",
-        lzma.open: ".xz",
-    }
-
     def __init__(self, compress: Optional[str] = None):
         try:
-            self.open = self.OPEN_FUNCTIONS[compress]
+            self.open = _OPEN_FUNCTIONS[compress]
         except KeyError:
             raise ConfigurationError(f"The {compress} compression format does not exist.")
 
     def write(self, artifact: T, dir: Union[str, PathLike]):
-        filename = pathlib.Path(dir) / ("data.dill" + self.SUFFIXES[self.open])
+        filename = pathlib.Path(dir) / ("data.dill" + _SUFFIXES[self.open])
         with self.open(filename, "wb") as f:
             pickler = dill.Pickler(file=f)
             pickler.dump(self.VERSION)
@@ -139,7 +140,7 @@ class DillFormat(Format[T], Generic[T]):
                 pickler.dump(artifact)
 
     def read(self, dir: Union[str, PathLike]) -> T:
-        filename = pathlib.Path(dir) / ("data.dill" + self.SUFFIXES[self.open])
+        filename = pathlib.Path(dir) / ("data.dill" + _SUFFIXES[self.open])
         with self.open(filename, "rb") as f:
             unpickler = dill.Unpickler(file=f)
             version = unpickler.load()
@@ -204,50 +205,29 @@ class JsonFormat(Format[T], Generic[T]):
 
     VERSION = 1
 
-    OPEN_FUNCTIONS: Dict[Optional[str], Callable[[PathLike, str], IO]] = {
-        None: open,
-        "None": open,
-        "none": open,
-        "null": open,
-        "gz": gzip.open,
-        "gzip": gzip.open,
-        "bz": bz2.open,
-        "bz2": bz2.open,
-        "bzip": bz2.open,
-        "bzip2": bz2.open,
-        "lzma": lzma.open,
-    }
-
-    SUFFIXES = {
-        open: "",
-        gzip.open: ".gz",
-        bz2.open: ".bz2",
-        lzma.open: ".xz",
-    }
-
     def __init__(self, compress: Optional[str] = None):
         self.logger = cast(AllenNlpLogger, logging.getLogger(self.__class__.__name__))
         try:
-            self.open = self.OPEN_FUNCTIONS[compress]
+            self.open = _OPEN_FUNCTIONS[compress]
         except KeyError:
             raise ConfigurationError(f"The {compress} compression format does not exist.")
 
     def write(self, artifact: T, dir: Union[str, PathLike]):
         if hasattr(artifact, "__next__"):
-            filename = pathlib.Path(dir) / ("data.jsonl" + self.SUFFIXES[self.open])
+            filename = pathlib.Path(dir) / ("data.jsonl" + _SUFFIXES[self.open])
             with self.open(filename, "wt") as f:
                 for item in cast(Iterable, artifact):
                     json.dump(item, f)
                     f.write("\n")
         else:
-            filename = pathlib.Path(dir) / ("data.json" + self.SUFFIXES[self.open])
+            filename = pathlib.Path(dir) / ("data.json" + _SUFFIXES[self.open])
             with self.open(filename, "wt") as f:
                 json.dump(artifact, f)
 
     def read(self, dir: Union[str, PathLike]) -> T:
-        iterator_filename = pathlib.Path(dir) / ("data.jsonl" + self.SUFFIXES[self.open])
+        iterator_filename = pathlib.Path(dir) / ("data.jsonl" + _SUFFIXES[self.open])
         iterator_exists = iterator_filename.exists()
-        non_iterator_filename = pathlib.Path(dir) / ("data.json" + self.SUFFIXES[self.open])
+        non_iterator_filename = pathlib.Path(dir) / ("data.json" + _SUFFIXES[self.open])
         non_iterator_exists = non_iterator_filename.exists()
 
         if iterator_exists and non_iterator_exists:

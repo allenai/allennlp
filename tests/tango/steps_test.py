@@ -5,7 +5,7 @@ import pytest
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
-from allennlp.tango.format import DillFormat, JsonFormat
+from allennlp.tango.format import DillFormat, JsonFormat, _OPEN_FUNCTIONS
 from allennlp.tango.hf_dataset import HuggingfaceDataset
 from allennlp.tango.step import (
     Step,
@@ -114,7 +114,7 @@ def test_make_step_graph_missing_step():
         step_graph_from_params(params.pop("steps"))
 
 
-@pytest.mark.parametrize("compress", DillFormat.OPEN_FUNCTIONS.keys())
+@pytest.mark.parametrize("compress", _OPEN_FUNCTIONS.keys())
 def test_iterable_dill_format(compress: Optional[str]):
     r = (x + 1 for x in range(10))
 
@@ -125,7 +125,7 @@ def test_iterable_dill_format(compress: Optional[str]):
         assert [x + 1 for x in range(10)] == list(r2)
 
 
-@pytest.mark.parametrize("compress", JsonFormat.OPEN_FUNCTIONS.keys())
+@pytest.mark.parametrize("compress", _OPEN_FUNCTIONS.keys())
 def test_iterable_json_format(compress: Optional[str]):
     r = (x + 1 for x in range(10))
 
