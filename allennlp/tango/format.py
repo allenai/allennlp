@@ -1,3 +1,7 @@
+"""
+*AllenNLP Tango is an experimental API and parts of it might change or disappear every time we release a new version.*
+"""
+
 import bz2
 import gzip
 import lzma

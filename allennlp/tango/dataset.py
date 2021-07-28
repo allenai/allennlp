@@ -1,3 +1,7 @@
+"""
+*AllenNLP Tango is an experimental API and parts of it might change or disappear every time we release a new version.*
+"""
+
 import itertools
 from dataclasses import dataclass, field
 from typing import Mapping, Any, Optional, Sequence, Dict

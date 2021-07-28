@@ -1,3 +1,7 @@
+"""
+*AllenNLP Tango is an experimental API and parts of it might change or disappear every time we release a new version.*
+"""
+
 import datasets
 from allennlp.tango.dataset import AllenNlpDataset
 from allennlp.tango.step import Step
