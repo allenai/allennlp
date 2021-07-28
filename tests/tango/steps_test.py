@@ -5,7 +5,7 @@ import pytest
 
 from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
-from allennlp.tango.format import DillFormat
+from allennlp.tango.format import DillFormat, JsonFormat
 from allennlp.tango.hf_dataset import HuggingfaceDataset
 from allennlp.tango.step import (
     Step,
@@ -120,6 +120,17 @@ def test_iterable_dill_format(compress: Optional[str]):
 
     with TemporaryDirectory(prefix="test_iterable_dill_format-") as d:
         format = DillFormat[Iterable[int]](compress)
+        format.write(r, d)
+        r2 = format.read(d)
+        assert [x + 1 for x in range(10)] == list(r2)
+
+
+@pytest.mark.parametrize("compress", JsonFormat.OPEN_FUNCTIONS.keys())
+def test_iterable_json_format(compress: Optional[str]):
+    r = (x + 1 for x in range(10))
+
+    with TemporaryDirectory(prefix="test_iterable_json_format-") as d:
+        format = JsonFormat[Iterable[int]](compress)
         format.write(r, d)
         r2 = format.read(d)
         assert [x + 1 for x in range(10)] == list(r2)
