@@ -6,7 +6,7 @@ every time we release a new version.*
 import dataclasses
 from typing import Set, Optional, Iterable, Any
 
-from allennlp.tango.dataset import AllenNlpDataset
+from allennlp.tango.dataset import AllenNlpDatasetDict
 from allennlp.tango.step import Step
 
 
@@ -23,11 +23,11 @@ class TextOnlyDataset(Step):
 
     def run(  # type: ignore
         self,
-        input: AllenNlpDataset,
+        input: AllenNlpDatasetDict,
         *,
         fields_to_keep: Optional[Set[str]] = None,
         min_length: Optional[int] = None,
-    ) -> AllenNlpDataset:
+    ) -> AllenNlpDatasetDict:
         """
         Turns the `input` dataset into another dataset that contains only the strings from the
         original dataset.

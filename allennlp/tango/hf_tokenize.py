@@ -11,7 +11,7 @@ import torch
 from allennlp.common import cached_transformers
 from allennlp.data import Vocabulary
 from allennlp.data.fields import TransformerTextField
-from allennlp.tango.dataset import AllenNlpDataset
+from allennlp.tango.dataset import AllenNlpDatasetDict
 from allennlp.tango.step import Step
 from datasets import Dataset
 
@@ -27,13 +27,13 @@ class HuggingfaceTokenize(Step):
     def run(  # type: ignore
         self,
         tokenizer_name: str,
-        input: AllenNlpDataset,
+        input: AllenNlpDatasetDict,
         fields_to_tokenize: Optional[List[str]] = None,
         add_special_tokens: bool = True,
         max_length: Optional[int] = 512,
         special_tokens_mask: bool = False,
         offset_mapping: bool = False,
-    ) -> AllenNlpDataset:
+    ) -> AllenNlpDatasetDict:
         """
         Reads a dataset and converts all strings in it into `TransformerTextField`.
 
@@ -153,4 +153,4 @@ class HuggingfaceTokenize(Step):
         for name in field_names_used:
             vocab.add_transformer_vocab(tokenizer, name)
 
-        return AllenNlpDataset(new_splits, vocab)
+        return AllenNlpDatasetDict(new_splits, vocab)
