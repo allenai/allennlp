@@ -2,7 +2,7 @@
 *AllenNLP Tango is an experimental API and parts of it might change or disappear
 every time we release a new version.*
 """
-
+import collections
 import copy
 import inspect
 import itertools
@@ -32,6 +32,7 @@ from typing import (
     MutableMapping,
     Iterator,
     MutableSet,
+    OrderedDict,
 )
 
 try:
@@ -140,17 +141,51 @@ class DirectoryStepCache(StepCache):
     `metadata.json` signifies that the cache entry is complete and has been written successfully.
     """
 
+    LRU_CACHE_MAX_SIZE = 8
+
     def __init__(self, dir: Union[str, PathLike]):
         self.dir = Path(dir)
         self.dir.mkdir(parents=True, exist_ok=True)
 
         # We keep an in-memory cache as well so we don't have to de-serialize stuff
         # we happen to have in memory already.
-        self.cache: MutableMapping[str, Any] = weakref.WeakValueDictionary()
+        self.weak_cache: MutableMapping[str, Any] = weakref.WeakValueDictionary()
+
+        # Not all Python objects can be referenced weakly, and even if they can they
+        # might get removed too quickly, so we also keep an LRU cache.
+        self.strong_cache: OrderedDict[str, Any] = collections.OrderedDict()
+
+    def _add_to_cache(self, key: str, o: Any) -> None:
+        if hasattr(o, "__next__"):
+            # We never cache iterators, because they are mutable, storing their current position.
+            return
+
+        self.strong_cache[key] = o
+        self.strong_cache.move_to_end(key)
+        while len(self.strong_cache) > self.LRU_CACHE_MAX_SIZE:
+            del self.strong_cache[next(iter(self.strong_cache))]
+
+        try:
+            self.weak_cache[key] = o
+        except TypeError:
+            pass  # Many native Python objects cannot be referenced weakly, and they throw TypeError when you try
+
+    def _get_from_cache(self, key: str) -> Optional[Any]:
+        result = self.strong_cache.get(key)
+        if result is not None:
+            self.strong_cache.move_to_end(key)
+            return result
+        try:
+            return self.weak_cache[key]
+        except KeyError:
+            return None
 
     def __contains__(self, step: object) -> bool:
         if isinstance(step, Step):
-            if step.unique_id() in self.cache:
+            key = step.unique_id()
+            if key in self.strong_cache:
+                return True
+            if key in self.weak_cache:
                 return True
             metadata_file = self.path_for_step(step) / "metadata.json"
             return metadata_file.exists()
@@ -158,14 +193,14 @@ class DirectoryStepCache(StepCache):
             return False
 
     def __getitem__(self, step: "Step") -> Any:
-        try:
-            return self.cache[step.unique_id()]
-        except KeyError:
+        key = step.unique_id()
+        result = self._get_from_cache(key)
+        if result is None:
             if step not in self:
                 raise KeyError(step)
             result = step.format.read(self.path_for_step(step))
-            self.cache[step.unique_id()] = result
-            return result
+            self._add_to_cache(key, result)
+        return result
 
     def __setitem__(self, step: "Step", value: Any) -> None:
         location = self.path_for_step(step)
@@ -184,7 +219,7 @@ class DirectoryStepCache(StepCache):
             }
             with temp_metadata_location.open("wt") as f:
                 json.dump(metadata, f)
-            self.cache[step.unique_id()] = value
+            self._add_to_cache(step.unique_id(), value)
             temp_metadata_location.rename(metadata_location)
         except:  # noqa: E722
             temp_metadata_location.unlink(missing_ok=True)

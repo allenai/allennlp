@@ -4,7 +4,9 @@ every time we release a new version.*
 """
 
 import bz2
+import dataclasses
 import gzip
+import importlib
 import json
 import logging
 import lzma
@@ -22,6 +24,8 @@ from typing import (
     Iterable,
     cast,
     Iterator,
+    Any,
+    List,
 )
 
 import dill
@@ -204,7 +208,7 @@ class JsonFormat(Format[T], Generic[T]):
     iterator. If you read an iterator, it will read the iterator lazily.
     """
 
-    VERSION = 1
+    VERSION = 2
 
     def __init__(self, compress: Optional[str] = None):
         self.logger = cast(AllenNlpLogger, logging.getLogger(self.__class__.__name__))
@@ -213,17 +217,53 @@ class JsonFormat(Format[T], Generic[T]):
         except KeyError:
             raise ConfigurationError(f"The {compress} compression format does not exist.")
 
+    @staticmethod
+    def _encoding_fallback(unencodable: Any):
+        if isinstance(unencodable, torch.Tensor):
+            if len(unencodable.shape) == 0:
+                return unencodable.item()
+            else:
+                raise TypeError(
+                    "Tensors must have 1 element and no dimensions to be JSON serializable."
+                )
+        elif dataclasses.is_dataclass(unencodable):
+            result = dataclasses.asdict(unencodable)
+            module = type(unencodable).__module__
+            qualname = type(unencodable).__qualname__
+            if module == "builtins":
+                result["_dataclass"] = qualname
+            else:
+                result["_dataclass"] = [module, qualname]
+            return result
+        raise TypeError(f"Object of type {type(unencodable)} is not JSON serializable")
+
+    @staticmethod
+    def _decoding_fallback(o: Dict) -> Any:
+        if "_dataclass" in o:
+            classname: Union[str, List[str]] = o.pop("_dataclass")
+            if isinstance(classname, list) and len(classname) == 2:
+                module, classname = classname
+                constructor: Callable = importlib.import_module(module)  # type: ignore
+                for item in classname.split("."):
+                    constructor = getattr(constructor, item)
+            elif isinstance(classname, str):
+                constructor = globals()[classname]
+            else:
+                raise RuntimeError(f"Could not parse {classname} as the name of a dataclass.")
+            return constructor(**o)
+        return o
+
     def write(self, artifact: T, dir: Union[str, PathLike]):
         if hasattr(artifact, "__next__"):
             filename = pathlib.Path(dir) / ("data.jsonl" + _SUFFIXES[self.open])
             with self.open(filename, "wt") as f:
                 for item in cast(Iterable, artifact):
-                    json.dump(item, f)
+                    json.dump(item, f, default=self._encoding_fallback)
                     f.write("\n")
         else:
             filename = pathlib.Path(dir) / ("data.json" + _SUFFIXES[self.open])
             with self.open(filename, "wt") as f:
-                json.dump(artifact, f)
+                json.dump(artifact, f, default=self._encoding_fallback)
 
     def read(self, dir: Union[str, PathLike]) -> T:
         iterator_filename = pathlib.Path(dir) / ("data.jsonl" + _SUFFIXES[self.open])
@@ -246,7 +286,7 @@ class JsonFormat(Format[T], Generic[T]):
             return JsonFormatIterator(iterator_filename)  # type: ignore
         elif not iterator_exists and non_iterator_exists:
             with self.open(non_iterator_filename, "rt") as f:
-                return json.load(f)
+                return json.load(f, object_hook=self._decoding_fallback)
         else:
             raise RuntimeError("This should be impossible.")
 
@@ -267,7 +307,7 @@ class JsonFormatIterator(Iterator[T], Generic[T]):
             line = self.f.readline()
             if len(line) <= 0:
                 raise EOFError()
-            return json.loads(line)
+            return json.loads(line, object_hook=JsonFormat._decoding_fallback)
         except EOFError:
             self.f.close()
             self.f = None

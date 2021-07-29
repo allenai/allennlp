@@ -15,6 +15,7 @@ from allennlp.models import Model
 from allennlp.nn.util import move_to_device
 from allennlp.tango.dataloader import TangoDataLoader, BatchSizeDataLoader
 from allennlp.tango.dataset import AllenNlpDataset
+from allennlp.tango.format import JsonFormat, Format
 from allennlp.tango.step import Step
 
 
@@ -23,14 +24,13 @@ class EvaluationStep(Step):
     """This step evaluates a given model on a given dataset."""
 
     DETERMINISTIC = True
-    VERSION = "001"
+    VERSION = "002"
+    FORMAT: Format = JsonFormat(compress="gz")
 
     @dataclasses.dataclass
     class EvaluationResult:
         metrics: Dict[str, Any]
-        predictions: List[
-            Dict[str, Any]
-        ]  # TODO: This does not make sense as a type. Should be a List with one element per instance?
+        predictions: List[Dict[str, Any]]
 
     def run(  # type: ignore
         self,
@@ -64,9 +64,10 @@ class EvaluationStep(Step):
         generator_tqdm = Tqdm.tqdm(iter(concrete_data_loader))
 
         # Number of batches in instances.
-        batch_results = []
+        predictions: List[Dict[str, Any]] = []
         # Number of batches where the model produces a loss.
         loss_count = 0
+        batch_count = 0
         # Cumulative loss
         total_loss = 0.0
 
@@ -74,13 +75,13 @@ class EvaluationStep(Step):
             model.eval()
 
             for batch in concrete_data_loader:
+                batch_count += 1
                 batch = move_to_device(batch, cuda_device)
                 output_dict = model(**batch)
-                batch_results.append(sanitize(output_dict))
 
                 metrics = model.get_metrics()
 
-                loss = output_dict.get("loss")
+                loss = output_dict.pop("loss", None)
                 if loss is not None:
                     loss_count += 1
                     total_loss += loss.item()
@@ -104,13 +105,21 @@ class EvaluationStep(Step):
                     )
                     generator_tqdm.set_description(description, refresh=False)
 
-        final_metrics = model.get_metrics(reset=True)
+                output_dict = sanitize(output_dict)
+
+                # This is write-only code, but it's quite fast.
+                predictions.extend(
+                    dict(zip(output_dict.keys(), x)) for x in zip(*output_dict.values())
+                )
+
+            final_metrics = model.get_metrics(reset=True)
+
         if loss_count > 0:
             # Sanity check
-            if loss_count != len(batch_results):
+            if loss_count != batch_count:
                 raise RuntimeError(
                     "The model you are trying to evaluate only sometimes produced a loss!"
                 )
             final_metrics["loss"] = total_loss / loss_count
 
-        return self.EvaluationResult(final_metrics, output_dict)
+        return self.EvaluationResult(final_metrics, predictions)

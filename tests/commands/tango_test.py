@@ -1,15 +1,14 @@
-import gzip
 import os
 import sys
 import time
 
-import dill
 import pytest
 
 from allennlp.commands import main
 from allennlp.commands.tango import run_tango
 from allennlp.common import Params
 from allennlp.common.testing import AllenNlpTestCase
+from allennlp.tango import EvaluationStep
 
 
 class TestTangoCommand(AllenNlpTestCase):
@@ -34,12 +33,8 @@ class TestTangoCommand(AllenNlpTestCase):
         for symlink_name in {"dataset", "evaluation", "trained_model"}:
             assert os.path.islink(output_path / symlink_name)
 
-        with gzip.open(output_path / "evaluation" / "data.dill.gz") as f:
-            dill.load(f)
-            is_iterator = dill.load(f)
-            assert is_iterator is False
-            evaluation_result = dill.load(f)
-            assert evaluation_result.metrics["accuracy"] == 1.0
+        evaluation_result = EvaluationStep.FORMAT.read(output_path / "evaluation")
+        assert evaluation_result.metrics["accuracy"] == 1.0
 
         # If we try again, it should run faster, because everything is cached.
         start = time.time()
