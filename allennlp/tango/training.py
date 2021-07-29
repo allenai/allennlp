@@ -13,7 +13,7 @@ from allennlp.common.checks import check_for_gpu
 from allennlp.common.util import log_frozen_and_tunable_parameter_names
 from allennlp.models import Model
 from allennlp.tango.dataloader import TangoDataLoader, MaxBatchesDataLoader, DataLoaderAdapter
-from allennlp.tango.dataset import AllenNlpDatasetDict
+from allennlp.tango.dataset import DatasetDict
 from allennlp.tango.format import TorchFormat, Format
 from allennlp.tango.step import Step
 from allennlp.training import Checkpointer, TrainerCallback, GradientDescentTrainer
@@ -47,7 +47,7 @@ class TrainingStep(Step):
     def run(  # type: ignore
         self,
         model: Lazy[Model],
-        dataset: AllenNlpDatasetDict,
+        dataset: DatasetDict,
         data_loader: Lazy[TangoDataLoader],
         optimizer: Lazy[Optimizer],
         validation_data_loader: Optional[Lazy[TangoDataLoader]] = None,

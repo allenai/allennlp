@@ -14,7 +14,7 @@ from allennlp.common.util import sanitize
 from allennlp.models import Model
 from allennlp.nn.util import move_to_device
 from allennlp.tango.dataloader import TangoDataLoader, BatchSizeDataLoader
-from allennlp.tango.dataset import AllenNlpDatasetDict
+from allennlp.tango.dataset import DatasetDict
 from allennlp.tango.format import JsonFormat, Format
 from allennlp.tango.step import Step
 
@@ -35,7 +35,7 @@ class EvaluationStep(Step):
     def run(  # type: ignore
         self,
         model: Model,
-        dataset: AllenNlpDatasetDict,
+        dataset: DatasetDict,
         split: str = "validation",
         data_loader: Optional[Lazy[TangoDataLoader]] = None,
     ) -> EvaluationResult:

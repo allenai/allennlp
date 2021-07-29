@@ -13,7 +13,7 @@ from tqdm import tqdm
 
 
 @dataclass
-class AllenNlpDatasetDict:
+class DatasetDict:
     """This definition of a dataset combines all splits, the vocabulary, and some metadata, into
     one handy class."""
 
@@ -42,7 +42,7 @@ class DatasetReaderAdapterStep(Step):
     CACHEABLE = True
     VERSION = "002"
 
-    def run(self, reader: DatasetReader, splits: Dict[str, str]) -> AllenNlpDatasetDict:  # type: ignore
+    def run(self, reader: DatasetReader, splits: Dict[str, str]) -> DatasetDict:  # type: ignore
         """
         * `reader` specifies the old-school dataset reader to use.
         * `splits` maps the names of the splits to the filenames to use for the
@@ -65,4 +65,4 @@ class DatasetReaderAdapterStep(Step):
             for instance in tqdm(instances, desc=f"Indexing {split_name}"):
                 instance.index_fields(vocab)
 
-        return AllenNlpDatasetDict(splits=instances_map, vocab=vocab)
+        return DatasetDict(splits=instances_map, vocab=vocab)
