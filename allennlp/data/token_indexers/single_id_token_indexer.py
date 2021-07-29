@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 import itertools
 
 from overrides import overrides
@@ -109,3 +109,15 @@ class SingleIdTokenIndexer(TokenIndexer):
                     "constructor of this indexer."
                 )
         return text
+
+    @overrides
+    def _to_params(self) -> Dict[str, Any]:
+        return {
+            "namespace": self.namespace,
+            "lowercase_tokens": self.lowercase_tokens,
+            "start_tokens": [t.text for t in self._start_tokens],
+            "end_tokens": [t.text for t in self._end_tokens],
+            "feature_name": self._feature_name,
+            "default_value": self._default_value,
+            "token_min_padding_length": self._token_min_padding_length,
+        }

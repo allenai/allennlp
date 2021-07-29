@@ -20,6 +20,7 @@ import inspect
 import logging
 
 from allennlp.common.checks import ConfigurationError
+from allennlp.common.det_hash import CustomDetHash
 from allennlp.common.lazy import Lazy
 from allennlp.common.params import Params
 
@@ -505,7 +506,7 @@ def construct_arg(
         return popped_params
 
 
-class FromParams:
+class FromParams(CustomDetHash):
     """
     Mixin to give a from_params method to classes. We create a distinct base class for this
     because sometimes we want non-Registrable classes to be instantiatable from_params.
@@ -634,3 +635,29 @@ class FromParams:
                 kwargs = create_kwargs(constructor_to_inspect, cls, params, **extras)
 
             return constructor_to_call(**kwargs)  # type: ignore
+
+    def to_params(self) -> Params:
+        """
+        Returns a `Params` object that can be used with `.from_params()` to recreate an
+        object just like it.
+        """
+
+        def replace_object_with_params(o: Any) -> Any:
+            if isinstance(o, FromParams):
+                return o.to_params()
+            elif isinstance(o, List):
+                return [replace_object_with_params(i) for i in o]
+            elif isinstance(o, Set):
+                return {replace_object_with_params(i) for i in o}
+            elif isinstance(o, Dict):
+                return {key: replace_object_with_params(value) for key, value in o.items()}
+            else:
+                return o
+
+        return Params(replace_object_with_params(self._to_params()))
+
+    def _to_params(self) -> Dict[str, Any]:
+        raise NotImplementedError()
+
+    def det_hash_object(self) -> Any:
+        return self.to_params()
