@@ -5,8 +5,9 @@ every time we release a new version.*
 
 import logging
 import random
+from collections import abc
 from math import floor, ceil
-from typing import Optional, Iterator, Sequence
+from typing import Optional, Iterator, Sequence, Union
 
 import more_itertools
 import torch
@@ -82,6 +83,34 @@ class DataLoaderAdapter(DataLoader):
         self.target_device = device
 
 
+class ShuffledSequence(abc.Sequence):
+    """
+    Produces a shuffled view of a sequence, such as a list.
+
+    This assumes that the inner sequence never changes. If it does, the results
+    are undefined.
+    """
+
+    def __init__(self, inner_sequence: Sequence):
+        self.inner = inner_sequence
+        self.indices = list(range(len(inner_sequence)))
+        random.shuffle(self.indices)
+
+    def __len__(self) -> int:
+        return len(self.inner)
+
+    def __getitem__(self, i: Union[int, slice]):
+        if isinstance(i, int):
+            return self.inner[self.indices[i]]
+        else:
+            result = ShuffledSequence(self.inner)
+            result.indices = self.indices[i]
+            return result
+
+    def __contains__(self, item) -> bool:
+        return self.inner.__contains__(item)
+
+
 @TangoDataLoader.register("batch_size")
 class BatchSizeDataLoader(TangoDataLoader):
     """A data loader that turns instances into batches with a constant number of instances
@@ -115,11 +144,7 @@ class BatchSizeDataLoader(TangoDataLoader):
     def __iter__(self) -> Iterator[TensorDict]:
         instances: Sequence[Instance]
         if self.shuffle:
-            instances_as_list_just_to_make_mypy_happy = list(
-                self.instances
-            )  # make a new list pointing to the same instance objects
-            random.shuffle(instances_as_list_just_to_make_mypy_happy)
-            instances = instances_as_list_just_to_make_mypy_happy
+            instances = ShuffledSequence(self.instances)
         else:
             instances = self.instances
 
