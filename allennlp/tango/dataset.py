@@ -29,6 +29,12 @@ class DatasetDict:
     metadata: Mapping[str, Any] = field(default_factory=dict)
     """Metadata can contain anything you need."""
 
+    def __getitem__(self, split: str) -> Sequence[Any]:
+        return self.splits[split]
+
+    def __len__(self) -> int:
+        return len(self.splits)
+
 
 @Step.register("dataset_reader_adapter")
 class DatasetReaderAdapterStep(Step):
