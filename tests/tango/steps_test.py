@@ -223,7 +223,7 @@ def test_random_seeds_are_initialized(deterministic: bool):
         DETERMINISTIC = deterministic
         CACHEABLE = False
 
-        def run(self) -> Tuple[int, int, int]:
+        def run(self) -> Tuple[int, int, int]:  # type: ignore
             import random
             import numpy
             import torch
