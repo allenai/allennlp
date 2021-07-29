@@ -76,7 +76,7 @@ setup(
         "checklist==0.0.11",
         "wandb>=0.10.0,<0.12.0",
         "huggingface_hub>=0.0.8",
-        "datasets>=1.2.1,<1.3.0",
+        "datasets>=1.2.1,<2.0",
         "dill",
         "base58",
         "google-cloud-storage>=1.38.0,<1.42.0",
