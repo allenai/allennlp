@@ -15,6 +15,9 @@ import torch
 import torch.distributed as dist
 import torch.multiprocessing as mp
 from overrides import overrides
+from optuna import Trial
+from optuna import TrialPruned
+from optuna.storages import _CachedStorage
 
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common import Params, Registrable, Lazy
@@ -359,7 +362,7 @@ def train_model(
                 nprocs=num_procs,
             )
 
-        except Exception as e
+        except Exception as e:
             # NOTE `mp.spawn` raises `torch.multiprocessing.spawn.ProcessRaisedException` when
             # some error occurs in a worker. This exception propagates to Optuna and `study.optimize()`
             # terminates without pruning. To make pruning work, we check a traceback and raise
@@ -369,7 +372,6 @@ def train_model(
 
             # Re-raise the original exception if `TrialPruned` is not raised.
             raise e
-
 
     if not dry_run:
         archive_model(serialization_dir, include_in_archive=include_in_archive)
