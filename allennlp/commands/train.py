@@ -198,6 +198,7 @@ def train_model(
     dry_run: bool = False,
     file_friendly_logging: bool = False,
     return_model: Optional[bool] = None,
+    trial: Trial = None,
 ) -> Optional[Model]:
     """
     Trains the model specified in the given [`Params`](../common/params.md#params) object, using the data
@@ -228,6 +229,9 @@ def train_model(
     return_model : `Optional[bool]`, optional (default = `None`)
         Whether or not to return the final model. If not specified, this defaults to `False` for
         distributed training and `True` otherwise.
+    trial : :class:`~optuna.trial.Trial`, optional (default=`None`)
+        A :class:`~optuna.trial.Trial` corresponding to the current evaluation of the
+        objective function.
 
     # Returns
 
@@ -258,6 +262,7 @@ def train_model(
             include_package=include_package,
             dry_run=dry_run,
             file_friendly_logging=file_friendly_logging,
+            trial=trial,
         )
     # Otherwise, we are running multiple processes for training.
     else:
@@ -318,24 +323,53 @@ def train_model(
             f"World size: {world_size}"
         )
 
-        mp.spawn(
-            _train_worker,
-            args=(
-                params.duplicate(),
-                serialization_dir,
-                include_package,
-                dry_run,
-                node_rank,
-                primary_addr,
-                primary_port,
-                world_size,
-                device_ids,
-                file_friendly_logging,
-                include_in_archive,
-                Params(distributed_params),
-            ),
-            nprocs=num_procs,
-        )
+        if trial is not None:
+            if isinstance(trial.study._storage, _CachedStorage):
+                # Reconstruct storage to purge a old cache.
+                if isinstance(trial.study._storage, _CachedStorage):
+                    trial.study._storage = _CachedStorage(trial.study._storage._backend)
+
+                else:
+                    message = "RDBStorage is only supported in distributed configuration."
+                    message += " For more information about RDBStorage,"
+                    message += " please refer our official documentations:\n"
+                    message += " - https://optuna.readthedocs.io/en/stable/tutorial/20_recipes"
+                    message += "/001_rdb.html#sphx-glr-tutorial-20-recipes-001-rdb-py\n"
+                    message += " - https://optuna.readthedocs.io/en/stable/reference/generated"
+                    message += "/optuna.storages.RDBStorage.html?highlight=RDB"
+                    raise ValueError(message)
+
+        try:
+            mp.spawn(
+                _train_worker,
+                args=(
+                    params.duplicate(),
+                    serialization_dir,
+                    include_package,
+                    dry_run,
+                    node_rank,
+                    primary_addr,
+                    primary_port,
+                    world_size,
+                    device_ids,
+                    file_friendly_logging,
+                    include_in_archive,
+                    Params(distributed_params),
+                ),
+                nprocs=num_procs,
+            )
+
+        except Exception as e
+            # NOTE `mp.spawn` raises `torch.multiprocessing.spawn.ProcessRaisedException` when
+            # some error occurs in a worker. This exception propagates to Optuna and `study.optimize()`
+            # terminates without pruning. To make pruning work, we check a traceback and raise
+            # :class:`~optuna.TrialPruned` if "optuna.exceptions.TrialPruned" appears in the message.
+            if "optuna.exceptions.TrialPruned" in str(e):
+                raise TrialPruned()
+
+            # Re-raise the original exception if `TrialPruned` is not raised.
+            raise e
+
 
     if not dry_run:
         archive_model(serialization_dir, include_in_archive=include_in_archive)
@@ -364,6 +398,7 @@ def _train_worker(
     file_friendly_logging: bool = False,
     include_in_archive: List[str] = None,
     distributed_params: Optional[Params] = None,
+    trial: Trial = None,
 ) -> Optional[Model]:
     """
     Helper to train the configured model/experiment. In distributed mode, this is spawned as a
@@ -402,6 +437,9 @@ def _train_worker(
         Paths relative to `serialization_dir` that should be archived in addition to the default ones.
     distributed_params : `Optional[Params]`, optional
         Additional distributed params.
+    trial : :class:`~optuna.trial.Trial`, optional (default=`None`)
+        A :class:`~optuna.trial.Trial` corresponding to the current evaluation of the
+        objective function.
 
     # Returns
 
@@ -492,6 +530,7 @@ def _train_worker(
         serialization_dir=serialization_dir,
         local_rank=process_rank,
         ddp_accelerator=ddp_accelerator,
+        trial=trial,
     )
 
     if dry_run:
