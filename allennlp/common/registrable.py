@@ -9,6 +9,7 @@ from collections import defaultdict
 from typing import Callable, ClassVar, DefaultDict, Dict, List, Optional, Tuple, Type, TypeVar, cast
 
 from allennlp.common.checks import ConfigurationError
+from allennlp.common.det_hash import DetHashFromInitParams
 from allennlp.common.from_params import FromParams
 
 logger = logging.getLogger(__name__)
@@ -19,7 +20,7 @@ _RegistrableT = TypeVar("_RegistrableT", bound="Registrable")
 _SubclassRegistry = Dict[str, Tuple[type, Optional[str]]]
 
 
-class Registrable(FromParams):
+class Registrable(FromParams, DetHashFromInitParams):
     """
     Any class that inherits from `Registrable` gains access to a named registry for its
     subclasses. To register them, just decorate them with the classmethod

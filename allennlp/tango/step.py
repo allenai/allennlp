@@ -35,6 +35,8 @@ from typing import (
     OrderedDict,
 )
 
+from allennlp.common.det_hash import det_hash
+
 try:
     from typing import get_origin, get_args
 except ImportError:
@@ -54,7 +56,6 @@ from allennlp.common.from_params import (
     infer_constructor_params,
 )
 from allennlp.common.logging import AllenNlpLogger
-from allennlp.common.util import hash_object
 from allennlp.tango.format import Format, DillFormat
 
 logger = logging.getLogger(__name__)
@@ -599,7 +600,7 @@ class Step(Registrable, Generic[T]):
                     else:
                         return o
 
-                self.unique_id_cache += hash_object(
+                self.unique_id_cache += det_hash(
                     (
                         self.format.__class__.__name__,
                         self.format.VERSION,
@@ -607,9 +608,7 @@ class Step(Registrable, Generic[T]):
                     )
                 )[:32]
             else:
-                self.unique_id_cache += hash_object(random.getrandbits((58 ** 32).bit_length()))[
-                    :32
-                ]
+                self.unique_id_cache += det_hash(random.getrandbits((58 ** 32).bit_length()))[:32]
 
         return self.unique_id_cache
 

@@ -46,7 +46,7 @@
               "lr": 0.01
             },
             "grad_norm": 1.0,
-            "num_epochs": 40,
+            "num_epochs": 60,
             "patience": 500,
         },
         "evaluation": {
