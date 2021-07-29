@@ -71,7 +71,7 @@ class EvaluationStep(Step):
         # Cumulative loss
         total_loss = 0.0
 
-        with torch.no_grad():
+        with torch.inference_mode():
             model.eval()
 
             for batch in concrete_data_loader:
