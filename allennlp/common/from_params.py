@@ -640,6 +640,9 @@ class FromParams(CustomDetHash):
         """
         Returns a `Params` object that can be used with `.from_params()` to recreate an
         object just like it.
+
+        This relies on `_to_params()`. If you need this in your custom `FromParams` class,
+        override `_to_params()`, not this method.
         """
 
         def replace_object_with_params(o: Any) -> Any:
@@ -657,6 +660,13 @@ class FromParams(CustomDetHash):
         return Params(replace_object_with_params(self._to_params()))
 
     def _to_params(self) -> Dict[str, Any]:
+        """
+        Returns a dictionary of parameters that, when turned into a `Params` object and
+        then fed to `.from_params()`, will recreate this object.
+
+        You don't need to implement this all the time. AllenNLP will let you know if you
+        need it.
+        """
         raise NotImplementedError()
 
     def det_hash_object(self) -> Any:
