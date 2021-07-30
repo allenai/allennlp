@@ -602,7 +602,7 @@ class Step(Registrable, Generic[T]):
 
                 self.unique_id_cache += det_hash(
                     (
-                        self.format.__class__.__name__,
+                        (self.format.__class__.__module__, self.format.__class__.__qualname__),
                         self.format.VERSION,
                         replace_steps_with_hashes(self.kwargs),
                     )
