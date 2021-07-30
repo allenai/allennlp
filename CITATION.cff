@@ -1,0 +1,47 @@
+# YAML 1.2
+---
+authors: 
+  -
+    affiliation: "Allen Institute for Artificial Intelligence"
+    family-names: Gardner
+    given-names: Matt
+  -
+    affiliation: "Allen Institute for Artificial Intelligence"
+    family-names: Grus
+    given-names: Joel
+  -
+    affiliation: "Allen Institute for Artificial Intelligence"
+    family-names: Neumann
+    given-names: Mark
+  -
+    affiliation: "Allen Institute for Artificial Intelligence"
+    family-names: Tafjord
+    given-names: Oyvind
+  -
+    affiliation: "Allen Institute for Artificial Intelligence"
+    family-names: Dasigi
+    given-names: Pradeep
+  -
+    affiliation: "Allen Institute for Artificial Intelligence"
+    family-names: Liu
+    given-names: Nelson
+  -
+    affiliation: "Allen Institute for Artificial Intelligence"
+    family-names: Peters
+    given-names: Matthew
+  -
+    affiliation: "Allen Institute for Artificial Intelligence"
+    family-names: Schmitz
+    given-names: Michael
+  -
+    affiliation: "Allen Institute for Artificial Intelligence"
+    family-names: Zettlemoyer
+    given-names: Luke
+cff-version: "1.1.0"
+license: "Apache-2.0"
+message: "If you use this software, please cite it using this metadata."
+repository-code: "https://github.com/allenai/allennlp"
+title: "AllenNLP: A Deep Semantic Natural Language Processing Platform"
+version: "2.6.0"
+doi: "10.18653/v1/W18-2501"
+...
