@@ -7,7 +7,7 @@ import logging
 import random
 from collections import abc
 from math import floor, ceil
-from typing import Optional, Iterator, Sequence, Union
+from typing import Optional, Iterator, Sequence, Union, Dict, Any
 
 import more_itertools
 import torch
@@ -50,9 +50,12 @@ class TangoDataLoader(Registrable):
 class DataLoaderAdapter(DataLoader):
     """Adapts a TangoDataLoader to an old-school AllenNLP DataLoader."""
 
-    def __init__(self, tango_data_loader: TangoDataLoader):
+    def __init__(self, *, tango_data_loader: TangoDataLoader):
         self.tango_data_loader = tango_data_loader
         self.target_device: Optional[torch.device] = None
+
+    def _to_params(self) -> Dict[str, Any]:
+        return {"tango_data_loader": self.tango_data_loader}
 
     def __len__(self) -> int:
         result = self.tango_data_loader.num_batches_per_epoch()
@@ -125,6 +128,7 @@ class BatchSizeDataLoader(TangoDataLoader):
     def __init__(
         self,
         instances: Sequence[Instance],
+        *,
         batch_size: int,
         drop_last: bool = False,
         shuffle: bool = True,
@@ -133,6 +137,14 @@ class BatchSizeDataLoader(TangoDataLoader):
         self.batch_size = batch_size
         self.drop_last = drop_last
         self.shuffle = shuffle
+
+    def _to_params(self) -> Dict[str, Any]:
+        return {
+            # We're not returning instances here.
+            "batch_size": self.batch_size,
+            "drop_last": self.drop_last,
+            "shuffle": self.shuffle,
+        }
 
     def num_batches_per_epoch(self) -> Optional[int]:
         batch_count = len(self.instances) / self.batch_size
@@ -157,9 +169,12 @@ class BatchSizeDataLoader(TangoDataLoader):
 class SamplerDataLoader(TangoDataLoader):
     """This dataloader uses a `BatchSampler` to make batches out of the instances given in `instances`."""
 
-    def __init__(self, instances: Sequence[Instance], batch_sampler: BatchSampler):
+    def __init__(self, instances: Sequence[Instance], *, batch_sampler: BatchSampler):
         self.instances = instances
         self.batch_sampler = batch_sampler
+
+    def _to_params(self) -> Dict[str, Any]:
+        return {"batch_sampler": self.batch_sampler}
 
     def num_batches_per_epoch(self) -> Optional[int]:
         return self.batch_sampler.get_num_batches(self.instances)
@@ -174,10 +189,13 @@ class BatchesPerEpochDataLoader(TangoDataLoader):
     """This dataloader wraps another data loader, but changes the length of the epoch. It ends
     one epoch and starts another every `batches_per_epoch` batches."""
 
-    def __init__(self, inner: TangoDataLoader, batches_per_epoch: int):
+    def __init__(self, *, inner: TangoDataLoader, batches_per_epoch: int):
         self.inner = inner
         self.iter = iter(inner)
         self.batches_per_epoch = batches_per_epoch
+
+    def _to_params(self) -> Dict[str, Any]:
+        return {"inner": self.inner, "batches_per_epoch": self.batches_per_epoch}
 
     def num_batches_per_epoch(self) -> Optional[int]:
         return self.batches_per_epoch
@@ -200,6 +218,9 @@ class MaxBatchesDataLoader(TangoDataLoader):
     def __init__(self, inner: TangoDataLoader, max_batches_per_epoch: int):
         self.inner = inner
         self.max_batches_per_epoch = max_batches_per_epoch
+
+    def _to_params(self) -> Dict[str, Any]:
+        return {"inner": self.inner, "max_batches_per_epoch": self.max_batches_per_epoch}
 
     def num_batches_per_epoch(self) -> Optional[int]:
         batches = self.inner.num_batches_per_epoch()

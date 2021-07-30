@@ -51,7 +51,9 @@ class EvaluationStep(Step):
 
         concrete_data_loader: TangoDataLoader
         if data_loader is None:
-            concrete_data_loader = BatchSizeDataLoader(dataset.splits[split], 32, shuffle=False)
+            concrete_data_loader = BatchSizeDataLoader(
+                dataset.splits[split], batch_size=32, shuffle=False
+            )
         else:
             concrete_data_loader = data_loader.construct(instances=dataset.splits[split])
 

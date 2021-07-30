@@ -85,7 +85,7 @@ class TrainingStep(Step):
                 concrete_validation_data_loader = MaxBatchesDataLoader(
                     concrete_validation_data_loader, limit_batches_per_epoch
                 )
-            validation_loader = DataLoaderAdapter(concrete_validation_data_loader)
+            validation_loader = DataLoaderAdapter(tango_data_loader=concrete_validation_data_loader)
 
         concrete_data_loader = data_loader.construct(instances=dataset.splits[training_split])
         del data_loader
@@ -93,7 +93,7 @@ class TrainingStep(Step):
             concrete_data_loader = MaxBatchesDataLoader(
                 concrete_data_loader, limit_batches_per_epoch
             )
-        loader = DataLoaderAdapter(concrete_data_loader)
+        loader = DataLoaderAdapter(tango_data_loader=concrete_data_loader)
 
         if torch.cuda.device_count() > 0:
             cuda_device = torch.device(0)
