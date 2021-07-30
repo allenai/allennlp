@@ -42,6 +42,8 @@ class _DetHashPickler(dill.Pickler):
     def persistent_id(self, obj: Any) -> Any:
         if isinstance(obj, CustomDetHash):
             return obj.__class__.__qualname__, obj.det_hash_object()
+        elif isinstance(obj, type):
+            return obj.__module__, obj.__qualname__
         else:
             return None
 
