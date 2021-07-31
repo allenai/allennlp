@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added a support for mutiple datasets and output files for the `evaluate` command.
 - Added a module `allennlp.nn.parallel` with a new base class, `DdpAccelerator`, which generalizes
   PyTorch's `DistributedDataParallel` wrapper to support other implementations. Two implementations of
   this class are provided. The default is `TorchDdpAccelerator` (registered at "torch"), which is just a thin wrapper around
