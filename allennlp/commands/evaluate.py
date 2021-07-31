@@ -27,19 +27,29 @@ logger = logging.getLogger(__name__)
 class Evaluate(Subcommand):
     @overrides
     def add_subparser(self, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
-        description = """Evaluate the specified model + dataset"""
+        description = """Evaluate the specified model + dataset(s)"""
         subparser = parser.add_parser(
-            self.name, description=description, help="Evaluate the specified model + dataset."
+            self.name, description=description, help="Evaluate the specified model + dataset(s)."
         )
 
         subparser.add_argument("archive_file", type=str, help="path to an archived trained model")
 
         subparser.add_argument(
-            "input_file", type=str, help="path to the file containing the evaluation data"
+            "input_file",
+            type=str,
+            help=(
+                "path to the file containing the evaluation data"
+                ' (for mutiple files, put ":" between filenames e.g., input1.txt:input2.txt)'
+            ),
         )
 
         subparser.add_argument(
-            "--output-file", type=str, help="optional path to write the metrics to as JSON"
+            "--output-file",
+            type=str,
+            help=(
+                "optional path to write the metrics to as JSON"
+                ' (for mutiple files, put ":" between filenames e.g., output1.txt:output2.txt)'
+            ),
         )
 
         subparser.add_argument(
@@ -135,12 +145,16 @@ def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
 
     # split files
     evaluation_data_path_list = args.input_file.split(":")
-    if (args.output_file != None):
+    if args.output_file is not None:
         output_file_list = args.output_file.split(":")
-        assert len(output_file_list) == len(evaluation_data_path_list), "number of output path must be equal number of dataset "
-    if (args.predictions_output_file != None):
+        assert len(output_file_list) == len(
+            evaluation_data_path_list
+        ), "number of output path must be equal number of dataset "
+    if args.predictions_output_file is not None:
         predictions_output_file_list = args.predictions_output_file.split(";")
-        assert len(predictions_output_file_list) == len(evaluation_data_path_list), "number of predictions_output_file path must be equal number of dataset "
+        assert len(predictions_output_file_list) == len(
+            evaluation_data_path_list
+        ), "number of predictions_output_file path must be equal number of dataset "
 
     # output file
     output_file_path = None
@@ -148,10 +162,10 @@ def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
 
     for index in range(len(evaluation_data_path_list)):
         config = deepcopy(archive.config)
-        evaluation_data_path =  evaluation_data_path_list[index]
-        if (args.output_file != None):
+        evaluation_data_path = evaluation_data_path_list[index]
+        if args.output_file is not None:
             output_file_path = output_file_list[index]
-        if (args.predictions_output_file != None):
+        if args.predictions_output_file is not None:
             predictions_output_file_path = predictions_output_file_list[index]
 
         logger.info("Reading evaluation data from %s", evaluation_data_path)
@@ -167,7 +181,7 @@ def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
         embedding_sources = (
             json.loads(args.embedding_sources_mapping) if args.embedding_sources_mapping else {}
         )
-    
+
         if args.extend_vocab:
             logger.info("Vocabulary is being extended with test instances.")
             model.vocab.extend_from_instances(instances=data_loader.iter_instances())
