@@ -616,7 +616,7 @@ class Step(Registrable, Generic[T]):
         return hash(self.unique_id())
 
     def __eq__(self, other):
-        if isinstance(self, Step):
+        if isinstance(other, Step):
             return self.unique_id() == other.unique_id()
         else:
             return False
