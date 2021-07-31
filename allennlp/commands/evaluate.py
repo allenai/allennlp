@@ -55,7 +55,10 @@ class Evaluate(Subcommand):
         subparser.add_argument(
             "--predictions-output-file",
             type=str,
-            help="optional path to write the predictions to as JSON lines",
+            help=(
+                "optional path to write the predictions to as JSON lines"
+                ' (for mutiple files, put ":" between filenames e.g., output1.jsonl:output2.jsonl)'
+            ),
         )
 
         subparser.add_argument(
@@ -151,7 +154,7 @@ def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
             evaluation_data_path_list
         ), "number of output path must be equal number of dataset "
     if args.predictions_output_file is not None:
-        predictions_output_file_list = args.predictions_output_file.split(";")
+        predictions_output_file_list = args.predictions_output_file.split(":")
         assert len(predictions_output_file_list) == len(
             evaluation_data_path_list
         ), "number of predictions_output_file path must be equal number of dataset "
