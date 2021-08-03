@@ -531,6 +531,8 @@ class Step(Registrable, Generic[T]):
             return o.result(cache)
         elif isinstance(o, List):
             return [cls._replace_steps_with_results(i, cache) for i in o]
+        elif isinstance(o, Tuple):
+            return tuple([cls._replace_steps_with_results(i, cache) for i in o])
         elif isinstance(o, Set):
             return {cls._replace_steps_with_results(i, cache) for i in o}
         elif isinstance(o, Dict):
