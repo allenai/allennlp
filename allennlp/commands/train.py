@@ -232,9 +232,12 @@ def train_model(
     return_model : `Optional[bool]`, optional (default = `None`)
         Whether or not to return the final model. If not specified, this defaults to `False` for
         distributed training and `True` otherwise.
-    trial : :class:`~optuna.trial.Trial`, optional (default=`None`)
-        A :class:`~optuna.trial.Trial` corresponding to the current evaluation of the
-        objective function.
+    trial : `Trial`, optional (default=`None`)
+        A [Trial](
+        https://optuna.readthedocs.io/en/stable/reference/generated/optuna.trial.Trial.html#optuna.trial.Trial)
+        corresponding to the current evaluation of the objective function.
+        It is used by [Optuna](https://github.com/optuna/optuna) or
+        [allennlp-optuna](https://github.com/himkt/allennlp-optuna) and not expected used by users directly.
 
     # Returns
 
@@ -439,9 +442,12 @@ def _train_worker(
         Paths relative to `serialization_dir` that should be archived in addition to the default ones.
     distributed_params : `Optional[Params]`, optional
         Additional distributed params.
-    trial : :class:`~optuna.trial.Trial`, optional (default=`None`)
-        A :class:`~optuna.trial.Trial` corresponding to the current evaluation of the
-        objective function.
+    trial : `Trial`, optional (default=`None`)
+        A [Trial](
+        https://optuna.readthedocs.io/en/stable/reference/generated/optuna.trial.Trial.html#optuna.trial.Trial)
+        corresponding to the current evaluation of the objective function.
+        It is used by [Optuna](https://github.com/optuna/optuna) or
+        [allennlp-optuna](https://github.com/himkt/allennlp-optuna) and not expected used by users directly.
 
     # Returns
 
