@@ -361,6 +361,7 @@ def train_model(
                     file_friendly_logging,
                     include_in_archive,
                     Params(distributed_params),
+                    trial,
                 ),
                 nprocs=num_procs,
             )
