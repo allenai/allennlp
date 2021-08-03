@@ -1,3 +1,4 @@
+from allennlp.common.util import import_module_and_submodules
 import argparse
 import copy
 import json
@@ -10,6 +11,8 @@ import shutil
 from collections import OrderedDict, Counter
 from typing import Optional, List, Dict, Any
 
+import optuna
+from optuna.testing.integration import DeterministicPruner
 import pytest
 import torch
 
@@ -762,6 +765,120 @@ class TestTrain(AllenNlpTestCase):
         shutil.rmtree(serialization_dir, ignore_errors=True)
         with pytest.raises(Exception):
             train_model(params, serialization_dir=serialization_dir)
+
+    def test_train_model_with_optuna_prune(self):
+        study = optuna.create_study(pruner=DeterministicPruner(True))
+        trial = study.ask()
+        trial.set_system_attr("allennlp:metrics", "best_validation_loss")
+        dropout = trial.suggest_float("dropout", 0.0, 1.0)
+
+        os.environ["DROPOUT"] = str(dropout)
+        params = Params.from_file("test_fixtures/optuna/classifier.jsonnet")
+
+        import_module_and_submodules("optuna.integration.allennlp")
+
+        out_dir = os.path.join(self.TEST_DIR, "test_train_with_optuna_prune")
+        with pytest.raises(optuna.TrialPruned):
+            train_model(
+                params,
+                serialization_dir=out_dir,
+                trial=trial,
+            )
+
+    def test_train_model_with_optuna(self):
+        study = optuna.create_study(pruner=DeterministicPruner(False))
+        trial = study.ask()
+        trial.set_system_attr("allennlp:metrics", "best_validation_loss")
+        dropout = trial.suggest_float("dropout", 0.0, 1.0)
+
+        os.environ["DROPOUT"] = str(dropout)
+        params = Params.from_file("test_fixtures/optuna/classifier.jsonnet")
+
+        import_module_and_submodules("optuna.integration.allennlp")
+
+        out_dir = os.path.join(self.TEST_DIR, "test_train_with_optuna")
+        train_model(
+            params,
+            serialization_dir=out_dir,
+            include_package=["optuna.integration.allennlp"],
+            trial=trial,
+        )
+
+        serialized_files = os.listdir(out_dir)
+        assert "model.tar.gz" in serialized_files
+        assert "metrics.json" in serialized_files
+
+        # Check we can load the serialized model
+        assert load_archive(out_dir).model
+
+    @cpu_or_gpu
+    def test_train_model_distributed_with_optuna_prune(self):
+        if torch.cuda.device_count() >= 2:
+            devices = [0, 1]
+        else:
+            devices = [-1, -1]
+
+        study = optuna.create_study(pruner=DeterministicPruner(True))
+        trial = study.ask()
+        trial.set_system_attr("allennlp:metrics", "best_validation_loss")
+        dropout = trial.suggest_float("dropout", 0.0, 1.0)
+
+        os.environ["CUDA_DEVICES"] = str(devices)
+        os.environ["DROPOUT"] = str(dropout)
+        params = Params.from_file("test_fixtures/optuna/classifier_distributed.jsonnet")
+
+        out_dir = os.path.join(self.TEST_DIR, "test_distributed_train_with_optuna_prune")
+        with pytest.raises(optuna.TrialPruned):
+            train_model(
+                params,
+                serialization_dir=out_dir,
+                include_package=["optuna.integration.allennlp"],
+                trial=trial,
+            )
+
+    @cpu_or_gpu
+    def test_train_model_distributed_with_optuna(self):
+        if torch.cuda.device_count() >= 2:
+            devices = [0, 1]
+        else:
+            devices = [-1, -1]
+
+        study = optuna.create_study(pruner=DeterministicPruner(False))
+        trial = study.ask()
+        trial.set_system_attr("allennlp:metrics", "best_validation_loss")
+        dropout = trial.suggest_float("dropout", 0.0, 1.0)
+
+        os.environ["CUDA_DEVICES"] = str(devices)
+        os.environ["DROPOUT"] = str(dropout)
+        params = Params.from_file("test_fixtures/optuna/classifier_distributed.jsonnet")
+
+        out_dir = os.path.join(self.TEST_DIR, "test_distributed_train_with_optuna")
+        train_model(
+            params,
+            serialization_dir=out_dir,
+            include_package=["optuna.integration.allennlp"],
+            trial=trial,
+        )
+
+        # Check that some logs specific to distributed
+        # training are where we expect.
+        serialized_files = os.listdir(out_dir)
+        assert "out_worker0.log" in serialized_files
+        assert "out_worker1.log" in serialized_files
+        assert "model.tar.gz" in serialized_files
+        assert "metrics.json" in serialized_files
+
+        # Make sure the metrics look right.
+        with open(os.path.join(out_dir, "metrics.json")) as f:
+            metrics = json.load(f)
+            assert metrics["peak_worker_0_memory_MB"] > 0
+            assert metrics["peak_worker_1_memory_MB"] > 0
+            if torch.cuda.device_count() >= 2:
+                assert metrics["peak_gpu_0_memory_MB"] > 0
+                assert metrics["peak_gpu_1_memory_MB"] > 0
+
+        # Check we can load the serialized model
+        assert load_archive(out_dir).model
 
 
 class TestDryRun(AllenNlpTestCase):
