@@ -1085,7 +1085,9 @@ class BeamSearch(Registrable):
             # dividing by per_node_beam_size gives the ancestor. (Note that this is integer
             # division as the tensor is a LongTensor.)
             # shape: (batch_size, beam_size)
-            backpointer = restricted_beam_indices // self.per_node_beam_size
+            backpointer = torch.divide(
+                restricted_beam_indices, self.per_node_beam_size, rounding_mode="trunc"
+            )
             backpointers.append(backpointer)
 
             # Keep only the pieces of the state tensors corresponding to the
@@ -1094,7 +1096,7 @@ class BeamSearch(Registrable):
 
             for i, constraint in enumerate(self.constraints):
                 constraint_states[i] = constraint.update_state(
-                    constraint_states[i], restricted_predicted_classes
+                    constraint_states[i], restricted_predicted_classes, last_backpointer=backpointer
                 )
 
         # Warn about "-inf" log probabilities if not using any constraints (negligible
