@@ -158,7 +158,7 @@ class HuggingfaceDatasetReaderTest:
     #     print(instances[0])
 
 
-    @pytest.mark.skip("Requires implementation of Dict")
+    # @pytest.mark.skip("Requires implementation of Dict")
     def test_squad(self):
         instances = list(HuggingfaceDatasetReader("squad").read("train"))
         print(instances[0])
@@ -172,9 +172,9 @@ class HuggingfaceDatasetReaderTest:
         instances = list(HuggingfaceDatasetReader("openwebtext").read("plain_text"))
         print(instances[0])
 
-    @pytest.mark.skip("Requires mapping of dict type")
+    # @pytest.mark.skip("Requires mapping of dict type")
     def test_mocha(self):
-        instances = list(HuggingfaceDatasetReader("mocha").read("test"))
+        reader = HuggingfaceDatasetReader("mocha").read("test")
         print(instances[0])
 
     @pytest.mark.skip("Requires implementation of Dict")
