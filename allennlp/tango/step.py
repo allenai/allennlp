@@ -4,7 +4,6 @@ every time we release a new version.*
 """
 import collections
 import copy
-import inspect
 import itertools
 import json
 import logging
@@ -22,7 +21,6 @@ from typing import (
     List,
     Dict,
     Type,
-    Callable,
     Union,
     cast,
     TypeVar,
@@ -33,6 +31,7 @@ from typing import (
     Iterator,
     MutableSet,
     OrderedDict,
+    Callable,
 )
 
 from allennlp.common.det_hash import det_hash
@@ -415,48 +414,16 @@ class Step(Registrable, Generic[T]):
                 accepts_kwargs = True
                 continue
 
-            annotation: Type = Union[Step[param.annotation], param.annotation]  # type: ignore
-
             explicitly_set = param_name in params
             constructed_arg = pop_and_construct_arg(
-                subclass.__name__, param_name, annotation, param.default, params, **extras
+                subclass.__name__,
+                param_name,
+                param.annotation,
+                param.default,
+                params,
+                existing_steps=existing_steps,
+                **extras,
             )
-
-            def annotation_could_be_str(a) -> bool:
-                if a == str:
-                    return True
-                if a == Any:
-                    return True
-                if get_origin(a) == Union:
-                    return any(annotation_could_be_str(o) for o in get_args(a))
-                return False
-
-            if isinstance(constructed_arg, str) and not annotation_could_be_str(param.annotation):
-                # We found a string, but we did not want a string.
-                if constructed_arg in existing_steps:  # the string matches an existing task
-                    constructed_arg = existing_steps[constructed_arg]
-                else:
-                    raise _RefStep.MissingStepError(constructed_arg)
-
-            if isinstance(constructed_arg, Step):
-                if isinstance(constructed_arg, _RefStep):
-                    try:
-                        constructed_arg = existing_steps[constructed_arg.ref()]
-                    except KeyError:
-                        raise _RefStep.MissingStepError(constructed_arg.ref())
-
-                return_type = inspect.signature(constructed_arg.run).return_annotation
-                if return_type == inspect.Signature.empty:
-                    logger.warning(
-                        "Step %s has no return type annotation. Those are really helpful when "
-                        "debugging, so we recommend them highly.",
-                        constructed_arg.__class__.__name__,
-                    )
-                elif not issubclass(return_type, param.annotation):
-                    raise ConfigurationError(
-                        f"Step {constructed_arg.name} returns {return_type}, but "
-                        f"{subclass.__name__} expects {param.annotation}."
-                    )
 
             # If the param wasn't explicitly set in `params` and we just ended up constructing
             # the default value for the parameter, we can just omit it.
@@ -580,6 +547,9 @@ class Step(Registrable, Generic[T]):
         result = self._run_with_work_dir(cache, **kwargs)
         cache[self] = result
 
+    def det_hash_object(self) -> Any:
+        return self.unique_id()
+
     def unique_id(self) -> str:
         """Returns the unique ID for this step.
 
@@ -593,24 +563,11 @@ class Step(Registrable, Generic[T]):
 
             self.unique_id_cache += "-"
             if self.DETERMINISTIC:
-
-                def replace_steps_with_hashes(o: Any):
-                    if isinstance(o, Step):
-                        return o.unique_id()
-                    elif isinstance(o, List):
-                        return [replace_steps_with_hashes(i) for i in o]
-                    elif isinstance(o, Set):
-                        return {replace_steps_with_hashes(i) for i in o}
-                    elif isinstance(o, Dict):
-                        return {key: replace_steps_with_hashes(value) for key, value in o.items()}
-                    else:
-                        return o
-
                 self.unique_id_cache += det_hash(
                     (
                         (self.format.__class__.__module__, self.format.__class__.__qualname__),
                         self.format.VERSION,
-                        replace_steps_with_hashes(self.kwargs),
+                        self.kwargs,
                     )
                 )[:32]
             else:
@@ -674,6 +631,12 @@ class _RefStep(Step[T], Generic[T]):
 
     def ref(self) -> str:
         return self.kwargs["ref"]
+
+    def det_hash_object(self) -> Any:
+        # If we're using a RefStep to compute a unique ID, something has gone wrong. The unique ID would
+        # change once the RefStep is replaced with the actual step. Unique IDs are never supposed to
+        # change.
+        raise ValueError("Cannot compute hash of a _RefStep object.")
 
     class MissingStepError(Exception):
         def __init__(self, ref: str):

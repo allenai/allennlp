@@ -22,6 +22,12 @@ from allennlp.tango.text_only import TextOnlyDataset
 logging.basicConfig(level=logging.INFO)
 
 
+@Step.register("float")
+class FloatStep(Step):
+    def run(self, result: float) -> float:  # type: ignore
+        return result
+
+
 def test_from_params():
     params = Params({"type": "hf_dataset", "dataset_name": "squad"})
     step = Step.from_params(params)
@@ -31,7 +37,7 @@ def test_from_params():
 
 def test_from_params_wrong_type():
     params = Params({"type": "hf_dataset", "dataset_name": 1.1})
-    with pytest.raises(ConfigurationError):
+    with pytest.raises(TypeError):
         Step.from_params(params)
 
 
@@ -47,43 +53,18 @@ def test_nested_steps():
 
 
 def test_nested_steps_wrong_type():
-    @Step.register("float")
-    class FloatStep(Step):
-        def run(self, result: float) -> float:  # type: ignore
-            return result
-
     params = Params({"type": "hf_dataset", "dataset_name": {"type": "float", "result": 1.1}})
-    with pytest.raises(ConfigurationError):
+    with pytest.raises(TypeError):
         Step.from_params(params)
 
 
-def test_make_step_graph():
-    params = Params(
-        {
-            "steps": {
-                "dataset": {"type": "hf_dataset", "dataset_name": "squad"},
-                "dataset_text_only": {
-                    "type": "text_only",
-                    "input": {"type": "ref", "ref": "dataset"},
-                    "fields_to_keep": ["context", "question"],
-                },
-            }
-        }
-    )
-    step_graph = step_graph_from_params(params.pop("steps"))
-    assert len(step_graph) == 2
-    assert isinstance(step_graph["dataset"], HuggingfaceDataset)
-    assert isinstance(step_graph["dataset_text_only"], TextOnlyDataset)
-    assert step_graph["dataset_text_only"].kwargs["input"] == step_graph["dataset"]
-
-
 @pytest.mark.parametrize("ordered_ascending", [True, False])
-def test_make_step_graph_simple_ref(ordered_ascending: bool):
+def test_make_step_graph(ordered_ascending: bool):
     params_as_dict_because_mypy_is_lame = {
         "dataset": {"type": "hf_dataset", "dataset_name": "squad"},
         "dataset_text_only": {
             "type": "text_only",
-            "input": "dataset",
+            "input": {"type": "ref", "ref": "dataset"},
             "fields_to_keep": ["context", "question"],
         },
     }
@@ -104,7 +85,7 @@ def test_make_step_graph_missing_step():
             "steps": {
                 "dataset_text_only": {
                     "type": "text_only",
-                    "input": "dataset",
+                    "input": {"type": "ref", "ref": "dataset"},
                     "fields_to_keep": ["context", "question"],
                 }
             }

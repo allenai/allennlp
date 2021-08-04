@@ -10,7 +10,7 @@
         },
         "trained_model": {
             "type": "training",
-            "dataset": "dataset",
+            "dataset": { "ref": "dataset" },
             "training_split": "train",
             "data_loader": {
                "type": "sampler",
@@ -51,11 +51,8 @@
         },
         "evaluation": {
             "type": "evaluation",
-            "dataset": "dataset",
-            "model": {
-                "type": "ref",
-                "ref": "trained_model"
-            }   # TODO: Figure out why this doesn't work as a string.
+            "dataset": { "ref": "dataset" },
+            "model": { "ref": "trained_model" }
         }
     }
 }
