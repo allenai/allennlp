@@ -390,9 +390,12 @@ class Step(Registrable, Generic[T]):
             "type", choices=as_registrable.list_available(), default_to_first_choice=True
         )
         subclass, constructor_name = as_registrable.resolve_class_name(choice)
-        kwargs: Dict[str, Any] = {}
+        if not issubclass(subclass, Step):
+            # This can happen if `choice` is a fully qualified name.
+            raise ConfigurationError(
+                f"Tried to make a Step of type {choice}, but ended up with a {subclass}."
+            )
 
-        assert issubclass(subclass, Step)
         parameters = infer_method_params(subclass, subclass.run)
         del parameters["self"]
         init_parameters = infer_constructor_params(subclass)
@@ -405,6 +408,7 @@ class Step(Registrable, Generic[T]):
         )
         parameters.update(init_parameters)
 
+        kwargs: Dict[str, Any] = {}
         accepts_kwargs = False
         for param_name, param in parameters.items():
             if param.kind == param.VAR_KEYWORD:
