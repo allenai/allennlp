@@ -253,6 +253,8 @@ class Step(Registrable, Generic[T]):
       default for this setting is to set it for all steps that don't have an explicit name.
     """
 
+    default_implementation = "ref"
+
     DETERMINISTIC: bool = False
     """This describes whether this step can be relied upon to produce the same results every time
     when given the same inputs. If this is `False`, the step can't be cached, and neither can any
@@ -385,7 +387,9 @@ class Step(Registrable, Generic[T]):
             )
 
         as_registrable = cast(Type[Registrable], cls)
-        choice = params.pop_choice("type", choices=as_registrable.list_available())
+        choice = params.pop_choice(
+            "type", choices=as_registrable.list_available(), default_to_first_choice=True
+        )
         subclass, constructor_name = as_registrable.resolve_class_name(choice)
         kwargs: Dict[str, Any] = {}
 
