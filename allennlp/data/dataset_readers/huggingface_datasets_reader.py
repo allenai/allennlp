@@ -135,9 +135,12 @@ def _map_Feature(
         )
 
     elif isinstance(feature_type, Sequence):
-        fields_to_be_added[feature_name] = _map_Sequence(
-            feature_name, value, feature_type.feature, tokenizer
-        )
+        if type(value) == dict:
+            fields_to_be_added = _map_Dict(feature_type, value, tokenizer)
+        else:
+            fields_to_be_added[feature_name] = _map_Sequence(
+                feature_name, value, feature_type.feature, tokenizer
+            )
 
     elif isinstance(feature_type, Translation):
         fields_to_be_added = _map_Translation(
