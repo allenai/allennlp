@@ -27,7 +27,7 @@ class DetHashFromInitParams(CustomDetHash):
 
     def __new__(cls, *args, **kwargs):
         super_new = super(DetHashFromInitParams, cls).__new__
-        if super_new is object.__new__:
+        if super().__new__ is object.__new__ and cls.__init__ is not object.__init__:
             instance = super_new(cls)
         else:
             instance = super_new(cls, *args, **kwargs)
