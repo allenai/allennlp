@@ -1,7 +1,7 @@
 """
 Utilities for working with the local dataset cache.
 """
-
+import weakref
 from contextlib import contextmanager
 import glob
 import io
@@ -567,7 +567,7 @@ def _serialize(data):
     return np.frombuffer(buffer, dtype=np.uint8)
 
 
-_tensor_cache_open_files = set()
+_active_tensor_caches: MutableMapping[str, "TensorCache"] = weakref.WeakValueDictionary()
 
 
 class TensorCache(MutableMapping[str, Tensor], ABC):
@@ -579,6 +579,19 @@ class TensorCache(MutableMapping[str, Tensor], ABC):
     you can use it in distributed training situations, or from multiple training
     runs at the same time.
     """
+
+    def __new__(cls, filename: Union[str, PathLike], *, read_only: bool = False, **kwargs):
+        # This mechanism makes sure we re-use open lmdb file handles. Lmdb has a problem when the same file is
+        # opened by the same process multiple times. This is our workaround.
+        filename = str(filename)
+        result = _active_tensor_caches.get(filename)
+        if result is None:
+            result = super(TensorCache, cls).__new__(
+                cls, filename, read_only=read_only, **kwargs
+            )  # type: ignore
+        elif not read_only and result.read_only:
+            result._upgrade_to_read_write()
+        return result
 
     def __init__(
         self,
@@ -640,10 +653,6 @@ class TensorCache(MutableMapping[str, Tensor], ABC):
                 UserWarning,
             )
 
-        if filename in _tensor_cache_open_files:
-            raise ValueError(
-                f"Opening {filename} for the second time. LMDB files can be opened only once per process."
-            )
         self.lmdb_env = lmdb.open(
             filename,
             subdir=False,
@@ -657,7 +666,7 @@ class TensorCache(MutableMapping[str, Tensor], ABC):
             readonly=read_only,
             lock=use_lock,
         )
-        _tensor_cache_open_files.add(self.lmdb_env.path())
+        _active_tensor_caches[self.lmdb_env.path()] = self
 
         # We have another cache here that makes sure we return the same object for the same key. Without it,
         # you would get a different tensor, using different memory, every time you call __getitem__(), even
@@ -725,7 +734,6 @@ class TensorCache(MutableMapping[str, Tensor], ABC):
 
     def __del__(self):
         if self.lmdb_env is not None:
-            _tensor_cache_open_files.remove(self.lmdb_env.path())
             self.lmdb_env.close()
             self.lmdb_env = None
 
@@ -735,6 +743,25 @@ class TensorCache(MutableMapping[str, Tensor], ABC):
     def __iter__(self):
         # It is not hard to implement this, but we have not needed it so far.
         raise NotImplementedError()
+
+    def _upgrade_to_read_write(self) -> None:
+        if not self.read_only:
+            # We are already a read/write object.
+            return
+
+        filename = self.lmdb_env.path()
+
+        self.lmdb_env.close()
+        self.lmdb_env = lmdb.open(
+            filename,
+            subdir=False,
+            metasync=False,
+            sync=True,
+            readahead=False,
+            meminit=False,
+            readonly=False,
+            lock=True,
+        )
 
 
 class CacheFile:
