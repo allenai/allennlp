@@ -567,6 +567,9 @@ def _serialize(data):
     return np.frombuffer(buffer, dtype=np.uint8)
 
 
+_tensor_cache_open_files = set()
+
+
 class TensorCache(MutableMapping[str, Tensor], ABC):
     """
     This is a key-value store, mapping strings to tensors. The data is kept on disk,
@@ -637,8 +640,12 @@ class TensorCache(MutableMapping[str, Tensor], ABC):
                 UserWarning,
             )
 
+        if filename in _tensor_cache_open_files:
+            raise ValueError(
+                f"Opening {filename} for the second time. LMDB files can be opened only once per process."
+            )
         self.lmdb_env = lmdb.open(
-            str(filename),
+            filename,
             subdir=False,
             map_size=map_size,
             max_readers=cpu_count * 4,
@@ -650,6 +657,7 @@ class TensorCache(MutableMapping[str, Tensor], ABC):
             readonly=read_only,
             lock=use_lock,
         )
+        _tensor_cache_open_files.add(self.lmdb_env.path())
 
         # We have another cache here that makes sure we return the same object for the same key. Without it,
         # you would get a different tensor, using different memory, every time you call __getitem__(), even
@@ -717,6 +725,7 @@ class TensorCache(MutableMapping[str, Tensor], ABC):
 
     def __del__(self):
         if self.lmdb_env is not None:
+            _tensor_cache_open_files.remove(self.lmdb_env.path())
             self.lmdb_env.close()
             self.lmdb_env = None
 
