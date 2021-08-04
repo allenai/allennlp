@@ -529,13 +529,13 @@ class Step(Registrable, Generic[T]):
     def _replace_steps_with_results(cls, o: Any, cache: StepCache):
         if isinstance(o, Step):
             return o.result(cache)
-        elif isinstance(o, List):
+        elif isinstance(o, list):
             return [cls._replace_steps_with_results(i, cache) for i in o]
-        elif isinstance(o, Tuple):
-            return tuple([cls._replace_steps_with_results(i, cache) for i in o])
-        elif isinstance(o, Set):
+        elif isinstance(o, tuple):
+            return tuple(cls._replace_steps_with_results(list(o), cache))
+        elif isinstance(o, set):
             return {cls._replace_steps_with_results(i, cache) for i in o}
-        elif isinstance(o, Dict):
+        elif isinstance(o, dict):
             return {key: cls._replace_steps_with_results(value, cache) for key, value in o.items()}
         else:
             return o
@@ -631,7 +631,7 @@ class Step(Registrable, Generic[T]):
                 return  # Confusingly, str is an Iterable of itself, resulting in infinite recursion.
             elif isinstance(o, Iterable):
                 yield from itertools.chain(*(dependencies_internal(i) for i in o))
-            elif isinstance(o, Dict):
+            elif isinstance(o, dict):
                 yield from dependencies_internal(o.values())
             else:
                 return
