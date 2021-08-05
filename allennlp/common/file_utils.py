@@ -567,7 +567,13 @@ def _serialize(data):
     return np.frombuffer(buffer, dtype=np.uint8)
 
 
-_active_tensor_caches: MutableMapping[str, "TensorCache"] = weakref.WeakValueDictionary()
+_active_tensor_caches: MutableMapping[int, "TensorCache"] = weakref.WeakValueDictionary()
+
+
+def _unique_file_id(path: Union[str, PathLike]) -> int:
+    result = os.stat(path).st_ino
+    assert result != 0
+    return result
 
 
 class TensorCache(MutableMapping[str, Tensor], ABC):
@@ -584,7 +590,10 @@ class TensorCache(MutableMapping[str, Tensor], ABC):
         # This mechanism makes sure we re-use open lmdb file handles. Lmdb has a problem when the same file is
         # opened by the same process multiple times. This is our workaround.
         filename = str(filename)
-        result = _active_tensor_caches.get(filename)
+        try:
+            result = _active_tensor_caches.get(_unique_file_id(filename))
+        except FileNotFoundError:
+            result = None
         if result is None:
             result = super(TensorCache, cls).__new__(
                 cls, filename, read_only=read_only, **kwargs
@@ -691,7 +700,7 @@ class TensorCache(MutableMapping[str, Tensor], ABC):
                 readonly=read_only,
                 lock=use_lock,
             )
-            _active_tensor_caches[self.lmdb_env.path()] = self
+            _active_tensor_caches[_unique_file_id(filename)] = self
 
             # We have another cache here that makes sure we return the same object for the same key. Without it,
             # you would get a different tensor, using different memory, every time you call __getitem__(), even
