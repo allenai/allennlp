@@ -311,7 +311,7 @@ def cached_path(
                 and (is_zipfile(file_path) or tarfile.is_tarfile(file_path))
             ):
                 # We'll use a unique directory within the cache to root to extract the archive to.
-                # The name of the directoy is a hash of the resource file path and it's modification
+                # The name of the directory is a hash of the resource file path and it's modification
                 # time. That way, if the file changes, we'll know when to extract it again.
                 extraction_name = (
                     _resource_to_filename(url_or_filename, str(os.path.getmtime(file_path)))
