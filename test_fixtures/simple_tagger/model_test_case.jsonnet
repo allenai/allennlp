@@ -29,7 +29,7 @@
         "padding_noise": 0.0,
         "batch_size" : 80
     }
-},
+  },
   "trainer": {
     "num_epochs": 40,
     "grad_norm": 1.0,

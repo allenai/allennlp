@@ -545,7 +545,7 @@ class TestLocalCacheResource(AllenNlpTestCase):
             assert data["a"] == 1
 
 
-class TestTensorCace(AllenNlpTestCase):
+class TestTensorCache(AllenNlpTestCase):
     def test_tensor_cache(self):
         cache = TensorCache(self.TEST_DIR / "cache")
         assert not cache.read_only
@@ -578,6 +578,26 @@ class TestTensorCace(AllenNlpTestCase):
         with pytest.warns(UserWarning, match="cache will be read-only"):
             cache = TensorCache(self.TEST_DIR / "cache")
             assert cache.read_only
+
+    def test_tensor_cache_open_twice(self):
+        cache1 = TensorCache(self.TEST_DIR / "multicache")
+        cache1["foo"] = torch.tensor([1, 2, 3])
+        cache2 = TensorCache(self.TEST_DIR / "multicache")
+        assert cache1 is cache2
+
+    def test_tensor_cache_upgrade(self):
+        cache0 = TensorCache(self.TEST_DIR / "upcache")
+        cache0["foo"] = torch.tensor([1, 2, 3])
+        del cache0
+
+        cache1 = TensorCache(self.TEST_DIR / "upcache", read_only=True)
+        cache2 = TensorCache(self.TEST_DIR / "upcache")
+        assert not cache1.read_only
+        assert not cache2.read_only
+        assert torch.allclose(cache1["foo"], torch.tensor([1, 2, 3]))
+
+        cache2["bar"] = torch.tensor([2, 3, 4])
+        assert torch.allclose(cache1["bar"], cache2["bar"])
 
 
 class TestHFHubDownload(AllenNlpTestCase):
