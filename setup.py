@@ -52,7 +52,7 @@ setup(
     install_requires=[
         "torch>=1.6.0,<1.10.0",
         "torchvision>=0.8.1,<0.11.0",
-        "fairscale==0.3.8",
+        "fairscale==0.4.0",
         "jsonnet>=0.10.0 ; sys.platform != 'win32'",
         "overrides==3.1.0",
         "nltk",
@@ -76,6 +76,9 @@ setup(
         "checklist==0.0.11",
         "wandb>=0.10.0,<0.12.0",
         "huggingface_hub>=0.0.8",
+        "datasets>=1.2.1,<2.0",
+        "dill",
+        "base58",
         "google-cloud-storage>=1.38.0,<1.42.0",
     ],
     entry_points={"console_scripts": ["allennlp=allennlp.__main__:run"]},

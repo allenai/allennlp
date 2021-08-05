@@ -27,7 +27,7 @@ class Trainer(Registrable):
 
     def __init__(
         self,
-        serialization_dir: str = None,
+        serialization_dir: Union[str, os.PathLike] = None,
         cuda_device: Optional[Union[int, torch.device]] = None,
         distributed: bool = False,
         local_rank: int = 0,
@@ -48,7 +48,7 @@ class Trainer(Registrable):
 
             self._serialization_dir = tempfile.mkdtemp()
         else:
-            self._serialization_dir = serialization_dir
+            self._serialization_dir = str(serialization_dir)
         # Ensure serialization directory exists.
         os.makedirs(self._serialization_dir, exist_ok=True)
 

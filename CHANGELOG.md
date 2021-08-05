@@ -24,11 +24,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `self.ddp_accelerator` during distributed training. This is useful when, for example, instantiating submodules in your
   model's `__init__()` method by wrapping them with `self.ddp_accelerator.wrap_module()`. See the `allennlp.modules.transformer.t5`
   for an example.
+- Added Tango components, to be explored in detail in a later post.
 
 ### Fixed
 
 - Fixed a mispelling: the parameter `contructor_extras` in `Lazy()` is now correctly called `constructor_extras`.
 - Fixed broken links in `allennlp.nn.initializers` docs.
+- Fixed bug in `BeamSearch` where `last_backpointers` was not being passed to any `Constraint`s.
 - `TransformerTextField` can now take tensors of shape `(1, n)` like the tensors produced from a HuggingFace tokenizer.
 - `tqdm` lock is now set inside `MultiProcessDataLoading` when new workers are spawned to avoid contention when writing output.
 - `ConfigurationError` is now pickleable.

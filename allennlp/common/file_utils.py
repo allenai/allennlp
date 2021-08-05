@@ -1,7 +1,7 @@
 """
 Utilities for working with the local dataset cache.
 """
-
+import weakref
 from contextlib import contextmanager
 import glob
 import io
@@ -311,7 +311,7 @@ def cached_path(
                 and (is_zipfile(file_path) or tarfile.is_tarfile(file_path))
             ):
                 # We'll use a unique directory within the cache to root to extract the archive to.
-                # The name of the directoy is a hash of the resource file path and it's modification
+                # The name of the directory is a hash of the resource file path and it's modification
                 # time. That way, if the file changes, we'll know when to extract it again.
                 extraction_name = (
                     _resource_to_filename(url_or_filename, str(os.path.getmtime(file_path)))
@@ -567,6 +567,15 @@ def _serialize(data):
     return np.frombuffer(buffer, dtype=np.uint8)
 
 
+_active_tensor_caches: MutableMapping[int, "TensorCache"] = weakref.WeakValueDictionary()
+
+
+def _unique_file_id(path: Union[str, PathLike]) -> int:
+    result = os.stat(path).st_ino
+    assert result != 0
+    return result
+
+
 class TensorCache(MutableMapping[str, Tensor], ABC):
     """
     This is a key-value store, mapping strings to tensors. The data is kept on disk,
@@ -576,6 +585,20 @@ class TensorCache(MutableMapping[str, Tensor], ABC):
     you can use it in distributed training situations, or from multiple training
     runs at the same time.
     """
+
+    def __new__(cls, filename: Union[str, PathLike], *, read_only: bool = False, **kwargs):
+        # This mechanism makes sure we re-use open lmdb file handles. Lmdb has a problem when the same file is
+        # opened by the same process multiple times. This is our workaround.
+        filename = str(filename)
+        try:
+            result = _active_tensor_caches.get(_unique_file_id(filename))
+        except FileNotFoundError:
+            result = None
+        if result is None:
+            result = super(TensorCache, cls).__new__(
+                cls, filename, read_only=read_only, **kwargs
+            )  # type: ignore
+        return result
 
     def __init__(
         self,
@@ -601,63 +624,91 @@ class TensorCache(MutableMapping[str, Tensor], ABC):
             that number. Reasonable operating systems don't actually allocate that space
             until it is really needed.
         """
-        filename = str(filename)
+        self.lmdb_env: lmdb.Environment
+        if hasattr(self, "lmdb_env"):
+            # We're being initialized again after a cache hit in _active_tensor_caches, thanks
+            # to __new__. In this case, we may have to upgrade to read/write, but other than
+            # that we are good to go.
+            if read_only:
+                return
+            if not self.read_only:
+                return
 
-        cpu_count = os.cpu_count() or 1
-        if os.path.exists(filename):
-            if os.path.isfile(filename):
-                # If the file is not writable, set read_only to True, but issue a warning.
-                if not os.access(filename, os.W_OK):
-                    if not read_only:
-                        warnings.warn(
-                            f"File '{filename}' is read-only, so cache will be read-only",
-                            UserWarning,
-                        )
-                    read_only = True
-            else:
-                # If it's not a file, raise an error.
-                raise ValueError("Expect a file, found a directory instead")
+            # Upgrade a read-only lmdb env to a read/write lmdb env.
+            filename = self.lmdb_env.path()
+            old_info = self.lmdb_env.info()
 
-        use_lock = True
-        if read_only:
-            # Check if the lock file is writable. If it's not, then we won't be able to use the lock.
-
-            # This is always how lmdb names the lock file.
-            lock_filename = filename + "-lock"
-            if os.path.isfile(lock_filename):
-                use_lock = os.access(lock_filename, os.W_OK)
-            else:
-                # If the lock file doesn't exist yet, then the directory needs to be writable in
-                # order to create and use the lock file.
-                use_lock = os.access(os.path.dirname(lock_filename), os.W_OK)
-
-        if not use_lock:
-            warnings.warn(
-                f"Lacking permissions to use lock file on cache '{filename}'.\nUse at your own risk!",
-                UserWarning,
+            self.lmdb_env.close()
+            self.lmdb_env = lmdb.open(
+                filename,
+                map_size=old_info["map_size"],
+                subdir=False,
+                metasync=False,
+                sync=True,
+                readahead=False,
+                meminit=False,
+                readonly=False,
+                lock=True,
             )
+        else:
+            filename = str(filename)
 
-        self.lmdb_env = lmdb.open(
-            str(filename),
-            subdir=False,
-            map_size=map_size,
-            max_readers=cpu_count * 4,
-            max_spare_txns=cpu_count * 4,
-            metasync=False,
-            sync=True,
-            readahead=False,
-            meminit=False,
-            readonly=read_only,
-            lock=use_lock,
-        )
+            cpu_count = os.cpu_count() or 1
+            if os.path.exists(filename):
+                if os.path.isfile(filename):
+                    # If the file is not writable, set read_only to True, but issue a warning.
+                    if not os.access(filename, os.W_OK):
+                        if not read_only:
+                            warnings.warn(
+                                f"File '{filename}' is read-only, so cache will be read-only",
+                                UserWarning,
+                            )
+                        read_only = True
+                else:
+                    # If it's not a file, raise an error.
+                    raise ValueError("Expect a file, found a directory instead")
 
-        # We have another cache here that makes sure we return the same object for the same key. Without it,
-        # you would get a different tensor, using different memory, every time you call __getitem__(), even
-        # if you call it with the same key.
-        # The downside is that we can't keep self.cache_cache up to date when multiple processes modify the
-        # cache at the same time. We can guarantee though that it is up to date as long as processes either
-        # write new values, or read existing ones.
-        self.cache_cache: MutableMapping[str, Tensor] = WeakValueDictionary()
+            use_lock = True
+            if read_only:
+                # Check if the lock file is writable. If it's not, then we won't be able to use the lock.
+
+                # This is always how lmdb names the lock file.
+                lock_filename = filename + "-lock"
+                if os.path.isfile(lock_filename):
+                    use_lock = os.access(lock_filename, os.W_OK)
+                else:
+                    # If the lock file doesn't exist yet, then the directory needs to be writable in
+                    # order to create and use the lock file.
+                    use_lock = os.access(os.path.dirname(lock_filename), os.W_OK)
+
+            if not use_lock:
+                warnings.warn(
+                    f"Lacking permissions to use lock file on cache '{filename}'.\nUse at your own risk!",
+                    UserWarning,
+                )
+
+            self.lmdb_env = lmdb.open(
+                filename,
+                subdir=False,
+                map_size=map_size,
+                max_readers=cpu_count * 4,
+                max_spare_txns=cpu_count * 4,
+                metasync=False,
+                sync=True,
+                readahead=False,
+                meminit=False,
+                readonly=read_only,
+                lock=use_lock,
+            )
+            _active_tensor_caches[_unique_file_id(filename)] = self
+
+            # We have another cache here that makes sure we return the same object for the same key. Without it,
+            # you would get a different tensor, using different memory, every time you call __getitem__(), even
+            # if you call it with the same key.
+            # The downside is that we can't keep self.cache_cache up to date when multiple processes modify the
+            # cache at the same time. We can guarantee though that it is up to date as long as processes either
+            # write new values, or read existing ones.
+            self.cache_cache: MutableMapping[str, Tensor] = WeakValueDictionary()
 
     @property
     def read_only(self) -> bool:
