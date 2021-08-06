@@ -152,7 +152,7 @@ def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
         output_file_list = args.output_file.split(":")
         assert len(output_file_list) == len(
             evaluation_data_path_list
-        ), "number of output path must be equal number of dataset "
+        ), "The number of `output_file` paths must be equal to the number of datasets being evaluated. "
     if args.predictions_output_file is not None:
         predictions_output_file_list = args.predictions_output_file.split(":")
         assert len(predictions_output_file_list) == len(
