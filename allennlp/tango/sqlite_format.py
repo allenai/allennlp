@@ -38,10 +38,7 @@ class SqliteDictFormat(Format[DatasetDict]):
         with gzip.open(dir / "metadata.dill.gz", "rb") as f:
             metadata = dill.load(f)
         splits = {
-            filename.stem : SqliteSparseSequence(filename, read_only=True)
+            filename.stem: SqliteSparseSequence(filename, read_only=True)
             for filename in dir.glob("*.sqlite")
         }
-        return DatasetDict(
-            vocab=vocab,
-            metadata=metadata,
-            splits=splits)
+        return DatasetDict(vocab=vocab, metadata=metadata, splits=splits)

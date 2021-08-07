@@ -7,11 +7,7 @@ from sqlitedict import SqliteDict
 
 
 class SqliteSparseSequence(MutableSequence[Any]):
-    def __init__(
-            self,
-            filename: Union[str, PathLike],
-            read_only: bool = False
-    ):
+    def __init__(self, filename: Union[str, PathLike], read_only: bool = False):
         self.table = SqliteDict(filename, flag="r" if read_only else "c")
 
     def __del__(self):
@@ -96,4 +92,3 @@ class SqliteSparseSequence(MutableSequence[Any]):
                 shutil.copy(self.table.filename, target)
             else:
                 raise
-
