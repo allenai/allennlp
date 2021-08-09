@@ -8,6 +8,7 @@ import os
 from os import PathLike
 from pathlib import Path
 from typing import Union, Dict, Any, List, Optional
+import warnings
 
 from overrides import overrides
 
@@ -69,6 +70,10 @@ class Tango(Subcommand):
 
 
 def run_tango_from_args(args: argparse.Namespace):
+    warnings.warn(
+        "AllenNLP Tango is an experimental API and parts of it might change or disappear "
+        "every time we release a new version."
+    )
     run_tango_from_file(
         tango_filename=args.config_path,
         serialization_dir=args.serialization_dir,
