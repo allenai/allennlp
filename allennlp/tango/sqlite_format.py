@@ -21,7 +21,7 @@ class SqliteDictFormat(Format[DatasetDict]):
             dill.dump(artifact.vocab, f)
         with gzip.open(dir / "metadata.dill.gz", "wb") as f:
             dill.dump(artifact.metadata, f)
-        for split_name, split in artifact.splits:
+        for split_name, split in artifact.splits.items():
             filename = f"{split_name}.sqlite"
             if not filename_is_safe(filename):
                 raise ValueError(f"{split_name} is not a valid name for a split.")
