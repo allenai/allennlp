@@ -7,7 +7,6 @@ from allennlp.data.tokenizers import WhitespaceTokenizer
 
 # TODO Add test where we compare huggingface wrapped reader with an explicitly coded dataset
 class HuggingfaceDatasetReaderTest:
-
     """
     Test read for some lightweight datasets
     """
@@ -101,6 +100,7 @@ class HuggingfaceDatasetReaderTest:
     Test to help validate for the known supported datasets
     Skipped by default, enable when required
     """
+
     # TODO pab-vmware skip these once MR is ready to check-in
     @pytest.mark.parametrize(
         "dataset, config, split",
@@ -136,9 +136,7 @@ class HuggingfaceDatasetReaderTest:
     """
 
     # TODO pab-vmware skip these once MR is ready to check-in
-    @pytest.mark.parametrize(
-        "dataset", (("swahili"), ("dbpedia_14"), ("trec"), ("emotion"))
-    )
+    @pytest.mark.parametrize("dataset", (("swahili"), ("dbpedia_14"), ("trec"), ("emotion")))
     def test_read_known_supported_datasets_without_config(self, dataset):
         split = "train"
         huggingface_reader = HuggingfaceDatasetReader(dataset_name=dataset)
@@ -152,15 +150,14 @@ class HuggingfaceDatasetReaderTest:
         # Confirm all features were mapped
         assert len(instance.fields) == len(entry)
 
-
     # def test_conll2003(self):
     #     instances = list(HuggingfaceDatasetReader("conll2003").read("test"))
     #     print(instances[0])
 
-
     # @pytest.mark.skip("Requires implementation of Dict")
     def test_squad(self):
-        instances = list(HuggingfaceDatasetReader("squad").read("train"))
+        tokenizer: Tokenizer = WhitespaceTokenizer()
+        instances = list(HuggingfaceDatasetReader("squad", tokenizer=tokenizer).read("train"))
         print(instances[0])
 
     @pytest.mark.parametrize("config", (("default"), ("ptb")))
@@ -174,7 +171,7 @@ class HuggingfaceDatasetReaderTest:
 
     # @pytest.mark.skip("Requires mapping of dict type")
     def test_mocha(self):
-        reader = HuggingfaceDatasetReader("mocha").read("test")
+        instances = list(HuggingfaceDatasetReader("mocha").read("test"))
         print(instances[0])
 
     @pytest.mark.skip("Requires implementation of Dict")
@@ -202,8 +199,23 @@ class HuggingfaceDatasetReaderTest:
         instances = list(HuggingfaceDatasetReader("super_glue").read("test"))
         print(instances[0])
 
-    @pytest.mark.parametrize("config", (("cola"), ("mnli"), ("ax"), ("mnli_matched"), ("mnli_mismatched"), ("mrpc"), ("qnli"),\
-                                        ("qqp"), ("rte"), ("sst2"), ("stsb"), ("wnli")))
+    @pytest.mark.parametrize(
+        "config",
+        (
+            ("cola"),
+            ("mnli"),
+            ("ax"),
+            ("mnli_matched"),
+            ("mnli_mismatched"),
+            ("mrpc"),
+            ("qnli"),
+            ("qqp"),
+            ("rte"),
+            ("sst2"),
+            ("stsb"),
+            ("wnli"),
+        ),
+    )
     def test_glue(self, config):
         instances = list(HuggingfaceDatasetReader("glue", config).read("test"))
         print(instances[0])
@@ -211,12 +223,3 @@ class HuggingfaceDatasetReaderTest:
     def test_drop(self):
         instances = list(HuggingfaceDatasetReader("drop").read("test"))
         print(instances[0])
-
-
-
-
-
-
-
-
-
