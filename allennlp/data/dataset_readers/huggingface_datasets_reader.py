@@ -82,7 +82,9 @@ class HuggingfaceDatasetReader(DatasetReader):
             yield self.text_to_instance(file_path, dataset_split[index])
 
     def raise_feature_not_supported_value_error(feature_name, feature_type):
-        raise ValueError(f"Datasets feature {feature_name} type {feature_type} is not supported yet.")
+        raise ValueError(
+            f"Datasets feature {feature_name} type {feature_type} is not supported yet."
+        )
 
     def text_to_instance(self, split: str, entry) -> Instance:  # type: ignore
         """
@@ -114,7 +116,9 @@ class HuggingfaceDatasetReader(DatasetReader):
             field_list: list
             feature_type = features[feature_name]
 
-            fields_to_be_added = _map_Feature(feature_name, entry[feature_name], feature_type, self.tokenizer)
+            fields_to_be_added = _map_Feature(
+                feature_name, entry[feature_name], feature_type, self.tokenizer
+            )
             for field_key in fields_to_be_added:
                 fields[field_key] = fields_to_be_added[field_key]
 
@@ -130,22 +134,18 @@ def _map_Feature(
         fields_to_be_added[feature_name] = _map_ClassLabel(feature_name, value)
     # datasets Value can be of different types
     elif isinstance(feature_type, Value):
-        fields_to_be_added[feature_name] = _map_Value(
-            feature_name, value, feature_type, tokenizer
-        )
+        fields_to_be_added[feature_name] = _map_Value(feature_name, value, feature_type, tokenizer)
 
     elif isinstance(feature_type, Sequence):
-        if type(value) == dict:
-            fields_to_be_added = _map_Dict(feature_type, value, tokenizer)
+        if type(feature_type.feature) == dict:
+            fields_to_be_added[feature_name] = _map_Dict(feature_type.feature, value, tokenizer)
         else:
             fields_to_be_added[feature_name] = _map_Sequence(
                 feature_name, value, feature_type.feature, tokenizer
             )
 
     elif isinstance(feature_type, Translation):
-        fields_to_be_added = _map_Translation(
-            feature_name, value, feature_type, tokenizer
-        )
+        fields_to_be_added = _map_Translation(feature_name, value, feature_type, tokenizer)
 
     elif isinstance(feature_type, TranslationVariableLanguages):
         fields_to_be_added = _map_TranslationVariableLanguages(
@@ -166,8 +166,8 @@ def _map_ClassLabel(feature_name: str, value: ClassLabel) -> Field:
 
 def _map_Value(
     feature_name: str, value: Value, feature_type, tokenizer: Optional[Tokenizer]
-) -> Union[TextField, LabelField]:
-    field: Union[TextField, LabelField]
+) -> Union[TextField, LabelField, TensorField]:
+    field: Union[TextField, LabelField, TensorField]
     if feature_type.dtype == "string":
         # datasets.Value[string] maps to TextField
         # If tokenizer is provided we will use it to split it to tokens
@@ -176,6 +176,7 @@ def _map_Value(
 
     elif feature_type.dtype == "float32" or feature_type.dtype == "float64":
         field = _map_Float(value)
+
     else:
         field = LabelField(value, label_namespace=feature_name, skip_indexing=True)
     return field
@@ -183,9 +184,9 @@ def _map_Value(
 
 def _map_Sequence(
     feature_name, value: Sequence, item_feature_type, tokenizer: Optional[Tokenizer]
-) -> Union[ListField]:
+) -> ListField:
     field_list: List[Field] = list()
-    field: ListField = None
+    field: ListField
     item_field: Field
     # In HF Sequence and list are considered interchangeable, but there are some distinctions such as
     if isinstance(item_feature_type, Value):
@@ -223,7 +224,7 @@ def _map_Sequence(
         if len(field_list) > 0:
             field = ListField(field_list)
 
-    # WIP for drop
+    # WIP for dropx`
     elif isinstance(item_feature_type, dict):
         for item in value:
             item_field = _map_Dict(item_feature_type, value[item], tokenizer)
@@ -232,7 +233,9 @@ def _map_Sequence(
             field = ListField(field_list)
 
     else:
-        HuggingfaceDatasetReader.raise_feature_not_supported_value_error(feature_name, item_feature_type)
+        HuggingfaceDatasetReader.raise_feature_not_supported_value_error(
+            feature_name, item_feature_type
+        )
 
     return field
 
@@ -307,6 +310,7 @@ def _map_String(text: str, tokenizer: Optional[Tokenizer]) -> TextField:
         field = TextField([Token(text)])
     return field
 
+
 def _map_Float(value: float) -> TensorField:
     return TensorField(torch.tensor(value))
 
@@ -315,11 +319,12 @@ def _map_Float(value: float) -> TensorField:
 def _map_to_Label(namespace, item, skip_indexing=True) -> LabelField:
     return LabelField(label=item, label_namespace=namespace, skip_indexing=skip_indexing)
 
-def _map_Dict(feature_definition: dict, values: dict, tokenizer: Tokenizer) -> Dict[str, Field]:
+
+def _map_Dict(
+    feature_definition: dict, values: dict, tokenizer: Optional[Tokenizer]
+) -> Dict[str, Field]:
+    # Map it as a Dictionary of List
     fields: Dict[str, Field] = dict()
     for key in values:
-        fields[key] = _map_Feature(key, values[key], feature_definition[key], tokenizer)
+        fields[key] = _map_Sequence(key, values[key], feature_definition[key], tokenizer)
     return fields
-
-
-
