@@ -186,7 +186,7 @@ def _map_Sequence(
     feature_name, value: Sequence, item_feature_type, tokenizer: Optional[Tokenizer]
 ) -> ListField:
     field_list: List[Field] = list()
-    field: ListField
+    field: ListField = list()
     item_field: Field
     # In HF Sequence and list are considered interchangeable, but there are some distinctions such as
     if isinstance(item_feature_type, Value):
@@ -326,6 +326,7 @@ def _map_Dict(
     tokenizer: Optional[Tokenizer] = None,
     feature_name: Optional[str] = None,
 ) -> Dict[str, Field]:
+    # TODO abhishek-p expand this to more generic based on metadata checks
     # Map it as a Dictionary of List
     fields: Dict[str, Field] = dict()
     for key in values:

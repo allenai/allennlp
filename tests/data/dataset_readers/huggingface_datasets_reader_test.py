@@ -80,13 +80,6 @@ class HuggingfaceDatasetReaderTest:
         # For XNLI that means 3 fields become 5
         assert len(instance.fields) == 5
 
-    def test_non_supported_feature(self):
-        dataset = "pubmed_qa"
-        config = "pqa_labeled"
-        split = "train"
-        with pytest.raises(ValueError):
-            next(HuggingfaceDatasetReader(dataset_name=dataset, config_name=config).read(split))
-
     def test_non_available_dataset(self):
         with pytest.raises(ValueError):
             HuggingfaceDatasetReader(dataset_name="surely-such-a-dataset-does-not-exist")
@@ -101,7 +94,7 @@ class HuggingfaceDatasetReaderTest:
     Skipped by default, enable when required
     """
 
-    # TODO pab-vmware skip these once MR is ready to check-in
+    # TODO abhishek-p skip these once MR is ready to check-in
     @pytest.mark.parametrize(
         "dataset, config, split",
         (
@@ -135,7 +128,7 @@ class HuggingfaceDatasetReaderTest:
         Skipped by default, enable when required
     """
 
-    # TODO pab-vmware skip these once MR is ready to check-in
+    # TODO abhishek-p skip these once MR is ready to check-in
     @pytest.mark.parametrize("dataset", (("swahili"), ("dbpedia_14"), ("trec"), ("emotion")))
     def test_read_known_supported_datasets_without_config(self, dataset):
         split = "train"
@@ -154,11 +147,10 @@ class HuggingfaceDatasetReaderTest:
     #     instances = list(HuggingfaceDatasetReader("conll2003").read("test"))
     #     print(instances[0])
 
-    # @pytest.mark.skip("Requires implementation of Dict")
     def test_squad(self):
         tokenizer: Tokenizer = WhitespaceTokenizer()
-        instances = list(HuggingfaceDatasetReader("squad", tokenizer=tokenizer).read("train"))
-        print(instances[0])
+        instance_gen = HuggingfaceDatasetReader("squad", tokenizer=tokenizer).read("train")
+        print(next(instance_gen))
 
     @pytest.mark.parametrize("config", (("default"), ("ptb")))
     def test_sst(self, config):
