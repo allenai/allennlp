@@ -13,7 +13,7 @@ from allennlp.tango.format import Format
 
 @Format.register("sqlite")
 class SqliteDictFormat(Format[DatasetDict]):
-    VERSION = 1
+    VERSION = 2
 
     def write(self, artifact: DatasetDict, dir: Union[str, PathLike]):
         dir = pathlib.Path(dir)
@@ -28,7 +28,7 @@ class SqliteDictFormat(Format[DatasetDict]):
             if isinstance(split, SqliteSparseSequence):
                 split.copy_to(filename)
             else:
-                sqlite = SqliteSparseSequence(filename)
+                sqlite = SqliteSparseSequence(dir / filename)
                 sqlite.extend(split)
 
     def read(self, dir: Union[str, PathLike]) -> DatasetDict:
