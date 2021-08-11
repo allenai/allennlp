@@ -28,7 +28,7 @@ class SqliteSparseSequence(MutableSequence[Any]):
         elif isinstance(i, slice):
             from allennlp.tango.dataloader import ShuffledSequence
 
-            return ShuffledSequence(self, i.indices(len(self)))
+            return ShuffledSequence(self, range(*i.indices(len(self))))
         else:
             raise TypeError(f"list indices must be integers or slices, not {i.__class__.__name__}")
 
@@ -56,7 +56,8 @@ class SqliteSparseSequence(MutableSequence[Any]):
             self.table["_len"] = current_length - 1
             self.table.commit()
         elif isinstance(i, slice):
-            for index in i.indices(current_length):
+            # This isn't very efficient for continuous slices.
+            for index in reversed(range(*i.indices(current_length))):
                 del self[index]
         else:
             raise TypeError(f"list indices must be integers or slices, not {i.__class__.__name__}")
