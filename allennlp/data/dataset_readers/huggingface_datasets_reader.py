@@ -138,7 +138,7 @@ def _map_Feature(
 
     elif isinstance(feature_type, Sequence):
         if type(feature_type.feature) == dict:
-            fields_to_be_added[feature_name] = _map_Dict(feature_type.feature, value, tokenizer)
+            fields_to_be_added = _map_Dict(feature_type.feature, value, tokenizer, feature_name)
         else:
             fields_to_be_added[feature_name] = _map_Sequence(
                 feature_name, value, feature_type.feature, tokenizer
@@ -224,13 +224,13 @@ def _map_Sequence(
         if len(field_list) > 0:
             field = ListField(field_list)
 
-    # WIP for dropx`
-    elif isinstance(item_feature_type, dict):
-        for item in value:
-            item_field = _map_Dict(item_feature_type, value[item], tokenizer)
-            field_list.append(item_field)
-        if len(field_list) > 0:
-            field = ListField(field_list)
+    # # WIP for dropx`
+    # elif isinstance(item_feature_type, dict):
+    #     for item in value:
+    #         item_field = _map_Dict(item_feature_type, value[item], tokenizer)
+    #         field_list.append(item_field)
+    #     if len(field_list) > 0:
+    #         field = ListField(field_list)
 
     else:
         HuggingfaceDatasetReader.raise_feature_not_supported_value_error(
@@ -321,10 +321,16 @@ def _map_to_Label(namespace, item, skip_indexing=True) -> LabelField:
 
 
 def _map_Dict(
-    feature_definition: dict, values: dict, tokenizer: Optional[Tokenizer]
+    feature_definition: dict,
+    values: dict,
+    tokenizer: Optional[Tokenizer] = None,
+    feature_name: Optional[str] = None,
 ) -> Dict[str, Field]:
     # Map it as a Dictionary of List
     fields: Dict[str, Field] = dict()
     for key in values:
-        fields[key] = _map_Sequence(key, values[key], feature_definition[key], tokenizer)
+        key_name: str = key
+        if feature_name is not None:
+            key_name = feature_name + "-" + key
+        fields[key_name] = _map_Sequence(key, values[key], feature_definition[key], tokenizer)
     return fields
