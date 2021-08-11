@@ -2,6 +2,8 @@
 import logging
 import os
 import sys
+import warnings
+
 
 if os.environ.get("ALLENNLP_DEBUG"):
     LEVEL = logging.DEBUG
@@ -27,10 +29,16 @@ def _transformers_log_filter(record):
 
 logging.getLogger("transformers.file_utils").addFilter(_transformers_log_filter)
 
-from allennlp.commands import main  # noqa
-
 
 def run():
+    # We issue a seperate warning from the tango command and ignore this one so that
+    # users won't see a Tango warning when they're not using the Tango command.
+    warnings.filterwarnings(
+        "ignore", category=UserWarning, message="AllenNLP Tango", module=r"allennlp\.tango"
+    )
+
+    from allennlp.commands import main  # noqa
+
     main(prog="allennlp")
 
 
