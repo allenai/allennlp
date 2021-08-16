@@ -1,4 +1,6 @@
 import math
+from typing import Optional
+
 import torch
 from overrides import overrides
 from allennlp.modules.attention.attention import Attention
@@ -22,12 +24,13 @@ class ScaledDotProductAttention(Attention):
         distribution for your attention.  If false, this is just computing a similarity score.
     """
 
-    def __init__(self, scaling_factor: int, normalize: bool = True) -> None:
+    def __init__(self, scaling_factor: Optional[int] = None, normalize: bool = True) -> None:
         super().__init__(normalize)
         self.scaling_factor = scaling_factor
 
     @overrides
     def _forward_internal(self, vector: torch.Tensor, matrix: torch.Tensor) -> torch.Tensor:
         scores = torch.matmul(vector, matrix)
-        scores = scores / math.sqrt(self.scaling_factor)
+        scaling_factor = self.scaling_factor or matrix.size(-1)
+        scores = scores / math.sqrt(scaling_factor)
         return scores
