@@ -253,7 +253,7 @@ class LogWriterCallback(TrainerCallback):
 
         if self._batch_size_interval:
             # We're assuming here that `log_batch` will get called every batch, and only every
-            # batch.  This is true with our current usage of this code (version 1.0); if that
+            # batch. This is true with our current usage of this code (version 1.0); if that
             # assumption becomes wrong, this code will break.
             batch_group_size = sum(get_batch_size(batch) for batch in batch_group)  # type: ignore
             self._cumulative_batch_group_size += batch_group_size
