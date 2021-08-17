@@ -227,7 +227,7 @@ class LogWriterCallback(TrainerCallback):
 
             # Now collect per-batch metrics to log.
             metrics_to_log: Dict[str, float] = {}
-            for key in ("batch_loss", "batch_reg_loss"):
+            for key in ["batch_loss", "batch_reg_loss"]:
                 if key not in metrics:
                     continue
                 value = metrics[key]
