@@ -18,13 +18,7 @@ class TestScaledDotProductAttention(AllenNlpTestCase):
     def test_scaled_dot_product_similarity(self):
         attn = ScaledDotProductAttention(9, normalize=False)
         vector = torch.FloatTensor([[0, 0, 0], [1, 1, 1]])
-        matrix = torch.FloatTensor([[[1, 2, 3], [4, 5, 6]], [[7, 8, 9], [10, 11, 12]]]).transpose(
-            -1, -2
-        )
+        matrix = torch.FloatTensor([[[1, 2, 3], [4, 5, 6]], [[7, 8, 9], [10, 11, 12]]])
         output = attn(vector, matrix)
 
-        assert_almost_equal(
-            output.numpy(),
-            numpy.array([[[0.0, 0.0], [2.0, 5.0]], [[0.0, 0.0], [8.0, 11.0]]]),
-            decimal=2,
-        )
+        assert_almost_equal(output.numpy(), numpy.array([[0.0, 0.0], [8.0, 11.0]]), decimal=2)
