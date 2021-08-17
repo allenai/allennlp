@@ -241,6 +241,13 @@ class LogWriterCallback(TrainerCallback):
                     self._batch_loss_moving_items[key]
                 )
 
+            for key, value in metrics.items():
+                if key.startswith("batch_"):
+                    continue
+                key = "batch_" + key
+                if key not in metrics_to_log:
+                    metrics_to_log[key] = value
+
             self.log_scalars(
                 metrics_to_log,
                 log_prefix="train",
