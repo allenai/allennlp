@@ -44,7 +44,8 @@ class BiModalAttention(TransformerModule, FromParams):
         The name of the attention-calculating function to be used for the first modality.
     scoring_func2 : `str` (default = `scaled_dot_product`)
         The name of the attention-calculating function to be used for the second modality.
-        Eg. `dot_product`, `linear`, etc. For a complete list, please check :mod:`allennlp.modules.matrix_attention`.
+        Eg. `dot_product`, `linear`, etc. For a complete list, please check
+        :mod:`allennlp.modules.matrix_attention`.
     """
 
     def __init__(
