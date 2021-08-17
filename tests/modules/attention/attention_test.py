@@ -13,8 +13,9 @@ def test_all_attention_works_the_same(attention_type: str):
     matrix = torch.FloatTensor([[[1, 2, 3], [4, 5, 6]]])
 
     if module_cls in {BilinearAttention, AdditiveAttention, LinearAttention}:
-        module = module_cls(vector.size(1), matrix.size(2))
+        module = module_cls(vector.size(-1), matrix.size(-1))
     else:
         module = module_cls()
 
-    module(vector, matrix)
+    output = module(vector, matrix)
+    assert tuple(output.size()) == (1, 2)

@@ -3,11 +3,13 @@ from typing import Optional
 
 import torch
 from overrides import overrides
+
+from allennlp.modules.attention.dot_product_attention import DotProductAttention
 from allennlp.modules.attention.attention import Attention
 
 
 @Attention.register("scaled_dot_product")
-class ScaledDotProductAttention(Attention):
+class ScaledDotProductAttention(DotProductAttention):
     """
     Computes attention between two tensors using scaled dot product.
     # Reference: [Attention Is All You Need (Vaswani et al, 2017)]
@@ -30,7 +32,7 @@ class ScaledDotProductAttention(Attention):
 
     @overrides
     def _forward_internal(self, vector: torch.Tensor, matrix: torch.Tensor) -> torch.Tensor:
-        scores = torch.matmul(vector, matrix)
+        scores = super()._forward_internal(vector, matrix)
         scaling_factor = self.scaling_factor or matrix.size(-1)
         scores = scores / math.sqrt(scaling_factor)
         return scores
