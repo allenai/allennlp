@@ -14,8 +14,8 @@ class TestDotProductAttention(AllenNlpTestCase):
         isinstance(legacy_attention, DotProductAttention)
 
     def test_dot_product_similarity(self):
-        linear = DotProductAttention(normalize=False)
-        output = linear(
+        attn = DotProductAttention(normalize=False)
+        output = attn(
             torch.FloatTensor([[0, 0, 0], [1, 1, 1]]),
             torch.FloatTensor([[[1, 2, 3], [4, 5, 6]], [[7, 8, 9], [10, 11, 12]]]),
         )
