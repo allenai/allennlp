@@ -35,6 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `tqdm` lock is now set inside `MultiProcessDataLoading` when new workers are spawned to avoid contention when writing output.
 - `ConfigurationError` is now pickleable.
 - Multitask models now support `TextFieldTensor` in heads, not just in the backbone
+- Checkpointer cleaning was fixed to work on Windows Paths
 
 ### Changed
 
