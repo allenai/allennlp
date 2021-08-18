@@ -42,7 +42,7 @@ class PolynomialDecay(LearningRateScheduler):
     `warmup_steps` set `100`, `power` set to `2`, and `end_learning_rate` set
     to `1e-10`.
 
-    ```
+    ```json
     {
         ...
        "trainer":{

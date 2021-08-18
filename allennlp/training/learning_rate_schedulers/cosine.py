@@ -49,7 +49,7 @@ class CosineWithRestarts(LearningRateScheduler):
     * `eta_mul` set to `0.8`
     * `last_epoch` set to `10`
 
-    ```
+    ```json
     {
         ...
        "trainer":{

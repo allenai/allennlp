@@ -40,7 +40,7 @@ class NoamLR(LearningRateScheduler):
     Config for using `NoamLR` with a model size of `1024`, warmup steps
     of `5`, and `factor` of `.25`.
 
-    ```
+    ```json
     {
         ...
        "trainer":{
