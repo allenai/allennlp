@@ -55,7 +55,7 @@ class NoamLR(LearningRateScheduler):
        }
     }
     ```
-    Note that you do NOT pass an optimizer key to the Learning rate scheduler.
+    Note that you do NOT pass an `optimizer` key to the Learning rate scheduler.
     """
 
     def __init__(
