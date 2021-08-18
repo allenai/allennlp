@@ -20,13 +20,13 @@ from allennlp.training.learning_rate_schedulers.learning_rate_scheduler import (
     ConstantLearningRateScheduler,
     ConstantWithWarmupLearningRateScheduler,
     CosineWithWarmupLearningRateScheduler,
-    CosineHardRestartsWithWarmupLearningRateScheduler
+    CosineHardRestartsWithWarmupLearningRateScheduler,
 )
 from allennlp.training.learning_rate_schedulers.pytorch_lr_schedulers import (
     StepLearningRateScheduler,
     MultiStepLearningRateScheduler,
     ExponentialLearningRateScheduler,
-    ReduceOnPlateauLearningRateScheduler
+    ReduceOnPlateauLearningRateScheduler,
 )
 from allennlp.training.learning_rate_schedulers.combined import CombinedLearningRateScheduler
 from allennlp.training.learning_rate_schedulers.cosine import CosineWithRestarts

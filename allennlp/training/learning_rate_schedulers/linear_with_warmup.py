@@ -51,12 +51,12 @@ class LinearWithWarmup(PolynomialDecay):
     """
 
     def __init__(
-            self,
-            optimizer: torch.optim.Optimizer,
-            num_epochs: int,
-            num_steps_per_epoch: int,
-            warmup_steps: int = 100,
-            last_epoch: int = -1,
+        self,
+        optimizer: torch.optim.Optimizer,
+        num_epochs: int,
+        num_steps_per_epoch: int,
+        warmup_steps: int = 100,
+        last_epoch: int = -1,
     ) -> None:
         super().__init__(
             optimizer,

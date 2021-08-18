@@ -14,6 +14,7 @@ from transformers.optimization import (
     get_cosine_with_hard_restarts_schedule_with_warmup,
 )
 
+
 class LearningRateScheduler(Scheduler, Registrable):
     def __init__(self, optimizer: torch.optim.Optimizer, last_epoch: int = -1) -> None:
         super().__init__(optimizer, "lr", last_epoch)
@@ -160,12 +161,12 @@ class CosineWithWarmupLearningRateScheduler(_PyTorchLearningRateSchedulerWrapper
     """
 
     def __init__(
-            self,
-            optimizer: Optimizer,
-            num_warmup_steps: int,
-            num_training_steps: int,
-            num_cycles: float = 0.5,
-            last_epoch: int = -1,
+        self,
+        optimizer: Optimizer,
+        num_warmup_steps: int,
+        num_training_steps: int,
+        num_cycles: float = 0.5,
+        last_epoch: int = -1,
     ) -> None:
         lr_scheduler = get_cosine_schedule_with_warmup(
             optimizer=optimizer,
@@ -204,12 +205,12 @@ class CosineHardRestartsWithWarmupLearningRateScheduler(_PyTorchLearningRateSche
     """
 
     def __init__(
-            self,
-            optimizer: Optimizer,
-            num_warmup_steps: int,
-            num_training_steps: int,
-            num_cycles: int = 1,
-            last_epoch: int = -1,
+        self,
+        optimizer: Optimizer,
+        num_warmup_steps: int,
+        num_training_steps: int,
+        num_cycles: int = 1,
+        last_epoch: int = -1,
     ) -> None:
         lr_scheduler = get_cosine_with_hard_restarts_schedule_with_warmup(
             optimizer=optimizer,

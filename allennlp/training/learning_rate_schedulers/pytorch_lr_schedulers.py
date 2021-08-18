@@ -8,9 +8,8 @@ from allennlp.training.optimizers import Optimizer
 from allennlp.training.learning_rate_schedulers.learning_rate_scheduler import (
     LearningRateScheduler,
     _PyTorchLearningRateSchedulerWrapper,
-    _PyTorchLearningRateSchedulerWithMetricsWrapper
+    _PyTorchLearningRateSchedulerWithMetricsWrapper,
 )
-
 
 
 @LearningRateScheduler.register("step")
@@ -57,11 +56,7 @@ class StepLearningRateScheduler(_PyTorchLearningRateSchedulerWrapper):
     """
 
     def __init__(
-            self,
-            optimizer: Optimizer,
-            step_size: int,
-            gamma: float = 0.1,
-            last_epoch: int = -1
+        self, optimizer: Optimizer, step_size: int, gamma: float = 0.1, last_epoch: int = -1
     ) -> None:
         """
 
@@ -106,8 +101,7 @@ class MultiStepLearningRateScheduler(_PyTorchLearningRateSchedulerWrapper):
     """
 
     def __init__(
-            self, optimizer: Optimizer, milestones: List[int], gamma: float = 0.1,
-            last_epoch: int = -1
+        self, optimizer: Optimizer, milestones: List[int], gamma: float = 0.1, last_epoch: int = -1
     ) -> None:
         lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(
             optimizer=optimizer, milestones=milestones, gamma=gamma, last_epoch=last_epoch
@@ -164,7 +158,7 @@ class ReduceOnPlateauLearningRateScheduler(_PyTorchLearningRateSchedulerWithMetr
 
     Config for using the `ReduceOnPlateauLearningRateScheduler` Learning Rate
     Scheduler with the following `init` arguments:
-    
+
     * `mode="max"`
     * `factor=0.2`
     * `patience=5`
@@ -198,17 +192,17 @@ class ReduceOnPlateauLearningRateScheduler(_PyTorchLearningRateSchedulerWithMetr
     """
 
     def __init__(
-            self,
-            optimizer: Optimizer,
-            mode: str = "min",
-            factor: float = 0.1,
-            patience: int = 10,
-            verbose: bool = False,
-            threshold_mode: str = "rel",
-            threshold: float = 1e-4,
-            cooldown: int = 0,
-            min_lr: Union[float, List[float]] = 0,
-            eps: float = 1e-8,
+        self,
+        optimizer: Optimizer,
+        mode: str = "min",
+        factor: float = 0.1,
+        patience: int = 10,
+        verbose: bool = False,
+        threshold_mode: str = "rel",
+        threshold: float = 1e-4,
+        cooldown: int = 0,
+        min_lr: Union[float, List[float]] = 0,
+        eps: float = 1e-8,
     ) -> None:
         lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
             optimizer=optimizer,

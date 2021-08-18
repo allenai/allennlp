@@ -62,14 +62,14 @@ class PolynomialDecay(LearningRateScheduler):
     """
 
     def __init__(
-            self,
-            optimizer: torch.optim.Optimizer,
-            num_epochs: int,
-            num_steps_per_epoch: int,
-            power=1.0,
-            warmup_steps=0,
-            end_learning_rate=0.0,
-            last_epoch: int = -1,
+        self,
+        optimizer: torch.optim.Optimizer,
+        num_epochs: int,
+        num_steps_per_epoch: int,
+        power=1.0,
+        warmup_steps=0,
+        end_learning_rate=0.0,
+        last_epoch: int = -1,
     ):
         super().__init__(optimizer, last_epoch)
 
