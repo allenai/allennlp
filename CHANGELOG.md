@@ -24,7 +24,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `self.ddp_accelerator` during distributed training. This is useful when, for example, instantiating submodules in your
   model's `__init__()` method by wrapping them with `self.ddp_accelerator.wrap_module()`. See the `allennlp.modules.transformer.t5`
   for an example.
-- Added Tango components, to be explored in detail in a later post.
+- Added Tango components, to be explored in detail in a later post
+- Added `ScaledDotProductMatrixAttention`, and converted the transformer toolkit to use it
+- Added tests to ensure that all `Attention` and `MatrixAttention` implementations are interchangeable
 
 ### Fixed
 
@@ -34,7 +36,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `TransformerTextField` can now take tensors of shape `(1, n)` like the tensors produced from a HuggingFace tokenizer.
 - `tqdm` lock is now set inside `MultiProcessDataLoading` when new workers are spawned to avoid contention when writing output.
 - `ConfigurationError` is now pickleable.
-- Multitask models now support `TextFieldTensor` in heads, not just in the backbone
+- Multitask models now support `TextFieldTensor` in heads, not just in the backbone.
+- Fixed the signature of `ScaledDotProductAttention` to match the other `Attention` classes
 
 ### Changed
 
