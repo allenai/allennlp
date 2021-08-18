@@ -15,7 +15,10 @@ from allennlp.training.learning_rate_schedulers.learning_rate_scheduler import (
 @LearningRateScheduler.register("step")
 class StepLearningRateScheduler(_PyTorchLearningRateSchedulerWrapper):
     """
-    Wrapper for [PyTorch's `StepLR`](https://pytorch.org/docs/stable/generated/torch.optim.lr_scheduler.StepLR.html#torch.optim.lr_scheduler.StepLR).
+    Wrapper for [PyTorch's `StepLR`](
+    https://pytorch.org/docs/stable/generated/
+    torch.optim.lr_scheduler.StepLR.html#torch.optim.lr_scheduler.StepLR
+    ).
 
     Registered as a `LearningRateScheduler` with name "step".  The "optimizer"
     argument does not get an entry in a configuration file for the object.
@@ -73,7 +76,10 @@ class StepLearningRateScheduler(_PyTorchLearningRateSchedulerWrapper):
 @LearningRateScheduler.register("multi_step")
 class MultiStepLearningRateScheduler(_PyTorchLearningRateSchedulerWrapper):
     """
-    Wrapper for [PyTorch's `MultiStepLR`](https://pytorch.org/docs/stable/generated/torch.optim.lr_scheduler.MultiStepLR.html#torch.optim.lr_scheduler.MultiStepLR).
+    Wrapper for [PyTorch's `MultiStepLR`](
+    https://pytorch.org/docs/stable/
+    generated/torch.optim.lr_scheduler.MultiStepLR.html#torch.optim.lr_scheduler.MultiStepLR
+    ).
 
     Registered as a `LearningRateScheduler` with name "multi_step".  The "optimizer" argument does
     not get an entry in a configuration file for the object.
@@ -112,7 +118,9 @@ class MultiStepLearningRateScheduler(_PyTorchLearningRateSchedulerWrapper):
 @LearningRateScheduler.register("exponential")
 class ExponentialLearningRateScheduler(_PyTorchLearningRateSchedulerWrapper):
     """
-    Wrapper for [PyTorch's `ExponentialLR`](https://pytorch.org/docs/stable/generated/torch.optim.lr_scheduler.ExponentialLR.html#torch.optim.lr_scheduler.ExponentialLR).
+    Wrapper for [PyTorch's `ExponentialLR`](
+    https://pytorch.org/docs/stable/generated/
+    torch.optim.lr_scheduler.ExponentialLR.html#torch.optim.lr_scheduler.ExponentialLR).
 
     Registered as a `LearningRateScheduler` with name "exponential".  The "optimizer" argument does
     not get an entry in a configuration file for the object.
@@ -148,7 +156,8 @@ class ExponentialLearningRateScheduler(_PyTorchLearningRateSchedulerWrapper):
 @LearningRateScheduler.register("reduce_on_plateau")
 class ReduceOnPlateauLearningRateScheduler(_PyTorchLearningRateSchedulerWithMetricsWrapper):
     """
-    Wrapper for [PyTorch's `ReduceLROnPlateau`](https://pytorch.org/docs/stable/generated/torch.optim.lr_scheduler.ReduceLROnPlateau.html#torch.optim.lr_scheduler.ReduceLROnPlateau).
+    Wrapper for [PyTorch's `ReduceLROnPlateau`](https://pytorch.org/docs/stable/generated/
+    torch.optim.lr_scheduler.ReduceLROnPlateau.html#torch.optim.lr_scheduler.ReduceLROnPlateau).
 
     Registered as a `LearningRateScheduler` with name "reduce_on_plateau".  The
     "optimizer" argument does not get an entry in a configuration file for the

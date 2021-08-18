@@ -15,9 +15,9 @@ class NoamLR(LearningRateScheduler):
 
     The formula for learning rate when using `NoamLR` is:
 
-    `lr`= `factor` \* (
-        `model_size` \*\* (`-0.5`)
-        \* min(`step` \*\* (`-0.5`), `step` \* `warmup_steps` \*\* (`-1.5`))
+    `lr`= `factor *` (
+        `model_size **` (`-0.5`)
+        `*` min(`step**` (`-0.5`), `step * warmup_steps **` (`-1.5`))
     )
 
     Registered as a `LearningRateScheduler` with name "noam".

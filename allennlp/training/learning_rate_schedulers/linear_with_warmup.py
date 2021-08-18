@@ -11,7 +11,9 @@ class LinearWithWarmup(PolynomialDecay):
     `lr` during the first `warmup_steps` steps, and then decreases it to zero
     over the rest of the training steps.
 
-    In practice, this is a wrapper of [`PolynomialDecay`](https://docs.allennlp.org/main/api/training/learning_rate_schedulers/polynomial_decay/)
+    In practice, this is a wrapper of [`PolynomialDecay`](
+    https://docs.allennlp.org/main/api/training/
+    learning_rate_schedulers/polynomial_decay/)
     with `power=1` and `end_learning_rate=0`.
 
 

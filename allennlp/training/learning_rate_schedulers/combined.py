@@ -34,8 +34,12 @@ class CombinedLearningRateScheduler(LearningRateScheduler):
     Config for using the `CombinedLearningRateScheduler` Learning Rate Scheduler
     with the following arguments:
 
-    * Use [`PolynomialDecay`](https://docs.allennlp.org/main/api/training/learning_rate_schedulers/polynomial_decay/) for the first `15` epochs.
-    * Use [`NoamLR`](https://docs.allennlp.org/main/api/training/learning_rate_schedulers/noam/) for the next `15` epochs.
+    * Use [`PolynomialDecay`](
+    https://docs.allennlp.org/main/api/training/learning_rate_schedulers/polynomial_decay/
+    ) for the first `15` epochs.
+    * Use [`NoamLR`](
+    https://docs.allennlp.org/main/api/training/learning_rate_schedulers/noam/
+    ) for the next `15` epochs.
     * Use a constant LR for the remaining epochs.
 
     ```json
