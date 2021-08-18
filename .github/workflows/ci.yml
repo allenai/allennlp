@@ -396,8 +396,7 @@ jobs:
     name: Docker (CUDA ${{ matrix.cuda }})
     timeout-minutes: 18
     if: github.repository == 'allenai/allennlp'
-    # Run on self-hosted to utilize layer caching.
-    runs-on: [self-hosted, Docker-enabled]
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         cuda: ['10.2', '11.1']
