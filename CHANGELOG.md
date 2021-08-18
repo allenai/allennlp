@@ -31,6 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fixed a bug in `ConditionalRandomField`: `transitions` and `tag_sequence` tensors were not initialized on the desired device causing high CPU usage (see https://github.com/allenai/allennlp/issues/2884)
 - Fixed a mispelling: the parameter `contructor_extras` in `Lazy()` is now correctly called `constructor_extras`.
 - Fixed broken links in `allennlp.nn.initializers` docs.
 - Fixed bug in `BeamSearch` where `last_backpointers` was not being passed to any `Constraint`s.
