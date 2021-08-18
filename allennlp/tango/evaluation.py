@@ -9,7 +9,6 @@ from typing import Dict, Any, List, Optional
 import torch
 
 from allennlp.common import Lazy, Tqdm
-from allennlp.common.checks import check_for_gpu
 from allennlp.common.util import sanitize
 from allennlp.models import Model
 from allennlp.nn.util import move_to_device
@@ -58,10 +57,10 @@ class EvaluationStep(Step):
             concrete_data_loader = data_loader.construct(instances=dataset.splits[split])
 
         if torch.cuda.device_count() > 0:
+            model = model.cuda()
             cuda_device = torch.device(0)
         else:
             cuda_device = torch.device("cpu")
-        check_for_gpu(cuda_device)
 
         generator_tqdm = Tqdm.tqdm(iter(concrete_data_loader))
 
