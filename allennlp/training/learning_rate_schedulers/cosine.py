@@ -15,15 +15,16 @@ class CosineWithRestarts(LearningRateScheduler):
     """
     Cosine annealing with restarts.
 
-    This is described in the paper https://arxiv.org/abs/1608.03983. Note that early
-    stopping should typically be avoided when using this schedule.
+    This is described in the paper https://arxiv.org/abs/1608.03983. Note that
+    early stopping should typically be avoided when using this schedule.
 
     Registered as a `LearningRateScheduler` with name "cosine".
 
     # Parameters
 
     optimizer : `torch.optim.Optimizer`
-        This argument does not get an entry in a configuration file for the object.
+        This argument does not get an entry in a configuration file for the
+        object.
     t_initial : `int`
         The number of iterations (epochs) within the first cycle.
     t_mul : `float`, optional (default=`1`)
@@ -32,10 +33,41 @@ class CosineWithRestarts(LearningRateScheduler):
     eta_min : `float`, optional (default=`0`)
         The minimum learning rate.
     eta_mul : `float`, optional (default=`1`)
-        Determines the initial learning rate for the i-th decay cycle, which is the
-        last initial learning rate multiplied by `m_mul`.
+        Determines the initial learning rate for the i-th decay cycle, which is
+        the last initial learning rate multiplied by `m_mul`.
     last_epoch : `int`, optional (default=`-1`)
         The index of the last epoch. This is used when restarting.
+
+    # Example
+
+    Config for using the `CosineWithRestarts` Learning Rate Scheduler with the
+    following arguments:
+
+    * `t_initial` set to `5`
+    * `t_mul` set to `0.9`
+    * `eta_min` set to `1e-12`
+    * `eta_mul` set to `0.8`
+    * `last_epoch` set to `10`
+
+    ```
+    {
+        ...
+       "trainer":{
+            ...
+            "learning_rate_scheduler": {
+                "type": "cosine",
+                "t_initial": 5,
+                "t_mul": 0.9,
+                "eta_min": 1e-12
+                "eta_mul": 0.8
+                "last_epoch": 10
+            },
+            ...
+       }
+    }
+    ```
+    Note that you do NOT pass a `optimizer` key to the Learning rate scheduler.
+
     """
 
     def __init__(
