@@ -192,9 +192,9 @@ class ConditionalRandomField(torch.nn.Module):
         # Include special start of sequence (num_tags + 1) and end of sequence tags (num_tags + 2)
         if constraints is None:
             # All transitions are valid.
-            constraint_mask = torch.Tensor(num_tags + 2, num_tags + 2).fill_(1.0)
+            constraint_mask = torch.full((num_tags + 2, num_tags + 2), 1.0)
         else:
-            constraint_mask = torch.Tensor(num_tags + 2, num_tags + 2).fill_(0.0)
+            constraint_mask = torch.full((num_tags + 2, num_tags + 2), 0.0)
             for i, j in constraints:
                 constraint_mask[i, j] = 1.0
 
@@ -364,7 +364,7 @@ class ConditionalRandomField(torch.nn.Module):
         # Augment transitions matrix with start and end transitions
         start_tag = num_tags
         end_tag = num_tags + 1
-        transitions = torch.empty(num_tags + 2, num_tags + 2, device=logits.device).fill_(-10000.0)
+        transitions = torch.full((num_tags + 2, num_tags + 2), -10000.0, device=logits.device)
 
         # Apply transition constraints
         constrained_transitions = self.transitions * self._constraint_mask[
