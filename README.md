@@ -259,12 +259,12 @@ For various reasons you may need to create your own AllenNLP Docker image, such 
 of PyTorch. To do so, just run `make docker-image` from the root of your local clone of AllenNLP.
 
 By default this builds an image with the tag `allennlp/allennlp`, but you can change this to anything you want
-by setting the `DOCKER_TAG` flag when you call `make`. For example,
-`make docker-image DOCKER_TAG=my-allennlp`.
+by setting the `DOCKER_IMAGE_NAME` flag when you call `make`. For example,
+`make docker-image DOCKER_IMAGE_NAME=my-allennlp`.
 
-If you want to use a different version of PyTorch, set the flag `DOCKER_TORCH_VERSION` to something like
-`torch==1.7.0` or `torch==1.7.0+cu110 -f https://download.pytorch.org/whl/torch_stable.html`.
-The value of this flag will passed directly to `pip install`.
+If you want to use a different version of Python or PyTorch, set the flags `DOCKER_PYTHON_VERSION` and `DOCKER_TORCH_VERSION` to something like
+`3.9` and `1.9.0-cuda10.2`, respectively. These flags together determine the base image that is used. You can see the list of valid
+combinations in this GitHub Container Registry: [github.com/allenai/docker-images/pkgs/container/pytorch](https://github.com/allenai/docker-images/pkgs/container/pytorch).
 
 After building the image you should be able to see it listed by running `docker images allennlp`.
 
