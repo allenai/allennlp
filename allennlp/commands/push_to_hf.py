@@ -24,11 +24,7 @@ class PushToHf(Subcommand):
         allows you to share your models with others. On top of that, you can try
         the models directly in the browser with the available widgets.
 
-        Before running this command, login to Hugging Face with
-            ```
-            pip install huggingface_hub
-            huggingface-cli login
-            ```
+        Before running this command, login to Hugging Face with huggingface-cli login
         """
         subparser = parser.add_parser(self.name, description=description, help=description)
         subparser.set_defaults(func=push)
