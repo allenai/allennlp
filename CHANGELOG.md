@@ -27,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added Tango components, to be explored in detail in a later post
 - Added `ScaledDotProductMatrixAttention`, and converted the transformer toolkit to use it
 - Added tests to ensure that all `Attention` and `MatrixAttention` implementations are interchangeable
+- Added `from_pretrained_transformer_and_instances` constructor to `Vocabulary`
 
 ### Fixed
 
@@ -45,8 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   with a default value of `False`. `False` means gradients are not rescaled and the gradient
   norm is never even calculated. `True` means the gradients are still not rescaled but the gradient
   norm is calculated and passed on to callbacks. A `float` value means gradients are rescaled.
-- `TensorCache` now supports more concurrent readers and writers. 
-
+- `TensorCache` now supports more concurrent readers and writers.
 
 ## [v2.6.0](https://github.com/allenai/allennlp/releases/tag/v2.6.0) - 2021-07-19
 
@@ -84,14 +84,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Changed behavior of `MultiOptimizer` so that while a default optimizer is still required, an error is not thrown if the default optimizer receives no parameters.
-- Made the epsilon parameter for the layer normalization in token embeddings configurable. 
+- Made the epsilon parameter for the layer normalization in token embeddings configurable.
 
 ### Removed
 
 - Removed `TransformerModule._tied_weights`. Weights should now just be tied directly in the `__init__()` method.
   You can also override `TransformerModule._post_load_pretrained_state_dict_hook()` to remove keys associated with tied weights from `missing_keys`
   after loading a pretrained state dictionary.
-
 
 ## [v2.5.0](https://github.com/allenai/allennlp/releases/tag/v2.5.0) - 2021-06-03
 
@@ -111,7 +110,7 @@ on a downstream task.
   See [PR #5172](https://github.com/allenai/allennlp/pull/5172) for more details.
 - Added `SpanExtractorWithSpanWidthEmbedding`, putting specific span embedding computations into the `_embed_spans` method and leaving the common code in `SpanExtractorWithSpanWidthEmbedding` to unify the arguments, and modified `BidirectionalEndpointSpanExtractor`, `EndpointSpanExtractor` and `SelfAttentiveSpanExtractor` accordingly. Now, `SelfAttentiveSpanExtractor` can also embed span widths.
 - Added a `min_steps` parameter to `BeamSearch` to set a minimum length for the predicted sequences.
-- Added the `FinalSequenceScorer` abstraction to calculate the final scores of the generated sequences in `BeamSearch`. 
+- Added the `FinalSequenceScorer` abstraction to calculate the final scores of the generated sequences in `BeamSearch`.
 - Added `shuffle` argument to `BucketBatchSampler` which allows for disabling shuffling.
 - Added `allennlp.modules.transformer.attention_module` which contains a generalized `AttentionModule`. `SelfAttention` and `T5Attention` both inherit from this.
 - Added a `Constraint` abstract class to `BeamSearch`, which allows for incorporating constraints on the predictions found by `BeamSearch`,
@@ -143,7 +142,6 @@ on a downstream task.
 - Fixed `wandb` callback to work in distributed training.
 - Fixed `tqdm` logging into multiple files with `allennlp-optuna`.
 
-
 ## [v2.4.0](https://github.com/allenai/allennlp/releases/tag/v2.4.0) - 2021-04-22
 
 ### Added
@@ -159,7 +157,6 @@ on a downstream task.
 - The `GradientDescentTrainer` no longer leaves stray model checkpoints around when it runs out of patience.
 - Fixed `cached_path()` for "hf://" files.
 - Improved the error message for the `PolynomialDecay` LR scheduler when `num_steps_per_epoch` is missing.
-
 
 ## [v2.3.1](https://github.com/allenai/allennlp/releases/tag/v2.3.1) - 2021-04-20
 
@@ -179,7 +176,7 @@ on a downstream task.
 
 ### Fixed
 
-- Fixed a bug with the `ShardedDatasetReader` when used with multi-process data loading (https://github.com/allenai/allennlp/issues/5132).
+- Fixed a bug with the `ShardedDatasetReader` when used with multi-process data loading (<https://github.com/allenai/allennlp/issues/5132>).
 
 ## [v2.3.0](https://github.com/allenai/allennlp/releases/tag/v2.3.0) - 2021-04-14
 
@@ -220,9 +217,7 @@ on a downstream task.
 
 - Removed the `stride` parameter to `PretrainedTransformerTokenizer`. This parameter had no effect.
 
-
 ## [v2.2.0](https://github.com/allenai/allennlp/releases/tag/v2.2.0) - 2021-03-26
-
 
 ### Added
 
@@ -243,18 +238,16 @@ on a downstream task.
 - `Model.get_parameters_for_histogram_tensorboard_logging` is deprecated in favor of
   `Model.get_parameters_for_histogram_logging`.
 
-
 ### Fixed
 
 - Makes sure tensors that are stored in `TensorCache` always live on CPUs
 - Fixed a bug where `FromParams` objects wrapped in `Lazy()` couldn't be pickled.
 - Fixed a bug where the `ROUGE` metric couldn't be picked.
-- Fixed a bug reported by https://github.com/allenai/allennlp/issues/5036. We keeps our spacy POS tagger on.
+- Fixed a bug reported by <https://github.com/allenai/allennlp/issues/5036>. We keeps our spacy POS tagger on.
 
 ### Removed
 
 - Removed `TensorBoardWriter`. Please use the `TensorBoardCallback` instead.
-
 
 ## [v2.1.0](https://github.com/allenai/allennlp/releases/tag/v2.1.0) - 2021-02-24
 
@@ -287,7 +280,6 @@ on a downstream task.
 - Fixed a bug where the `MultiTaskDataLoader` would crash when `num_workers > 0`
 - Fixed an import error that happens when PyTorch's distributed framework is unavailable on the system.
 
-
 ## [v2.0.1](https://github.com/allenai/allennlp/releases/tag/v2.0.1) - 2021-01-29
 
 ### Added
@@ -302,7 +294,6 @@ on a downstream task.
 ### Fixed
 
 - `common.util.sanitize` now handles sets.
-
 
 ## [v2.0.0](https://github.com/allenai/allennlp/releases/tag/v2.0.0) - 2021-01-27
 
@@ -335,7 +326,6 @@ on a downstream task.
 - Fixed the misspelling, changed `TensoboardBatchMemoryUsage` to `TensorBoardBatchMemoryUsage`.
 - We set a value to `epoch` so in case of firing `TrainerCallback.on_end()` the variable is bound.
   This could have lead to an error in case of trying to recover a run after it was finished training.
-
 
 ## [v2.0.0rc1](https://github.com/allenai/allennlp/releases/tag/v2.0.0rc1) - 2021-01-21
 
@@ -405,7 +395,6 @@ on a downstream task.
   can't be acquired because the file system is read-only.
 - `TrackEpochCallback` is now a `EpochCallback`.
 
-
 ## [v1.3.0](https://github.com/allenai/allennlp/releases/tag/v1.3.0) - 2020-12-15
 
 ### Added
@@ -437,7 +426,6 @@ on a downstream task.
 - Added safety checks for extracting tar files
 - Turned superfluous warning to info when extending the vocab in the embedding matrix, if no pretrained file was provided
 
-
 ## [v1.2.2](https://github.com/allenai/allennlp/releases/tag/v1.2.2) - 2020-11-17
 
 ### Added
@@ -448,7 +436,6 @@ on a downstream task.
 ### Fixed
 
 - `GumbelSampler` now sorts the beams by their true log prob.
-
 
 ## [v1.2.1](https://github.com/allenai/allennlp/releases/tag/v1.2.1) - 2020-11-10
 
@@ -481,7 +468,6 @@ on a downstream task.
 - Fixed pretrained embeddings for transformers that don't use end tokens.
 - Fixed the transformer tokenizer cache when the tokenizers are initialized with custom kwargs.
 
-
 ## [v1.2.0](https://github.com/allenai/allennlp/releases/tag/v1.2.0) - 2020-10-29
 
 ### Changed
@@ -503,7 +489,6 @@ on a downstream task.
   used rare vocabulary items.
 - Fixed a bug where `BeamSearch` would fail if `max_steps` was equal to 1.
 - Fixed `BasicTextFieldEmbedder` to not raise ConfigurationError if it has embedders that are empty and not in input
-
 
 ## [v1.2.0rc1](https://github.com/allenai/allennlp/releases/tag/v1.2.0rc1) - 2020-10-22
 
@@ -588,7 +573,6 @@ on a downstream task.
 - Fixed a bug in the cnn_encoder where activations involving masked tokens could be picked up by the max
 - Fix intra word tokenization for `PretrainedTransformerTokenizer` when disabling fast tokenizer.
 
-
 ## [v1.1.0](https://github.com/allenai/allennlp/releases/tag/v1.1.0) - 2020-09-08
 
 ### Fixed
@@ -604,7 +588,6 @@ on a downstream task.
 ### Added
 
 - `Predictor.capture_model_internals()` now accepts a regex specifying which modules to capture.
-
 
 ## [v1.1.0rc4](https://github.com/allenai/allennlp/releases/tag/v1.1.0rc4) - 2020-08-20
 
@@ -631,7 +614,6 @@ on a downstream task.
 - Fixed problem with automatically detecting whether tokenization is necessary.
   This affected primarily the Roberta SST model.
 - Improved help text for using the --overrides command line flag.
-
 
 ## [v1.1.0rc2](https://github.com/allenai/allennlp/releases/tag/v1.1.0rc2) - 2020-07-31
 
@@ -735,7 +717,7 @@ remains the same, but was renamed to `allennlp.data.PyTorchDataLoader`.
 ### Fixed
 
 - A bug where `TextField`s could not be duplicated since some tokenizers cannot be deep-copied.
-  See https://github.com/allenai/allennlp/issues/4270.
+  See <https://github.com/allenai/allennlp/issues/4270>.
 - Our caching mechanism had the potential to introduce race conditions if multiple processes
   were attempting to cache the same file at once. This was fixed by using a lock file tied to each
   cached file.
