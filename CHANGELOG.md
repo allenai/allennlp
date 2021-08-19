@@ -25,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `self.ddp_accelerator` during distributed training. This is useful when, for example, instantiating submodules in your
   model's `__init__()` method by wrapping them with `self.ddp_accelerator.wrap_module()`. See the `allennlp.modules.transformer.t5`
   for an example.
+- We now log batch metrics to tensorboard and wandb.
 - Added Tango components, to be explored in detail in a later post
 - Added `ScaledDotProductMatrixAttention`, and converted the transformer toolkit to use it
 - Added tests to ensure that all `Attention` and `MatrixAttention` implementations are interchangeable
@@ -47,7 +48,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   with a default value of `False`. `False` means gradients are not rescaled and the gradient
   norm is never even calculated. `True` means the gradients are still not rescaled but the gradient
   norm is calculated and passed on to callbacks. A `float` value means gradients are rescaled.
-- `TensorCache` now supports more concurrent readers and writers. 
+- `TensorCache` now supports more concurrent readers and writers.
+- We no longer log parameter statistics to tensorboard or wandb by default.
 
 
 ## [v2.6.0](https://github.com/allenai/allennlp/releases/tag/v2.6.0) - 2021-07-19

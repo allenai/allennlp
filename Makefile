@@ -10,13 +10,14 @@ MD_DOCS_CONF_SRC = mkdocs-skeleton.yml
 MD_DOCS_TGT = site/
 MD_DOCS_EXTRAS = $(addprefix $(MD_DOCS_ROOT),README.md CHANGELOG.md CONTRIBUTING.md)
 
-TORCH_VERSION = torch==1.9.0 torchvision==0.10.0
+TORCH_INSTALL = pip install torch torchvision
+DOCKER_TORCH_VERSION = 1.9.0-cuda10.2
+DOCKER_TEST_TORCH_VERSION = 1.9.0-cuda10.2
+DOCKER_PYTHON_VERSION = 3.9
 
 DOCKER_TAG = latest
 DOCKER_IMAGE_NAME = allennlp/allennlp:$(DOCKER_TAG)
 DOCKER_TEST_IMAGE_NAME = allennlp/test:$(DOCKER_TAG)
-DOCKER_TORCH_VERSION = $(TORCH_VERSION)
-DOCKER_TEST_TORCH_VERSION = $(TORCH_VERSION)
 DOCKER_RUN_CMD = docker run --rm \
 		-v $$HOME/.allennlp:/root/.allennlp \
 		-v $$HOME/.cache/huggingface:/root/.cache/huggingface \
@@ -96,7 +97,7 @@ install :
 	# See https://github.com/pypa/pip/issues/4537.
 	# python setup.py install_egg_info
 	# Install torch ecosystem first.
-	pip install $(TORCH_VERSION)
+	$(TORCH_INSTALL)
 	pip install --upgrade --upgrade-strategy eager -e . -r dev-requirements.txt
 	# These nltk packages are used by the 'checklist' module.
 	$(NLTK_DOWNLOAD_CMD)
@@ -158,6 +159,7 @@ docker-image :
 		--pull \
 		-f Dockerfile \
 		--build-arg TORCH=$(DOCKER_TORCH_VERSION) \
+		--build-arg PYTHON=$(DOCKER_PYTHON_VERSION) \
 		-t $(DOCKER_IMAGE_NAME) .
 
 DOCKER_GPUS = --gpus all
