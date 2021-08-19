@@ -21,7 +21,7 @@ class TensorBoardCallback(LogWriterCallback):
         summary_interval: int = 100,
         distribution_interval: Optional[int] = None,
         batch_size_interval: Optional[int] = None,
-        should_log_parameter_statistics: bool = True,
+        should_log_parameter_statistics: bool = False,
         should_log_learning_rate: bool = False,
     ) -> None:
         super().__init__(
