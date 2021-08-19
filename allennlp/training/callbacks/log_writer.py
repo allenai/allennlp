@@ -227,7 +227,8 @@ class LogWriterCallback(TrainerCallback):
 
             # Now collect per-batch metrics to log.
             metrics_to_log: Dict[str, float] = {}
-            for key in ["batch_loss", "batch_reg_loss"]:
+            batch_loss_metrics = {"batch_loss", "batch_reg_loss"}
+            for key in batch_loss_metrics:
                 if key not in metrics:
                     continue
                 value = metrics[key]
@@ -242,7 +243,7 @@ class LogWriterCallback(TrainerCallback):
                 )
 
             for key, value in metrics.items():
-                if key.startswith("batch_"):
+                if key in batch_loss_metrics:
                     continue
                 key = "batch_" + key
                 if key not in metrics_to_log:
