@@ -2,6 +2,7 @@ import os
 import shutil
 from os import PathLike
 from typing import MutableSequence, Any, Union, Iterable
+from allennlp.tango.dataloader import ShuffledSequence
 
 from sqlitedict import SqliteDict
 
@@ -26,8 +27,6 @@ class SqliteSparseSequence(MutableSequence[Any]):
                 else:
                     return None
         elif isinstance(i, slice):
-            from allennlp.tango.dataloader import ShuffledSequence
-
             return ShuffledSequence(self, range(*i.indices(len(self))))
         else:
             raise TypeError(f"list indices must be integers or slices, not {i.__class__.__name__}")
