@@ -1,7 +1,7 @@
 import os
 import shutil
 from os import PathLike
-from typing import MutableSequence, Any, Union
+from typing import MutableSequence, Any, Union, Iterable
 
 from sqlitedict import SqliteDict
 
@@ -61,6 +61,13 @@ class SqliteSparseSequence(MutableSequence[Any]):
                 del self[index]
         else:
             raise TypeError(f"list indices must be integers or slices, not {i.__class__.__name__}")
+
+    def extend(self, values: Iterable[Any]) -> None:
+        current_length = len(self)
+        for index, value in enumerate(values):
+            self.table[str(index + current_length)] = value
+        self.table["_len"] = current_length + index + 1
+        self.table.commit()
 
     def insert(self, i: int, value: Any) -> None:
         current_length = len(self)
