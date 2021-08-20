@@ -3,16 +3,15 @@ from transformers.models import t5 as hf_t5
 
 from allennlp.modules.transformer.t5 import T5
 from allennlp.nn.parallel import FairScaleFsdpAccelerator
-from allennlp.common.testing import requires_gpu, run_distributed_test, requires_multi_gpu
+from allennlp.common.testing import run_distributed_test, requires_multi_gpu
 
 
-# Mark this as GPU so it runs on a self-hosted runner, which will be a lot faster.
-@requires_gpu
+@pytest.mark.skip("takes too long in CI")
 @pytest.mark.parametrize(
     "pretrained_model_name",
     [
         "t5-base",
-        #  "t5-large",  # Takes too long in CI
+        #  "t5-large",  # Takes WAY too long in CI
     ],
 )
 def test_create_t5_from_pretrained(pretrained_model_name: str):
