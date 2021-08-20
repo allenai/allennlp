@@ -28,6 +28,7 @@ class SqliteDictFormat(Format[DatasetDict]):
             if isinstance(split, SqliteSparseSequence):
                 split.copy_to(filename)
             else:
+                (dir / filename).unlink(missing_ok=True)
                 sqlite = SqliteSparseSequence(dir / filename)
                 sqlite.extend(split)
 
