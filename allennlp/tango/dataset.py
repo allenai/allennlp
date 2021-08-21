@@ -4,11 +4,13 @@ every time we release a new version.*
 """
 
 import itertools
+import re
 from dataclasses import dataclass, field
 from typing import Mapping, Any, Optional, Sequence, Dict
 
 from allennlp.data import Vocabulary, DatasetReader, Instance
 from allennlp.tango.step import Step
+from allennlp.common.sequences import SlicedSequence, ConcatenatedSequence
 from tqdm import tqdm
 
 
@@ -72,3 +74,46 @@ class DatasetReaderAdapterStep(Step):
                 instance.index_fields(vocab)
 
         return DatasetDict(splits=instances_map, vocab=vocab)
+
+
+@Step.register("dataset_remix")
+class DatasetRemixStep(Step):
+    """
+    This step can remix splits in a dataset into new splits.
+    """
+
+    DETERMINISTIC = True
+    CACHEABLE = False  # This is so fast it's not worth caching.
+    VERSION = "001"
+
+    def run(  # type: ignore
+        self, input: DatasetDict, new_splits: Dict[str, str], keep_old_splits: bool = True
+    ) -> DatasetDict:
+        def get_slice(split_name: str) -> Sequence[Any]:
+            slice_match = re.match(r"(.*)\[([0123456789:]*)]", split_name)
+            if slice_match is None:
+                return input[split_name]
+            else:
+                split_name = slice_match[1]
+                slice_args = [int(a) if len(a) > 0 else None for a in slice_match[2].split(":")]
+                return SlicedSequence(input[split_name], slice(*slice_args))
+
+        def parse_split_spec(split_spec: str):
+            parts = [get_slice(name.strip()) for name in split_spec.split("+")]
+            if len(parts) == 1:
+                return parts[0]
+            else:
+                return ConcatenatedSequence(*parts)
+
+        if keep_old_splits:
+            result = dict(input.splits.items())
+        else:
+            result = {}
+        result.update(
+            {
+                new_split_name: parse_split_spec(new_split_spec)
+                for new_split_name, new_split_spec in new_splits.items()
+            }
+        )
+
+        return DatasetDict(vocab=input.vocab, metadata=input.metadata, splits=result)
