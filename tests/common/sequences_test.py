@@ -1,5 +1,5 @@
 import pytest
-from common.sequences import ConcatenatedSequence
+from allennlp.common.sequences import ConcatenatedSequence
 
 
 def assert_equal_including_exceptions(expected_fn, actual_fn):
