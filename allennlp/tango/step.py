@@ -301,13 +301,8 @@ class Step(Registrable, Generic[T]):
         self.unique_id_cache: Optional[str] = None
         if step_name is None:
             self.name = self.unique_id()
-            self.only_if_needed = False
         else:
             self.name = step_name
-            self.only_if_needed = True
-
-        if only_if_needed is not None:
-            self.only_if_needed = only_if_needed
 
         if cache_results is True:
             if not self.CACHEABLE:
@@ -344,6 +339,13 @@ class Step(Registrable, Generic[T]):
             raise ConfigurationError(
                 f"Step {self.name}'s cache_results parameter is set to an invalid value."
             )
+
+        if step_name is None:
+            self.only_if_needed = True
+        else:
+            self.only_if_needed = not self.cache_results
+        if only_if_needed is not None:
+            self.only_if_needed = only_if_needed
 
         self.work_dir_for_run: Optional[
             PathLike
