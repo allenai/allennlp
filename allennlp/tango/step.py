@@ -459,7 +459,7 @@ class Step(Registrable, Generic[T]):
         if self.work_dir_for_run is not None:
             raise ValueError("You can only run a Step's run() method once at a time.")
 
-        logger.info("Starting run for step %s of type %s", self.name, self.__class__)
+        logger.info("Starting run for step %s of type %s", self.name, self.__class__.__name__)
 
         if self.DETERMINISTIC:
             random.seed(784507111)
