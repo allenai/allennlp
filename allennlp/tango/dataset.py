@@ -39,9 +39,9 @@ class DatasetDict:
 @Step.register("dataset_reader_adapter")
 class DatasetReaderAdapterStep(Step):
     """
-    This step creates an `AllenNlpDataset` from old-school dataset readers. If you're
+    This step creates an `DatasetDict` from old-school dataset readers. If you're
     tempted to write a new `DatasetReader`, and then use this step with it, don't.
-    Just write a `Step` that creates the `AllenNlpDataset` you need directly.
+    Just write a `Step` that creates the `DatasetDict` you need directly.
     """
 
     DETERMINISTIC = True  # We're giving the dataset readers some credit here.
