@@ -356,6 +356,7 @@ class Step(Registrable, Generic[T]):
         constructor_to_call: Callable[..., "Step"] = None,
         constructor_to_inspect: Union[Callable[..., "Step"], Callable[["Step"], None]] = None,
         existing_steps: Optional[Dict[str, "Step"]] = None,
+        step_name: Optional[str] = None,
         **extras,
     ) -> "Step":
         # Why do we need a custom from_params? Step classes have a run() method that takes all the
@@ -445,7 +446,7 @@ class Step(Registrable, Generic[T]):
         else:
             params.assert_empty(subclass.__name__)
 
-        return subclass(**kwargs)
+        return subclass(step_name=step_name, **kwargs)
 
     @abstractmethod
     def run(self, **kwargs) -> T:
@@ -679,7 +680,7 @@ def step_graph_from_params(params: Dict[str, Params]) -> Dict[str, Step]:
         step_params_backup = copy.deepcopy(step_params)
         try:
             parsed_steps[step_name] = Step.from_params(
-                step_params, existing_steps=parsed_steps, extras={"step_name": step_name}
+                step_params, existing_steps=parsed_steps, step_name=step_name
             )
             steps_parsed += 1
         except _RefStep.MissingStepError:
