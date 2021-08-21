@@ -342,7 +342,7 @@ class Step(Registrable, Generic[T]):
                 assert False, "Step.DETERMINISTIC or step.CACHEABLE are set to an invalid value."
         else:
             raise ConfigurationError(
-                f"Step {step_name}'s cache_results parameter is set to an invalid value."
+                f"Step {self.name}'s cache_results parameter is set to an invalid value."
             )
 
         self.work_dir_for_run: Optional[
