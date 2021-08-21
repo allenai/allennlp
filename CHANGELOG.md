@@ -29,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `ScaledDotProductMatrixAttention`, and converted the transformer toolkit to use it
 - Added tests to ensure that all `Attention` and `MatrixAttention` implementations are interchangeable
 - Added a way for AllenNLP Tango to read and write datasets lazily.
+- Added a way to remix datasets flexibly
 
 ### Fixed
 
@@ -41,6 +42,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `ConfigurationError` is now pickleable.
 - Multitask models now support `TextFieldTensor` in heads, not just in the backbone.
 - Fixed the signature of `ScaledDotProductAttention` to match the other `Attention` classes
+- Fixed the way names are applied to Tango `Step` instances.
 
 ### Changed
 
