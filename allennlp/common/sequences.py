@@ -38,11 +38,26 @@ class ShuffledSequence(abc.Sequence):
 
 
 class SlicedSequence(ShuffledSequence):
+    """
+    Produces a sequence that's a slice into another sequence, without copying the elements.
+
+    This assumes that the inner sequence never changes. If it does, the results
+    are undefined.
+    """
+
     def __init__(self, inner_sequence: Sequence, s: slice):
         super().__init__(inner_sequence, range(*s.indices(len(inner_sequence))))
 
 
 class ConcatenatedSequence(abc.Sequence):
+    """
+    Produces a sequence that's the concatenation of multiple other sequences, without
+    copying the elements.
+
+    This assumes that the inner sequence never changes. If it does, the results
+    are undefined.
+    """
+
     def __init__(self, *sequences: Sequence):
         self.sequences = sequences
         self.cumulative_sequence_lengths = [0]
