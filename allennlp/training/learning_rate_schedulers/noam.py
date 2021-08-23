@@ -7,23 +7,55 @@ from allennlp.training.learning_rate_schedulers.learning_rate_scheduler import L
 @LearningRateScheduler.register("noam")
 class NoamLR(LearningRateScheduler):
     """
-    Implements the Noam Learning rate schedule. This corresponds to increasing the learning rate
-    linearly for the first `warmup_steps` training steps, and decreasing it thereafter proportionally
-    to the inverse square root of the step number, scaled by the inverse square root of the
-    dimensionality of the model. Time will tell if this is just madness or it's actually important.
+    Implements the Noam Learning rate schedule. This corresponds to increasing
+    the learning rate linearly for the first `warmup_steps` training steps, and
+    decreasing it thereafter proportionally to the inverse square root of the
+    step number, scaled by the inverse square root of the dimensionality of the
+    model. Time will tell if this is just madness or it's actually important.
+
+    The formula for learning rate when using `NoamLR` is:
+
+    `lr`= `factor *` (
+        `model_size **` (`-0.5`)
+        `*` min(`step**` (`-0.5`), `step * warmup_steps **` (`-1.5`))
+    )
 
     Registered as a `LearningRateScheduler` with name "noam".
 
     # Parameters
 
     optimizer : `torch.optim.Optimizer`
-        This argument does not get an entry in a configuration file for the object.
+        This argument does not get an entry in a configuration file for the
+        object.
     model_size : `int`, required.
-        The hidden size parameter which dominates the number of parameters in your model.
+        The hidden size parameter which dominates the number of parameters in
+        your model.
     warmup_steps : `int`, required.
         The number of steps to linearly increase the learning rate.
     factor : `float`, optional (default = `1.0`).
         The overall scale factor for the learning rate decay.
+
+    # Example
+
+    Config for using `NoamLR` with a model size of `1024`, warmup steps
+    of `5`, and `factor` of `.25`.
+
+    ```json
+    {
+        ...
+       "trainer":{
+            ...
+            "learning_rate_scheduler": {
+                "type": "noam",
+                "model_size": 1024,
+                "warmup_steps":5,
+                "factor":0.25
+            },
+            ...
+       }
+    }
+    ```
+    Note that you do NOT pass an `optimizer` key to the Learning rate scheduler.
     """
 
     def __init__(

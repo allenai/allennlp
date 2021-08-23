@@ -2,9 +2,9 @@ import os
 import shutil
 from os import PathLike
 from typing import MutableSequence, Any, Union, Iterable
-from allennlp.common.sequences import SlicedSequence
-
 from sqlitedict import SqliteDict
+
+from allennlp.common.sequences import SlicedSequence
 
 
 class SqliteSparseSequence(MutableSequence[Any]):
