@@ -33,4 +33,8 @@ class TestOutputLayer(AllenNlpTestCase):
 
     def test_forward_runs(self):
 
-        self.output_layer.forward(torch.randn(3, 3), torch.randn(3, 5))
+        inputs = (torch.randn(3, 3), torch.randn(3, 5))
+        output = self.output_layer.forward(*inputs)
+        scripted = torch.jit.script(self.output_layer)
+        scripted_output = scripted.forward(*inputs)
+        assert torch.allclose(output, scripted_output)

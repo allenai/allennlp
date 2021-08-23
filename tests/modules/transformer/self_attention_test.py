@@ -92,3 +92,15 @@ def test_loading_from_pretrained_weights_using_model_name(pretrained_name, relev
         hf_output = pretrained_module(hidden_states, attention_mask=attention_mask)[0]
 
     assert torch.allclose(output, hf_output)
+
+def test_forward_runs(self_attention):
+    batch_size = 2
+    seq_len = 3
+    dim = self_attention.query.in_features
+    hidden_states = torch.randn(batch_size, seq_len, dim)
+    attention_mask = torch.tensor([[1, 1, 0], [1, 0, 1]])[:, None, None, :]
+
+    output = self_attention.forward(hidden_states, attention_mask=attention_mask)
+    scripted = torch.jit.script(self_attention)
+    scripted_output = scripted.forward(hidden_states, attention_mask=attention_mask)
+    assert torch.allclose(output, scripted_output)

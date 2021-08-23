@@ -2,6 +2,7 @@
 An *attention* module that computes the similarity between
 an input vector and the rows of a matrix.
 """
+from typing import Optional
 
 import torch
 
@@ -40,8 +41,11 @@ class Attention(torch.nn.Module, Registrable):
 
     @overrides
     def forward(
-        self, vector: torch.Tensor, matrix: torch.Tensor, matrix_mask: torch.BoolTensor = None
+        self, vector: torch.Tensor, matrix: torch.Tensor, matrix_mask: Optional[torch.Tensor] = None
     ) -> torch.Tensor:
+        """
+        Note: `matrix_mask` should be a `BoolTensor`.
+        """
         similarities = self._forward_internal(vector, matrix)
         if self._normalize:
             return masked_softmax(similarities, matrix_mask)

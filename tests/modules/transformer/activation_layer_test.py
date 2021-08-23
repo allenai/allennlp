@@ -31,4 +31,8 @@ def test_can_construct_from_params(activation_layer, params_dict):
 
 
 def test_forward_runs(activation_layer):
-    activation_layer.forward(torch.randn(7, 5))
+    inputs = torch.randn(7, 5)
+    output = activation_layer.forward(inputs)
+    scripted = torch.jit.script(activation_layer)
+    scripted_output = scripted.forward(inputs)
+    assert torch.allclose(output, scripted_output)

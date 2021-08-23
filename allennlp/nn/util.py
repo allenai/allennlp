@@ -245,10 +245,9 @@ def get_dropout_mask(dropout_probability: float, tensor_for_masking: torch.Tenso
     dropout_mask = binary_mask.float().div(1.0 - dropout_probability)
     return dropout_mask
 
-
 def masked_softmax(
     vector: torch.Tensor,
-    mask: torch.BoolTensor,
+    mask: Optional[torch.Tensor] = None,
     dim: int = -1,
     memory_efficient: bool = False,
 ) -> torch.Tensor:
@@ -2071,6 +2070,13 @@ def masked_topk(
         top_indices.reshape(*permuted_size).permute(*reverse_permutation),
     )
 
+FloatingTypes = [torch.float, torch.float16, torch.float32, 
+                 torch.float64, torch.double, torch.half,
+                 torch.bfloat16]
+
+def is_floating_point(dtype: torch.dtype):
+    return dtype in FloatingTypes
+
 
 def info_value_of_dtype(dtype: torch.dtype):
     """
@@ -2078,17 +2084,31 @@ def info_value_of_dtype(dtype: torch.dtype):
     """
     if dtype == torch.bool:
         raise TypeError("Does not support torch.bool")
-    elif dtype.is_floating_point:
+    elif is_floating_point(dtype):
         return torch.finfo(dtype)
     else:
         return torch.iinfo(dtype)
 
-
-def min_value_of_dtype(dtype: torch.dtype):
+# TODO: refactor this to work with torchscript.
+def min_value_of_dtype(
+    dtype: torch.dtype,
+    # min16: float = torch.finfo(torch.float16).min,
+    # min32: float = torch.finfo(torch.float32).min,
+    # min64: float = torch.finfo(torch.float64).min,
+) -> Union[float, int]:
     """
     Returns the minimum value of a given PyTorch data type. Does not allow torch.bool.
     """
     return info_value_of_dtype(dtype).min
+    # if dtype == torch.float16:
+    #     return min16
+    # elif dtype == torch.float32:
+    #     return min32
+    # elif dtype == torch.float64:
+    #     return min64
+    # else:
+    #     raise RuntimeError(f"Expected dtype to be floating-point, got {dtype}")
+
 
 
 def max_value_of_dtype(dtype: torch.dtype):
@@ -2105,7 +2125,7 @@ def tiny_value_of_dtype(dtype: torch.dtype):
     This is different from `info_value_of_dtype(dtype).tiny` because it causes some NaN bugs.
     Only supports floating point dtypes.
     """
-    if not dtype.is_floating_point:
+    if not is_floating_point(dtype):
         raise TypeError("Only supports floating point dtypes.")
     if dtype == torch.float or dtype == torch.double:
         return 1e-13
