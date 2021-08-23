@@ -197,3 +197,6 @@ class Batch(Iterable):
         for i in numpy.random.randint(len(self.instances), size=10):
             print(f"Instance {i}:")
             print(f"\t{self.instances[i]}")
+
+    def __len__(self):
+        return len(self.instances)

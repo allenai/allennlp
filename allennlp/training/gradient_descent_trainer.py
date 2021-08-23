@@ -223,7 +223,7 @@ class GradientDescentTrainer(Trainer):
         validation_metric: Union[str, List[str]] = "-loss",
         validation_data_loader: DataLoader = None,
         num_epochs: int = 20,
-        serialization_dir: Optional[str] = None,
+        serialization_dir: Optional[Union[str, os.PathLike]] = None,
         checkpointer: Optional[Checkpointer] = None,
         cuda_device: Optional[Union[int, torch.device]] = None,
         grad_norm: Union[float, bool] = False,
@@ -731,9 +731,9 @@ class GradientDescentTrainer(Trainer):
             self._maybe_restore_checkpoint()
         except RuntimeError as e:
             configuration_error = ConfigurationError(
-                "Could not recover training from the checkpoint. Did you mean to output to "
-                "a different serialization directory or delete the existing serialization "
-                "directory?"
+                f"Could not recover training from the checkpoint in {self._serialization_dir}. "
+                "Did you mean to output to a different serialization directory or delete the "
+                "existing serialization directory?"
             )
             configuration_error.__cause__ = e
             raise configuration_error

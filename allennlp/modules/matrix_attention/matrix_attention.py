@@ -8,7 +8,7 @@ class MatrixAttention(torch.nn.Module, Registrable):
     `MatrixAttention` takes two matrices as input and returns a matrix of attentions.
 
     We compute the similarity between each row in each matrix and return unnormalized similarity
-    scores.  Because these scores are unnormalized, we don't take a mask as input; it's up to the
+    scores. Because these scores are unnormalized, we don't take a mask as input; it's up to the
     caller to deal with masking properly when this output is used.
 
     Input:
