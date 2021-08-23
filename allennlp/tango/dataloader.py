@@ -94,10 +94,14 @@ class ShuffledSequence(abc.Sequence):
     are undefined.
     """
 
-    def __init__(self, inner_sequence: Sequence):
+    def __init__(self, inner_sequence: Sequence, indices: Optional[Sequence[int]] = None):
         self.inner = inner_sequence
-        self.indices = list(range(len(inner_sequence)))
-        random.shuffle(self.indices)
+        self.indices: Sequence[int]
+        if indices is None:
+            self.indices = list(range(len(inner_sequence)))
+            random.shuffle(self.indices)
+        else:
+            self.indices = indices
 
     def __len__(self) -> int:
         return len(self.inner)
@@ -106,9 +110,7 @@ class ShuffledSequence(abc.Sequence):
         if isinstance(i, int):
             return self.inner[self.indices[i]]
         else:
-            result = ShuffledSequence(self.inner)
-            result.indices = self.indices[i]
-            return result
+            return ShuffledSequence(self.inner, self.indices[i])
 
     def __contains__(self, item) -> bool:
         return self.inner.__contains__(item)

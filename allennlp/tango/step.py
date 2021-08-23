@@ -293,6 +293,8 @@ class Step(Registrable, Generic[T]):
 
         if step_format is None:
             self.format = self.FORMAT
+            if isinstance(self.format, type):
+                self.format = self.format()
         else:
             self.format = step_format
 
