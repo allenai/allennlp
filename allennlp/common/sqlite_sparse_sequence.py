@@ -2,9 +2,10 @@ import os
 import shutil
 from os import PathLike
 from typing import MutableSequence, Any, Union, Iterable
-from allennlp.tango.dataloader import ShuffledSequence
 
 from sqlitedict import SqliteDict
+
+from allennlp.tango.dataloader import ShuffledSequence
 
 
 class SqliteSparseSequence(MutableSequence[Any]):
