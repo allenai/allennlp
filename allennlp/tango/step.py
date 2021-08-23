@@ -564,7 +564,7 @@ class Step(Registrable, Generic[T]):
     def unique_id(self) -> str:
         """Returns the unique ID for this step.
 
-        Unique IDs are of the shape `$class_name-$version-$hash`, where the hash is the has of the
+        Unique IDs are of the shape `$class_name-$version-$hash`, where the hash is the hash of the
         inputs for deterministic steps, and a random string of characters for non-deterministic ones."""
         if self.unique_id_cache is None:
             self.unique_id_cache = self.__class__.__name__
