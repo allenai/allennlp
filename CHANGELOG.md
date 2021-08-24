@@ -8,7 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Unreleased
 
 ### Added
-
+- Added more documentation to the learning rate schedulers to include a sample config object for how to use it.
+- Moved the pytorch learning rate schedulers wrappers to their own file called `pytorch_lr_schedulers.py` so that they will have their own documentation page.
 - Added a module `allennlp.nn.parallel` with a new base class, `DdpAccelerator`, which generalizes
   PyTorch's `DistributedDataParallel` wrapper to support other implementations. Two implementations of
   this class are provided. The default is `TorchDdpAccelerator` (registered at "torch"), which is just a thin wrapper around
@@ -28,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added Tango components, to be explored in detail in a later post
 - Added `ScaledDotProductMatrixAttention`, and converted the transformer toolkit to use it
 - Added tests to ensure that all `Attention` and `MatrixAttention` implementations are interchangeable
+- Added a way for AllenNLP Tango to read and write datasets lazily.
 - Added `from_pretrained_transformer_and_instances` constructor to `Vocabulary`
 
 ### Fixed

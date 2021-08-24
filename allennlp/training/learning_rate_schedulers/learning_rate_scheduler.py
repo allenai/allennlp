@@ -1,12 +1,11 @@
-from typing import Any, Dict, List, Union
-
+from typing import Any, Dict
 from overrides import overrides
 import torch
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.registrable import Registrable
-from allennlp.training.scheduler import Scheduler
 from allennlp.training.optimizers import Optimizer
+from allennlp.training.scheduler import Scheduler
 
 from transformers.optimization import (
     get_constant_schedule,
@@ -57,92 +56,29 @@ class _PyTorchLearningRateSchedulerWithMetricsWrapper(_PyTorchLearningRateSchedu
         self.lr_scheduler.step(metric)
 
 
-@LearningRateScheduler.register("step")
-class StepLearningRateScheduler(_PyTorchLearningRateSchedulerWrapper):
-    """
-    Registered as a `LearningRateScheduler` with name "step".  The "optimizer" argument does not get
-    an entry in a configuration file for the object.
-    """
-
-    def __init__(
-        self, optimizer: Optimizer, step_size: int, gamma: float = 0.1, last_epoch: int = -1
-    ) -> None:
-        lr_scheduler = torch.optim.lr_scheduler.StepLR(
-            optimizer=optimizer, step_size=step_size, gamma=gamma, last_epoch=last_epoch
-        )
-        super().__init__(lr_scheduler)
-
-
-@LearningRateScheduler.register("multi_step")
-class MultiStepLearningRateScheduler(_PyTorchLearningRateSchedulerWrapper):
-    """
-    Registered as a `LearningRateScheduler` with name "multi_step".  The "optimizer" argument does
-    not get an entry in a configuration file for the object.
-    """
-
-    def __init__(
-        self, optimizer: Optimizer, milestones: List[int], gamma: float = 0.1, last_epoch: int = -1
-    ) -> None:
-        lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(
-            optimizer=optimizer, milestones=milestones, gamma=gamma, last_epoch=last_epoch
-        )
-        super().__init__(lr_scheduler)
-
-
-@LearningRateScheduler.register("exponential")
-class ExponentialLearningRateScheduler(_PyTorchLearningRateSchedulerWrapper):
-    """
-    Registered as a `LearningRateScheduler` with name "exponential".  The "optimizer" argument does
-    not get an entry in a configuration file for the object.
-    """
-
-    def __init__(self, optimizer: Optimizer, gamma: float = 0.1, last_epoch: int = -1) -> None:
-        lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(
-            optimizer=optimizer, gamma=gamma, last_epoch=last_epoch
-        )
-        super().__init__(lr_scheduler)
-
-
-@LearningRateScheduler.register("reduce_on_plateau")
-class ReduceOnPlateauLearningRateScheduler(_PyTorchLearningRateSchedulerWithMetricsWrapper):
-    """
-    Registered as a `LearningRateScheduler` with name "reduce_on_plateau".  The "optimizer" argument
-    does not get an entry in a configuration file for the object.
-    """
-
-    def __init__(
-        self,
-        optimizer: Optimizer,
-        mode: str = "min",
-        factor: float = 0.1,
-        patience: int = 10,
-        verbose: bool = False,
-        threshold_mode: str = "rel",
-        threshold: float = 1e-4,
-        cooldown: int = 0,
-        min_lr: Union[float, List[float]] = 0,
-        eps: float = 1e-8,
-    ) -> None:
-        lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-            optimizer=optimizer,
-            mode=mode,
-            factor=factor,
-            patience=patience,
-            verbose=verbose,
-            threshold_mode=threshold_mode,
-            threshold=threshold,
-            cooldown=cooldown,
-            min_lr=min_lr,
-            eps=eps,
-        )
-        super().__init__(lr_scheduler)
-
-
 @LearningRateScheduler.register("constant")
 class ConstantLearningRateScheduler(_PyTorchLearningRateSchedulerWrapper):
     """
-    Registered as a `LearningRateScheduler` with name "constant".  The "optimizer" argument does
-    not get an entry in a configuration file for the object.
+    Registered as a `LearningRateScheduler` with name "constant".  The
+    "optimizer" argument does not get an entry in a configuration file for the
+    object.
+
+    # Example
+
+    Config for using the `ConstantLearningRateScheduler` Learning Rate
+    Scheduler.
+
+    ```json
+    {
+        ...
+       "trainer":{
+            ...
+            "learning_rate_scheduler": "constant",
+            ...
+       }
+    }
+    ```
+    Note that you do NOT pass a `optimizer` key to the Learning rate scheduler.
     """
 
     def __init__(self, optimizer: Optimizer, last_epoch: int = -1) -> None:
@@ -153,8 +89,35 @@ class ConstantLearningRateScheduler(_PyTorchLearningRateSchedulerWrapper):
 @LearningRateScheduler.register("constant_with_warmup")
 class ConstantWithWarmupLearningRateScheduler(_PyTorchLearningRateSchedulerWrapper):
     """
-    Registered as a `LearningRateScheduler` with name "constant_with_warmup".  The "optimizer" argument does
-    not get an entry in a configuration file for the object.
+    Registered as a `LearningRateScheduler` with name "constant_with_warmup".
+    The "optimizer" argument does not get an entry in a configuration file for
+    the object.
+
+    # Parameters
+
+    optimizer : `torch.optim.Optimizer`
+        This argument does not get an entry in a configuration file for the
+        object.
+    num_warmup_steps : `int`, required
+        The number of steps to linearly increase the learning rate.
+
+    # Example
+
+    Config for using the `ConstantWithWarmupLearningRateScheduler` Learning Rate
+     Scheduler with `num_warmup_steps` set `100`.
+
+    ```json
+    {
+        ...
+       "trainer":{
+            ...
+            "learning_rate_scheduler": {
+                "type": "constant_with_warmup",
+                "num_warmup_steps": 100
+            },
+            ...
+       }
+    }
     """
 
     def __init__(self, optimizer: Optimizer, num_warmup_steps: int, last_epoch: int = -1) -> None:
@@ -169,6 +132,32 @@ class CosineWithWarmupLearningRateScheduler(_PyTorchLearningRateSchedulerWrapper
     """
     Registered as a `LearningRateScheduler` with name "cosine_with_warmup".  The "optimizer" argument does
     not get an entry in a configuration file for the object.
+
+    # Parameters
+
+    optimizer : `torch.optim.Optimizer`
+        This argument does not get an entry in a configuration file for the
+        object.
+    num_warmup_steps : `int`, required
+        The number of steps to linearly increase the learning rate.
+
+    # Example
+
+    Config for using the `CosineWithWarmupLearningRateScheduler` Learning Rate
+     Scheduler with `num_warmup_steps` set `100`.
+
+    ```json
+    {
+        ...
+       "trainer":{
+            ...
+            "learning_rate_scheduler": {
+                "type": "cosine_with_warmup",
+                "num_warmup_steps": 100
+            },
+            ...
+       }
+    }
     """
 
     def __init__(
@@ -192,8 +181,27 @@ class CosineWithWarmupLearningRateScheduler(_PyTorchLearningRateSchedulerWrapper
 @LearningRateScheduler.register("cosine_hard_restarts_with_warmup")
 class CosineHardRestartsWithWarmupLearningRateScheduler(_PyTorchLearningRateSchedulerWrapper):
     """
-    Registered as a `LearningRateScheduler` with name "cosine_hard_restarts_with_warmup".
-    The "optimizer" argument does not get an entry in a configuration file for the object.
+    Registered as a `LearningRateScheduler` with name
+    "cosine_hard_restarts_with_warmup". The "optimizer" argument does not get an
+     entry in a configuration file for the object.
+
+    # Example
+
+    Config for using the `CosineHardRestartsWithWarmupLearningRateScheduler`
+    Learning Rate Scheduler with `num_warmup_steps` set `100`.
+
+    ```json
+    {
+        ...
+       "trainer":{
+            ...
+            "learning_rate_scheduler": {
+                "type": "cosine_hard_restarts_with_warmup",
+                "num_warmup_steps": 100
+            },
+            ...
+       }
+    }
     """
 
     def __init__(
