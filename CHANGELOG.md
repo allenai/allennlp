@@ -30,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `ScaledDotProductMatrixAttention`, and converted the transformer toolkit to use it
 - Added tests to ensure that all `Attention` and `MatrixAttention` implementations are interchangeable
 - Added a way for AllenNLP Tango to read and write datasets lazily.
+- Added `from_pretrained_transformer_and_instances` constructor to `Vocabulary`
 
 ### Fixed
 
