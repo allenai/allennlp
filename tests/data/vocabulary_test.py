@@ -958,22 +958,6 @@ class TestVocabularyFromPretrainedTransformerAndInstances(AllenNlpTestCase):
 
         assert vocab.get_vocab_size(namespace) == expected_vocab_size
 
-    @pytest.mark.parametrize("model1_name", ["bert-base-cased", "roberta-base"])
-    @pytest.mark.parametrize("model2_name", ["bert-base-cased", "roberta-base"])
-    def test_with_single_namespace_and_multiple_models(self, model1_name, model2_name):
-        dataset = self.single_namespace_dataset
-        namespace = "namespace_1"
-
-        model1_tokens = self._get_expected_vocab(dataset, namespace, model1_name)
-        model2_tokens = self._get_expected_vocab(dataset, namespace, model2_name)
-        expected_vocab_size = len(model1_tokens.union(model2_tokens))
-
-        vocab = Vocabulary.from_pretrained_transformer_and_instances(
-            dataset, {namespace: [model1_name, model2_name]}
-        )
-
-        assert vocab.get_vocab_size(namespace) == expected_vocab_size
-
     @pytest.mark.parametrize("model_name", ["bert-base-cased", "roberta-base"])
     def test_only_updates_single_namespace_when_multiple_present(self, model_name):
         dataset = self.multiple_namespace_dataset
@@ -1013,30 +997,3 @@ class TestVocabularyFromPretrainedTransformerAndInstances(AllenNlpTestCase):
 
         assert vocab.get_vocab_size(namespace1) == namespace1_vocab_size
         assert vocab.get_vocab_size(namespace2) == namespace2_vocab_size
-
-    @pytest.mark.parametrize("namespace1_list", [["bert-base-cased", "distilbert-base-cased"]])
-    @pytest.mark.parametrize("namespace2_list", [["roberta-base", "distilroberta-base"]])
-    def test_with_multiple_models_across_multiple_namespaces(
-        self, namespace1_list, namespace2_list
-    ):
-        dataset = self.multiple_namespace_dataset
-        namespace1 = "namespace_1"
-        namespace2 = "namespace_2"
-
-        namespace1_vocab = set()
-        namespace2_vocab = set()
-
-        for model1_name in namespace1_list:
-            namespace1_model_vocab = self._get_expected_vocab(dataset, namespace1, model1_name)
-            namespace1_vocab.update(namespace1_model_vocab)
-
-        for model2_name in namespace2_list:
-            namespace2_model_vocab = self._get_expected_vocab(dataset, namespace2, model2_name)
-            namespace2_vocab.update(namespace2_model_vocab)
-
-        vocab = Vocabulary.from_pretrained_transformer_and_instances(
-            dataset, {namespace1: namespace1_list, namespace2: namespace2_list}
-        )
-
-        assert vocab.get_vocab_size(namespace1) == len(namespace1_vocab)
-        assert vocab.get_vocab_size(namespace2) == len(namespace2_vocab)

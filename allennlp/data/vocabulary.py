@@ -427,7 +427,7 @@ class Vocabulary(Registrable):
     def from_pretrained_transformer_and_instances(
         cls,
         instances: Iterable["adi.Instance"],
-        transformers: Dict[str, Union[str, List[str]]],
+        transformers: Dict[str, str],
         min_count: Dict[str, int] = None,
         max_vocab_size: Union[int, Dict[str, int]] = None,
         non_padded_namespaces: Iterable[str] = DEFAULT_NON_PADDED_NAMESPACES,
@@ -452,10 +452,9 @@ class Vocabulary(Registrable):
 
         # Parameters
 
-        transformers : `Dict[str, Union[str, List[str]]]`
+        transformers : `Dict[str, str]`
             Dictionary mapping the vocab namespaces (keys) to a transformer model name (value).
-            If desired, multiple model names can be provided to a single namespace as a list of
-            strings. Namespaces not included will be ignored.
+            Namespaces not included will be ignored.
 
         # Examples
 
@@ -468,7 +467,7 @@ class Vocabulary(Registrable):
                 type: 'from_pretrained_transformer_and_instances',
                 transformers: {
                     'namespace1': 'bert-base-cased',
-                    'namespace2': ['bert-base-cased', 'roberta-base'],
+                    'namespace2': 'roberta-base',
                 },
             }
         }
@@ -487,15 +486,11 @@ class Vocabulary(Registrable):
             oov_token=oov_token,
         )
 
-        for namespace, model_name_list in transformers.items():
-            if isinstance(model_name_list, str):
-                model_name_list = [model_name_list]
-
-            for model_name in model_name_list:
-                transformer_vocab = cls.from_pretrained_transformer(
-                    model_name=model_name, namespace=namespace
-                )
-                vocab.extend_from_vocab(transformer_vocab)
+        for namespace, model_name in transformers.items():
+            transformer_vocab = cls.from_pretrained_transformer(
+                model_name=model_name, namespace=namespace
+            )
+            vocab.extend_from_vocab(transformer_vocab)
 
         return vocab
 
