@@ -4,13 +4,14 @@ every time we release a new version.*
 """
 
 import itertools
+import random
 import re
 from dataclasses import dataclass, field
 from typing import Mapping, Any, Optional, Sequence, Dict
 
 from allennlp.data import Vocabulary, DatasetReader, Instance
 from allennlp.tango.step import Step
-from allennlp.common.sequences import SlicedSequence, ConcatenatedSequence
+from allennlp.common.sequences import SlicedSequence, ConcatenatedSequence, ShuffledSequence
 from tqdm import tqdm
 
 
@@ -87,8 +88,24 @@ class DatasetRemixStep(Step):
     VERSION = "001"
 
     def run(  # type: ignore
-        self, input: DatasetDict, new_splits: Dict[str, str], keep_old_splits: bool = True
+        self,
+        input: DatasetDict,
+        new_splits: Dict[str, str],
+        keep_old_splits: bool = True,
+        shuffle_before: bool = False,
+        shuffle_after: bool = False,
+        random_seed: int = 1532637578,
     ) -> DatasetDict:
+        random.seed(random_seed)
+
+        if shuffle_before:
+            input_splits: Mapping[str, Sequence[Any]] = {
+                split_name: ShuffledSequence(split_instances)
+                for split_name, split_instances in input.splits.items()
+            }
+        else:
+            input_splits = input.splits
+
         def get_slice(split_name: str) -> Sequence[Any]:
             slice_match = re.match(r"(.*)\[([0123456789:]*)]", split_name)
             if slice_match is None:
@@ -106,7 +123,7 @@ class DatasetRemixStep(Step):
                 return ConcatenatedSequence(*parts)
 
         if keep_old_splits:
-            result = dict(input.splits.items())
+            result = dict(input_splits.items())
         else:
             result = {}
         result.update(
@@ -115,5 +132,11 @@ class DatasetRemixStep(Step):
                 for new_split_name, new_split_spec in new_splits.items()
             }
         )
+
+        if shuffle_after:
+            result = {
+                split_name: ShuffledSequence(split_instances)
+                for split_name, split_instances in result.items()
+            }
 
         return DatasetDict(vocab=input.vocab, metadata=input.metadata, splits=result)
