@@ -17,6 +17,7 @@ from allennlp.commands.subcommand import Subcommand
 from allennlp.commands.test_install import TestInstall
 from allennlp.commands.train import Train
 from allennlp.commands.count_instances import CountInstances
+from allennlp.commands.tango import Tango
 from allennlp.common.plugins import import_plugins
 from allennlp.common.util import import_module_and_submodules
 from allennlp.commands.checklist import CheckList

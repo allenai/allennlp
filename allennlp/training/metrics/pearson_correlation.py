@@ -84,7 +84,7 @@ class PearsonCorrelation(Metric):
             self.reset()
 
         if np.around(denominator, decimals=5) == 0:
-            pearson_r = 0
+            pearson_r = 0.0
         else:
             pearson_r = covariance / denominator
         return pearson_r

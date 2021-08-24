@@ -17,9 +17,10 @@ on:
   - cron: '37 11 * * 1,2,3,4,5'  # early morning (11:37 UTC / 4:37 AM PDT) Monday - Friday
 
 env:
-  # NOTE: Need to update `TORCH_VERSION` and `TORCH_VISION_VERSION` for new torch releases.
+  # NOTE: Need to update `TORCH_VERSION`, `TORCH_CPU_INSTALL` and `TORCH_GPU_INSTALL` for new torch releases.
   TORCH_VERSION: 1.9.0
-  TORCH_VISION_VERSION: 0.10.0
+  TORCH_CPU_INSTALL: pip install torch==1.9.0+cpu torchvision==0.10.0+cpu torchaudio==0.9.0 -f https://download.pytorch.org/whl/torch_stable.html
+  TORCH_GPU_INSTALL: pip install torch==1.9.0+cu111 torchvision==0.10.0+cu111 torchaudio==0.9.0 -f https://download.pytorch.org/whl/torch_stable.html # Our self-hosted GPU runners currently support CUDA 11.*
   # Change this to invalidate existing cache.
   CACHE_PREFIX: v0
   # Disable tokenizers parallelism because this doesn't help, and can cause issues in distributed tests.
@@ -74,7 +75,7 @@ jobs:
   checks:
     name: ${{ matrix.task.name }}
     runs-on: ${{ matrix.task.runs_on }}
-    timeout-minutes: 20
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -94,9 +95,9 @@ jobs:
           run: make test
 
         - name: GPU Tests
-          runs_on: [self-hosted, GPU]
+          runs_on: [self-hosted, GPU, Multi GPU]
           coverage_report: true
-          torch_platform: cu111  # Our self-hosted GPU runners currently support CUDA 11.*
+          torch_platform: gpu
           run: make gpu-tests
 
         - name: Model Tests
@@ -132,6 +133,16 @@ jobs:
         # Use week number in cache key so we can refresh the cache weekly.
         echo "WEEK_NUMBER=$(date +%V)" >> $GITHUB_ENV
 
+    - name: Set build variables (CPU only)
+      if: matrix.task.torch_platform == 'cpu'
+      run: |
+        echo "TORCH_INSTALL=$TORCH_CPU_INSTALL" >> $GITHUB_ENV
+
+    - name: Set build variables (GPU only)
+      if: matrix.task.torch_platform == 'gpu'
+      run: |
+        echo "TORCH_INSTALL=$TORCH_GPU_INSTALL" >> $GITHUB_ENV
+
     - uses: actions/cache@v2
       id: virtualenv-cache
       with:
@@ -145,7 +156,7 @@ jobs:
       run: |
         test -d .venv || virtualenv -p $(which python) --copies --reset-app-data .venv
         . .venv/bin/activate
-        make install TORCH_VERSION="torch==${TORCH_VERSION}+${{ matrix.task.torch_platform }} torchvision==${TORCH_VISION_VERSION}+${{ matrix.task.torch_platform }} -f https://download.pytorch.org/whl/torch_stable.html"
+        make install TORCH_INSTALL="$TORCH_INSTALL"
 
     - name: Setup virtual environment (cache hit)
       if: steps.virtualenv-cache.outputs.cache-hit == 'true'
@@ -280,7 +291,7 @@ jobs:
       run: |
         test -d .venv || virtualenv -p $(which python) --copies --reset-app-data .venv
         . .venv/bin/activate
-        make install TORCH_VERSION="torch==${TORCH_VERSION}+cpu torchvision==${TORCH_VISION_VERSION}+cpu -f https://download.pytorch.org/whl/torch_stable.html"
+        make install TORCH_INSTALL="$TORCH_CPU_INSTALL"
 
     - name: Setup virtual environment (cache hit)
       if: steps.virtualenv-cache.outputs.cache-hit == 'true'
@@ -385,37 +396,19 @@ jobs:
     name: Docker (CUDA ${{ matrix.cuda }})
     timeout-minutes: 18
     if: github.repository == 'allenai/allennlp'
-    # Run on self-hosted to utilize layer caching.
-    runs-on: [self-hosted, Docker-enabled]
+    runs-on: ubuntu-latest
     strategy:
       matrix:
-        cuda: ['10.1', '10.2', '11.1']
+        cuda: ['10.2', '11.1']
 
     steps:
     - uses: actions/checkout@v2
 
-    - name: Set torch version
+    - name: Set image name and torch version
       env:
         CUDA: ${{ matrix.cuda }}
       run: |
-        # Check the install instructions on https://pytorch.org/ to keep these up-to-date.
-        if [[ $CUDA == '10.1' ]]; then
-            # NOTE: We need to use an older version of torch to support CUDA 10.1
-            echo "DOCKER_TORCH_VERSION='torch==1.8.0+cu101 torchvision==0.9.0+cu101 -f https://download.pytorch.org/whl/torch_stable.html'" >> $GITHUB_ENV;
-        elif [[ $CUDA == '10.2' ]]; then
-            # NOTE: 10.2 is still the default but that could change in the next release.
-            echo "DOCKER_TORCH_VERSION='torch==${{ env.TORCH_VERSION }} torchvision==${{ env.TORCH_VISION_VERSION }}'" >> $GITHUB_ENV;
-        elif [[ $CUDA == '11.1' ]]; then
-            echo "DOCKER_TORCH_VERSION='torch==${{ env.TORCH_VERSION }}+cu111 torchvision==${{ env.TORCH_VISION_VERSION }}+cu111 -f https://download.pytorch.org/whl/torch_stable.html'" >> $GITHUB_ENV;
-        else
-            echo "Unhandled CUDA version $CUDA";
-            exit 1;
-        fi
-
-    - name: Set image name
-      env:
-        CUDA: ${{ matrix.cuda }}
-      run: |
+        echo "DOCKER_TORCH_VERSION=${TORCH_VERSION}-cuda${CUDA}" >> $GITHUB_ENV;
         if [[ $GITHUB_EVENT_NAME == 'release' ]]; then
             echo "DOCKER_IMAGE_NAME=allennlp/allennlp:${GITHUB_REF#refs/tags/}-cuda${CUDA}" >> $GITHUB_ENV;
         else
@@ -503,7 +496,7 @@ jobs:
       run: |
         test -d .venv || virtualenv -p $(which python) --copies --reset-app-data .venv
         . .venv/bin/activate
-        make install TORCH_VERSION="torch==${TORCH_VERSION}+cpu torchvision==${TORCH_VISION_VERSION}+cpu -f https://download.pytorch.org/whl/torch_stable.html"
+        make install TORCH_INSTALL="$TORCH_CPU_INSTALL"
 
     - name: Setup virtual environment (cache hit)
       if: steps.virtualenv-cache.outputs.cache-hit == 'true'
