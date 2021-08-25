@@ -20,22 +20,18 @@ class PushToHf(Subcommand):
     def add_subparser(self, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
         description = """Push a model to the Hugging Face Hub
 
-        Pushing your models to the Hugging Face Hub ([hf.co](https://hf.co/)) 
+        Pushing your models to the Hugging Face Hub ([hf.co](https://hf.co/))
         allows you to share your models with others. On top of that, you can try
         the models directly in the browser with the available widgets.
 
-        Before running this command, login to Hugging Face with huggingface-cli login
+        Before running this command, login to Hugging Face with `huggingface-cli login`.
+
+        You can specify either a `serialization_dir` or an `archive_path`, but using the
+        first option is recommended since the `serialization_dir` contains more useful
+        information such as metrics and TensorBoard traces.
         """
         subparser = parser.add_parser(self.name, description=description, help=description)
         subparser.set_defaults(func=push)
-
-        subparser.add_argument(
-            "-a",
-            "--archive_path",
-            required=True,
-            type=str,
-            help="full path to the zipped model or to a directory with the serialized model.",
-        )
 
         subparser.add_argument(
             "-n",
@@ -44,6 +40,21 @@ class PushToHf(Subcommand):
             type=str,
             default="Name of the repository",
             help="Name of the repository",
+        )
+
+        model_dir_group = subparser.add_mutually_exclusive_group(required=True)
+        model_dir_group.add_argument(
+            "-s",
+            "--serialization_dir",
+            type=str,
+            help="directory in which to save the model and its logs are saved",
+        )
+
+        model_dir_group.add_argument(
+            "-a",
+            "--archive_path",
+            type=str,
+            help="full path to the zipped model, using serialization_dir instead is recommended",
         )
 
         subparser.add_argument(
@@ -77,8 +88,9 @@ class PushToHf(Subcommand):
 
 def push(args: argparse.Namespace):
     push_to_hf(
-        args.archive_path,
         args.repo_name,
+        args.serialization_dir,
+        args.archive_path,
         args.organization,
         args.commit_message,
         args.local_repo_path,

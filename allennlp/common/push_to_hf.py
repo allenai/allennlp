@@ -3,7 +3,6 @@ Utilities for pushing models to the Hugging Face Hub ([hf.co](https://hf.co/)).
 """
 
 import logging
-import sys
 from typing import Optional, Union
 from pathlib import Path
 
@@ -68,8 +67,9 @@ def _copy_allowed_file(filepath: Path, dst_directory: Path):
 
 
 def push_to_hf(
-    archive_path: Union[str, Path],
     repo_name: str,
+    serialization_dir: Optional[Union[str, Path]] = None,
+    archive_path: Optional[Union[str, Path]] = None,
     organization: Optional[str] = None,
     commit_message: str = "Update repository",
     local_repo_path: Union[str, Path] = "hub",
@@ -78,11 +78,14 @@ def push_to_hf(
 
     # Parameters
 
-    archive_path : `Union[str, Path]`
-        Full path to the zipped model (e.g. model/model.tar.gz) or to a directory with the serialized model.
-
     repo_name: `str`
         Name of the repository in the Hugging Face Hub.
+
+    serialization_dir : `Optional[str]`, optional (default = `None`)
+        Full path to a directory with the serialized model.
+
+    archive_path : `Optional[str]`, optional (default = `None`)
+        Full path to the zipped model (e.g. model/model.tar.gz). Use `serialization_dir` if possible
 
     organization : `Optional[str]`, optional (default = `None`)
         Name of organization to which the model should be uploaded.
@@ -94,15 +97,36 @@ def push_to_hf(
         Local directory where the repository will be saved.
 
     """
-    archive_path = Path(archive_path)
 
-    if not archive_path.exists():
-        logging.error(
-            f"Can't find archive path: {archive_path}, please"
-            "point to either a .tar.gz archive or to a directory"
-            "with the serialized model."
-        )
-        sys.exit(1)
+    if serialization_dir is not None:
+        serialization_dir = Path(serialization_dir)
+        if archive_path is not None:
+            raise ValueError(
+                "serialization_dir and archive_path are mutually exclusive, please just use one."
+            )
+        if not serialization_dir.exists() or not serialization_dir.is_dir():
+            raise ValueError(
+                f"Can't find path: {serialization_dir}, please point"
+                "to a directory with the serialized model."
+            )
+    else:
+        archive_path = Path(archive_path)
+        if archive_path is None:
+            raise ValueError("please specify either serialization_dir or archive_path")
+        elif (
+            not archive_path.exists()
+            or not zipfile.is_zipfile(archive_path)
+            and not tarfile.is_tarfile(archive_path)
+        ):
+            raise ValueError(
+                f"Can't find path: {archive_path}, please point to a .tar.gz archive"
+                "or to a directory with the serialized model."
+            )
+        else:
+            logging.info(
+                "Using the archive_path is discouraged. Using the serialization_dir"
+                "will also upload metrics andTensorBoard traces to the Hugging Face Hub."
+            )
 
     # Create the repo (or clone its content if it's nonempty)
     api = HfApi()
@@ -127,10 +151,10 @@ def push_to_hf(
 
     # Extract information from either serializable directory or a
     # .tar.gz file
-    if archive_path.is_dir():
-        for filename in archive_path.iterdir():
+    if serialization_dir is not None:
+        for filename in serialization_dir.iterdir():
             _copy_allowed_file(Path(filename), repo_local_path)
-    elif zipfile.is_zipfile(archive_path) or tarfile.is_tarfile(archive_path):
+    else:
         with tempfile.TemporaryDirectory() as temp_dir:
             extracted_dir = Path(cached_path(archive_path, temp_dir, extract_archive=True))
             for filename in extracted_dir.iterdir():
