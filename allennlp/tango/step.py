@@ -301,13 +301,8 @@ class Step(Registrable, Generic[T]):
         self.unique_id_cache: Optional[str] = None
         if step_name is None:
             self.name = self.unique_id()
-            self.only_if_needed = False
         else:
             self.name = step_name
-            self.only_if_needed = True
-
-        if only_if_needed is not None:
-            self.only_if_needed = only_if_needed
 
         if cache_results is True:
             if not self.CACHEABLE:
@@ -342,8 +337,15 @@ class Step(Registrable, Generic[T]):
                 assert False, "Step.DETERMINISTIC or step.CACHEABLE are set to an invalid value."
         else:
             raise ConfigurationError(
-                f"Step {step_name}'s cache_results parameter is set to an invalid value."
+                f"Step {self.name}'s cache_results parameter is set to an invalid value."
             )
+
+        if step_name is None:
+            self.only_if_needed = True
+        else:
+            self.only_if_needed = not self.cache_results
+        if only_if_needed is not None:
+            self.only_if_needed = only_if_needed
 
         self.work_dir_for_run: Optional[
             PathLike
@@ -356,6 +358,7 @@ class Step(Registrable, Generic[T]):
         constructor_to_call: Callable[..., "Step"] = None,
         constructor_to_inspect: Union[Callable[..., "Step"], Callable[["Step"], None]] = None,
         existing_steps: Optional[Dict[str, "Step"]] = None,
+        step_name: Optional[str] = None,
         **extras,
     ) -> "Step":
         # Why do we need a custom from_params? Step classes have a run() method that takes all the
@@ -445,7 +448,7 @@ class Step(Registrable, Generic[T]):
         else:
             params.assert_empty(subclass.__name__)
 
-        return subclass(**kwargs)
+        return subclass(step_name=step_name, **kwargs)
 
     @abstractmethod
     def run(self, **kwargs) -> T:
@@ -456,7 +459,7 @@ class Step(Registrable, Generic[T]):
         if self.work_dir_for_run is not None:
             raise ValueError("You can only run a Step's run() method once at a time.")
 
-        logger.info("Starting run for step %s of type %s", self.name, self.__class__)
+        logger.info("Starting run for step %s of type %s", self.name, self.__class__.__name__)
 
         if self.DETERMINISTIC:
             random.seed(784507111)
@@ -561,7 +564,7 @@ class Step(Registrable, Generic[T]):
     def unique_id(self) -> str:
         """Returns the unique ID for this step.
 
-        Unique IDs are of the shape `$class_name-$version-$hash`, where the hash is the has of the
+        Unique IDs are of the shape `$class_name-$version-$hash`, where the hash is the hash of the
         inputs for deterministic steps, and a random string of characters for non-deterministic ones."""
         if self.unique_id_cache is None:
             self.unique_id_cache = self.__class__.__name__
@@ -679,7 +682,7 @@ def step_graph_from_params(params: Dict[str, Params]) -> Dict[str, Step]:
         step_params_backup = copy.deepcopy(step_params)
         try:
             parsed_steps[step_name] = Step.from_params(
-                step_params, existing_steps=parsed_steps, extras={"step_name": step_name}
+                step_params, existing_steps=parsed_steps, step_name=step_name
             )
             steps_parsed += 1
         except _RefStep.MissingStepError:

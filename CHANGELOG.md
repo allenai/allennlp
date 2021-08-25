@@ -31,6 +31,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `ScaledDotProductMatrixAttention`, and converted the transformer toolkit to use it
 - Added tests to ensure that all `Attention` and `MatrixAttention` implementations are interchangeable
 - Added a way for AllenNLP Tango to read and write datasets lazily.
+- Added a way to remix datasets flexibly
+- Added `from_pretrained_transformer_and_instances` constructor to `Vocabulary`
 
 ### Fixed
 
@@ -45,6 +47,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed the signature of `ScaledDotProductAttention` to match the other `Attention` classes
 - `allennlp` commands will now catch `SIGTERM` signals and handle them similar to `SIGINT` (keyboard interrupt).
 - The `MultiProcessDataLoader` will properly shutdown its workers when a `SIGTERM` is received.
+- Fixed the way names are applied to Tango `Step` instances.
 
 ### Changed
 
