@@ -112,8 +112,6 @@ def push_to_hf(
             )
     elif archive_path is not None:
         working_dir = Path(archive_path)
-        if archive_path is None:
-            raise ValueError("please specify either serialization_dir or archive_path")
         elif (
             not working_dir.exists()
             or not zipfile.is_zipfile(working_dir)
@@ -128,6 +126,9 @@ def push_to_hf(
                 "Using the archive_path is discouraged. Using the serialization_dir"
                 "will also upload metrics andTensorBoard traces to the Hugging Face Hub."
             )
+    else:
+        raise ValueError("please specify either serialization_dir or archive_path")
+        
 
     # Create the repo (or clone its content if it's nonempty)
     api = HfApi()
