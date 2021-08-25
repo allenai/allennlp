@@ -112,7 +112,7 @@ def push_to_hf(
             )
     elif archive_path is not None:
         working_dir = Path(archive_path)
-        elif (
+        if (
             not working_dir.exists()
             or not zipfile.is_zipfile(working_dir)
             and not tarfile.is_tarfile(working_dir)
@@ -128,7 +128,6 @@ def push_to_hf(
             )
     else:
         raise ValueError("please specify either serialization_dir or archive_path")
-        
 
     # Create the repo (or clone its content if it's nonempty)
     api = HfApi()
