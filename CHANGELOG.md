@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Unreleased
 
 ### Added
+
 - Added more documentation to the learning rate schedulers to include a sample config object for how to use it.
 - Moved the pytorch learning rate schedulers wrappers to their own file called `pytorch_lr_schedulers.py` so that they will have their own documentation page.
 - Added a module `allennlp.nn.parallel` with a new base class, `DdpAccelerator`, which generalizes
@@ -42,6 +43,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `ConfigurationError` is now pickleable.
 - Multitask models now support `TextFieldTensor` in heads, not just in the backbone.
 - Fixed the signature of `ScaledDotProductAttention` to match the other `Attention` classes
+- `allennlp` commands will now catch `SIGTERM` signals and handle them similar to `SIGINT` (keyboard interrupt).
+- The `MultiProcessDataLoader` will properly shutdown its workers when a `SIGTERM` is received.
 
 ### Changed
 
