@@ -1,4 +1,4 @@
-from common.det_hash import det_hash, DetHashWithVersion
+from allennlp.common.det_hash import det_hash, DetHashWithVersion
 
 
 def test_normal_det_hash():
