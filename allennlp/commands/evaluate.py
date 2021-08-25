@@ -168,9 +168,8 @@ def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
     if args.extend_vocab:
         logger.info("Vocabulary is being extended with embedding sources.")
         embedding_sources = (
-        json.loads(args.embedding_sources_mapping) if args.embedding_sources_mapping else {}
+            json.loads(args.embedding_sources_mapping) if args.embedding_sources_mapping else {}
         )
-    model.extend_embedder_vocab(embedding_sources)
 
     for index in range(len(evaluation_data_path_list)):
         config = deepcopy(archive.config)
@@ -193,6 +192,7 @@ def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
         if args.extend_vocab:
             logger.info("Vocabulary is being extended with test instances.")
             model.vocab.extend_from_instances(instances=data_loader.iter_instances())
+            model.extend_embedder_vocab(embedding_sources)
 
         data_loader.index_with(model.vocab)
 
