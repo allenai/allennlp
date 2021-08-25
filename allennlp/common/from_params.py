@@ -14,11 +14,13 @@ from typing import (
     Type,
     TypeVar,
     Union,
+    Optional,
 )
 import inspect
 import logging
 
 from allennlp.common.checks import ConfigurationError
+from allennlp.common.det_hash import CustomDetHash
 from allennlp.common.lazy import Lazy
 from allennlp.common.params import Params
 
@@ -112,13 +114,19 @@ def remove_optional(annotation: type):
         return annotation
 
 
-def infer_params(
+def infer_constructor_params(
     cls: Type[T], constructor: Union[Callable[..., T], Callable[[T], None]] = None
-) -> Dict[str, Any]:
+) -> Dict[str, inspect.Parameter]:
     if constructor is None:
         constructor = cls.__init__
+    return infer_method_params(cls, constructor)
 
-    signature = inspect.signature(constructor)
+
+infer_params = infer_constructor_params  # Legacy name
+
+
+def infer_method_params(cls: Type[T], method: Callable) -> Dict[str, inspect.Parameter]:
+    signature = inspect.signature(method)
     parameters = dict(signature.parameters)
 
     has_kwargs = False
@@ -135,8 +143,8 @@ def infer_params(
     if not has_kwargs:
         return parameters
 
-    # "mro" is "method resolution order".  The first one is the current class, the next is the
-    # first superclass, and so on.  We take the first superclass we find that inherits from
+    # "mro" is "method resolution order". The first one is the current class, the next is the
+    # first superclass, and so on. We take the first superclass we find that inherits from
     # FromParams.
     super_class = None
     for super_class_candidate in cls.mro()[1:]:
@@ -313,11 +321,31 @@ def construct_arg(
     popped_params: Params,
     annotation: Type,
     default: Any,
+    could_be_step: bool = True,
     **extras,
 ) -> Any:
     """
     The first two parameters here are only used for logging if we encounter an error.
     """
+    from allennlp.tango.step import Step, _RefStep
+
+    if could_be_step:
+        # We try parsing as a step _first_. Parsing as a non-step always succeeds, because
+        # it will fall back to returning a dict. So we can't try parsing as a non-step first.
+        backup_params = deepcopy(popped_params)
+        try:
+            return construct_arg(
+                class_name,
+                argument_name,
+                popped_params,
+                Step[annotation],  # type: ignore
+                default,
+                could_be_step=False,
+                **extras,
+            )
+        except (ValueError, TypeError, ConfigurationError, AttributeError):
+            popped_params = backup_params
+
     origin = getattr(annotation, "__origin__", None)
     args = getattr(annotation, "__args__", [])
 
@@ -335,10 +363,39 @@ def construct_arg(
             # In some cases we allow a string instead of a param dict, so
             # we need to handle that case separately.
             if isinstance(popped_params, str):
-                popped_params = Params({"type": popped_params})
+                if origin != Step:
+                    # We don't allow single strings to be upgraded to steps.
+                    # Since we try everything as a step first, upgrading strings to
+                    # steps automatically would cause confusion every time a step
+                    # name conflicts with any string anywhere in a config.
+                    popped_params = Params({"type": popped_params})
             elif isinstance(popped_params, dict):
                 popped_params = Params(popped_params)
-            return annotation.from_params(params=popped_params, **subextras)
+            result = annotation.from_params(params=popped_params, **subextras)
+
+            if isinstance(result, Step):
+                if isinstance(result, _RefStep):
+                    existing_steps: Dict[str, Step] = extras.get("existing_steps", {})
+                    try:
+                        result = existing_steps[result.ref()]
+                    except KeyError:
+                        raise _RefStep.MissingStepError(result.ref())
+
+                expected_return_type = args[0]
+                return_type = inspect.signature(result.run).return_annotation
+                if return_type == inspect.Signature.empty:
+                    logger.warning(
+                        "Step %s has no return type annotation. Those are really helpful when "
+                        "debugging, so we recommend them highly.",
+                        result.__class__.__name__,
+                    )
+                elif not issubclass(return_type, expected_return_type):
+                    raise ConfigurationError(
+                        f"Step {result.name} returns {return_type}, but "
+                        f"we expected {expected_return_type}."
+                    )
+
+            return result
         elif not optional:
             # Not optional and not supplied, that's an error!
             raise ConfigurationError(f"expected key {argument_name} for {class_name}")
@@ -433,6 +490,7 @@ def construct_arg(
 
         # We'll try each of the given types in the union sequentially, returning the first one that
         # succeeds.
+        error_chain: Optional[Exception] = None
         for arg_annotation in args:
             try:
                 return construct_arg(
@@ -443,22 +501,27 @@ def construct_arg(
                     default,
                     **extras,
                 )
-            except (ValueError, TypeError, ConfigurationError, AttributeError):
+            except (ValueError, TypeError, ConfigurationError, AttributeError) as e:
                 # Our attempt to construct the argument may have modified popped_params, so we
                 # restore it here.
                 popped_params = deepcopy(backup_params)
+                e.args = (f"While constructing an argument of type {arg_annotation}",) + e.args
+                e.__cause__ = error_chain
+                error_chain = e
 
         # If none of them succeeded, we crash.
-        raise ConfigurationError(
-            f"Failed to construct argument {argument_name} with type {annotation}"
+        config_error = ConfigurationError(
+            f"Failed to construct argument {argument_name} with type {annotation}."
         )
+        config_error.__cause__ = error_chain
+        raise config_error
     elif origin == Lazy:
         if popped_params is default:
             return default
 
         value_cls = args[0]
         subextras = create_extras(value_cls, extras)
-        return Lazy(value_cls, params=deepcopy(popped_params), contructor_extras=subextras)  # type: ignore
+        return Lazy(value_cls, params=deepcopy(popped_params), constructor_extras=subextras)  # type: ignore
 
     # For any other kind of iterable, we will just assume that a list is good enough, and treat
     # it the same as List. This condition needs to be at the end, so we don't catch other kinds
@@ -492,7 +555,7 @@ def construct_arg(
         return popped_params
 
 
-class FromParams:
+class FromParams(CustomDetHash):
     """
     Mixin to give a from_params method to classes. We create a distinct base class for this
     because sometimes we want non-Registrable classes to be instantiatable from_params.
@@ -621,3 +684,39 @@ class FromParams:
                 kwargs = create_kwargs(constructor_to_inspect, cls, params, **extras)
 
             return constructor_to_call(**kwargs)  # type: ignore
+
+    def to_params(self) -> Params:
+        """
+        Returns a `Params` object that can be used with `.from_params()` to recreate an
+        object just like it.
+
+        This relies on `_to_params()`. If you need this in your custom `FromParams` class,
+        override `_to_params()`, not this method.
+        """
+
+        def replace_object_with_params(o: Any) -> Any:
+            if isinstance(o, FromParams):
+                return o.to_params()
+            elif isinstance(o, List):
+                return [replace_object_with_params(i) for i in o]
+            elif isinstance(o, Set):
+                return {replace_object_with_params(i) for i in o}
+            elif isinstance(o, Dict):
+                return {key: replace_object_with_params(value) for key, value in o.items()}
+            else:
+                return o
+
+        return Params(replace_object_with_params(self._to_params()))
+
+    def _to_params(self) -> Dict[str, Any]:
+        """
+        Returns a dictionary of parameters that, when turned into a `Params` object and
+        then fed to `.from_params()`, will recreate this object.
+
+        You don't need to implement this all the time. AllenNLP will let you know if you
+        need it.
+        """
+        raise NotImplementedError()
+
+    def det_hash_object(self) -> Any:
+        return self.to_params()

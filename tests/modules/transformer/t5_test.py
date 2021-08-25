@@ -2,20 +2,22 @@ import pytest
 from transformers.models import t5 as hf_t5
 
 from allennlp.modules.transformer.t5 import T5
-from allennlp.common.testing import requires_gpu
+from allennlp.nn.parallel import FairScaleFsdpAccelerator
+from allennlp.common.testing import run_distributed_test, requires_multi_gpu
 
 
-# Mark this as GPU so it runs on a self-hosted runner, which will be a lot faster.
-@requires_gpu
+@pytest.mark.skip("takes too long in CI")
 @pytest.mark.parametrize(
     "pretrained_model_name",
     [
         "t5-base",
-        #  "t5-large",  # Takes too long in CI
+        #  "t5-large",  # Takes WAY too long in CI
     ],
 )
 def test_create_t5_from_pretrained(pretrained_model_name: str):
-    T5.from_pretrained_module(pretrained_model_name)
+    model = T5.from_pretrained_module(pretrained_model_name)
+    # Make sure weights are tied.
+    assert id(model.token_embeddings.weight) == id(model.lm_head.weight)
 
 
 @pytest.fixture(scope="module")
@@ -119,3 +121,17 @@ def test_t5_forward_beam_search(model: T5, tokenizer: hf_t5.T5Tokenizer):
     combined_preds, combined_probs = run_beam_search([s1, s2])
     assert combined_preds == s1_pred + s2_pred
     assert combined_probs == s1_prob + s2_prob
+
+
+def _test_distributed_load_state_dict(global_rank, world_size, gpu_id):
+    T5.from_pretrained_module(
+        "t5-small",
+        ddp_accelerator=FairScaleFsdpAccelerator(
+            local_rank=global_rank, world_size=world_size, cuda_device=gpu_id
+        ),
+    )
+
+
+@requires_multi_gpu
+def test_distributed_load_state_dict():
+    run_distributed_test([0, 1], func=_test_distributed_load_state_dict)

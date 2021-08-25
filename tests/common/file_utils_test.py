@@ -545,7 +545,7 @@ class TestLocalCacheResource(AllenNlpTestCase):
             assert data["a"] == 1
 
 
-class TestTensorCace(AllenNlpTestCase):
+class TestTensorCache(AllenNlpTestCase):
     def test_tensor_cache(self):
         cache = TensorCache(self.TEST_DIR / "cache")
         assert not cache.read_only
@@ -579,6 +579,26 @@ class TestTensorCace(AllenNlpTestCase):
             cache = TensorCache(self.TEST_DIR / "cache")
             assert cache.read_only
 
+    def test_tensor_cache_open_twice(self):
+        cache1 = TensorCache(self.TEST_DIR / "multicache")
+        cache1["foo"] = torch.tensor([1, 2, 3])
+        cache2 = TensorCache(self.TEST_DIR / "multicache")
+        assert cache1 is cache2
+
+    def test_tensor_cache_upgrade(self):
+        cache0 = TensorCache(self.TEST_DIR / "upcache")
+        cache0["foo"] = torch.tensor([1, 2, 3])
+        del cache0
+
+        cache1 = TensorCache(self.TEST_DIR / "upcache", read_only=True)
+        cache2 = TensorCache(self.TEST_DIR / "upcache")
+        assert not cache1.read_only
+        assert not cache2.read_only
+        assert torch.allclose(cache1["foo"], torch.tensor([1, 2, 3]))
+
+        cache2["bar"] = torch.tensor([2, 3, 4])
+        assert torch.allclose(cache1["bar"], cache2["bar"])
+
 
 class TestHFHubDownload(AllenNlpTestCase):
     def test_cached_download(self):
@@ -611,8 +631,10 @@ class TestHFHubDownload(AllenNlpTestCase):
         assert meta.resource == "hf://t5-small/config.json"
 
     def test_snapshot_download_no_user_or_org(self):
-        path = cached_path("hf://t5-small")
+        # This is the smallest snapshot I could find that is not associated with a user / org.
+        model_name = "distilbert-base-german-cased"
+        path = cached_path(f"hf://{model_name}")
         assert os.path.isdir(path)
         assert os.path.isfile(path + ".json")
         meta = _Meta.from_path(path + ".json")
-        assert meta.resource == "hf://t5-small"
+        assert meta.resource == f"hf://{model_name}"

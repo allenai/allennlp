@@ -23,20 +23,27 @@ class PytorchTransformer(Seq2SeqEncoder):
 
     input_dim : `int`, required.
         The input dimension of the encoder.
+    num_layers : `int`, required.
+        The number of stacked self attention -> feedforward -> layer normalisation blocks.
     feedforward_hidden_dim : `int`, required.
         The middle dimension of the FeedForward network. The input and output
         dimensions are fixed to ensure sizes match up for the self attention layers.
-    num_layers : `int`, required.
-        The number of stacked self attention -> feedforward -> layer normalisation blocks.
     num_attention_heads : `int`, required.
         The number of attention heads to use per layer.
-    use_positional_encoding : `bool`, optional, (default = `True`)
-        Whether to add sinusoidal frequencies to the input tensor. This is strongly recommended,
-        as without this feature, the self attention layers have no idea of absolute or relative
+    positional_encoding : `str`, optional, (default = `None`)
+        Specifies the type of positional encodings to use. Your options are
+         * `None` to have no positional encodings.
+         * `"sinusoidal"` to have sinusoidal encodings, as described in https://api.semanticscholar.org/CorpusID:13756489.
+         * `"embedding"` to treat positional encodings as learnable parameters
+        Without positional encoding, the self attention layers have no idea of absolute or relative
         position (as they are just computing pairwise similarity between vectors of elements),
         which can be important features for many tasks.
+    positional_embedding_size : `int`, optional, (default = `512`)
+        The number of positional embeddings.
     dropout_prob : `float`, optional, (default = `0.1`)
         The dropout probability for the feedforward network.
+    activation : `str`, (default = `"relu"`)
+        The activation function of intermediate layers. Must be either `"relu"` or `"gelu"`.
     """  # noqa
 
     def __init__(

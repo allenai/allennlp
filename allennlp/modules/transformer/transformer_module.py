@@ -9,7 +9,13 @@ import torch
 import torch.distributed as dist
 
 from allennlp.common.util import is_distributed, is_global_primary
-from allennlp.nn.util import StateDictType, read_state_dict, load_state_dict_distributed
+from allennlp.nn.parallel import ShardedModuleMixin
+from allennlp.nn.module import Module
+from allennlp.nn.util import (
+    StateDictType,
+    read_state_dict,
+    _check_incompatible_keys,
+)
 
 if TYPE_CHECKING:
     from transformers.configuration_utils import PretrainedConfig
@@ -21,7 +27,7 @@ logger = logging.getLogger(__name__)
 _T = TypeVar("_T", bound="TransformerModule")
 
 
-class TransformerModule(torch.nn.Module):
+class TransformerModule(Module):
     """
     Base class to help with generalized loading of pretrained weights.
 
@@ -52,12 +58,6 @@ class TransformerModule(torch.nn.Module):
     """
     An optional list of regular expressions that specifies which weights are allowed to be missing
     from a pretrained state dictionary.
-    """
-
-    _tied_weights: Optional[Dict[str, List[str]]] = None
-    """
-    A mapping that defines any weights that need to be tied. Keys and values are parameter names.
-    The values will be tied to the corresponding key.
     """
 
     @classmethod
@@ -177,20 +177,6 @@ class TransformerModule(torch.nn.Module):
         """
         raise NotImplementedError
 
-    def tie_weights(self) -> None:
-        """
-        Tie weights according to the `_tied_weights` class attribute.
-
-        This should always be called after loading a state dictionary. It will be called
-        automatically within `from_pretrained_module()`.
-        """
-        if self._tied_weights:
-            param_dict = dict(self.named_parameters())
-            param_dict.update(dict(self.named_buffers()))
-            for anchor_name, free_names in self._tied_weights.items():
-                for free_name in free_names:
-                    param_dict[free_name] = param_dict[anchor_name]
-
     @classmethod
     def from_pretrained_module(
         cls: Type[_T],
@@ -278,12 +264,12 @@ class TransformerModule(torch.nn.Module):
                 # this class. This is called recursively on each submodule of the current module.
                 state_dict = model._get_mapped_state_dict(pretrained_state_dict, mapping=mapping)
 
+            logger.info("Loading state_dict into module")
+
             missing_keys: List[str]
             unexpected_keys: List[str]
-            error_msgs: List[str] = []
             if not is_distributed():
                 assert state_dict is not None
-                logger.info("Loading state_dict into module")
                 missing_keys, unexpected_keys = model.load_state_dict(state_dict, strict=False)
             else:
                 # We're in distributed training. `state_dict` is `None` for all process groups
@@ -292,9 +278,8 @@ class TransformerModule(torch.nn.Module):
                 # to load the state_dict into memory.
                 dist.barrier()
                 # Now load the state dict into the model.
-                logger.info("Loading state_dict into module (MEMORY_EFFICIENT strategy)")
-                missing_keys, unexpected_keys = load_state_dict_distributed(
-                    model, state_dict, strict=False
+                missing_keys, unexpected_keys = model.load_state_dict_distributed(
+                    state_dict, strict=False
                 )
 
             # Exclude any keys in `missing_keys` that match with the `allow_missing`
@@ -306,38 +291,7 @@ class TransformerModule(torch.nn.Module):
                     k for k in missing_keys if not any(re.match(p, k) for p in allow_missing)
                 ]
 
-            # Allow missing keys in state_dict for params that are going to be tied.
-            for param_names in (model._tied_weights or {}).values():
-                for param_name in param_names:
-                    if param_name in missing_keys:
-                        missing_keys.remove(param_name)
-
-            if missing_keys:
-                error_msgs.append(
-                    "Missing key(s) in state_dict: {}".format(
-                        ", ".join(f'"{k}"' for k in missing_keys)
-                    )
-                )
-            if unexpected_keys:
-                error_msgs.append(
-                    "Unexpected key(s) in state_dict: {}".format(
-                        ", ".join(f'"{k}"' for k in unexpected_keys)
-                    )
-                )
-
-            if error_msgs and strict:
-                raise RuntimeError(
-                    "Error(s) in loading state_dict for {}:\n\t{}".format(
-                        cls.__name__, "\n\t".join(error_msgs)
-                    )
-                )
-
-            # If there were error messages but we're not loading in 'strict' mode,
-            # we just issue warnings from the logger.
-            for msg in error_msgs:
-                logger.warning(msg)
-
-        model.tie_weights()
+            _check_incompatible_keys(model, missing_keys, unexpected_keys, strict)
 
         return model
 
@@ -367,6 +321,10 @@ def _get_mapped_state_dict(
 
     # Now loop through the submodules, calling this function on each submodule.
     for name, submodule in module.named_children():
+        # Submodule might be a wrapped, sharded module.
+        if isinstance(submodule, ShardedModuleMixin):
+            submodule = submodule.get_original_module()
+
         # Pull-out the part of the state_dict corresponding to just this submodule.
         relevant_keys = set([key for key in state_dict.keys() if key.startswith(name + ".")])
         module_state_dict = {

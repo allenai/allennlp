@@ -3,9 +3,10 @@ An implementation of [T5](https://api.semanticscholar.org/CorpusID:204838007), a
 (https://github.com/huggingface/transformers/blob/4c32f9f26e6a84f0d9843fec8757e6ce640bb44e/src/transformers/models/t5/modeling_t5.py).
 """  # noqa: E401
 
-from dataclasses import dataclass
-from typing import Optional, Tuple, List, Union, Dict, TYPE_CHECKING
+import logging
+from typing import Optional, Tuple, List, Union, Dict, TYPE_CHECKING, NamedTuple
 
+from overrides import overrides
 import torch
 from torch import nn
 import torch.nn.functional as F
@@ -25,9 +26,13 @@ from allennlp.modules.transformer.util import (
     BoolT,
 )
 from allennlp.nn.beam_search import BeamSearch
+from allennlp.nn.parallel import DdpAccelerator
+from allennlp.nn.checkpoint import CheckpointWrapper
 
 if TYPE_CHECKING:
     from transformers.configuration_utils import PretrainedConfig
+
+logger = logging.getLogger(__name__)
 
 
 class T5LayerNorm(TransformerModule, FromParams):
@@ -117,8 +122,7 @@ class T5LayerFF(TransformerModule, FromParams):
         return hidden_states
 
 
-@dataclass
-class T5LayerSelfAttentionOutput:
+class T5LayerSelfAttentionOutput(NamedTuple):
     hidden_states: FloatT
     attn_key_value_state: Optional[Tuple[FloatT, FloatT]]
     attn_position_bias: FloatT
@@ -179,8 +183,7 @@ class T5LayerSelfAttention(TransformerModule, FromParams):
         )
 
 
-@dataclass
-class T5LayerCrossAttentionOutput:
+class T5LayerCrossAttentionOutput(NamedTuple):
     hidden_states: FloatT
     attn_key_value_state: Optional[Tuple[FloatT, FloatT]]
     attn_position_bias: FloatT
@@ -245,8 +248,7 @@ KeyValueStates = Union[
 ]
 
 
-@dataclass
-class T5BlockOutput:
+class T5BlockOutput(NamedTuple):
     hidden_states: FloatT
     present_key_value_states: Optional[KeyValueStates]
     self_attn_weights: Optional[FloatT]
@@ -365,15 +367,17 @@ class T5Block(TransformerModule, FromParams):
             present_key_value_state,
             self_attention_outputs.attn_weights,
             self_attention_outputs.attn_position_bias,
+            cross_attn_weights=(
+                None if not do_cross_attention else cross_attention_outputs.attn_weights
+            ),
+            cross_attn_position_bias=(
+                None if not do_cross_attention else cross_attention_outputs.attn_position_bias
+            ),
         )
-        if do_cross_attention:
-            output.cross_attn_weights = cross_attention_outputs.attn_weights
-            output.cross_attn_position_bias = cross_attention_outputs.attn_position_bias
         return output
 
 
-@dataclass
-class T5StackOutput:
+class T5StackOutput(NamedTuple):
     last_hidden_state: FloatT
     past_key_values: Optional[List[KeyValueStates]] = None
     all_hidden_states: Optional[List[FloatT]] = None
@@ -522,6 +526,10 @@ class T5Stack(TransformerModule, FromParams):
                 use_cache=use_cache,
                 output_attentions=output_attentions,
             )
+            # If the blocks were wrapped with a `CheckpointWrapper`, the output
+            # may just be a raw tuple, not the NamedTuple that we want.
+            if not isinstance(layer_outputs, T5BlockOutput):
+                layer_outputs = T5BlockOutput(*layer_outputs)
             hidden_states = layer_outputs.hidden_states
 
             # We share the position biases between the layers - the first layer store them
@@ -580,9 +588,14 @@ class T5EncoderStack(T5Stack, FromParams):
         final_layer_norm: Optional[T5LayerNorm] = None,
         block_ff: Lazy[T5LayerFF] = Lazy(T5LayerFF),
         dropout: float = 0.1,
+        ddp_accelerator: Optional[DdpAccelerator] = None,
+        checkpoint_wrapper: Optional[CheckpointWrapper] = None,
     ) -> "T5EncoderStack":
-        blocks = [
-            T5Block(
+        if ddp_accelerator is not None:
+            logger.info("Initializing T5 encoder with DdpAccelerator %s", ddp_accelerator)
+        blocks: List[T5Block] = []
+        for i in range(num_blocks):
+            block = T5Block(
                 attention=T5LayerSelfAttention(
                     self_attention=block_self_attention.construct(
                         is_decoder=False, has_relative_attention_bias=(i == 0)
@@ -591,8 +604,11 @@ class T5EncoderStack(T5Stack, FromParams):
                 cross_attention=None,
                 ff=block_ff.construct(),
             )
-            for i in range(num_blocks)
-        ]
+            if checkpoint_wrapper is not None:
+                block = checkpoint_wrapper.wrap_module(block)
+            if ddp_accelerator is not None:
+                block = ddp_accelerator.wrap_module(block)
+            blocks.append(block)
         return cls(token_embeddings, blocks, final_layer_norm=final_layer_norm, dropout=dropout)
 
 
@@ -624,9 +640,14 @@ class T5DecoderStack(T5Stack, FromParams):
         final_layer_norm: Optional[T5LayerNorm] = None,
         block_ff: Lazy[T5LayerFF] = Lazy(T5LayerFF),
         dropout: float = 0.1,
+        ddp_accelerator: Optional[DdpAccelerator] = None,
+        checkpoint_wrapper: Optional[CheckpointWrapper] = None,
     ) -> "T5DecoderStack":
-        blocks = [
-            T5Block(
+        if ddp_accelerator is not None:
+            logger.info("Initializing T5 decoder with DdpAccelerator %s", ddp_accelerator)
+        blocks: List[T5Block] = []
+        for i in range(num_blocks):
+            block = T5Block(
                 attention=T5LayerSelfAttention(
                     self_attention=block_self_attention.construct(
                         is_decoder=True, has_relative_attention_bias=(i == 0)
@@ -640,13 +661,15 @@ class T5DecoderStack(T5Stack, FromParams):
                 ),
                 ff=block_ff.construct(),
             )
-            for i in range(num_blocks)
-        ]
+            if checkpoint_wrapper is not None:
+                block = checkpoint_wrapper.wrap_module(block)
+            if ddp_accelerator is not None:
+                block = ddp_accelerator.wrap_module(block)
+            blocks.append(block)
         return cls(token_embeddings, blocks, final_layer_norm=final_layer_norm, dropout=dropout)
 
 
-@dataclass
-class T5Output:
+class T5Output(NamedTuple):
     """
     Defines the output from the `T5` model.
     """
@@ -725,13 +748,7 @@ class T5Output:
 class T5(TransformerModule, Registrable):
 
     _pretrained_mapping = {"shared": "token_embeddings"}
-    _tied_weights = {
-        "token_embeddings.weight": [
-            "encoder.token_embeddings.weight",
-            "decoder.token_embeddings.weight",
-            "lm_head.weight",
-        ]
-    }
+
     # Don't know why HF has this param in their state_dict. It's not used in their model.
     _pretrained_ignore = [
         r"^decoder\.block\.0\.layer\.1\.EncDecAttention\.relative_attention_bias\.weight$"
@@ -751,21 +768,34 @@ class T5(TransformerModule, Registrable):
         model_dim: int = 512,
         output_attentions: bool = False,
         output_all_hidden_states: bool = False,
-        beam_size: int = 3,
-        max_decoding_steps: int = 100,
+        beam_search: Lazy[BeamSearch] = Lazy(BeamSearch, beam_size=3, max_steps=100),
+        ddp_accelerator: Optional[DdpAccelerator] = None,
+        checkpoint_wrapper: Optional[CheckpointWrapper] = None,
+        tie_word_embeddings: bool = True,
     ):
         super().__init__()
+        self._tie_word_embeddings = tie_word_embeddings
+
         self.model_dim = model_dim
         self.token_embeddings = token_embeddings or nn.Embedding(vocab_size, model_dim)
         if token_embeddings is None:
             self.token_embeddings.weight.data.normal_(mean=0.0, std=1.0)
-
-        self.encoder: T5EncoderStack = encoder.construct(token_embeddings=self.token_embeddings)
-        self.decoder: T5DecoderStack = decoder.construct(token_embeddings=self.token_embeddings)
+        self.encoder: T5EncoderStack = encoder.construct(
+            token_embeddings=self.token_embeddings,
+            ddp_accelerator=ddp_accelerator,
+            checkpoint_wrapper=checkpoint_wrapper,
+        )
+        self.decoder: T5DecoderStack = decoder.construct(
+            token_embeddings=self.token_embeddings,
+            ddp_accelerator=ddp_accelerator,
+            checkpoint_wrapper=checkpoint_wrapper,
+        )
         self.lm_head = nn.Linear(
             self.decoder.hidden_size, self.token_embeddings.num_embeddings, bias=False
         )
-        self.lm_head.weight = self.token_embeddings.weight
+        if self._tie_word_embeddings:
+            self.lm_head.weight = self.token_embeddings.weight
+
         self.loss_fct = CrossEntropyLoss(ignore_index=-100)
 
         self.decoder_start_token_id = decoder_start_token_id
@@ -774,9 +804,22 @@ class T5(TransformerModule, Registrable):
         self.output_attentions = output_attentions
         self.output_all_hidden_states = output_all_hidden_states
 
-        self.beam_search = BeamSearch(
-            self.eos_token_id, max_steps=max_decoding_steps, beam_size=beam_size or 1
-        )
+        self.beam_search = beam_search.construct(end_index=self.eos_token_id)
+
+    @overrides
+    def _post_load_state_dict(
+        self, missing_keys: List[str], unexpected_keys: List[str]
+    ) -> Tuple[List[str], List[str]]:
+        missing_keys_to_ignore = [
+            "encoder.token_embeddings.weight",
+            "decoder.token_embeddings.weight",
+        ]
+        if self._tie_word_embeddings:
+            missing_keys_to_ignore.append("lm_head.weight")
+        for key in missing_keys_to_ignore:
+            if key in missing_keys:
+                missing_keys.remove(key)
+        return missing_keys, unexpected_keys
 
     @classmethod
     def _from_config(cls, config: "PretrainedConfig", **kwargs):
@@ -809,9 +852,9 @@ class T5(TransformerModule, Registrable):
         return cls(
             encoder=Lazy(
                 T5EncoderStack.basic_encoder,
-                contructor_extras={
+                constructor_extras={
                     "num_blocks": config.num_layers,
-                    "block_self_attention": Lazy(T5Attention, contructor_extras=attention_kwargs),
+                    "block_self_attention": Lazy(T5Attention, constructor_extras=attention_kwargs),
                     "final_layer_norm": T5LayerNorm(**layer_norm_kwargs),
                     "block_ff": block_ff,
                     "dropout": config.dropout_rate,
@@ -819,10 +862,10 @@ class T5(TransformerModule, Registrable):
             ),
             decoder=Lazy(
                 T5DecoderStack.basic_decoder,
-                contructor_extras={
+                constructor_extras={
                     "num_blocks": config.num_decoder_layers,
-                    "block_self_attention": Lazy(T5Attention, contructor_extras=attention_kwargs),
-                    "block_cross_attention": Lazy(T5Attention, contructor_extras=attention_kwargs),
+                    "block_self_attention": Lazy(T5Attention, constructor_extras=attention_kwargs),
+                    "block_cross_attention": Lazy(T5Attention, constructor_extras=attention_kwargs),
                     "final_layer_norm": T5LayerNorm(**layer_norm_kwargs),
                     "block_ff": block_ff,
                     "dropout": config.dropout_rate,
@@ -833,6 +876,8 @@ class T5(TransformerModule, Registrable):
             eos_token_id=config.eos_token_id,
             vocab_size=config.vocab_size,
             model_dim=config.d_model,
+            tie_word_embeddings=kwargs.pop("tie_word_embeddings", config.tie_word_embeddings),
+            **kwargs,
         )
 
     def _shift_right(self, input_ids, start_value: int):

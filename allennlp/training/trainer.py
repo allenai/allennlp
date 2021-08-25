@@ -1,7 +1,6 @@
 import logging
 import os
-from dataclasses import dataclass
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, Optional, Union, NamedTuple
 
 import torch.optim.lr_scheduler
 
@@ -12,8 +11,7 @@ from allennlp.common.util import int_to_device
 logger = logging.getLogger(__name__)
 
 
-@dataclass
-class TrainerCheckpoint:
+class TrainerCheckpoint(NamedTuple):
     model_state: Dict[str, Any]
     trainer_state: Dict[str, Any]
 
@@ -29,7 +27,7 @@ class Trainer(Registrable):
 
     def __init__(
         self,
-        serialization_dir: str = None,
+        serialization_dir: Union[str, os.PathLike] = None,
         cuda_device: Optional[Union[int, torch.device]] = None,
         distributed: bool = False,
         local_rank: int = 0,
@@ -50,7 +48,7 @@ class Trainer(Registrable):
 
             self._serialization_dir = tempfile.mkdtemp()
         else:
-            self._serialization_dir = serialization_dir
+            self._serialization_dir = str(serialization_dir)
         # Ensure serialization directory exists.
         os.makedirs(self._serialization_dir, exist_ok=True)
 
@@ -80,7 +78,7 @@ class Trainer(Registrable):
         """
         raise NotImplementedError
 
-    def get_checkpoint_state(self) -> TrainerCheckpoint:
+    def get_checkpoint_state(self) -> Optional[TrainerCheckpoint]:
         """
         Returns a tuple of (model state, training state), where training state could have several
         internal components (e.g., for an, optimizer, learning rate scheduler, etc.).

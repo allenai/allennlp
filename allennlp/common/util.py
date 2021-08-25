@@ -3,7 +3,6 @@ Various utilities that don't fit anywhere else.
 """
 import hashlib
 import io
-import pickle
 from datetime import timedelta
 import importlib
 import json
@@ -31,12 +30,14 @@ from typing import (
     Set,
 )
 
+import dill
 import numpy
 import spacy
 import torch
 import torch.distributed as dist
 from spacy.cli.download import download as spacy_download
 from spacy.language import Language as SpacyModelType
+import base58
 
 from allennlp.common.checks import log_pytorch_version_info
 from allennlp.common.params import Params
@@ -418,12 +419,14 @@ def peak_gpu_memory() -> Dict[int, int]:
     if not torch.cuda.is_available():
         return {}
 
+    device = torch.cuda.current_device()
+
+    results_dict: Dict[int, int] = {}
     if is_distributed():
         # If the backend is not 'nccl', we're training on CPU.
         if dist.get_backend() != "nccl":
             return {}
 
-        device = torch.cuda.current_device()
         global_rank = dist.get_rank()
         world_size = dist.get_world_size()
         peak_bytes = torch.cuda.max_memory_allocated(device)
@@ -433,13 +436,15 @@ def peak_gpu_memory() -> Dict[int, int]:
 
         dist.all_gather(gather_results, peak_bytes_tensor)
 
-        results_dict: Dict[int, int] = {}
         for peak_bytes_tensor in gather_results:
             results_dict[int(peak_bytes_tensor[0])] = int(peak_bytes_tensor[1])
-
-        return results_dict
     else:
-        return {0: torch.cuda.max_memory_allocated()}
+        results_dict = {0: torch.cuda.max_memory_allocated()}
+
+    # Reset peak stats.
+    torch.cuda.reset_max_memory_allocated(device)
+
+    return results_dict
 
 
 def ensure_list(iterable: Iterable[A]) -> List[A]:
@@ -718,9 +723,9 @@ def cycle_iterator_function(iterator_function: Callable[[], Iterable[T]]) -> Ite
 
 
 def hash_object(o: Any) -> str:
-    """Returns a 32-character hash code of arbitrary Python objects."""
+    """Returns a character hash code of arbitrary Python objects."""
     m = hashlib.blake2b()
     with io.BytesIO() as buffer:
-        pickle.dump(o, buffer)
+        dill.dump(o, buffer)
         m.update(buffer.getbuffer())
-        return m.hexdigest()
+        return base58.b58encode(m.digest()).decode()

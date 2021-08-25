@@ -126,7 +126,7 @@ class Covariance(Metric):
         self._total_co_moment += delta_co_moment.item()
         self._total_count = updated_count
 
-    def get_metric(self, reset: bool = False):
+    def get_metric(self, reset: bool = False) -> float:
         """
         # Returns
 

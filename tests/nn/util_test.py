@@ -19,6 +19,7 @@ from allennlp.data.token_indexers import (
     SingleIdTokenIndexer,
 )
 from allennlp.nn import util
+from allennlp.nn.parallel import ShardedModuleMixin
 from allennlp.models import load_archive
 
 
@@ -1771,7 +1772,7 @@ class DistributedFixtureModel(torch.nn.Module):
         self.direct_param = torch.nn.Parameter(torch.randn(3, 5))
         self.register_buffer("direct_buffer", torch.randn(2, 2))
         self.custom_submodule = DistributedFixtureSubmodule()
-        self.custom_sharded_submodule = DistributedFixtureSubmodule(sharded=True)
+        self.custom_sharded_submodule = ShardedDistributedFixtureSubmodule()
         self.linear_submodule = torch.nn.Linear(3, 5)
 
     def forward(self, x):
@@ -1780,17 +1781,20 @@ class DistributedFixtureModel(torch.nn.Module):
 
 
 class DistributedFixtureSubmodule(torch.nn.Module):
-    def __init__(self, sharded: bool = False):
+    def __init__(self):
         super().__init__()
         self.direct_param = torch.nn.Parameter(torch.randn(3, 5))
         self.register_buffer("direct_buffer", torch.randn(2, 2))
         self.linear_submodule = torch.nn.Linear(3, 5)
-        if sharded:
-            setattr(self, util._MODULE_SHARDED_FLAG, True)
 
     def forward(self, x):
         # This doesn't matter, we're not going to actually use it.
         pass
+
+
+class ShardedDistributedFixtureSubmodule(DistributedFixtureSubmodule, ShardedModuleMixin):
+    def get_original_module(self):
+        return self
 
 
 def _dist_load_ok(global_rank, world_size, gpu_id):

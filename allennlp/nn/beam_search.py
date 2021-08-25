@@ -6,8 +6,9 @@ import warnings
 from overrides import overrides
 import torch
 
-from allennlp.common import Registrable
+from allennlp.common import Lazy, Registrable
 from allennlp.common.checks import ConfigurationError
+from allennlp.data import Vocabulary
 from allennlp.nn.util import min_value_of_dtype
 
 
@@ -568,6 +569,9 @@ class Constraint(Registrable):
 
     """
 
+    def __init__(self, vocab: Optional[Vocabulary] = None) -> None:
+        self.vocab = vocab
+
     def init_state(
         self,
         batch_size: int,
@@ -625,8 +629,8 @@ class Constraint(Registrable):
 
 @Constraint.register("repeated-ngram-blocking")
 class RepeatedNGramBlockingConstraint(Constraint):
-    def __init__(self, ngram_size: int) -> None:
-        super().__init__()
+    def __init__(self, ngram_size: int, **kwargs) -> None:
+        super().__init__(**kwargs)
         self.ngram_size = ngram_size
 
     @overrides
@@ -729,6 +733,15 @@ class BeamSearch(Registrable):
     constraints: `List[Constraint]`, optional (default = `None`)
         An optional list of `Constraint`s which should be applied during beam search. If not
         provided, no constraints will be enforced.
+
+    vocab: `Vocabulary`
+        If `constraints` is not `None`, then `Vocabulary` will be passed to each constraint
+        during its initialization. Having access to the vocabulary may be useful for certain
+        contraints, e.g., to mask out invalid predictions during structured prediction.
+
+        In a typical AllenNLP configuration file, this parameter does not get an entry under the
+        "model", it gets specified as a top-level parameter, then is passed in to the model
+        separately.
     """
 
     default_implementation = "beam_search"
@@ -742,7 +755,8 @@ class BeamSearch(Registrable):
         sampler: Sampler = None,
         min_steps: Optional[int] = None,
         final_sequence_scorer: FinalSequenceScorer = None,
-        constraints: Optional[List[Constraint]] = None,
+        constraints: Optional[List[Lazy[Constraint]]] = None,
+        vocab: Optional[Vocabulary] = None,
     ) -> None:
         if not max_steps > 0:
             raise ValueError("max_steps must be positive")
@@ -763,7 +777,8 @@ class BeamSearch(Registrable):
         self.sampler = sampler or DeterministicSampler()
         self.min_steps = min_steps or 0
         self.final_sequence_scorer = final_sequence_scorer or SequenceLogProbabilityScorer()
-        self.constraints = constraints or []
+        # Lazily build the constrains with the vocab (if provided).
+        self.constraints = [constraint.construct(vocab=vocab) for constraint in constraints or []]
 
     @staticmethod
     def _reconstruct_sequences(predictions, backpointers):
@@ -1070,7 +1085,9 @@ class BeamSearch(Registrable):
             # dividing by per_node_beam_size gives the ancestor. (Note that this is integer
             # division as the tensor is a LongTensor.)
             # shape: (batch_size, beam_size)
-            backpointer = restricted_beam_indices // self.per_node_beam_size
+            backpointer = torch.divide(
+                restricted_beam_indices, self.per_node_beam_size, rounding_mode="trunc"
+            )
             backpointers.append(backpointer)
 
             # Keep only the pieces of the state tensors corresponding to the
@@ -1079,7 +1096,7 @@ class BeamSearch(Registrable):
 
             for i, constraint in enumerate(self.constraints):
                 constraint_states[i] = constraint.update_state(
-                    constraint_states[i], restricted_predicted_classes
+                    constraint_states[i], restricted_predicted_classes, last_backpointer=backpointer
                 )
 
         # Warn about "-inf" log probabilities if not using any constraints (negligible

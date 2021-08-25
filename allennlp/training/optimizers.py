@@ -9,13 +9,14 @@ The available optimizers are
 * [adagrad](https://pytorch.org/docs/master/optim.html#torch.optim.Adagrad)
 * [adam](https://pytorch.org/docs/master/optim.html#torch.optim.Adam)
 * [adamw](https://pytorch.org/docs/master/optim.html#torch.optim.AdamW)
-* [huggingface_adamw](https://huggingface.co/transformers/main_classes/optimizer_schedules.html#transformers.AdamW)
+* [huggingface_adamw](https://huggingface.co/transformers/main_classes/optimizer_schedules.html#adamw-pytorch)
+* [huggingface_adafactor](https://huggingface.co/transformers/main_classes/optimizer_schedules.html#adafactor-pytorch)
 * [sparse_adam](https://pytorch.org/docs/master/optim.html#torch.optim.SparseAdam)
 * [sgd](https://pytorch.org/docs/master/optim.html#torch.optim.SGD)
 * [rmsprop](https://pytorch.org/docs/master/optim.html#torch.optim.RMSprop)
 * [adamax](https://pytorch.org/docs/master/optim.html#torch.optim.Adamax)
 * [averaged_sgd](https://pytorch.org/docs/master/optim.html#torch.optim.ASGD)
-"""
+"""  # noqa: E501
 import copy
 import logging
 import re
@@ -177,7 +178,7 @@ class Optimizer(torch.optim.Optimizer, Registrable):
     we want to use those classes.  To make things easy, we just inherit from those classes, using
     multiple inheritance to also inherit from `Optimizer`.  The only reason we do this is to make
     type inference on parameters possible, so we can construct these objects using our configuration
-    framework.  If you are writing your own script, you can safely ignore these classes and just use
+    framework. If you are writing your own script, you can safely ignore these classes and just use
     the `torch.optim` classes directly.
 
     If you are implementing one of these classes, the `model_parameters` and `parameter_groups`
@@ -188,7 +189,7 @@ class Optimizer(torch.optim.Optimizer, Registrable):
     inconsistent.
 
     Most subclasses of `Optimizer` take both a `model_parameters` and a `parameter_groups`
-    constructor argument.  The `model_parameters` argument does not get an entry in a typical
+    constructor argument. The `model_parameters` argument does not get an entry in a typical
     AllenNLP configuration file, but the `parameter_groups` argument does (if you want a non-default
     value).  See the documentation for the `make_parameter_groups` function for more information on
     how the `parameter_groups` argument should be specified.
@@ -478,6 +479,40 @@ class HuggingfaceAdamWOptimizer(Optimizer, transformers.AdamW):
             eps=eps,
             weight_decay=weight_decay,
             correct_bias=correct_bias,
+        )
+
+
+@Optimizer.register("huggingface_adafactor")
+class HuggingfaceAdafactor(Optimizer, transformers.Adafactor):
+    """
+    Registered as an `Optimizer` with name "huggingface_adafactor".
+    """
+
+    def __init__(
+        self,
+        model_parameters: List[Tuple[str, torch.nn.Parameter]],
+        parameter_groups: List[Tuple[List[str], Dict[str, Any]]] = None,
+        lr: Optional[float] = None,
+        eps: Tuple[float, float] = (1e-30, 1e-3),
+        clip_threshold: float = 1.0,
+        decay_rate: float = -0.8,
+        beta1: Optional[float] = None,
+        weight_decay: float = 0.0,
+        scale_parameter: bool = True,
+        relative_step: bool = True,
+        warmup_init: bool = False,
+    ):
+        super().__init__(
+            params=make_parameter_groups(model_parameters, parameter_groups),
+            lr=lr,
+            eps=eps,
+            clip_threshold=clip_threshold,
+            decay_rate=decay_rate,
+            beta1=beta1,
+            weight_decay=weight_decay,
+            scale_parameter=scale_parameter,
+            relative_step=relative_step,
+            warmup_init=warmup_init,
         )
 
 

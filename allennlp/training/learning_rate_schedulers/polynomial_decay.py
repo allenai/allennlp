@@ -8,10 +8,10 @@ from allennlp.training.learning_rate_schedulers.learning_rate_scheduler import L
 @LearningRateScheduler.register("polynomial_decay")
 class PolynomialDecay(LearningRateScheduler):
     """
-    Implements polynomial decay Learning rate scheduling. The learning rate is first
-    linearly increased for the first `warmup_steps` training steps. Then it is decayed for
-    `total_steps` - `warmup_steps` from the initial learning rate to `end_learning_rate` using a polynomial
-    of degree `power`.
+    Implements polynomial decay Learning rate scheduling. The learning rate is
+    first linearly increased for the first `warmup_steps` training steps. Then
+    it is decayed for `total_steps` - `warmup_steps` from the initial learning
+    rate to `end_learning_rate` using a polynomial of degree `power`.
 
     Formally,
 
@@ -20,14 +20,45 @@ class PolynomialDecay(LearningRateScheduler):
 
     # Parameters
 
-    total_steps: `int`, required
-        The total number of steps to adjust the learning rate for.
+    optimizer : `torch.optim.Optimizer`
+        This argument does not get an entry in a configuration file for the
+        object.
+    num_epochs: `int`
+        The number of epochs in the experiment. this does *NOT* get an entry in
+        the config.
+    num_steps_per_epoch: `int`
+        The number of steps per epoch. this does *NOT* get an entry in the
+        config.
     warmup_steps : `int`, required
         The number of steps to linearly increase the learning rate.
     power : `float`, optional (default = `1.0`)
         The power of the polynomial used for decaying.
     end_learning_rate : `float`, optional (default = `0.0`)
         Final learning rate to decay towards.
+
+    # Example
+
+    Config for using the `PolynomialDecay` Learning Rate Scheduler with
+    `warmup_steps` set `100`, `power` set to `2`, and `end_learning_rate` set
+    to `1e-10`.
+
+    ```json
+    {
+        ...
+       "trainer":{
+            ...
+            "learning_rate_scheduler": {
+                "type": "polynomial_decay",
+                "power": 2,
+                "warmup_steps": 100,
+                "end_learning_rate": 1e-10
+            },
+            ...
+       }
+    }
+    ```
+    Note that you do NOT pass a `optimizer`, `num_epochs`, nor
+    `num_steps_per_epoch` key to the Learning rate scheduler.
     """
 
     def __init__(

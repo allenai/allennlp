@@ -13,10 +13,10 @@ class CombinedLearningRateScheduler(LearningRateScheduler):
     This `LearningRateScheduler` can be used to apply an arbitrary number of other schedulers
     one after the other.
 
-    These schedulers are defined though the `schedulers` parameter, which takes a list
-    of `Tuple[int, Lazy[LearningRateScheduler]]`. The first field of the tuple, the `int`,
-    specifies how many epochs the corresponding scheduler will be used before the next
-    scheduler takes its place.
+    These schedulers are defined though the `schedulers` parameter, which takes
+    a list of `Tuple[int, Lazy[LearningRateScheduler]]`. The first field of the
+    tuple, the `int`, specifies how many epochs the corresponding scheduler will
+     be used before the next scheduler takes its place.
 
     While it usually makes sense for the sum
 
@@ -25,8 +25,54 @@ class CombinedLearningRateScheduler(LearningRateScheduler):
     ```
 
     to equal the total number of training epochs, it is not a requirement.
-    If training continues beyond the last defined scheduler, both `step()` and `step_batch()`
-    will be a no-op.
+    If training continues beyond the last defined scheduler, both `step()` and
+    `step_batch()` will be a no-op. In effect, this causes the learning rate to
+    stay constant.
+
+    # Example
+
+    Config for using the `CombinedLearningRateScheduler` Learning Rate Scheduler
+    with the following arguments:
+
+    * Use [`PolynomialDecay`](
+    https://docs.allennlp.org/main/api/training/learning_rate_schedulers/polynomial_decay/
+    ) for the first `15` epochs.
+    * Use [`NoamLR`](
+    https://docs.allennlp.org/main/api/training/learning_rate_schedulers/noam/
+    ) for the next `15` epochs.
+    * Use a constant LR for the remaining epochs.
+
+    ```json
+    {
+        ...
+       "trainer":{
+            ...
+            "learning_rate_scheduler": {
+                "type": "combined",
+                "schedulers": [
+                    [
+                        15, {
+                            "type": "polynomial_decay",
+                            "power": 2,
+                            "warmup_steps": 50,
+                            "end_learning_rate": 1e-10
+                        }
+                    ],
+                    [
+                        15, {
+                            "type": "noam",
+                            "warmup_steps": 1,
+                            "model_size": 128,
+                            "factor": 0.5
+                        }
+                    ]
+                ]
+            },
+            ...
+       }
+    }
+    ```
+    Note that you do NOT pass a `optimizer` key to the Learning rate scheduler.
     """
 
     def __init__(

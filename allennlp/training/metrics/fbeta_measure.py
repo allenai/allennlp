@@ -55,7 +55,7 @@ class FBetaMeasure(Metric):
             alters 'macro' to account for label imbalance; it can result in an
             F-score that is not between precision and recall.
 
-    labels: `list`, optional
+    labels : `list`, optional
         The set of labels to include and their order if `average is None`.
         Labels present in the data can be excluded, for example to calculate a
         multi-class average ignoring a majority negative class. Labels not present

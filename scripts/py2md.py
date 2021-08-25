@@ -258,7 +258,7 @@ class AllenNlpDocstringProcessor(Struct):
                 if ty == "mod":
                     href = "/api/" + "/".join(path[1:])
                 else:
-                    href = "/api/" + "/".join(path[1:-1]) + "#" + path[-1].lower()
+                    href = "/api/" + "/".join(path[1:-1]) + "/#" + path[-1].lower()
                 cross_ref = f"[`{path[-1]}`]({href})"
             elif "." not in name:
                 cross_ref = f"[`{name}`](#{name.lower()})"
@@ -285,8 +285,8 @@ class AllenNlpFilterProcessor(Struct):
         "TransformerModule._pretrained_ignore",
         "TransformerModule._pretrained_allow_missing",
         "TransformerModule._distributed_loading_strategy",
-        "TransformerModule._tied_weights",
         "Constraint._update_state",
+        "Module._post_load_state_dict",
     }
 
     def process(self, graph, _resolver):
