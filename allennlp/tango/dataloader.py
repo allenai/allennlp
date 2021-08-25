@@ -4,10 +4,8 @@ every time we release a new version.*
 """
 
 import logging
-import random
-from collections import abc
 from math import floor, ceil
-from typing import Optional, Iterator, Sequence, Union, Dict, Any
+from typing import Optional, Iterator, Sequence, Dict, Any
 
 import more_itertools
 import torch
@@ -22,6 +20,7 @@ from allennlp.data import (
     Vocabulary,
 )
 from allennlp.nn.util import move_to_device
+from allennlp.common.sequences import ShuffledSequence
 
 
 class TangoDataLoader(Registrable):
@@ -84,36 +83,6 @@ class DataLoaderAdapter(DataLoader):
 
     def set_target_device(self, device: torch.device) -> None:
         self.target_device = device
-
-
-class ShuffledSequence(abc.Sequence):
-    """
-    Produces a shuffled view of a sequence, such as a list.
-
-    This assumes that the inner sequence never changes. If it does, the results
-    are undefined.
-    """
-
-    def __init__(self, inner_sequence: Sequence, indices: Optional[Sequence[int]] = None):
-        self.inner = inner_sequence
-        self.indices: Sequence[int]
-        if indices is None:
-            self.indices = list(range(len(inner_sequence)))
-            random.shuffle(self.indices)
-        else:
-            self.indices = indices
-
-    def __len__(self) -> int:
-        return len(self.inner)
-
-    def __getitem__(self, i: Union[int, slice]):
-        if isinstance(i, int):
-            return self.inner[self.indices[i]]
-        else:
-            return ShuffledSequence(self.inner, self.indices[i])
-
-    def __contains__(self, item) -> bool:
-        return self.inner.__contains__(item)
 
 
 @TangoDataLoader.register("batch_size")
