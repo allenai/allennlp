@@ -496,10 +496,11 @@ class MultiProcessDataLoader(DataLoader):
         while True:
             # First we have to check to make sure the parent process is still alive
             # and consuming from the queue because there are circumstances where the
-            # parent process can exit without automatically cleaning up its children (the workers).
+            # parent process can or exit stop consuming without automatically cleaning up
+            # its children (the workers).
             # For example, when the parent process is killed with `kill -9`.
             # So the first thing we do is check to see if the parent has notified
-            # us (the worker) to stop through the rx connection.
+            # us (the worker) to stop through the rx (receiver) connection.
             # Of course this only works if the parent was able to send out a notification,
             # which may not always be the case. So we have a backup check below.
             if rx.poll():
@@ -508,16 +509,17 @@ class MultiProcessDataLoader(DataLoader):
                 )
                 queue.cancel_join_thread()
                 return False
-            # The is the backup check, but it only works if the worker was spawned
-            # (as opposed to being created from a fork).
-            if self.start_method == "spawn":
-                # The file descriptor associated with the rx (receiver) connection will
-                # be readable if and only if the parent process has exited.
-                fds, _, _ = select.select([rx.fileno()], [], [], 0)
-                if fds:
-                    logger.warning("worker %d parent process has died, exiting now", worker_id)
-                    queue.cancel_join_thread()
-                    return False
+            # The is the backup check.
+            # The file descriptor associated with the rx (receiver) connection will
+            # be readable if and only if the parent process has exited.
+            # NOTE (epwalsh): this doesn't work on Mac OS X with `start_method == "fork"`
+            # for some reason, i.e. the file descriptor doesn't show as readable
+            # after the parent process has died.
+            fds, _, _ = select.select([rx.fileno()], [], [], 0)
+            if fds:
+                logger.warning("worker %d parent process has died, exiting now", worker_id)
+                queue.cancel_join_thread()
+                return False
             # If we're down here the parent process is still alive to the best of our
             # knowledge, so we can continue putting things on the queue.
             try:
