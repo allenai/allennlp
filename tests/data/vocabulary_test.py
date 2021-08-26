@@ -905,3 +905,95 @@ class TestVocabularyFromPretrainedTransformer(AllenNlpTestCase):
 
         vocab1 = Vocabulary.from_files(self.TEST_DIR / "vocab")
         assert vocab1._token_to_index[namespace] == tokenizer.get_vocab()
+
+
+class TestVocabularyFromPretrainedTransformerAndInstances(AllenNlpTestCase):
+    def setup_method(self):
+        super().setup_method()
+
+        # Create dataset with single namespace
+        token_indexer_1 = SingleIdTokenIndexer("namespace_1")
+        text_field_1 = TextField(
+            [Token(t) for t in ["a", "a", "a", "a", "b", "b", "c", "c", "c"]],
+            {"namespace_1": token_indexer_1},
+        )
+        single_field_instance = Instance({"text": text_field_1})
+        self.single_namespace_dataset = Batch([single_field_instance])
+
+        # Create dataset with multiple namespaces
+        token_indexer_2 = SingleIdTokenIndexer("namespace_2")
+        text_field_2 = TextField(
+            [Token(t) for t in ["d", "d", "d", "d", "e", "e", "f", "f", "f"]],
+            {"namespace_2": token_indexer_2},
+        )
+        multiple_field_instance = Instance(
+            {"first_text": text_field_1, "second_text": text_field_2}
+        )
+        self.multiple_namespace_dataset = Batch([multiple_field_instance])
+
+    @staticmethod
+    def _get_expected_vocab(dataset, namespace, model_name):
+        vocab_from_instances = Vocabulary.from_instances(dataset)
+        instance_tokens = set(vocab_from_instances._token_to_index[namespace].keys())
+        transformer_tokens = set(
+            Vocabulary.from_pretrained_transformer(model_name, namespace)
+            ._token_to_index[namespace]
+            .keys()
+        )
+        return instance_tokens.union(transformer_tokens)
+
+    def _get_expected_vocab_size(self, dataset, namespace, model_name):
+        return len(self._get_expected_vocab(dataset, namespace, model_name))
+
+    @pytest.mark.parametrize("model_name", ["bert-base-cased", "roberta-base"])
+    def test_with_single_namespace_and_single_model(self, model_name):
+        dataset = self.single_namespace_dataset
+        namespace = "namespace_1"
+
+        expected_vocab_size = self._get_expected_vocab_size(dataset, namespace, model_name)
+
+        vocab = Vocabulary.from_pretrained_transformer_and_instances(
+            dataset, {namespace: model_name}
+        )
+
+        assert vocab.get_vocab_size(namespace) == expected_vocab_size
+
+    @pytest.mark.parametrize("model_name", ["bert-base-cased", "roberta-base"])
+    def test_only_updates_single_namespace_when_multiple_present(self, model_name):
+        dataset = self.multiple_namespace_dataset
+        namespace1 = "namespace_1"
+        namespace2 = "namespace_2"
+
+        namespace1_vocab_size = self._get_expected_vocab_size(dataset, namespace1, model_name)
+        namespace2_vocab_size = Vocabulary.from_instances(dataset).get_vocab_size("namespace_2")
+
+        vocab = Vocabulary.from_pretrained_transformer_and_instances(
+            dataset, {namespace1: model_name}
+        )
+
+        # Make sure only the desired namespace is extended
+        assert vocab.get_vocab_size(namespace1) == namespace1_vocab_size
+        assert vocab.get_vocab_size(namespace2) == namespace2_vocab_size
+
+    @pytest.mark.parametrize("namespace1_model_name", ["bert-base-cased", "roberta-base"])
+    @pytest.mark.parametrize("namespace2_model_name", ["bert-base-cased", "roberta-base"])
+    def test_with_different_models_per_namespace(
+        self, namespace1_model_name, namespace2_model_name
+    ):
+        dataset = self.multiple_namespace_dataset
+        namespace1 = "namespace_1"
+        namespace2 = "namespace_2"
+
+        namespace1_vocab_size = self._get_expected_vocab_size(
+            dataset, namespace1, namespace1_model_name
+        )
+        namespace2_vocab_size = self._get_expected_vocab_size(
+            dataset, namespace2, namespace2_model_name
+        )
+
+        vocab = Vocabulary.from_pretrained_transformer_and_instances(
+            dataset, {namespace1: namespace1_model_name, namespace2: namespace2_model_name}
+        )
+
+        assert vocab.get_vocab_size(namespace1) == namespace1_vocab_size
+        assert vocab.get_vocab_size(namespace2) == namespace2_vocab_size

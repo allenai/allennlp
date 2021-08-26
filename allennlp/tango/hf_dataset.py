@@ -10,7 +10,7 @@ from allennlp.tango.step import Step
 
 @Step.register("hf_dataset")
 class HuggingfaceDataset(Step):
-    """This steps reads a huggingface dataset and returns it in `AllenNlpDataset` format."""
+    """This steps reads a huggingface dataset and returns it in `DatasetDict` format."""
 
     DETERMINISTIC = True
     VERSION = "001"

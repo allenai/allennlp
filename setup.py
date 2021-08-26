@@ -79,6 +79,7 @@ setup(
         "datasets>=1.2.1,<2.0",
         "dill",
         "base58",
+        "sqlitedict",
         "google-cloud-storage>=1.38.0,<1.43.0",
     ],
     entry_points={"console_scripts": ["allennlp=allennlp.__main__:run"]},
