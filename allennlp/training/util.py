@@ -269,6 +269,16 @@ def get_metrics(
     the `"loss"` metric is "average loss per batch".
     Returns the `"batch_loss"` separately.
     """
+    if world_size > 1:
+        total_loss = nn_util.dist_reduce_sum(total_loss)
+        num_batches = nn_util.dist_reduce_sum(num_batches)
+        if total_reg_loss is not None:
+            total_reg_loss = nn_util.dist_reduce_sum(total_reg_loss)
+        if batch_loss is not None:
+            batch_loss = nn_util.dist_reduce_sum(batch_loss)
+        if batch_reg_loss is not None:
+            batch_reg_loss = nn_util.dist_reduce_sum(batch_reg_loss)
+
     metrics = model.get_metrics(reset=reset)
     if batch_loss is not None:
         metrics["batch_loss"] = batch_loss
@@ -277,11 +287,6 @@ def get_metrics(
         if batch_reg_loss is not None:
             metrics["batch_reg_loss"] = batch_reg_loss
         metrics["reg_loss"] = float(total_reg_loss / num_batches) if num_batches > 0 else 0.0
-    if world_size > 1:
-        for key in {"loss", "reg_less", "batch_loss", "batch_reg_loss"}:
-            if key not in metrics:
-                continue
-            metrics[key] = nn_util.dist_reduce_sum(metrics[key]) / world_size
 
     return metrics
 
