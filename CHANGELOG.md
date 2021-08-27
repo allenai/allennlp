@@ -8,7 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Unreleased
 
 ### Added
-
+- Added more documentation to the learning rate schedulers to include a sample config object for how to use it.
+- Moved the pytorch learning rate schedulers wrappers to their own file called `pytorch_lr_schedulers.py` so that they will have their own documentation page.
 - Added a module `allennlp.nn.parallel` with a new base class, `DdpAccelerator`, which generalizes
   PyTorch's `DistributedDataParallel` wrapper to support other implementations. Two implementations of
   this class are provided. The default is `TorchDdpAccelerator` (registered at "torch"), which is just a thin wrapper around
@@ -24,10 +25,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `self.ddp_accelerator` during distributed training. This is useful when, for example, instantiating submodules in your
   model's `__init__()` method by wrapping them with `self.ddp_accelerator.wrap_module()`. See the `allennlp.modules.transformer.t5`
   for an example.
-- Added Tango components, to be explored in detail in a later post.
+- We now log batch metrics to tensorboard and wandb.
+- Added Tango components, to be explored in detail in a later post
+- Added `ScaledDotProductMatrixAttention`, and converted the transformer toolkit to use it
+- Added tests to ensure that all `Attention` and `MatrixAttention` implementations are interchangeable
+- Added a way for AllenNLP Tango to read and write datasets lazily.
+- Added a way to remix datasets flexibly
+- Added `from_pretrained_transformer_and_instances` constructor to `Vocabulary`
 
 ### Fixed
 
+- Fixed a bug in `ConditionalRandomField`: `transitions` and `tag_sequence` tensors were not initialized on the desired device causing high CPU usage (see https://github.com/allenai/allennlp/issues/2884)
 - Fixed a mispelling: the parameter `contructor_extras` in `Lazy()` is now correctly called `constructor_extras`.
 - Fixed broken links in `allennlp.nn.initializers` docs.
 - Fixed bug in `BeamSearch` where `last_backpointers` was not being passed to any `Constraint`s.
@@ -36,6 +44,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `ConfigurationError` is now pickleable.
 - Multitask models now support `TextFieldTensor` in heads, not just in the backbone
 - Checkpointer cleaning was fixed to work on Windows Paths
+- Multitask models now support `TextFieldTensor` in heads, not just in the backbone.
+- Fixed the signature of `ScaledDotProductAttention` to match the other `Attention` classes
+- Fixed the way names are applied to Tango `Step` instances.
 
 ### Changed
 
@@ -43,7 +54,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   with a default value of `False`. `False` means gradients are not rescaled and the gradient
   norm is never even calculated. `True` means the gradients are still not rescaled but the gradient
   norm is calculated and passed on to callbacks. A `float` value means gradients are rescaled.
-- `TensorCache` now supports more concurrent readers and writers. 
+- `TensorCache` now supports more concurrent readers and writers.
+- We no longer log parameter statistics to tensorboard or wandb by default.
 
 
 ## [v2.6.0](https://github.com/allenai/allennlp/releases/tag/v2.6.0) - 2021-07-19

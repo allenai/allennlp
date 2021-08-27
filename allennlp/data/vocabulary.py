@@ -424,6 +424,77 @@ class Vocabulary(Registrable):
         return vocab
 
     @classmethod
+    def from_pretrained_transformer_and_instances(
+        cls,
+        instances: Iterable["adi.Instance"],
+        transformers: Dict[str, str],
+        min_count: Dict[str, int] = None,
+        max_vocab_size: Union[int, Dict[str, int]] = None,
+        non_padded_namespaces: Iterable[str] = DEFAULT_NON_PADDED_NAMESPACES,
+        pretrained_files: Optional[Dict[str, str]] = None,
+        only_include_pretrained_words: bool = False,
+        tokens_to_add: Dict[str, List[str]] = None,
+        min_pretrained_embeddings: Dict[str, int] = None,
+        padding_token: Optional[str] = DEFAULT_PADDING_TOKEN,
+        oov_token: Optional[str] = DEFAULT_OOV_TOKEN,
+    ) -> "Vocabulary":
+        """
+        Construct a vocabulary given a collection of `Instance`'s and some parameters. Then extends
+        it with generated vocabularies from pretrained transformers.
+
+        Vocabulary from instances is constructed by passing parameters to :func:`from_instances`,
+        and then updated by including merging in vocabularies from
+        :func:`from_pretrained_transformer`. See other methods for full descriptions for what the
+        other parameters do.
+
+        The `instances` parameters does not get an entry in a typical AllenNLP configuration file,
+        other parameters do (if you want non-default parameters).
+
+        # Parameters
+
+        transformers : `Dict[str, str]`
+            Dictionary mapping the vocab namespaces (keys) to a transformer model name (value).
+            Namespaces not included will be ignored.
+
+        # Examples
+
+        You can use this constructor by modifying the following example within your training
+        configuration.
+
+        ```jsonnet
+        {
+            vocabulary: {
+                type: 'from_pretrained_transformer_and_instances',
+                transformers: {
+                    'namespace1': 'bert-base-cased',
+                    'namespace2': 'roberta-base',
+                },
+            }
+        }
+        ```
+        """
+        vocab = cls.from_instances(
+            instances=instances,
+            min_count=min_count,
+            max_vocab_size=max_vocab_size,
+            non_padded_namespaces=non_padded_namespaces,
+            pretrained_files=pretrained_files,
+            only_include_pretrained_words=only_include_pretrained_words,
+            tokens_to_add=tokens_to_add,
+            min_pretrained_embeddings=min_pretrained_embeddings,
+            padding_token=padding_token,
+            oov_token=oov_token,
+        )
+
+        for namespace, model_name in transformers.items():
+            transformer_vocab = cls.from_pretrained_transformer(
+                model_name=model_name, namespace=namespace
+            )
+            vocab.extend_from_vocab(transformer_vocab)
+
+        return vocab
+
+    @classmethod
     def empty(cls) -> "Vocabulary":
         """
         This method returns a bare vocabulary instantiated with `cls()` (so, `Vocabulary()` if you
@@ -810,6 +881,10 @@ class Vocabulary(Registrable):
 Vocabulary.register("from_pretrained_transformer", constructor="from_pretrained_transformer")(
     Vocabulary
 )
+Vocabulary.register(
+    "from_pretrained_transformer_and_instances",
+    constructor="from_pretrained_transformer_and_instances",
+)(Vocabulary)
 Vocabulary.register("from_instances", constructor="from_instances")(Vocabulary)
 Vocabulary.register("from_files", constructor="from_files")(Vocabulary)
 Vocabulary.register("extend", constructor="from_files_and_instances")(Vocabulary)

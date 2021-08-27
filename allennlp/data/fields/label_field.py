@@ -97,7 +97,6 @@ class LabelField(Field[torch.Tensor]):
 
     @overrides
     def as_tensor(self, padding_lengths: Dict[str, int]) -> torch.Tensor:
-
         tensor = torch.tensor(self._label_id, dtype=torch.long)
         return tensor
 

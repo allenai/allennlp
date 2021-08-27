@@ -227,7 +227,8 @@ class LogWriterCallback(TrainerCallback):
 
             # Now collect per-batch metrics to log.
             metrics_to_log: Dict[str, float] = {}
-            for key in ("batch_loss", "batch_reg_loss"):
+            batch_loss_metrics = {"batch_loss", "batch_reg_loss"}
+            for key in batch_loss_metrics:
                 if key not in metrics:
                     continue
                 value = metrics[key]
@@ -241,6 +242,13 @@ class LogWriterCallback(TrainerCallback):
                     self._batch_loss_moving_items[key]
                 )
 
+            for key, value in metrics.items():
+                if key in batch_loss_metrics:
+                    continue
+                key = "batch_" + key
+                if key not in metrics_to_log:
+                    metrics_to_log[key] = value
+
             self.log_scalars(
                 metrics_to_log,
                 log_prefix="train",
@@ -253,7 +261,7 @@ class LogWriterCallback(TrainerCallback):
 
         if self._batch_size_interval:
             # We're assuming here that `log_batch` will get called every batch, and only every
-            # batch.  This is true with our current usage of this code (version 1.0); if that
+            # batch. This is true with our current usage of this code (version 1.0); if that
             # assumption becomes wrong, this code will break.
             batch_group_size = sum(get_batch_size(batch) for batch in batch_group)  # type: ignore
             self._cumulative_batch_group_size += batch_group_size

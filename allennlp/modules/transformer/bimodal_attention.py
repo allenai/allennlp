@@ -1,7 +1,7 @@
 import torch
 
 from allennlp.common import FromParams
-from allennlp.modules.attention import Attention
+from allennlp.modules.matrix_attention.matrix_attention import MatrixAttention
 from allennlp.modules.transformer.transformer_module import TransformerModule
 from allennlp.modules.transformer.util import apply_mask
 
@@ -44,7 +44,8 @@ class BiModalAttention(TransformerModule, FromParams):
         The name of the attention-calculating function to be used for the first modality.
     scoring_func2 : `str` (default = `scaled_dot_product`)
         The name of the attention-calculating function to be used for the second modality.
-        Eg. `additive`, `linear`, etc. For a complete list, please check :mod:`allennlp.modules.attention`.
+        Eg. `dot_product`, `linear`, etc. For a complete list, please check
+        :mod:`allennlp.modules.matrix_attention`.
     """
 
     def __init__(
@@ -79,13 +80,7 @@ class BiModalAttention(TransformerModule, FromParams):
         self.value1 = torch.nn.Linear(hidden_size1, self.all_head_size)
 
         self.scoring_func1 = scoring_func1
-        if self.scoring_func1 in ["additive", "linear", "bilinear"]:
-            self.attn1 = Attention.by_name(self.scoring_func1)(hidden_size1, hidden_size1)
-        elif self.scoring_func1 == "scaled_dot_product":
-            self.attn1 = Attention.by_name(self.scoring_func1)(self.attention_head_size, False)
-        else:
-            self.attn1 = Attention.by_name(self.scoring_func1)()
-
+        self.attn1 = MatrixAttention.by_name(self.scoring_func1)()
         self.dropout1 = torch.nn.Dropout(dropout1)
 
         # Second modality:
@@ -95,13 +90,7 @@ class BiModalAttention(TransformerModule, FromParams):
         self.value2 = torch.nn.Linear(hidden_size2, self.all_head_size)
 
         self.scoring_func2 = scoring_func2
-        if self.scoring_func2 in ["additive", "linear", "bilinear"]:
-            self.attn2 = Attention.by_name(self.scoring_func2)(hidden_size2, hidden_size2)
-        elif self.scoring_func2 == "scaled_dot_product":
-            self.attn2 = Attention.by_name(self.scoring_func2)(self.attention_head_size, False)
-        else:
-            self.attn2 = Attention.by_name(self.scoring_func2)()
-
+        self.attn2 = MatrixAttention.by_name(self.scoring_func2)()
         self.dropout2 = torch.nn.Dropout(dropout2)
 
     def _transpose_for_scores(self, x):
@@ -164,7 +153,7 @@ class BiModalAttention(TransformerModule, FromParams):
         value_layer2 = self._transpose_for_scores(mixed_value_layer2)
 
         # Conditioning the second modality on the first one.
-        attention_scores1 = self.attn1(query_layer2, key_layer1.transpose(-1, -2))
+        attention_scores1 = self.attn1(query_layer2, key_layer1)
         if attention_mask1 is not None:
             attention_scores1 = apply_mask(attention_scores1, attention_mask1)
         if co_attention_mask is not None:
@@ -182,7 +171,7 @@ class BiModalAttention(TransformerModule, FromParams):
         context_layer1 = context_layer1.view(*new_context_layer_shape1)
 
         # Conditioning the first modality on the second one.
-        attention_scores2 = self.attn2(query_layer1, key_layer2.transpose(-1, -2))
+        attention_scores2 = self.attn2(query_layer1, key_layer2)
         # we can comment this line for single flow.
         if attention_mask2 is not None:
             attention_scores2 = apply_mask(attention_scores2, attention_mask2)
