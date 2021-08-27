@@ -545,7 +545,6 @@ class GradientDescentTrainer(Trainer):
                 batch_reg_loss,
                 self._batches_in_epoch_completed,
                 world_size=self._world_size,
-                cuda_device=self.cuda_device,
             )
 
             for callback in self._callbacks:
@@ -600,7 +599,6 @@ class GradientDescentTrainer(Trainer):
                 num_batches=self._batches_in_epoch_completed,
                 reset=True,
                 world_size=self._world_size,
-                cuda_device=self.cuda_device,
             )
 
         for (worker, memory) in cpu_memory_usage:
@@ -689,7 +687,6 @@ class GradientDescentTrainer(Trainer):
                     val_batch_reg_loss,
                     batches_this_epoch,
                     world_size=self._world_size,
-                    cuda_device=self.cuda_device,
                 )
 
                 description = training_util.description_from_metrics(val_metrics)
@@ -812,7 +809,6 @@ class GradientDescentTrainer(Trainer):
                         num_batches=num_batches,
                         reset=True,
                         world_size=self._world_size,
-                        cuda_device=self.cuda_device,
                     )
 
                     # Check validation metric for early stopping

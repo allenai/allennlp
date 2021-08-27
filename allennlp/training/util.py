@@ -262,7 +262,6 @@ def get_metrics(
     num_batches: int,
     reset: bool = False,
     world_size: int = 1,
-    cuda_device: Union[int, torch.device] = torch.device("cpu"),
 ) -> Dict[str, float]:
     """
     Gets the metrics but sets `"loss"` to
@@ -278,6 +277,11 @@ def get_metrics(
         if batch_reg_loss is not None:
             metrics["batch_reg_loss"] = batch_reg_loss
         metrics["reg_loss"] = float(total_reg_loss / num_batches) if num_batches > 0 else 0.0
+    if world_size > 1:
+        for key in {"loss", "reg_less", "batch_loss", "batch_reg_loss"}:
+            if key not in metrics:
+                continue
+            metrics[key] = nn_util.dist_reduce_sum(metrics[key]) / world_size
 
     return metrics
 
