@@ -18,6 +18,7 @@ from allennlp.common import util as common_util, Tqdm, Lazy
 from allennlp.data.data_loaders.data_loader import DataLoader, TensorDict
 from allennlp.models.model import Model
 from allennlp.nn.parallel import DdpAccelerator, DdpWrappedModel, TorchDdpAccelerator
+from allennlp.nn.util import dist_reduce_sum
 from allennlp.training.callbacks import ConsoleLoggerCallback
 from allennlp.training.callbacks.confidence_checks import ConfidenceChecksCallback
 from allennlp.training.callbacks.backward import MixedPrecisionBackwardCallback
@@ -544,8 +545,6 @@ class GradientDescentTrainer(Trainer):
                 batch_loss,
                 batch_reg_loss,
                 self._batches_in_epoch_completed,
-                world_size=self._world_size,
-                cuda_device=self.cuda_device,
             )
 
             for callback in self._callbacks:
@@ -591,16 +590,19 @@ class GradientDescentTrainer(Trainer):
         ):
             metrics = {}
         else:
+            train_loss = dist_reduce_sum(train_loss)
+            num_batches = dist_reduce_sum(self._batches_in_epoch_completed)
+            if train_reg_loss is not None:
+                train_reg_loss = dist_reduce_sum(train_reg_loss)
+
             metrics = training_util.get_metrics(
                 self.model,
                 train_loss,
                 train_reg_loss,
                 batch_loss=None,
                 batch_reg_loss=None,
-                num_batches=self._batches_in_epoch_completed,
+                num_batches=num_batches,
                 reset=True,
-                world_size=self._world_size,
-                cuda_device=self.cuda_device,
             )
 
         for (worker, memory) in cpu_memory_usage:
@@ -688,8 +690,6 @@ class GradientDescentTrainer(Trainer):
                     val_batch_loss,
                     val_batch_reg_loss,
                     batches_this_epoch,
-                    world_size=self._world_size,
-                    cuda_device=self.cuda_device,
                 )
 
                 description = training_util.description_from_metrics(val_metrics)
@@ -803,6 +803,11 @@ class GradientDescentTrainer(Trainer):
                     if self._distributed:
                         dist.barrier()
 
+                    val_loss = dist_reduce_sum(val_loss)
+                    num_batches = dist_reduce_sum(num_batches)
+                    if val_reg_loss is not None:
+                        val_reg_loss = dist_reduce_sum(val_reg_loss)
+
                     val_metrics = training_util.get_metrics(
                         self.model,
                         val_loss,
@@ -811,8 +816,6 @@ class GradientDescentTrainer(Trainer):
                         batch_reg_loss=None,
                         num_batches=num_batches,
                         reset=True,
-                        world_size=self._world_size,
-                        cuda_device=self.cuda_device,
                     )
 
                     # Check validation metric for early stopping

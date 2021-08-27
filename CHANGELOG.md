@@ -46,6 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Multitask models now support `TextFieldTensor` in heads, not just in the backbone.
 - Fixed the signature of `ScaledDotProductAttention` to match the other `Attention` classes
 - Fixed the way names are applied to Tango `Step` instances.
+- Fixed a bug in calculating loss in the distributed setting.
 
 ### Changed
 
