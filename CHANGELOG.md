@@ -42,6 +42,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `TransformerTextField` can now take tensors of shape `(1, n)` like the tensors produced from a HuggingFace tokenizer.
 - `tqdm` lock is now set inside `MultiProcessDataLoading` when new workers are spawned to avoid contention when writing output.
 - `ConfigurationError` is now pickleable.
+- Checkpointer cleaning was fixed to work on Windows Paths
 - Multitask models now support `TextFieldTensor` in heads, not just in the backbone.
 - Fixed the signature of `ScaledDotProductAttention` to match the other `Attention` classes
 - Fixed the way names are applied to Tango `Step` instances.
