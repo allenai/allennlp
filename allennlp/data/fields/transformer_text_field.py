@@ -114,3 +114,6 @@ class TransformerTextField(Field[torch.Tensor]):
             for name in self.__slots__
             if isinstance(getattr(self, name), torch.Tensor)
         }
+
+    def __len__(self):
+        return len(self.input_ids)
