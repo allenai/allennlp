@@ -32,6 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added a way for AllenNLP Tango to read and write datasets lazily.
 - Added a way to remix datasets flexibly
 - Added `from_pretrained_transformer_and_instances` constructor to `Vocabulary`
+- `TransformerTextField` now supports `__len__`.
 
 ### Fixed
 
@@ -47,6 +48,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed the signature of `ScaledDotProductAttention` to match the other `Attention` classes
 - Fixed the way names are applied to Tango `Step` instances.
 - Fixed a bug in calculating loss in the distributed setting.
+- Fixed a bug when extending a sparse sequence by 0 items.
 
 ### Changed
 
