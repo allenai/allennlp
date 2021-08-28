@@ -502,7 +502,7 @@ def _train_worker(
             dist.barrier()
 
         metrics = train_loop.run()
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, common_util.SigTermReceived):
         # if we have completed an epoch, try to create a model archive.
         if primary:
             best_weights_path = train_loop.trainer.get_best_weights_path()
