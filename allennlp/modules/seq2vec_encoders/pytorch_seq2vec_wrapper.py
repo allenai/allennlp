@@ -35,7 +35,7 @@ class PytorchSeq2VecWrapper(Seq2VecEncoder):
     This is what pytorch's RNN's look like - just make sure your class looks like those, and it
     should work.
 
-    Note that we *require* you to pass sequence lengths when you call this module, to avoid subtle
+    Note that we *require* you to pass `mask` when you call this module, to avoid subtle
     bugs around masking.  If you already have a `PackedSequence` you can pass `None` as the
     second parameter.
     """
