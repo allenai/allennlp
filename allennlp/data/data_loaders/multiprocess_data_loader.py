@@ -1,9 +1,12 @@
 from collections import deque
 import logging
 from multiprocessing.process import BaseProcess
+from multiprocessing.connection import Connection
 import random
 import traceback
-from typing import List, Iterator, Optional, Iterable, Union, TypeVar
+import select
+from queue import Full
+from typing import List, Iterator, Optional, Iterable, Union, TypeVar, Tuple, Any
 
 from overrides import overrides
 import torch
@@ -374,7 +377,7 @@ class MultiProcessDataLoader(DataLoader):
                     if self._max_instance_queue_size is None
                     else ctx.JoinableQueue(maxsize=self._max_instance_queue_size)
                 )
-                workers = self._start_instance_workers(queue, ctx)
+                workers, txs = self._start_instance_workers(queue, ctx)
 
                 try:
                     for instance in self._maybe_tqdm(
@@ -386,7 +389,7 @@ class MultiProcessDataLoader(DataLoader):
                 finally:
                     if hasattr(queue, "close"):  # for compat with different Python versions.
                         queue.close()  # type: ignore[attr-defined]
-                    self._join_workers(workers, queue)
+                    self._join_workers(workers, queue, txs)
 
     @overrides
     def set_target_device(self, device: torch.device) -> None:
@@ -404,7 +407,7 @@ class MultiProcessDataLoader(DataLoader):
                 if self._max_batch_queue_size is None
                 else ctx.JoinableQueue(maxsize=self._max_batch_queue_size)
             )
-            workers = self._start_batch_workers(queue, ctx)
+            workers, txs = self._start_batch_workers(queue, ctx)
 
             try:
                 # We can now start consuming from the `queue` as the batch workers
@@ -425,47 +428,109 @@ class MultiProcessDataLoader(DataLoader):
             finally:
                 if hasattr(queue, "close"):  # for compat with different Python versions.
                     queue.close()  # type: ignore[attr-defined]
-                self._join_workers(workers, queue)
+                self._join_workers(workers, queue, txs)
 
-    def _start_instance_workers(self, queue: mp.JoinableQueue, ctx) -> List[BaseProcess]:
+    def _start_instance_workers(
+        self, queue: mp.JoinableQueue, ctx
+    ) -> Tuple[List[BaseProcess], List[Connection]]:
         Tqdm.set_lock(mp.RLock())
         workers: List[BaseProcess] = []
+        txs: List[Connection] = []
         for worker_id in range(self.num_workers):
+            rx, tx = ctx.Pipe(duplex=False)
             worker: BaseProcess = ctx.Process(
-                target=self._instance_worker, args=(worker_id, queue, Tqdm.get_lock()), daemon=True
+                target=self._instance_worker,
+                args=(worker_id, queue, Tqdm.get_lock(), rx),
+                daemon=True,
             )
             worker.start()
             workers.append(worker)
-        return workers
+            txs.append(tx)
+        return workers, txs
 
-    def _start_batch_workers(self, queue: mp.JoinableQueue, ctx) -> List[BaseProcess]:
+    def _start_batch_workers(
+        self, queue: mp.JoinableQueue, ctx
+    ) -> Tuple[List[BaseProcess], List[Connection]]:
         Tqdm.set_lock(mp.RLock())
         workers: List[BaseProcess] = []
+        txs: List[Connection] = []
         for worker_id in range(self.num_workers):
+            rx, tx = ctx.Pipe(duplex=False)
             worker: BaseProcess = ctx.Process(
-                target=self._batch_worker, args=(worker_id, queue, Tqdm.get_lock()), daemon=True
+                target=self._batch_worker, args=(worker_id, queue, Tqdm.get_lock(), rx), daemon=True
             )
             worker.start()
             workers.append(worker)
-        return workers
+            txs.append(tx)
+        return workers, txs
 
-    def _join_workers(self, workers: List[BaseProcess], queue) -> None:
-        # Each worker will be blocking on a call to `queue.join()`,
-        # calling `queue.task_done()` times the number of workers will
-        # call the `queue.join()` to return, and each worker should exit on its own.
+    def _join_workers(self, workers: List[BaseProcess], queue, txs: List[Connection]) -> None:
+        # If the workers have exhausted their batch/instance generators,
+        # they will be blocking on a call to `queue.join()`,
+        # so calling `queue.task_done()` times the number of workers will
+        # allow the `queue.join()` to return and each worker should exit on its own.
         for _ in range(len(workers)):
             try:
                 queue.task_done()
             except ValueError:
                 # This happens if a worker died early.
                 break
-        # If for some reason the workers don't exit properly, we go through and terminate
-        # them anyway.
-        for worker in workers:
+        # But if we're joining the workers due to an exception in the main process,
+        # they probably won't be finished, so we need to tell them to stop.
+        # We first do this nicely by sending them a message through their corresponding
+        # tx connection.
+        for tx in txs:
+            tx.send("stop")
+
+        # If for some reason the workers still haven't exited, we go through and terminate
+        # them.
+        for i, worker in enumerate(workers):
+            worker.join(1)
             if worker.is_alive():
+                logger.warning("terminating worker %s", i)
                 worker.terminate()
 
-    def _instance_worker(self, worker_id: int, queue: mp.JoinableQueue, lock) -> None:
+    def _safe_queue_put(
+        self, worker_id: int, item: Any, queue: mp.JoinableQueue, rx: Connection
+    ) -> bool:
+        while True:
+            # First we have to check to make sure the parent process is still alive
+            # and consuming from the queue because there are circumstances where the
+            # parent process can or exit stop consuming without automatically cleaning up
+            # its children (the workers).
+            # For example, when the parent process is killed with `kill -9`.
+            # So the first thing we do is check to see if the parent has notified
+            # us (the worker) to stop through the rx (receiver) connection.
+            # Of course this only works if the parent was able to send out a notification,
+            # which may not always be the case. So we have a backup check below.
+            if rx.poll():
+                logger.warning(
+                    "worker %d received stop message from parent, exiting now", worker_id
+                )
+                queue.cancel_join_thread()
+                return False
+            # The is the backup check.
+            # The file descriptor associated with the rx (receiver) connection will
+            # be readable if and only if the parent process has exited.
+            # NOTE (epwalsh): this doesn't work on Mac OS X with `start_method == "fork"`
+            # for some reason, i.e. the file descriptor doesn't show as readable
+            # after the parent process has died.
+            fds, _, _ = select.select([rx.fileno()], [], [], 0)
+            if fds:
+                logger.warning("worker %d parent process has died, exiting now", worker_id)
+                queue.cancel_join_thread()
+                return False
+            # If we're down here the parent process is still alive to the best of our
+            # knowledge, so we can continue putting things on the queue.
+            try:
+                queue.put(item, True, 0.1)
+                return True
+            except Full:
+                continue
+
+    def _instance_worker(
+        self, worker_id: int, queue: mp.JoinableQueue, lock, rx: Connection
+    ) -> None:
         Tqdm.set_lock(lock)
         try:
             self.reader._set_worker_info(WorkerInfo(self.num_workers, worker_id))
@@ -488,9 +553,16 @@ class MultiProcessDataLoader(DataLoader):
                                 "so already)."
                             )
                     checked_for_token_indexers = True
-                queue.put((instance, None))
+                if self._safe_queue_put(worker_id, (instance, None), queue, rx):
+                    continue
+                else:
+                    # Couldn't put item on queue because parent process has exited.
+                    return
         except Exception as e:
-            queue.put((None, (repr(e), traceback.format_exc())))
+            if not self._safe_queue_put(
+                worker_id, (None, (repr(e), traceback.format_exc())), queue, rx
+            ):
+                return
 
         # Indicate to the consumer that this worker is finished.
         queue.put((None, None))
@@ -498,7 +570,7 @@ class MultiProcessDataLoader(DataLoader):
         # Wait until this process can safely exit.
         queue.join()
 
-    def _batch_worker(self, worker_id: int, queue: mp.JoinableQueue, lock) -> None:
+    def _batch_worker(self, worker_id: int, queue: mp.JoinableQueue, lock, rx: Connection) -> None:
         Tqdm.set_lock(lock)
         try:
             self.reader._set_worker_info(WorkerInfo(self.num_workers, worker_id))
@@ -506,9 +578,16 @@ class MultiProcessDataLoader(DataLoader):
             for batch in self._instances_to_batches(
                 instances, move_to_device=self._worker_cuda_safe
             ):
-                queue.put((batch, None))
+                if self._safe_queue_put(worker_id, (batch, None), queue, rx):
+                    continue
+                else:
+                    # Couldn't put item on queue because parent process has exited.
+                    return
         except Exception as e:
-            queue.put((None, (repr(e), traceback.format_exc())))
+            if not self._safe_queue_put(
+                worker_id, (None, (repr(e), traceback.format_exc())), queue, rx
+            ):
+                return
 
         # Indicate to the consumer (main thread) that this worker is finished.
         queue.put((None, None))
