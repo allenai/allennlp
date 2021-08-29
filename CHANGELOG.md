@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Updated the docs for `PytorchSeq2VecWrapper` to specify that `mask` is required rather than sequence lengths for clarity.
 - Added more documentation to the learning rate schedulers to include a sample config object for how to use it.
 - Moved the pytorch learning rate schedulers wrappers to their own file called `pytorch_lr_schedulers.py` so that they will have their own documentation page.
 - Added a module `allennlp.nn.parallel` with a new base class, `DdpAccelerator`, which generalizes
