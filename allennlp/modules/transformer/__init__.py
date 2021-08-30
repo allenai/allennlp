@@ -137,6 +137,7 @@ from allennlp.modules.transformer.transformer_layer import AttentionLayer, Trans
 from allennlp.modules.transformer.transformer_stack import TransformerStack
 from allennlp.modules.transformer.transformer_pooler import TransformerPooler
 from allennlp.modules.transformer.output_layer import OutputLayer
+from allennlp.modules.transformer.masked_lm_head import MaskedLMHead
 
 from allennlp.modules.transformer.bimodal_attention import BiModalAttention
 from allennlp.modules.transformer.bimodal_encoder import BiModalEncoder
