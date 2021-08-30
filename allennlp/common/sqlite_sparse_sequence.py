@@ -63,8 +63,11 @@ class SqliteSparseSequence(MutableSequence[Any]):
 
     def extend(self, values: Iterable[Any]) -> None:
         current_length = len(self)
+        index = -1
         for index, value in enumerate(values):
             self.table[str(index + current_length)] = value
+        if index < 0:
+            return
         self.table["_len"] = current_length + index + 1
         self.table.commit()
 

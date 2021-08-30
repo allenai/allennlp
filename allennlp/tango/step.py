@@ -348,7 +348,7 @@ class Step(Registrable, Generic[T]):
             self.only_if_needed = only_if_needed
 
         self.work_dir_for_run: Optional[
-            PathLike
+            Path
         ] = None  # This is set only while the run() method runs.
 
     @classmethod
@@ -496,7 +496,7 @@ class Step(Registrable, Generic[T]):
                 # No cleanup, as we want to keep the directory for restarts or serialization.
                 self.work_dir_for_run = None
 
-    def work_dir(self) -> PathLike:
+    def work_dir(self) -> Path:
         """
         Returns a work directory that a step can use while its `run()` method runs.
 

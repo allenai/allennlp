@@ -16,6 +16,9 @@ class OutputLayer(TransformerModule, FromParams):
         self.layer_norm = LayerNorm(hidden_size, eps=1e-12)
         self.dropout = torch.nn.Dropout(dropout)
 
+    def get_output_dim(self) -> int:
+        return self.dense.out_features
+
     def forward(self, hidden_states, input_tensor):
         dense_output = self.dense(hidden_states)
         dropout_output = self.dropout(dense_output)
