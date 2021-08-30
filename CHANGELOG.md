@@ -33,6 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added a way for AllenNLP Tango to read and write datasets lazily.
 - Added a way to remix datasets flexibly
 - Added `from_pretrained_transformer_and_instances` constructor to `Vocabulary`
+- Added a Transformer Toolkit equivalent for masked language modeling
 - `TransformerTextField` now supports `__len__`.
 
 ### Fixed
