@@ -159,9 +159,6 @@ class TransformerLayer(TransformerModule, FromParams):
     ):
         super().__init__()
 
-        self._hidden_size = hidden_size
-        self._add_cross_attention = add_cross_attention
-
         self.attention = AttentionLayer(
             hidden_size=hidden_size,
             num_attention_heads=num_attention_heads,
@@ -185,6 +182,9 @@ class TransformerLayer(TransformerModule, FromParams):
         self.output = OutputLayer(
             input_size=intermediate_size, hidden_size=hidden_size, dropout=hidden_dropout
         )
+
+    def get_output_dim(self) -> int:
+        return self.output.get_output_dim()
 
     def forward(
         self,

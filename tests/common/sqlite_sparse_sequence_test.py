@@ -8,6 +8,8 @@ def test_sqlite_sparse_sequence():
     with TemporaryDirectory(prefix="test_sparse_sequence-") as temp_dir:
         s = SqliteSparseSequence(os.path.join(temp_dir, "test.sqlite"))
         assert len(s) == 0
+        s.extend([])
+        assert len(s) == 0
         s.append("one")
         assert len(s) == 1
         s.extend(["two", "three"])

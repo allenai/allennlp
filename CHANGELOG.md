@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Added a support for mutiple datasets and output files for the `evaluate` command.
+- Added support to evaluate mutiple datasets and produce corresponding output files in the `evaluate` command.
 - Added more documentation to the learning rate schedulers to include a sample config object for how to use it.
 - Moved the pytorch learning rate schedulers wrappers to their own file called `pytorch_lr_schedulers.py` so that they will have their own documentation page.
 - Added a module `allennlp.nn.parallel` with a new base class, `DdpAccelerator`, which generalizes
@@ -34,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added a way for AllenNLP Tango to read and write datasets lazily.
 - Added a way to remix datasets flexibly
 - Added `from_pretrained_transformer_and_instances` constructor to `Vocabulary`
+- `TransformerTextField` now supports `__len__`.
 
 ### Fixed
 
@@ -44,9 +45,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `TransformerTextField` can now take tensors of shape `(1, n)` like the tensors produced from a HuggingFace tokenizer.
 - `tqdm` lock is now set inside `MultiProcessDataLoading` when new workers are spawned to avoid contention when writing output.
 - `ConfigurationError` is now pickleable.
+- Checkpointer cleaning was fixed to work on Windows Paths
 - Multitask models now support `TextFieldTensor` in heads, not just in the backbone.
 - Fixed the signature of `ScaledDotProductAttention` to match the other `Attention` classes
+- `allennlp` commands will now catch `SIGTERM` signals and handle them similar to `SIGINT` (keyboard interrupt).
+- The `MultiProcessDataLoader` will properly shutdown its workers when a `SIGTERM` is received.
 - Fixed the way names are applied to Tango `Step` instances.
+- Fixed a bug in calculating loss in the distributed setting.
+- Fixed a bug when extending a sparse sequence by 0 items.
 
 ### Changed
 

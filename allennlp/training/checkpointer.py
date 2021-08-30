@@ -97,8 +97,8 @@ class Checkpointer(Registrable):
         else:
             return path + ".th"
 
-    _model_state_file_re = re.compile(r"(.*/)?model_state_e(\d+)_b(\d+)(_w\d+)?\.th$")
-    _training_state_file_re = re.compile(r"(.*/)?training_state_e(\d+)_b(\d+)(_w\d+)?\.th$")
+    _model_state_file_re = re.compile(r"(.*[/\\])?model_state_e(\d+)_b(\d+)(_w\d+)?\.th$")
+    _training_state_file_re = re.compile(r"(.*[/\\])?training_state_e(\d+)_b(\d+)(_w\d+)?\.th$")
 
     @classmethod
     def _parse_model_state_path(cls, path: Union[str, os.PathLike]) -> Optional[Tuple[int, int]]:
