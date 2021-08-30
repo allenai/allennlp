@@ -3,23 +3,27 @@
 every time we release a new version.*
 """
 
-import dataclasses
 from typing import Set, Optional, Iterable, Any
 
 from allennlp.tango.dataset import DatasetDict
 from allennlp.tango.step import Step
+from allennlp.common.sqlite_sparse_sequence import SqliteSparseSequence
+from allennlp.tango.sqlite_format import SqliteDictFormat
+from tqdm import tqdm
 
 
-@Step.register("text_only")
-class TextOnlyDataset(Step):
+@Step.register("strings_only")
+class StringsOnlyDataset(Step):
     """
-    This step converts a dataset into another dataset that contains only the strings from the original dataset.
+    This step converts a dataset into another dataset that contains only strings from the original dataset.
 
     You can specify exactly which fields to keep from the original dataset (default is all of them).
     You can specify a minimum length of string to keep, to filter out strings that are too short.
     """
 
     DETERMINISTIC = True
+    VERSION = "001"
+    FORMAT = SqliteDictFormat()
 
     def run(  # type: ignore
         self,
@@ -39,7 +43,11 @@ class TextOnlyDataset(Step):
         """
 
         def find_nested_strings(o: Any, prefix: str = "") -> Iterable[str]:
-            if isinstance(o, list) or isinstance(o, tuple):
+            if isinstance(o, str):
+                if fields_to_keep is None or prefix in fields_to_keep:
+                    if min_length is None or len(o) >= min_length:
+                        yield o
+            elif isinstance(o, list) or isinstance(o, tuple):
                 for i, item in enumerate(o):
                     new_prefix = f"{prefix}.{i}"
                     yield from find_nested_strings(item, new_prefix)
@@ -47,17 +55,17 @@ class TextOnlyDataset(Step):
                 for name, item in o.items():
                     new_prefix = f"{prefix}.{name}"
                     yield from find_nested_strings(item, new_prefix)
-            elif isinstance(o, str):
-                if fields_to_keep is None or prefix in fields_to_keep:
-                    if min_length is None or len(o) >= min_length:
-                        yield o
 
-        return dataclasses.replace(
-            input,
-            splits={
-                split_name: [
-                    {"text": text} for instance in split for text in find_nested_strings(instance)
-                ]
-                for split_name, split in input.splits.items()
-            },
-        )
+        splits = {}
+        for split_name, split in input.splits.items():
+            sequence_file = self.work_dir() / f"{split_name}.sqlite"
+            sequence_file.unlink(missing_ok=True)
+            sequence = SqliteSparseSequence(sequence_file)
+            sequence.extend(
+                {"text": string}
+                for instance in tqdm(split, desc=f"Processing split '{split_name}'")
+                for string in find_nested_strings(instance)
+            )
+            splits[split_name] = sequence
+
+        return DatasetDict(splits=splits, vocab=input.vocab, metadata=input.metadata)

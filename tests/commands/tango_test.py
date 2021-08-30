@@ -47,7 +47,7 @@ class TestTangoCommand(AllenNlpTestCase):
         params_as_dict_because_mypy_is_lame = {
             "dataset": {"type": "hf_dataset", "dataset_name": "squad"},
             "dataset_text_only": {
-                "type": "text_only",
+                "type": "text_fields_only",
                 "input": "dataset",
                 "fields_to_keep": ["context", "question"],
             },

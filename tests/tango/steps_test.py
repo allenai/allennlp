@@ -17,7 +17,7 @@ from allennlp.tango.step import (
 
 import logging
 
-from allennlp.tango.text_only import TextOnlyDataset
+from allennlp.tango.text_fields_only import TextFieldsOnlyDataset
 
 logging.basicConfig(level=logging.INFO)
 
@@ -63,7 +63,7 @@ def test_make_step_graph(ordered_ascending: bool):
     params_as_dict_because_mypy_is_lame = {
         "dataset": {"type": "hf_dataset", "dataset_name": "squad"},
         "dataset_text_only": {
-            "type": "text_only",
+            "type": "text_fields_only",
             "input": {"type": "ref", "ref": "dataset"},
             "fields_to_keep": ["context", "question"],
         },
@@ -75,7 +75,7 @@ def test_make_step_graph(ordered_ascending: bool):
     step_graph = step_graph_from_params(params.pop("steps"))
     assert len(step_graph) == 2
     assert isinstance(step_graph["dataset"], HuggingfaceDataset)
-    assert isinstance(step_graph["dataset_text_only"], TextOnlyDataset)
+    assert isinstance(step_graph["dataset_text_only"], TextFieldsOnlyDataset)
     assert step_graph["dataset_text_only"].kwargs["input"] == step_graph["dataset"]
 
 
