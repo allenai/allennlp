@@ -145,7 +145,9 @@ def _dist_load_and_train(
 
     # TODO: grad scaler doesn't work now due to https://github.com/facebookresearch/fairscale/issues/421.
     #  scaler = wrapped_model.init_grad_scaler()
-    scaler: Optional[amp.GradScaler] = None
+    # scaler: Optional[amp.GradScaler] = None
+    # Update: works now?
+    scaler = wrapped_model.init_grad_scaler()
 
     # Checkpoint each worker's state.
     worker_state = wrapped_model.state_dict()
