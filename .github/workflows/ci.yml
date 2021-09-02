@@ -362,6 +362,8 @@ jobs:
     strategy:
       matrix:
         python: ['3.7', '3.8']
+    env:
+      HUGGINGFACE_CO_STAGING: yes
 
     steps:
     - name: Setup Python

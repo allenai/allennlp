@@ -3,18 +3,17 @@ Utilities for pushing models to the Hugging Face Hub ([hf.co](https://hf.co/)).
 """
 
 import logging
-from os import PathLike
-from typing import Optional, Union
-from pathlib import Path
-
-from allennlp.common.file_utils import cached_path
 import shutil
-
-import zipfile
 import tarfile
 import tempfile
+import zipfile
+from os import PathLike
+from pathlib import Path
+from typing import Optional, Union
 
-from huggingface_hub import Repository, HfApi, HfFolder
+from huggingface_hub import HfApi, HfFolder, Repository
+
+from allennlp.common.file_utils import cached_path
 
 logger = logging.getLogger(__name__)
 
@@ -62,7 +61,7 @@ def _copy_allowed_file(filepath: Path, dst_directory: Path):
     if filepath.is_dir():
         shutil.copytree(filepath, dst)
     elif filepath.is_file():
-        if filepath.name == "best.th":
+        if filepath.name in ["best.th", "weights.th"]:
             dst = dst_directory / "model.th"
         shutil.copy(str(filepath), str(dst))
 
@@ -74,7 +73,8 @@ def push_to_hf(
     organization: Optional[str] = None,
     commit_message: str = "Update repository",
     local_repo_path: Union[str, PathLike] = "hub",
-):
+    use_auth_token: Union[bool, str] = True,
+) -> str:
     """Pushes model and related files to the Hugging Face Hub ([hf.co](https://hf.co/))
 
     # Parameters
@@ -97,6 +97,10 @@ def push_to_hf(
     local_repo_path : `Union[str, Path]`, optional (default=`hub`)
         Local directory where the repository will be saved.
 
+    use_auth_token (``str`` or ``bool``, `optional`, defaults ``True``):
+        huggingface_token can be extract from ``HfApi().login(username, password)`` and is used to authenticate
+        against the Hugging Face Hub (useful from Google Colab for instance). It's automatically retrieved
+        if you've done `huggingface-cli login` before.
     """
 
     if serialization_dir is not None:
@@ -124,23 +128,29 @@ def push_to_hf(
         else:
             logging.info(
                 "Using the archive_path is discouraged. Using the serialization_dir"
-                "will also upload metrics andTensorBoard traces to the Hugging Face Hub."
+                "will also upload metrics and TensorBoard traces to the Hugging Face Hub."
             )
     else:
         raise ValueError("please specify either serialization_dir or archive_path")
+
+    info_msg = f"Preparing repository '{use_auth_token}'"
+    if isinstance(use_auth_token, str):
+        huggingface_token = use_auth_token
+    elif use_auth_token:
+        huggingface_token = HfFolder.get_token()
 
     # Create the repo (or clone its content if it's nonempty)
     api = HfApi()
     repo_url = api.create_repo(
         name=repo_name,
-        token=HfFolder.get_token(),
+        token=huggingface_token,
         organization=organization,
         private=False,
         exist_ok=True,
     )
 
     repo_local_path = Path(local_repo_path) / repo_name
-    repo = Repository(repo_local_path, clone_from=repo_url)
+    repo = Repository(repo_local_path, clone_from=repo_url, use_auth_token=use_auth_token)
     repo.git_pull(rebase=True)
 
     # Model file should be tracked with Git LFS
@@ -164,7 +174,7 @@ def push_to_hf(
     _create_model_card(repo_local_path)
 
     logging.info(f"Pushing repo {repo_name} to the Hugging Face Hub")
-    url = repo.push_to_hub(commit_message=commit_message)
+    repo.push_to_hub(commit_message=commit_message)
 
-    url, _ = url.split("/commit/")
-    logging.info(f"View your model in {url}")
+    logging.info(f"View your model in {repo_url}")
+    return repo_url
