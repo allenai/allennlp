@@ -56,12 +56,12 @@ class PairedPCABiasDirectionTest(AllenNlpTestCase):
 
     @multi_device
     def test_paired_pca_without_grad(self, device: str):
-        seed_embeddings1 = torch.eye(2, device=device)
-        seed_embeddings2 = torch.tensor([[1.0, 1.0], [1.0, 1.0]], device=device)
+        seed_embeddings1 = torch.tensor([[1.0, 0.5], [1.5, 1.0]], device=device)
+        seed_embeddings2 = torch.tensor([[0.5, 1.0], [1.0, 1.5]], device=device)
         paired_pca = PairedPCABiasDirection()
 
-        const = 1 / math.sqrt(2)
-        expected_bias_direction = torch.tensor([const, -const], device=device)
+        const = math.sqrt(2) /2
+        expected_bias_direction = torch.tensor([-const, const], device=device)
         test_bias_direction = paired_pca(seed_embeddings1, seed_embeddings2)
         k = expected_bias_direction / test_bias_direction
         assert k[0].item() == pytest.approx(k[1].item())
