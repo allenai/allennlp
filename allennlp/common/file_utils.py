@@ -539,7 +539,7 @@ def _http_get(url: str, temp_file: IO) -> None:
         req.raise_for_status()
         content_length = req.headers.get("Content-Length")
         total = int(content_length) if content_length is not None else None
-        progress = Tqdm.tqdm(unit="B", total=total, desc="downloading")
+        progress = Tqdm.tqdm(unit="B", unit_scale=True, total=total, desc="downloading")
         for chunk in req.iter_content(chunk_size=1024):
             if chunk:  # filter out keep-alive new chunks
                 progress.update(len(chunk))
