@@ -9,10 +9,8 @@ from allennlp.common.checks import ConfigurationError
 from allennlp.common.params import (
     infer_and_cast,
     Params,
-    parse_overrides,
-    unflatten,
-    with_fallback,
     remove_keys_from_params,
+    with_overrides,
 )
 from allennlp.common.testing import AllenNlpTestCase
 
@@ -40,13 +38,37 @@ class TestParams(AllenNlpTestCase):
         Params.from_file(filename)
         del os.environ["BAD_ENVIRONMENT_VARIABLE"]
 
+    def test_with_overrides(self):
+        original = {
+            "foo": {"bar": {"baz": 3}, "x": 0},
+            "bar": ["a", "b", "c"],
+            "baz": {"bar": 2, "y": 3, "x": [0, 1, 2]},
+        }
+        overrides = {
+            "foo.bar": {"z": 2},
+            "bar.0": "d",
+            "baz.bar": 1,
+            "baz.x": [0, 0],
+        }
+        assert with_overrides(original, overrides) == {
+            "foo": {"bar": {"z": 2}, "x": 0},
+            "bar": ["d", "b", "c"],
+            "baz": {"bar": 1, "y": 3, "x": [0, 0]},
+        }
+
+    def test_bad_overrides(self):
+        with pytest.raises(ValueError, match="contains unused keys"):
+            with_overrides({"foo": [0, 1, 2]}, {"foo.3": 4})
+        with pytest.raises(ValueError, match="expected list or dict"):
+            with_overrides({"foo": 3}, {"foo.x": 2})
+
     @pytest.mark.parametrize("input_type", [dict, str])
     def test_overrides(self, input_type):
         filename = self.FIXTURES_ROOT / "simple_tagger" / "experiment.json"
         overrides = {
             "train_data_path": "FOO",
-            "model": {"type": "BAR"},
-            "model.text_field_embedder.tokens.type": "BAZ",
+            "model.type": "BAR",
+            "model.text_field_embedder.token_embedders.tokens.type": "BAZ",
             "data_loader.batch_sampler.sorting_keys.0": "question",
         }
         params = Params.from_file(
@@ -60,57 +82,7 @@ class TestParams(AllenNlpTestCase):
 
         model_params = params.pop("model")
         assert model_params.pop("type") == "BAR"
-        assert model_params["text_field_embedder"]["tokens"]["type"] == "BAZ"
-
-    def test_unflatten(self):
-        flattened = {"a.b.c": 1, "a.b.d": 0, "a.e.f.g.h": 2, "b": 3}
-        unflattened = unflatten(flattened)
-        assert unflattened == {"a": {"b": {"c": 1, "d": 0}, "e": {"f": {"g": {"h": 2}}}}, "b": 3}
-
-        # should do nothing to a non-flat dictionary
-        assert unflatten(unflattened) == unflattened
-
-    def test_with_fallback(self):
-        preferred = {"a": 1}
-        fallback = {"a": 0, "b": 2}
-
-        merged = with_fallback(preferred=preferred, fallback=fallback)
-        assert merged == {"a": 1, "b": 2}
-
-        # incompatibility is ok
-        preferred = {"a": {"c": 3}}
-        fallback = {"a": 0, "b": 2}
-        merged = with_fallback(preferred=preferred, fallback=fallback)
-        assert merged == {"a": {"c": 3}, "b": 2}
-
-        # goes deep
-        preferred = {"deep": {"a": 1}}
-        fallback = {"deep": {"a": 0, "b": 2}}
-
-        merged = with_fallback(preferred=preferred, fallback=fallback)
-        assert merged == {"deep": {"a": 1, "b": 2}}
-
-    def test_parse_overrides(self):
-        assert parse_overrides("") == {}
-        assert parse_overrides("{}") == {}
-
-        override_dict = parse_overrides('{"train_data": "/train", "trainer.num_epochs": 10}')
-        assert override_dict == {"train_data": "/train", "trainer": {"num_epochs": 10}}
-
-        params = with_fallback(
-            preferred=override_dict,
-            fallback={
-                "train_data": "/test",
-                "model": "simple_tagger",
-                "trainer": {"num_epochs": 100, "optimizer": "sgd"},
-            },
-        )
-
-        assert params == {
-            "train_data": "/train",
-            "model": "simple_tagger",
-            "trainer": {"num_epochs": 10, "optimizer": "sgd"},
-        }
+        assert model_params["text_field_embedder"]["token_embedders"]["tokens"]["type"] == "BAZ"
 
     def test_as_flat_dict(self):
         params = Params({"a": 10, "b": {"c": 20, "d": "stuff"}}).as_flat_dict()
