@@ -89,9 +89,9 @@ class PushToHf(Subcommand):
 def push(args: argparse.Namespace):
     push_to_hf(
         args.repo_name,
-        args.serialization_dir,
-        args.archive_path,
-        args.organization,
-        args.commit_message,
-        args.local_repo_path,
+        serialization_dir=args.serialization_dir,
+        archive_path=args.archive_path,
+        organization=args.organization,
+        commit_message=args.commit_message,
+        local_repo_path=args.local_repo_path,
     )
