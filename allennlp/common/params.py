@@ -1,4 +1,5 @@
 import copy
+from itertools import chain
 import json
 import logging
 import os
@@ -104,7 +105,9 @@ def with_overrides(original: T, overrides_dict: Dict[str, Any], prefix: str = ""
         keys = range(len(original))
     elif isinstance(original, dict):
         merged = {}
-        keys = original.keys()
+        keys = chain(
+            original.keys(), (k for k in overrides_dict if "." not in k and k not in original)
+        )
     else:
         if prefix:
             raise ValueError(

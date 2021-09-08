@@ -49,11 +49,13 @@ class TestParams(AllenNlpTestCase):
             "bar.0": "d",
             "baz.bar": 1,
             "baz.x": [0, 0],
+            "z": 2,
         }
         assert with_overrides(original, overrides) == {
             "foo": {"bar": {"z": 2}, "x": 0},
             "bar": ["d", "b", "c"],
             "baz": {"bar": 1, "y": 3, "x": [0, 0]},
+            "z": 2,
         }
 
     def test_bad_overrides(self):
