@@ -38,6 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added a way to remix datasets flexibly
 - Added `from_pretrained_transformer_and_instances` constructor to `Vocabulary`
 - `TransformerTextField` now supports `__len__`.
+- Added support to push models directly to the [Hugging Face Hub](https://huggingface.co/).
 
 ### Fixed
 
