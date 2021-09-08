@@ -113,6 +113,36 @@ class TestEvaluate(AllenNlpTestCase):
                 prediction = json.loads(line.strip())
             assert "tags" in prediction
 
+    def test_multiple_output_files_evaluate_from_args(self):
+        output_file = str(self.TEST_DIR / "metrics.json")
+        predictions_output_file = str(self.TEST_DIR / "predictions.jsonl")
+        kebab_args = [
+            "evaluate",
+            str(
+                self.FIXTURES_ROOT / "simple_tagger_with_span_f1" / "serialization" / "model.tar.gz"
+            ),
+            str(self.FIXTURES_ROOT / "data" / "conll2003.txt")
+            + ":"
+            + str(self.FIXTURES_ROOT / "data" / "conll2003.txt"),
+            "--cuda-device",
+            "-1",
+            "--output-file",
+            output_file + ":" + output_file,
+            "--predictions-output-file",
+            predictions_output_file + ":" + predictions_output_file,
+        ]
+        args = self.parser.parse_args(kebab_args)
+        computed_metrics = evaluate_from_args(args)
+
+        with open(output_file, "r") as file:
+            saved_metrics = json.load(file)
+        assert computed_metrics == saved_metrics
+
+        with open(predictions_output_file, "r") as file:
+            for line in file:
+                prediction = json.loads(line.strip())
+            assert "tags" in prediction
+
     def test_evaluate_works_with_vocab_expansion(self):
         archive_path = str(
             self.FIXTURES_ROOT / "basic_classifier" / "serialization" / "model.tar.gz"

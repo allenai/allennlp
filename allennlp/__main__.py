@@ -38,6 +38,10 @@ def run():
     )
 
     from allennlp.commands import main  # noqa
+    from allennlp.common.util import install_sigterm_handler
+
+    # We want to be able to catch SIGTERM signals in addition to SIGINT (keyboard interrupt).
+    install_sigterm_handler()
 
     main(prog="allennlp")
 

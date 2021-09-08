@@ -11,6 +11,7 @@ import os
 import pkgutil
 import random
 import sys
+import signal
 from contextlib import contextmanager
 from itertools import islice, zip_longest
 from pathlib import Path
@@ -729,3 +730,15 @@ def hash_object(o: Any) -> str:
         dill.dump(o, buffer)
         m.update(buffer.getbuffer())
         return base58.b58encode(m.digest()).decode()
+
+
+class SigTermReceived(Exception):
+    pass
+
+
+def _handle_sigterm(sig, frame):
+    raise SigTermReceived
+
+
+def install_sigterm_handler():
+    signal.signal(signal.SIGTERM, _handle_sigterm)
