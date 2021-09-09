@@ -89,7 +89,7 @@ def test_loading_from_pretrained(pretrained_model_name):
 
     batch_size = 2
     seq_length = 15
-    hidden_size = transformer_stack.layers[0]._hidden_size
+    hidden_size = transformer_stack.layers[0].get_output_dim()
 
     hidden_states = torch.randn(batch_size, seq_length, hidden_size)
     attention_mask = torch.randint(0, 2, (batch_size, seq_length))

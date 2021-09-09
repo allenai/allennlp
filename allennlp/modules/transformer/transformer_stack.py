@@ -92,6 +92,9 @@ class TransformerStack(TransformerModule, FromParams):
         )
         self.layers = replicate_layers(layer, num_hidden_layers)
 
+    def get_output_dim(self) -> int:
+        return self.layers[-1].get_output_dim()
+
     def forward(
         self,
         hidden_states: torch.Tensor,

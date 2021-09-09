@@ -9,6 +9,8 @@ import json
 import logging
 from typing import Any, Dict
 
+from copy import deepcopy
+
 from overrides import overrides
 
 from allennlp.commands.subcommand import Subcommand
@@ -25,25 +27,38 @@ logger = logging.getLogger(__name__)
 class Evaluate(Subcommand):
     @overrides
     def add_subparser(self, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
-        description = """Evaluate the specified model + dataset"""
+        description = """Evaluate the specified model + dataset(s)"""
         subparser = parser.add_parser(
-            self.name, description=description, help="Evaluate the specified model + dataset."
+            self.name, description=description, help="Evaluate the specified model + dataset(s)."
         )
 
         subparser.add_argument("archive_file", type=str, help="path to an archived trained model")
 
         subparser.add_argument(
-            "input_file", type=str, help="path to the file containing the evaluation data"
+            "input_file",
+            type=str,
+            help=(
+                "path to the file containing the evaluation data"
+                ' (for mutiple files, put ":" between filenames e.g., input1.txt:input2.txt)'
+            ),
         )
 
         subparser.add_argument(
-            "--output-file", type=str, help="optional path to write the metrics to as JSON"
+            "--output-file",
+            type=str,
+            help=(
+                "optional path to write the metrics to as JSON"
+                ' (for mutiple files, put ":" between filenames e.g., output1.txt:output2.txt)'
+            ),
         )
 
         subparser.add_argument(
             "--predictions-output-file",
             type=str,
-            help="optional path to write the predictions to as JSON lines",
+            help=(
+                "optional path to write the predictions to as JSON lines"
+                ' (for mutiple files, put ":" between filenames e.g., output1.jsonl:output2.jsonl)'
+            ),
         )
 
         subparser.add_argument(
@@ -123,47 +138,72 @@ def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
         cuda_device=args.cuda_device,
         overrides=args.overrides,
     )
-    config = archive.config
+    config = deepcopy(archive.config)
     prepare_environment(config)
     model = archive.model
     model.eval()
 
     # Load the evaluation data
-
     dataset_reader = archive.validation_dataset_reader
 
-    evaluation_data_path = args.input_file
-    logger.info("Reading evaluation data from %s", evaluation_data_path)
+    # split files
+    evaluation_data_path_list = args.input_file.split(":")
+    if args.output_file is not None:
+        output_file_list = args.output_file.split(":")
+        assert len(output_file_list) == len(
+            evaluation_data_path_list
+        ), "The number of `output_file` paths must be equal to the number of datasets being evaluated."
+    if args.predictions_output_file is not None:
+        predictions_output_file_list = args.predictions_output_file.split(":")
+        assert len(predictions_output_file_list) == len(evaluation_data_path_list), (
+            "The number of `predictions_output_file` paths must be equal"
+            + "to the number of datasets being evaluated. "
+        )
 
-    data_loader_params = config.pop("validation_data_loader", None)
-    if data_loader_params is None:
-        data_loader_params = config.pop("data_loader")
-    if args.batch_size:
-        data_loader_params["batch_size"] = args.batch_size
-    data_loader = DataLoader.from_params(
-        params=data_loader_params, reader=dataset_reader, data_path=evaluation_data_path
-    )
+    # output file
+    output_file_path = None
+    predictions_output_file_path = None
 
-    embedding_sources = (
-        json.loads(args.embedding_sources_mapping) if args.embedding_sources_mapping else {}
-    )
-
+    # embedding sources
     if args.extend_vocab:
-        logger.info("Vocabulary is being extended with test instances.")
-        model.vocab.extend_from_instances(instances=data_loader.iter_instances())
-        model.extend_embedder_vocab(embedding_sources)
+        logger.info("Vocabulary is being extended with embedding sources.")
+        embedding_sources = (
+            json.loads(args.embedding_sources_mapping) if args.embedding_sources_mapping else {}
+        )
 
-    data_loader.index_with(model.vocab)
+    for index in range(len(evaluation_data_path_list)):
+        config = deepcopy(archive.config)
+        evaluation_data_path = evaluation_data_path_list[index]
+        if args.output_file is not None:
+            output_file_path = output_file_list[index]
+        if args.predictions_output_file is not None:
+            predictions_output_file_path = predictions_output_file_list[index]
 
-    metrics = evaluate(
-        model,
-        data_loader,
-        args.cuda_device,
-        args.batch_weight_key,
-        output_file=args.output_file,
-        predictions_output_file=args.predictions_output_file,
-    )
+        logger.info("Reading evaluation data from %s", evaluation_data_path)
+        data_loader_params = config.get("validation_data_loader", None)
+        if data_loader_params is None:
+            data_loader_params = config.get("data_loader")
+        if args.batch_size:
+            data_loader_params["batch_size"] = args.batch_size
+        data_loader = DataLoader.from_params(
+            params=data_loader_params, reader=dataset_reader, data_path=evaluation_data_path
+        )
 
+        if args.extend_vocab:
+            logger.info("Vocabulary is being extended with test instances.")
+            model.vocab.extend_from_instances(instances=data_loader.iter_instances())
+            model.extend_embedder_vocab(embedding_sources)
+
+        data_loader.index_with(model.vocab)
+
+        metrics = evaluate(
+            model,
+            data_loader,
+            args.cuda_device,
+            args.batch_weight_key,
+            output_file=output_file_path,
+            predictions_output_file=predictions_output_file_path,
+        )
     logger.info("Finished evaluating.")
 
     return metrics

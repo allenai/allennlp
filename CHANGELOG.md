@@ -7,9 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+
+## [v2.7.0](https://github.com/allenai/allennlp/releases/tag/v2.7.0) - 2021-09-01
+
 ### Added
 
 - Updated the docs for `PytorchSeq2VecWrapper` to specify that `mask` is required rather than sequence lengths for clarity.
+- Added support to evaluate mutiple datasets and produce corresponding output files in the `evaluate` command.
 - Added more documentation to the learning rate schedulers to include a sample config object for how to use it.
 - Moved the pytorch learning rate schedulers wrappers to their own file called `pytorch_lr_schedulers.py` so that they will have their own documentation page.
 - Added a module `allennlp.nn.parallel` with a new base class, `DdpAccelerator`, which generalizes
@@ -34,6 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added a way for AllenNLP Tango to read and write datasets lazily.
 - Added a way to remix datasets flexibly
 - Added `from_pretrained_transformer_and_instances` constructor to `Vocabulary`
+- `TransformerTextField` now supports `__len__`.
 
 ### Fixed
 
@@ -51,6 +56,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The `MultiProcessDataLoader` will properly shutdown its workers when a `SIGTERM` is received.
 - Fixed the way names are applied to Tango `Step` instances.
 - Fixed a bug in calculating loss in the distributed setting.
+- Fixed a bug when extending a sparse sequence by 0 items.
 
 ### Changed
 
