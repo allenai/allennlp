@@ -45,3 +45,10 @@ class TestSentenceSplitter(AllenNlpTestCase):
             assert len(batch_doc) == len(separate_doc)
             for batch_sentence, separate_sentence in zip(batch_doc, separate_doc):
                 assert batch_sentence == separate_sentence
+
+    def test_to_params(self):
+        assert self.dep_parse_splitter.to_params() == {
+            "type"      : "spacy",
+            "language"  : self.dep_parse_splitter._language,
+            "rule_based": self.dep_parse_splitter._rule_based
+        }

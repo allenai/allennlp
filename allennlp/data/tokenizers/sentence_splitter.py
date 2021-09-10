@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Dict, Any
 from overrides import overrides
 
 import spacy
@@ -44,8 +44,11 @@ class SpacySentenceSplitter(SentenceSplitter):
     """
 
     def __init__(self, language: str = "en_core_web_sm", rule_based: bool = False) -> None:
+        self._language = language
+        self._rule_based = rule_based
+
         # we need spacy's dependency parser if we're not using rule-based sentence boundary detection.
-        self.spacy = get_spacy_model(language, parse=not rule_based, ner=False)
+        self.spacy = get_spacy_model(self._language, parse=not self._rule_based, ner=False)
         self._is_version_3 = spacy.__version__ >= "3.0"
         if rule_based:
             # we use `sentencizer`, a built-in spacy module for rule-based sentence boundary detection.
@@ -77,3 +80,10 @@ class SpacySentenceSplitter(SentenceSplitter):
         return [
             [sentence.string.strip() for sentence in doc.sents] for doc in self.spacy.pipe(texts)
         ]
+
+    def _to_params(self) -> Dict[str, Any]:
+        return {
+            "type"      : "spacy",
+            "language"  : self._language,
+            "rule_based": self._rule_based
+        }
