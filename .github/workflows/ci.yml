@@ -27,6 +27,8 @@ env:
   TOKENIZERS_PARALLELISM: 'false'
   # Disable multithreading with OMP because this can lead to dead-locks in distributed tests.
   OMP_NUM_THREADS: '1'
+  # Use staging for Hugging Face Hub push tests.
+  HUGGINGFACE_CO_STAGING: yes
 
 jobs:
   changelog:
@@ -362,8 +364,7 @@ jobs:
     strategy:
       matrix:
         python: ['3.7', '3.8']
-    env:
-      HUGGINGFACE_CO_STAGING: yes
+
 
     steps:
     - name: Setup Python
