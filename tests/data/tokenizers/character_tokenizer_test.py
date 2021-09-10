@@ -62,9 +62,9 @@ class TestCharacterTokenizer(AllenNlpTestCase):
         params = tokenizer.to_params()
         assert isinstance(params, Params)
         assert params.params == {
-            "type"                : "character",
-            "byte_encoding"       : "utf-8",
-            "end_tokens"          : [259],
-            "start_tokens"        : [260],
-            "lowercase_characters": False
+            "type": "character",
+            "byte_encoding": "utf-8",
+            "end_tokens": [259],
+            "start_tokens": [260],
+            "lowercase_characters": False,
         }

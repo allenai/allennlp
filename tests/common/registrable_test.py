@@ -25,7 +25,6 @@ def empty_registrable():
 
 
 class TestRegistrable(AllenNlpTestCase):
-
     def test_registrable_functionality_works(self):
         # This function tests the basic `Registrable` functionality:
         #
@@ -61,6 +60,7 @@ class TestRegistrable(AllenNlpTestCase):
         # Verify that registering under a name that already exists
         # causes a ConfigurationError.
         with pytest.raises(ConfigurationError):
+
             @base_class.register("fake")
             class FakeAlternate(base_class):
                 pass
@@ -145,9 +145,7 @@ class TestRegistrable(AllenNlpTestCase):
             pass
 
         obj = NoArguments()
-        assert obj.to_params().params == {
-            "type": "no-args"
-        }
+        assert obj.to_params().params == {"type": "no-args"}
 
     def test_to_params_no_pos_arguments(self, empty_registrable):
         # Test how registrable disambiguates the _to_params when there is an
@@ -158,9 +156,7 @@ class TestRegistrable(AllenNlpTestCase):
                 self.A = A
 
         obj = NoPosArguments()
-        assert obj.to_params().params == {
-            "type": "no-pos-args"
-        }
+        assert obj.to_params().params == {"type": "no-pos-args"}
 
     def test_to_params_pos_arguments(self, empty_registrable):
         # Test how registrable disambiguates the _to_params when there is an
@@ -173,11 +169,7 @@ class TestRegistrable(AllenNlpTestCase):
                 self._msg = C
 
         obj = PosArguments(False, 5, [])
-        assert obj.to_params().params == {
-            "type": "pos-args",
-            "A"   : False,
-            "B"   : 5
-        }
+        assert obj.to_params().params == {"type": "pos-args", "A": False, "B": 5}
 
     def test_to_params_not_registered(self, empty_registrable):
         # Test that Registrable raises an exception when the class called is
@@ -200,9 +192,7 @@ class TestRegistrable(AllenNlpTestCase):
             pass
 
         obj = NestedClass()
-        assert obj.to_params().params == {
-            "type": "nested"
-        }
+        assert obj.to_params().params == {"type": "nested"}
 
 
 @pytest.mark.parametrize(

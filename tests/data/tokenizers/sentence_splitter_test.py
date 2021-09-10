@@ -51,7 +51,7 @@ class TestSentenceSplitter(AllenNlpTestCase):
         params = self.dep_parse_splitter.to_params()
         assert isinstance(params, Params)
         assert params.params == {
-            "type"      : "spacy",
-            "language"  : self.dep_parse_splitter._language,
-            "rule_based": self.dep_parse_splitter._rule_based
+            "type": "spacy",
+            "language": self.dep_parse_splitter._language,
+            "rule_based": self.dep_parse_splitter._rule_based,
         }

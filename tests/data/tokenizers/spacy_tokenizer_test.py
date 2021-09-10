@@ -125,13 +125,13 @@ class TestSpacyTokenizer(AllenNlpTestCase):
         params = tokenizer.to_params()
         assert isinstance(params, Params)
         assert params.params == {
-            "type"             : "spacy",
-            "language"         : tokenizer._language,
-            "pos_tags"         : tokenizer._pos_tags,
-            "parse"            : tokenizer._parse,
-            "ner"              : tokenizer._ner,
+            "type": "spacy",
+            "language": tokenizer._language,
+            "pos_tags": tokenizer._pos_tags,
+            "parse": tokenizer._parse,
+            "ner": tokenizer._ner,
             "keep_spacy_tokens": tokenizer._keep_spacy_tokens,
-            "split_on_spaces"  : tokenizer._split_on_spaces,
-            "start_tokens"     : tokenizer._start_tokens,
-            "end_tokens"       : tokenizer._end_tokens,
+            "split_on_spaces": tokenizer._split_on_spaces,
+            "start_tokens": tokenizer._start_tokens,
+            "end_tokens": tokenizer._end_tokens,
         }

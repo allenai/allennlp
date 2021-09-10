@@ -7,8 +7,19 @@ import importlib
 import logging
 import inspect
 from collections import defaultdict
-from typing import Callable, ClassVar, DefaultDict, Dict, List, Optional, Tuple, Type, TypeVar, \
-    cast, Any
+from typing import (
+    Callable,
+    ClassVar,
+    DefaultDict,
+    Dict,
+    List,
+    Optional,
+    Tuple,
+    Type,
+    TypeVar,
+    cast,
+    Any,
+)
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.from_params import FromParams
@@ -49,7 +60,7 @@ class Registrable(FromParams):
 
     @classmethod
     def register(
-            cls, name: str, constructor: Optional[str] = None, exist_ok: bool = False
+        cls, name: str, constructor: Optional[str] = None, exist_ok: bool = False
     ) -> Callable[[Type[_T]], Type[_T]]:
         """
         Register a class under a particular name.
@@ -150,7 +161,7 @@ class Registrable(FromParams):
 
     @classmethod
     def resolve_class_name(
-            cls: Type[_RegistrableT], name: str
+        cls: Type[_RegistrableT], name: str
     ) -> Tuple[Type[_RegistrableT], Optional[str]]:
         """
         Returns the subclass that corresponds to the given `name`, along with the name of the
@@ -195,16 +206,16 @@ class Registrable(FromParams):
             suggestion = _get_suggestion(name, available)
             raise ConfigurationError(
                 (
-                        f"'{name}' is not a registered name for '{cls.__name__}'"
-                        + (". " if not suggestion else f", did you mean '{suggestion}'? ")
+                    f"'{name}' is not a registered name for '{cls.__name__}'"
+                    + (". " if not suggestion else f", did you mean '{suggestion}'? ")
                 )
                 + "If your registered class comes from custom code, you'll need to import "
-                  "the corresponding modules. If you're using AllenNLP from the command-line, "
-                  "this is done by using the '--include-package' flag, or by specifying your imports "
-                  "in a '.allennlp_plugins' file. "
-                  "Alternatively, you can specify your choices "
-                  """using fully-qualified paths, e.g. {"model": "my_module.models.MyModel"} """
-                  "in which case they will be automatically imported correctly."
+                "the corresponding modules. If you're using AllenNLP from the command-line, "
+                "this is done by using the '--include-package' flag, or by specifying your imports "
+                "in a '.allennlp_plugins' file. "
+                "Alternatively, you can specify your choices "
+                """using fully-qualified paths, e.g. {"model": "my_module.models.MyModel"} """
+                "in which case they will be automatically imported correctly."
             )
 
     @classmethod

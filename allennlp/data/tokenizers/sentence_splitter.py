@@ -82,8 +82,4 @@ class SpacySentenceSplitter(SentenceSplitter):
         ]
 
     def _to_params(self) -> Dict[str, Any]:
-        return {
-            "type"      : "spacy",
-            "language"  : self._language,
-            "rule_based": self._rule_based
-        }
+        return {"type": "spacy", "language": self._language, "rule_based": self._rule_based}

@@ -25,6 +25,4 @@ class WhitespaceTokenizer(Tokenizer):
         return [Token(t) for t in text.split()]
 
     def _to_params(self) -> Dict[str, Any]:
-        return {
-            "type": "whitespace"
-        }
+        return {"type": "whitespace"}
