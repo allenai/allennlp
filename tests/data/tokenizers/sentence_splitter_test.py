@@ -1,3 +1,4 @@
+from allennlp.common import Params
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.tokenizers.sentence_splitter import SpacySentenceSplitter
 
@@ -47,7 +48,9 @@ class TestSentenceSplitter(AllenNlpTestCase):
                 assert batch_sentence == separate_sentence
 
     def test_to_params(self):
-        assert self.dep_parse_splitter.to_params() == {
+        params = self.dep_parse_splitter.to_params()
+        assert isinstance(params, Params)
+        assert params.params == {
             "type"      : "spacy",
             "language"  : self.dep_parse_splitter._language,
             "rule_based": self.dep_parse_splitter._rule_based

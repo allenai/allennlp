@@ -1,5 +1,6 @@
 import spacy
 
+from allennlp.common import Params
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.tokenizers import Token, SpacyTokenizer
 
@@ -121,7 +122,9 @@ class TestSpacyTokenizer(AllenNlpTestCase):
 
     def test_to_params(self):
         tokenizer = SpacyTokenizer()
-        assert tokenizer.to_params() == {
+        params = tokenizer.to_params()
+        assert isinstance(params, Params)
+        assert params == {
             "type"             : "spacy",
             "language"         : tokenizer._language,
             "pos_tags"         : tokenizer._pos_tags,

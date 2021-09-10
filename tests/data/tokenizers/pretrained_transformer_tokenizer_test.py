@@ -327,3 +327,17 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
         PretrainedTransformerTokenizer.from_params(
             Params({"model_name": "bert-base-uncased", "tokenizer_kwargs": {"max_len": 10}})
         )
+
+    def test_to_params(self):
+        tokenizer = PretrainedTransformerTokenizer.from_params(
+            Params({"model_name": "bert-base-uncased", "tokenizer_kwargs": {"max_len": 10}})
+        )
+        params = tokenizer.to_params()
+        assert isinstance(params, Params)
+        assert params.params == {
+            "type"              : "pretrained_transformer",
+            "model_name"        : "bert-base-uncased",
+            "add_special_tokens": True,
+            "max_length"        : None,
+            "tokenizer_kwargs"  : {"max_len": 10, 'use_fast': True}
+        }
