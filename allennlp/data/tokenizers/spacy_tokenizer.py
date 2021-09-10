@@ -50,18 +50,31 @@ class SpacyTokenizer(Tokenizer):
     """
 
     def __init__(
-        self,
-        language: str = "en_core_web_sm",
-        pos_tags: bool = True,
-        parse: bool = False,
-        ner: bool = False,
-        keep_spacy_tokens: bool = False,
-        split_on_spaces: bool = False,
-        start_tokens: Optional[List[str]] = None,
-        end_tokens: Optional[List[str]] = None,
+            self,
+            language: str = "en_core_web_sm",
+            pos_tags: bool = True,
+            parse: bool = False,
+            ner: bool = False,
+            keep_spacy_tokens: bool = False,
+            split_on_spaces: bool = False,
+            start_tokens: Optional[List[str]] = None,
+            end_tokens: Optional[List[str]] = None,
     ) -> None:
-        self.spacy = get_spacy_model(language, pos_tags, parse, ner)
-        if split_on_spaces:
+        # Save these for use later in the _to_params method
+        self._language = language
+        self._pos_tags = pos_tags
+        self._parse = parse
+        self._ner = ner
+        self._split_on_spaces = split_on_spaces
+
+        self.spacy = get_spacy_model(
+            self._language,
+            self._pos_tags,
+            self._parse,
+            self._ner
+        )
+
+        if self._split_on_spaces:
             self.spacy.tokenizer = _WhitespaceSpacyTokenizer(self.spacy.vocab)
 
         self._keep_spacy_tokens = keep_spacy_tokens
@@ -115,6 +128,19 @@ class SpacyTokenizer(Tokenizer):
         # This works because our Token class matches spacy's.
         return self._sanitize(_remove_spaces(self.spacy(text)))
 
+    def _to_params(self):
+        return {
+            "type"             : "spacy",
+            "language"         : self._language,
+            "pos_tags"         : self._pos_tags,
+            "parse"            : self._parse,
+            "ner"              : self._ner,
+            "keep_spacy_tokens": self._keep_spacy_tokens,
+            "split_on_spaces"  : self._split_on_spaces,
+            "start_tokens"     : self._start_tokens,
+            "end_tokens"       : self._end_tokens,
+
+        }
 
 class _WhitespaceSpacyTokenizer:
     """
@@ -135,7 +161,6 @@ class _WhitespaceSpacyTokenizer:
         words = text.split(" ")
         spaces = [True] * len(words)
         return Doc(self.vocab, words=words, spaces=spaces)
-
 
 def _remove_spaces(tokens: List[spacy.tokens.Token]) -> List[spacy.tokens.Token]:
     return [token for token in tokens if not token.is_space]
