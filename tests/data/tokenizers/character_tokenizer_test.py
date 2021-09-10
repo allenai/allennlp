@@ -64,7 +64,7 @@ class TestCharacterTokenizer(AllenNlpTestCase):
         assert params.params == {
             "type": "character",
             "byte_encoding": "utf-8",
-            "end_tokens": [259],
-            "start_tokens": [260],
+            "end_tokens": [260],
+            "start_tokens": [259],
             "lowercase_characters": False,
         }
