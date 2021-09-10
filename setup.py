@@ -84,6 +84,6 @@ setup(
     ],
     entry_points={"console_scripts": ["allennlp=allennlp.__main__:run"]},
     include_package_data=True,
-    python_requires=">=3.6.1",
+    python_requires=">=3.7.1",
     zip_safe=False,
 )
