@@ -232,6 +232,20 @@ class Registrable(FromParams):
             return [default] + [k for k in keys if k != default]
 
     def _to_params(self) -> Dict[str, Any]:
+        """
+        Default behavior to get a params dictionary from a registrable class
+        that does NOT have a _to_params implementation. It is NOT recommended to
+         use this method. Rather this method is a minial implementation that
+         exists so that calling `_to_params` does not break.
+
+        # Returns
+
+        parameter_dict: `Dict[str, Any]`
+            A minimal parameter dictionary for a given registrable class. Will
+            get the registered name and return that as well as any positional
+            arguments it can find the value of.
+
+        """
         logger.warning(
             f"'{self.__class__.__name__}' does not implement '_to_params`. Will"
             f" use Registrable's `_to_params`."
