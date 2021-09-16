@@ -57,6 +57,11 @@ class LanguageModelingDataCollator(DataCollator):
 
         tokenizer = cached_transformers.get_tokenizer(model_name)
         self._collator = DataCollatorForLanguageModeling(tokenizer, mlm, mlm_probability)
+        if hasattr(self._collator, "mask_tokens"):
+            # For compatibility with transformers < 4.10
+            self._mask_tokens = self._collator.mask_tokens
+        else:
+            self._mask_tokens = self._collator.torch_mask_tokens
 
     def __call__(self, instances: List[Instance]) -> TensorDict:
         tensor_dicts = allennlp_collate(instances)
@@ -65,7 +70,7 @@ class LanguageModelingDataCollator(DataCollator):
 
     def process_tokens(self, tensor_dicts: TensorDict) -> TensorDict:
         inputs = tensor_dicts[self._field_name][self._namespace]["token_ids"]
-        inputs, labels = self._collator.mask_tokens(inputs)
+        inputs, labels = self._mask_tokens(inputs)
         tensor_dicts[self._field_name][self._namespace]["token_ids"] = inputs
         tensor_dicts[self._field_name][self._namespace]["labels"] = labels
         return tensor_dicts
