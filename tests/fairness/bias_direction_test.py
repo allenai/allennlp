@@ -60,7 +60,7 @@ class PairedPCABiasDirectionTest(AllenNlpTestCase):
         seed_embeddings2 = torch.tensor([[0.5, 1.0], [1.0, 1.5]], device=device)
         paired_pca = PairedPCABiasDirection()
 
-        const = math.sqrt(2) /2
+        const = math.sqrt(2) / 2
         expected_bias_direction = torch.tensor([-const, const], device=device)
         test_bias_direction = paired_pca(seed_embeddings1, seed_embeddings2)
         k = expected_bias_direction / test_bias_direction
