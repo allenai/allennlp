@@ -106,6 +106,7 @@ jobs:
           torch_platform: cpu
           run: |
             cd allennlp-models
+            git checkout test-fixes
             make test-with-cov COV=allennlp
             mv coverage.xml ../
 
