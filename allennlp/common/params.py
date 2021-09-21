@@ -402,7 +402,7 @@ class Params(MutableMapping):
         if key in self.params:
             return self._check_is_dict(key, self.params[key])
         else:
-            raise KeyError
+            raise KeyError(str(key))
 
     def __setitem__(self, key, value):
         self.params[key] = value
