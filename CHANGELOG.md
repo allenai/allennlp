@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Changed
+
+- The behavior of `--overrides` has changed. Previously the final configuration params were simply taken as the union over the original params and the `--overrides` params.
+  But now you can use `--overrides` to completely replace any part of the original config. For example, passing `--overrides '{"model":{"type":"foo"}}'` will completely
+  replace the "model" part of the original config. However, when you just want to change a single field in the JSON structure without removing / replacing adjacent fields,
+  you can still use the "dot" syntax. For example, `--overrides '{"model.num_layers":3}'` will only change the `num_layers` parameter to the "model" part of the config, leaving
+  everything else unchanged.
+
 ### Fixed
 
 - Fixed the implementation of `PairedPCABiasDirection` in `allennlp.fairness.bias_direction`, where the difference vectors should not be centered when performing the PCA.
