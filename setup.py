@@ -50,6 +50,7 @@ setup(
         ]
     ),
     install_requires=[
+        "cached-path>=0.2.0,<0.3.0",
         "torch>=1.6.0,<1.10.0",
         "torchvision>=0.8.1,<0.11.0",
         "fairscale==0.4.0",
@@ -59,7 +60,6 @@ setup(
         "spacy>=2.1.0,<3.2",
         "numpy",
         "tensorboardX>=1.2",
-        "boto3>=1.14,<2.0",
         "requests>=2.18",
         "tqdm>=4.19",
         "h5py",
@@ -75,12 +75,10 @@ setup(
         "termcolor==1.1.0",
         "checklist==0.0.11",
         "wandb>=0.10.0,<0.13.0",
-        "huggingface_hub>=0.0.8",
         "datasets>=1.2.1,<2.0",
         "dill",
         "base58",
         "sqlitedict",
-        "google-cloud-storage>=1.38.0,<1.43.0",
     ],
     entry_points={"console_scripts": ["allennlp=allennlp.__main__:run"]},
     include_package_data=True,
