@@ -35,7 +35,7 @@ import time
 import warnings
 
 import cached_path as _cached_path
-from cached_path.util import (  # noqa: F401
+from cached_path import (  # noqa: F401
     resource_to_filename as _resource_to_filename,
     check_tarfile,
     is_url_or_existing_file,

@@ -50,7 +50,7 @@ setup(
         ]
     ),
     install_requires=[
-        "cached-path>=0.2.0,<0.3.0",
+        "cached-path>=0.3.0,<0.4.0",
         "torch>=1.6.0,<1.10.0",
         "torchvision>=0.8.1,<0.11.0",
         "fairscale==0.4.0",
