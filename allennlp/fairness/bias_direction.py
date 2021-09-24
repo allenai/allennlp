@@ -148,6 +148,7 @@ class PairedPCABiasDirection(BiasDirection):
             _, _, V = torch.pca_lowrank(
                 paired_embeddings,
                 q=min(paired_embeddings.size(0), paired_embeddings.size(1)) - 1,
+                center=False,
             )
             bias_direction = V[:, 0]
             return self._normalize_bias_direction(bias_direction)
