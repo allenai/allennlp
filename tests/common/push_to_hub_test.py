@@ -19,6 +19,7 @@ ORG_NAME = "valid_org"
 
 REPO_NAME = "my-allennlp-model-{}".format(int(time.time() * 10e3))
 
+
 def with_staging_testing(func):
     file_download = patch(
         "huggingface_hub.file_download.HUGGINGFACE_CO_URL_TEMPLATE",
