@@ -5,6 +5,7 @@ import time
 import pytest
 import requests
 from huggingface_hub import HfApi, Repository
+from unittest.mock import patch
 
 from allennlp.common.push_to_hf import push_to_hf
 from allennlp.common.testing import AllenNlpTestCase
@@ -18,11 +19,29 @@ ORG_NAME = "valid_org"
 
 REPO_NAME = "my-allennlp-model-{}".format(int(time.time() * 10e3))
 
+def with_staging_testing(func):
+    file_download = patch(
+        "huggingface_hub.file_download.HUGGINGFACE_CO_URL_TEMPLATE",
+        ENDPOINT_STAGING + "/{repo_id}/resolve/{revision}/{filename}",
+    )
+
+    hf_api = patch(
+        "huggingface_hub.hf_api.ENDPOINT",
+        ENDPOINT_STAGING,
+    )
+
+    repository = patch(
+        "huggingface_hub.repository.ENDPOINT",
+        ENDPOINT_STAGING,
+    )
+
+    return repository(hf_api(file_download(func)))
+
 
 class TestPushToHub(AllenNlpTestCase):
     def setup_method(self):
         super().setup_method()
-        self.api = HfApi()
+        self.api = HfApi(ENDPOINT_STAGING)
         self.token = self.api.login(username=USER, password=PASS)
         self.local_repo_path = self.TEST_DIR / "hub"
         self.clone_path = self.TEST_DIR / "hub_clone"
@@ -43,6 +62,7 @@ class TestPushToHub(AllenNlpTestCase):
         except requests.exceptions.HTTPError:
             pass
 
+    @with_staging_testing
     def test_push_to_hub_archive_path(self):
         archive_path = self.FIXTURES_ROOT / "simple_tagger" / "serialization" / "model.tar.gz"
         url = push_to_hf(
@@ -65,6 +85,7 @@ class TestPushToHub(AllenNlpTestCase):
         assert "model.th" in os.listdir(self.clone_path)
         shutil.rmtree(self.clone_path)
 
+    @with_staging_testing
     def test_push_to_hub_serialization_dir(self):
         serialization_dir = self.FIXTURES_ROOT / "simple_tagger" / "serialization"
         url = push_to_hf(
@@ -87,6 +108,7 @@ class TestPushToHub(AllenNlpTestCase):
         assert "model.th" in os.listdir(self.clone_path)
         shutil.rmtree(self.clone_path)
 
+    @with_staging_testing
     def test_push_to_hub_to_org(self):
         serialization_dir = self.FIXTURES_ROOT / "simple_tagger" / "serialization"
         url = push_to_hf(
@@ -110,6 +132,7 @@ class TestPushToHub(AllenNlpTestCase):
         assert "model.th" in os.listdir(self.clone_path)
         shutil.rmtree(self.clone_path)
 
+    @with_staging_testing
     def test_push_to_hub_fails_with_invalid_token(self):
         serialization_dir = self.FIXTURES_ROOT / "simple_tagger" / "serialization"
         with pytest.raises(requests.exceptions.HTTPError):
