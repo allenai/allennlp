@@ -75,7 +75,7 @@ setup(
         "termcolor==1.1.0",
         "checklist==0.0.11",
         "wandb>=0.10.0,<0.13.0",
-        "huggingface_hub>=0.0.8",
+        "huggingface_hub>=0.0.16",
         "datasets>=1.2.1,<2.0",
         "dill",
         "base58",
