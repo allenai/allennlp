@@ -69,7 +69,7 @@ setup(
         "transformers>=4.1,<4.12",
         "sentencepiece",
         "dataclasses;python_version<'3.7'",
-        "filelock>=3.0,<3.2",
+        "filelock>=3.0,<3.3",
         "lmdb",
         "more-itertools",
         "termcolor==1.1.0",
