@@ -1,5 +1,5 @@
 """
-The `push_to_hf` subcommand can be used to push a trained model to the
+The `push-to-hf` subcommand can be used to push a trained model to the
 Hugging Face Hub ([hf.co](https://hf.co/)).
 """
 
@@ -14,11 +14,11 @@ from allennlp.common.push_to_hf import push_to_hf
 logger = logging.getLogger(__name__)
 
 
-@Subcommand.register("push_to_hf")
+@Subcommand.register("push-to-hf")
 class PushToHf(Subcommand):
     @overrides
     def add_subparser(self, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
-        description = """Push a model to the Hugging Face Hub
+        description = """Push a model to the Hugging Face Hub.
 
         Pushing your models to the Hugging Face Hub ([hf.co](https://hf.co/))
         allows you to share your models with others. On top of that, you can try
@@ -35,7 +35,7 @@ class PushToHf(Subcommand):
 
         subparser.add_argument(
             "-n",
-            "--repo_name",
+            "--repo-name",
             required=True,
             type=str,
             default="Name of the repository",
@@ -45,14 +45,14 @@ class PushToHf(Subcommand):
         model_dir_group = subparser.add_mutually_exclusive_group(required=True)
         model_dir_group.add_argument(
             "-s",
-            "--serialization_dir",
+            "--serialization-dir",
             type=str,
             help="directory in which to save the model and its logs are saved",
         )
 
         model_dir_group.add_argument(
             "-a",
-            "--archive_path",
+            "--archive-path",
             type=str,
             help="full path to the zipped model, using serialization_dir instead is recommended",
         )
@@ -67,7 +67,7 @@ class PushToHf(Subcommand):
 
         subparser.add_argument(
             "-c",
-            "--commit_message",
+            "--commit-message",
             required=False,
             type=str,
             default="Update repository",
@@ -76,7 +76,7 @@ class PushToHf(Subcommand):
 
         subparser.add_argument(
             "-l",
-            "--local_repo_path",
+            "--local-repo-path",
             required=False,
             type=str,
             default="hub",
