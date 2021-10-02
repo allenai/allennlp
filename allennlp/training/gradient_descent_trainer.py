@@ -359,12 +359,14 @@ class GradientDescentTrainer(Trainer):
             # 1. We have to unscale the gradient before clipping
             if self._scaler is not None:
                 optimizer_state = self._scaler._per_optimizer_states[id(self.optimizer)]
-                # 2. The `unscale_` should't be performed more than once per optimizer per step call,
+                # 2. The `unscale_` shouldn't be performed more than once per optimizer per step call,
                 # so we only perform `unscale_` if it has not already been called.
                 if optimizer_state["stage"] is not OptState.UNSCALED:
                     self._scaler.unscale_(self.optimizer)
-            torch.nn.utils.clip_grad_value_([p for p in self.model.parameters() if p.grad is not None],
-                                                self._grad_clipping)
+            torch.nn.utils.clip_grad_value_(
+                [p for p in self.model.parameters() if p.grad is not None],
+                self._grad_clipping
+            )
 
     def rescale_gradients(self) -> Optional[float]:
         """
