@@ -364,8 +364,7 @@ class GradientDescentTrainer(Trainer):
                 if optimizer_state["stage"] is not OptState.UNSCALED:
                     self._scaler.unscale_(self.optimizer)
             torch.nn.utils.clip_grad_value_(
-                [p for p in self.model.parameters() if p.grad is not None],
-                self._grad_clipping
+                [p for p in self.model.parameters() if p.grad is not None], self._grad_clipping
             )
 
     def rescale_gradients(self) -> Optional[float]:
