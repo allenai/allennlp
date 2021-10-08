@@ -5,3 +5,4 @@ from allennlp.common.registrable import Registrable
 from allennlp.common.tqdm import Tqdm
 from allennlp.common.util import JsonDict
 from allennlp.common.meta import Meta
+from allennlp.common.push_to_hf import push_to_hf
