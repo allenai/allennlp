@@ -58,13 +58,16 @@ class PretrainedTransformerTokenizer(Tokenizer):
             tokenizer_kwargs = {}
         else:
             tokenizer_kwargs = tokenizer_kwargs.copy()
-        tokenizer_kwargs.setdefault("use_fast", True)
         # Note: Just because we request a fast tokenizer doesn't mean we get one.
+        tokenizer_kwargs.setdefault("use_fast", True)
+
+        self._tokenizer_kwargs = tokenizer_kwargs
+        self._model_name = model_name
 
         from allennlp.common import cached_transformers
 
         self.tokenizer = cached_transformers.get_tokenizer(
-            model_name, add_special_tokens=False, **tokenizer_kwargs
+            self._model_name, add_special_tokens=False, **self._tokenizer_kwargs
         )
 
         self._add_special_tokens = add_special_tokens
@@ -452,3 +455,12 @@ class PretrainedTransformerTokenizer(Tokenizer):
             + len(self.sequence_pair_mid_tokens)
             + len(self.sequence_pair_end_tokens)
         )
+
+    def _to_params(self) -> Dict[str, Any]:
+        return {
+            "type": "pretrained_transformer",
+            "model_name": self._model_name,
+            "add_special_tokens": self._add_special_tokens,
+            "max_length": self._max_length,
+            "tokenizer_kwargs": self._tokenizer_kwargs,
+        }
