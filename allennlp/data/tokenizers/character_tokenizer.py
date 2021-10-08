@@ -1,4 +1,4 @@
-from typing import List, Union
+from typing import List, Union, Dict, Any
 
 from overrides import overrides
 
@@ -83,3 +83,12 @@ class CharacterTokenizer(Tokenizer):
         if isinstance(self, other.__class__):
             return self.__dict__ == other.__dict__
         return NotImplemented
+
+    def _to_params(self) -> Dict[str, Any]:
+        return {
+            "type": "character",
+            "byte_encoding": self._byte_encoding,
+            "lowercase_characters": self._lowercase_characters,
+            "start_tokens": self._start_tokens,
+            "end_tokens": self._end_tokens,
+        }

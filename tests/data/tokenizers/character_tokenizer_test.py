@@ -1,3 +1,4 @@
+from allennlp.common import Params
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.tokenizers import CharacterTokenizer
 
@@ -55,3 +56,15 @@ class TestCharacterTokenizer(AllenNlpTestCase):
         # Note that we've added one to the utf-8 encoded bytes, to account for masking.
         expected_tokens = [259, 196, 166, 196, 185, 196, 163, 196, 162, 98, 99, 102, 260]
         assert tokens == expected_tokens
+
+    def test_to_params(self):
+        tokenizer = CharacterTokenizer(byte_encoding="utf-8", start_tokens=[259], end_tokens=[260])
+        params = tokenizer.to_params()
+        assert isinstance(params, Params)
+        assert params.params == {
+            "type": "character",
+            "byte_encoding": "utf-8",
+            "end_tokens": [260],
+            "start_tokens": [259],
+            "lowercase_characters": False,
+        }
