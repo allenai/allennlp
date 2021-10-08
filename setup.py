@@ -50,7 +50,7 @@ setup(
         ]
     ),
     install_requires=[
-        "cached-path>=0.3.0,<0.4.0",
+        "cached-path>=0.3.1,<0.4.0",
         "torch>=1.6.0,<1.10.0",
         "torchvision>=0.8.1,<0.11.0",
         "fairscale==0.4.0",
@@ -69,7 +69,7 @@ setup(
         "transformers>=4.1,<4.11",
         "sentencepiece",
         "dataclasses;python_version<'3.7'",
-        "filelock>=3.0,<3.1",
+        "filelock>=3.3,<3.4",
         "lmdb",
         "more-itertools",
         "termcolor==1.1.0",
