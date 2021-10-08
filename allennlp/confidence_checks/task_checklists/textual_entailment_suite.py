@@ -3,7 +3,7 @@ import itertools
 import numpy as np
 from overrides import overrides
 from checklist.test_suite import TestSuite
-from checklist.test_types import MFT
+from checklist.test_types import MFT, INV, DIR, Expect
 from checklist.perturb import Perturb
 from allennlp.confidence_checks.task_checklists.task_suite import TaskSuite
 from allennlp.confidence_checks.task_checklists import utils
@@ -16,7 +16,7 @@ def _wrap_apply_to_each(perturb_fn: Callable, both: bool = False, *args, **kwarg
     """
 
     def new_fn(pair, *args, **kwargs):
-        premise, hypothesis = pair
+        premise, hypothesis = pair[0], pair[1]
         ret = []
         fn_premise = perturb_fn(premise, *args, **kwargs)
         fn_hypothesis = perturb_fn(hypothesis, *args, **kwargs)
@@ -150,6 +150,22 @@ class TextualEntailmentSuite(TaskSuite):
 
         self.editor.add_lexicon("antonyms", antonyms, overwrite=True)
 
+        synonyms = [
+            ("smart", "intelligent"),
+            ("optimistic", "hopeful"),
+            ("brave", "courageous"),
+            ("adorable", "cute"),
+            ("huge", "enormous"),
+            ("intelligent", "clever"),
+            ("lazy", "indolent"),
+            ("rude", "impolite"),
+            ("thin", "lean"),
+            ("sad", "unhappy"),
+            ("little", "small"),
+        ]
+
+        self.editor.add_lexicon("synonyms", synonyms, overwrite=True)
+
         comp = [
             "smarter",
             "better",
@@ -220,6 +236,127 @@ class TextualEntailmentSuite(TaskSuite):
         ]
         self.editor.add_lexicon("nouns", nouns, overwrite=True)
 
+        adjectives = [
+            "good",
+            "great",
+            "excellent",
+            "amazing",
+            "extraordinary",
+            "beautiful",
+            "fantastic",
+            "nice",
+            "awful",
+            "bad",
+            "horrible",
+            "weird",
+            "rough",
+        ]
+        self.editor.add_lexicon("adjectives", adjectives, overwrite=True)
+
+        intens_adj = [
+            "very",
+            "really",
+            "absolutely",
+            "truly",
+            "extremely",
+            "quite",
+            "incredibly",
+            "amazingly",
+            "especially",
+            "exceptionally",
+            "unbelievably",
+            "utterly",
+            "exceedingly",
+            "rather",
+            "totally",
+            "particularly",
+        ]
+        intens_verb = [
+            "really",
+            "absolutely",
+            "truly",
+            "extremely",
+            "especially",
+            "utterly",
+            "totally",
+            "particularly",
+            "highly",
+            "definitely",
+            "certainly",
+            "genuinely",
+            "honestly",
+            "strongly",
+            "sure",
+            "sincerely",
+        ]
+
+        self.editor.add_lexicon("intens_adj", intens_adj, overwrite=True)
+        self.editor.add_lexicon("intens_verb", intens_verb, overwrite=True)
+
+        reducer_adj = [
+            "somewhat",
+            "kinda",
+            "mostly",
+            "probably",
+            "generally",
+            "reasonably",
+            "a little",
+            "a bit",
+            "slightly",
+        ]
+
+        self.editor.add_lexicon("reducer_adj", reducer_adj, overwrite=True)
+
+        subclasses = [
+            (
+                "vehicles",
+                [
+                    "cars",
+                    "trucks",
+                    "jeeps",
+                    "bikes",
+                    "motorcycles",
+                    "tractors",
+                    "vans",
+                    "SUVs",
+                    "minivans",
+                    "bicycles",
+                ],
+            ),
+            (
+                "animals",
+                [
+                    "dogs",
+                    "cats",
+                    "turtles",
+                    "lizards",
+                    "snakes",
+                    "fish",
+                    "hamsters",
+                    "rabbits",
+                    "guinea pigs",
+                    "ducks",
+                ],
+            ),
+            (
+                "clothes",
+                [
+                    "jackets",
+                    "pants",
+                    "shirts",
+                    "skirts",
+                    "t-shirts",
+                    "raincoats",
+                    "sweaters",
+                    "jeans",
+                    "sweatpants",
+                ],
+            ),
+        ]
+
+        subclasses = [(a, b[i]) for a, b in subclasses for i in range(len(b))]
+        self.editor.add_lexicon("subclasses", subclasses, overwrite=True)
+
     @overrides
     def _default_tests(self, data: Optional[Iterable[Tuple]], num_test_cases=100):
         super()._default_tests(data, num_test_cases)
@@ -229,6 +366,9 @@ class TextualEntailmentSuite(TaskSuite):
         self._default_temporal_tests(data, num_test_cases)
         self._default_logic_tests(data, num_test_cases)
         self._default_negation_tests(data, num_test_cases)
+        self._default_taxonomy_tests(data, num_test_cases)
+        self._default_coreference_tests(data, num_test_cases)
+        self._default_fairness_tests(data, num_test_cases)
 
     def _default_vocabulary_tests(self, data: Optional[Iterable[Tuple]], num_test_cases=100):
 
@@ -250,6 +390,141 @@ class TextualEntailmentSuite(TaskSuite):
         )
 
         self.add_test(test)
+
+        template = self.editor.template(
+            [
+                ("All {nouns} are {synonyms[0]}.", "Some {nouns} are {synonyms[0]}."),
+                ("All {nouns} are {synonyms[0]}.", "Some {nouns} are {synonyms[1]}."),
+            ],
+            remove_duplicates=True,
+            nsamples=num_test_cases,
+        )
+
+        template += self.editor.template(
+            [
+                ("All {nouns} are {synonyms[0]}.", "Some {nouns} are not {synonyms[0]}."),
+                ("All {nouns} are {synonyms[0]}.", "Some {nouns} are not {synonyms[1]}."),
+            ],
+            remove_duplicates=True,
+            nsamples=num_test_cases,
+        )
+
+        test = INV(
+            template.data,
+            labels=[self._entails for i in range(num_test_cases)]
+            + [self._contradicts for i in range(num_test_cases)],
+            name="Changing X to a synonym(X) should not change the label",
+            capability="Vocabulary",
+            description='"Eg. All tigers are huge -> All tigers are enormous" should not change the label',
+        )
+
+        self.add_test(test)
+
+    def _default_taxonomy_tests(self, data: Optional[Iterable[Tuple]], num_test_cases=100):
+
+        template = self.editor.template(
+            ("{first_name1} owns {subclasses[1]}.", "{first_name1} owns {subclasses[0]}."),
+            remove_duplicates=True,
+            nsamples=num_test_cases,
+        )
+
+        test = MFT(
+            **template,
+            labels=self._entails,
+            name='"A owns SUBTYPE" entails "A owns SUPERTYPE"',
+            capability="Taxonomy",
+            description="Eg. A owns rabbits implies that A owns animals.",
+        )
+
+        self.add_test(test)
+
+    def _default_coreference_tests(self, data: Optional[Iterable[Tuple]], num_test_cases=100):
+
+        _quarter = num_test_cases // 4
+
+        template = self.editor.template(
+            (
+                "{first_name1} and {first_name2} are friends. The former is {a:profession}.",
+                "{first_name1} is {a:profession}.",
+            ),
+            remove_duplicates=True,
+            nsamples=_quarter,
+        )
+
+        template += self.editor.template(
+            (
+                "{first_name1} and {first_name2} are friends. The latter is {a:profession}.",
+                "{first_name2} is {a:profession}.",
+            ),
+            remove_duplicates=True,
+            nsamples=_quarter,
+        )
+
+        template += self.editor.template(
+            (
+                "{first_name1} and {first_name2} are friends. The former is {a:profession}.",
+                "{first_name2} is {a:profession}.",
+            ),
+            remove_duplicates=True,
+            nsamples=_quarter,
+        )
+
+        template += self.editor.template(
+            (
+                "{first_name1} and {first_name2} are friends. The latter is {a:profession}.",
+                "{first_name1} is {a:profession}.",
+            ),
+            remove_duplicates=True,
+            nsamples=_quarter,
+        )
+
+        test = MFT(
+            **template,
+            labels=[self._entails for i in range(_quarter * 2)]
+            + [self._neutral for i in range(_quarter * 2)],
+            name="Former / Latter",
+            capability="Coreference",
+            description='Eg. "A and B are friends. The former is a teacher."" entails "A is a teacher." (while "B is a teacher" is neutral).',
+        )
+
+        self.add_test(test)
+
+    def _default_robustness_tests(self, data: Optional[Iterable[str]], num_test_cases=100):
+
+        super()._default_robustness_tests(data, num_test_cases)
+
+        template = self.editor.template(
+            (
+                "{nouns1} and {nouns2} are {adjectives}.",
+                "{nouns2} and {nouns1} are {adjectives}.",
+            ),
+            remove_duplicates=True,
+            nsamples=num_test_cases,
+        )
+
+        test = MFT(
+            **template,
+            labels=self._entails,
+            name='"A and B are X" entails "B and A are X"',
+            capability="Vocabulary",
+            description='Eg. "tigers and lions are huge" entails that "lions and tigers are huge"',
+        )
+
+        self.add_test(test)
+
+        if data:
+
+            template = Perturb.perturb(
+                data, _wrap_apply_to_each(utils.add_random_strings), nsamples=num_test_cases
+            )
+            test = INV(
+                template.data,
+                name="Add random urls and handles",
+                capability="Robustness",
+                description="Add randomly generated urls and handles to the start or end of sentence",
+            )
+
+            self.add_test(test)
 
     def _default_logic_tests(self, data: Optional[Iterable[Tuple]], num_test_cases=100):
         template = self.editor.template(
@@ -375,3 +650,206 @@ class TextualEntailmentSuite(TaskSuite):
         )
 
         self.add_test(test)
+
+    def _default_fairness_tests(self, data: Optional[Iterable[Tuple]], num_test_cases: int = 100):
+
+        # Gender
+
+        # Taken from [Man is to Computer Programmer as Woman is to Homemaker? Debiasing Word Embeddings]
+        # (https://api.semanticscholar.org/CorpusID:1704893)
+
+        male_stereotypes = [
+            ("maestro", "maestros"),
+            ("skipper", "skippers"),
+            ("philosopher", "philosophers"),
+            ("architect", "architects"),
+            ("financier", "financiers"),
+            ("warrior", "warriors"),
+            ("broadcaster", "broadcasters"),
+            ("doctor", "doctors"),
+            ("captain", "captains"),
+            ("protege", "proteges"),
+            ("boss", "bosses"),
+            ("magician", "magicians"),
+            ("fighter pilot", "fighter pilots"),
+        ]
+
+        female_stereotypes = [
+            ("nurse", "nurses"),
+            ("homemaker", "homemakers"),
+            ("receptionist", "receptionists"),
+            ("stylist", "stylists"),
+            ("housekeeper", "housekeepers"),
+            ("socialite", "socialites"),
+            ("librarian", "librarians"),
+            ("hairdresser", "hairdressers"),
+            ("nanny", "nannies"),
+            ("interior designer", "interior designers"),
+            ("guidance counselor", "guidance counselors"),
+        ]
+
+        template = self.editor.template(
+            [
+                (
+                    "All people in the park are {male_stereotypes[1]}. {male} is in the park.",
+                    "He is a {male_stereotypes[0]}.",
+                ),
+                (
+                    "All people in the park are {male_stereotypes[1]}. {female} is in the park.",
+                    "She is a {male_stereotypes[0]}.",
+                ),
+            ],
+            nsamples=num_test_cases // 2,
+            remove_duplicates=True,
+            male_stereotypes=male_stereotypes,
+        )
+
+        test = DIR(
+            template.data,
+            Expect.monotonic(label=self._entails, increasing=True, tolerance=0.1),
+            name="Male stereotypes",
+            capability="Fairness",
+            description="Eg. 'All people are X' should entail 'He is X' and 'She is X' equally.",
+        )
+
+        self.add_test(test)
+
+        template = self.editor.template(
+            [
+                (
+                    "All people in the park are {female_stereotypes[1]}. She is in the park.",
+                    "{female} is a {female_stereotypes[0]}.",
+                ),
+                (
+                    "All people in the park are {female_stereotypes[1]}. He is in the park.",
+                    "{male} is a {female_stereotypes[0]}.",
+                ),
+            ],
+            nsamples=num_test_cases // 2,
+            remove_duplicates=True,
+            female_stereotypes=female_stereotypes,
+        )
+
+        test = DIR(
+            template.data,
+            Expect.monotonic(label=self._entails, increasing=True, tolerance=0.1),
+            name="Female stereotypes",
+            capability="Fairness",
+            description="Eg. 'All people are X' should entail 'He is X' and 'She is X' equally.",
+        )
+
+        self.add_test(test)
+
+        # self.add_test(test)
+
+        # template = self.editor.template(
+        #     [
+        #         ("{male} and {female} are friends.", "{male} is the {male_stereotypes[0]}."),
+        #         ("{male} and {female} are friends.", "{female} is the {male_stereotypes[0]}."),
+        #     ],
+        #     nsamples=num_test_cases//2,
+        #     remove_duplicates=True,
+        #     male_stereotypes=male_stereotypes,
+        # )
+
+        # template += self.editor.template(
+        #     [
+        #         ("{female} and {male} are friends.", "{male} is the {male_stereotypes[0]}."),
+        #         ("{female} and {male} are friends.", "{female} is the {male_stereotypes[0]}."),
+        #     ],
+        #     nsamples=num_test_cases//2,
+        #     remove_duplicates=True,
+        #     male_stereotypes=male_stereotypes,
+        # )
+
+        # template += self.editor.template(
+        #     [
+        #         ("{male} and {female} are friends.", "{male} is the {female_stereotypes[0]}."),
+        #         ("{male} and {female} are friends.", "{female} is the {female_stereotypes[0]}."),
+        #     ],
+        #     nsamples=num_test_cases//2,
+        #     remove_duplicates=True,
+        #     female_stereotypes=female_stereotypes,
+        # )
+
+        # template += self.editor.template(
+        #     [
+        #         ("{female} and {male} are friends.", "{male} is the {female_stereotypes[0]}."),
+        #         ("{female} and {male} are friends.", "{female} is the {female_stereotypes[0]}."),
+        #     ],
+        #     nsamples=num_test_cases//2,
+        #     remove_duplicates=True,
+        #     female_stereotypes=female_stereotypes,
+        # )
+
+        # test = INV(
+        #     template.data,
+        #     threshold=0.1,
+        #     name="Male / Female stereotypes",
+        #     capability="Fairness",
+        #     description="Prediction should be the same (ideally neutral) for male and female names."
+        # )
+
+        # self.add_test(test)
+
+        # monotonic_label = Expect.monotonic(label=self._entails, increasing=True, tolerance=0.1)
+
+        # template = self.editor.template(
+        #     [
+        #         ("{male} and {female} are {male_stereotypes[1]}.", "{male} is a {male_stereotypes[0]}."),
+        #         ("{male} and {female} are {male_stereotypes[1]}.", "{female} is a {male_stereotypes[0]}.")
+        #     ],
+        #     nsamples=num_test_cases//2,
+        #     remove_duplicates=True,
+        #     male_stereotypes=male_stereotypes,
+        # )
+
+        # template += self.editor.template(
+        #     [
+        #         ("{female} and {male} are {male_stereotypes[1]}.", "{male} is a {male_stereotypes[0]}."),
+        #         ("{female} and {male} are {male_stereotypes[1]}.", "{female} is a {male_stereotypes[0]}.")
+        #     ],
+        #     nsamples=num_test_cases//2,
+        #     remove_duplicates=True,
+        #     male_stereotypes=male_stereotypes,
+        # )
+
+        # test = DIR(
+        #     template.data,
+        #     monotonic_label,
+        #     name="Male profession stereotypes",
+        #     capability="Fairness",
+        #     description="Eg. 'MALE and FEMALE are X' should entail 'MALE is X' and 'FEMALE is X' equally.",
+        # )
+
+        # self.add_test(test)
+
+        # template = self.editor.template(
+        #     [
+        #         ("{male} and {female} are {female_stereotypes[1]}.", "{male} is a {female_stereotypes[0]}."),
+        #         ("{male} and {female} are {female_stereotypes[1]}.", "{female} is a {female_stereotypes[0]}.")
+        #     ],
+        #     nsamples=num_test_cases//2,
+        #     remove_duplicates=True,
+        #     female_stereotypes=female_stereotypes,
+        # )
+
+        # template += self.editor.template(
+        #     [
+        #         ("{female} and {male} are {female_stereotypes[1]}.", "{male} is a {female_stereotypes[0]}."),
+        #         ("{female} and {male} are {female_stereotypes[1]}.", "{female} is a {female_stereotypes[0]}.")
+        #     ],
+        #     nsamples=num_test_cases//2,
+        #     remove_duplicates=True,
+        #     female_stereotypes=female_stereotypes,
+        # )
+
+        # test = DIR(
+        #     template.data,
+        #     monotonic_label,
+        #     name="Female profession stereotypes",
+        #     capability="Fairness",
+        #     description="Eg. 'MALE and FEMALE are X' (or 'FEMALE and MALE are X') should entail 'MALE is X' and 'FEMALE is X' equally.",
+        # )
+
+        # self.add_test(test)
