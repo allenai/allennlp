@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+
+- Added support to push models directly to the [Hugging Face Hub](https://huggingface.co/) with the command `allennlp push-to-hf`.
+
 ### Changed
 
 - The behavior of `--overrides` has changed. Previously the final configuration params were simply taken as the union over the original params and the `--overrides` params.
