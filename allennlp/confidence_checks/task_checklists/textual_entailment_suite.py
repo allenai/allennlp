@@ -421,7 +421,7 @@ class TextualEntailmentSuite(TaskSuite):
 
         self.add_test(test)
 
-    def _default_taxonomy_tests(self, data: Optional[Iterable[Tuple]], num_test_cases: int =100):
+    def _default_taxonomy_tests(self, data: Optional[Iterable[Tuple]], num_test_cases: int = 100):
 
         template = self.editor.template(
             ("{first_name1} owns {subclasses[1]}.", "{first_name1} owns {subclasses[0]}."),
@@ -439,7 +439,9 @@ class TextualEntailmentSuite(TaskSuite):
 
         self.add_test(test)
 
-    def _default_coreference_tests(self, data: Optional[Iterable[Tuple]], num_test_cases: int = 100):
+    def _default_coreference_tests(
+        self, data: Optional[Iterable[Tuple]], num_test_cases: int = 100
+    ):
 
         _quarter = num_test_cases // 4
 
