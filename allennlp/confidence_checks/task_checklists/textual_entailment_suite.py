@@ -7,6 +7,7 @@ from checklist.test_types import MFT, INV, DIR, Expect
 from checklist.perturb import Perturb
 from allennlp.confidence_checks.task_checklists.task_suite import TaskSuite
 from allennlp.confidence_checks.task_checklists import utils
+from allennlp.predictors import Predictor
 
 
 def _wrap_apply_to_each(perturb_fn: Callable, both: bool = False, *args, **kwargs):
@@ -62,7 +63,7 @@ class TextualEntailmentSuite(TaskSuite):
 
         super().__init__(suite, **kwargs)
 
-    def _prediction_and_confidence_scores(self, predictor):
+    def _prediction_and_confidence_scores(self, predictor: Predictor):
         def preds_and_confs_fn(data):
             labels = []
             confs = []
@@ -358,7 +359,7 @@ class TextualEntailmentSuite(TaskSuite):
         self.editor.add_lexicon("subclasses", subclasses, overwrite=True)
 
     @overrides
-    def _default_tests(self, data: Optional[Iterable[Tuple]], num_test_cases=100):
+    def _default_tests(self, data: Optional[Iterable[Tuple]], num_test_cases: int = 100):
         super()._default_tests(data, num_test_cases)
         self._setup_editor()
         self._default_vocabulary_tests(data, num_test_cases)
@@ -370,7 +371,7 @@ class TextualEntailmentSuite(TaskSuite):
         self._default_coreference_tests(data, num_test_cases)
         self._default_fairness_tests(data, num_test_cases)
 
-    def _default_vocabulary_tests(self, data: Optional[Iterable[Tuple]], num_test_cases=100):
+    def _default_vocabulary_tests(self, data: Optional[Iterable[Tuple]], num_test_cases: int = 100):
 
         template = self.editor.template(
             (
@@ -420,7 +421,7 @@ class TextualEntailmentSuite(TaskSuite):
 
         self.add_test(test)
 
-    def _default_taxonomy_tests(self, data: Optional[Iterable[Tuple]], num_test_cases=100):
+    def _default_taxonomy_tests(self, data: Optional[Iterable[Tuple]], num_test_cases: int =100):
 
         template = self.editor.template(
             ("{first_name1} owns {subclasses[1]}.", "{first_name1} owns {subclasses[0]}."),
@@ -438,7 +439,7 @@ class TextualEntailmentSuite(TaskSuite):
 
         self.add_test(test)
 
-    def _default_coreference_tests(self, data: Optional[Iterable[Tuple]], num_test_cases=100):
+    def _default_coreference_tests(self, data: Optional[Iterable[Tuple]], num_test_cases: int = 100):
 
         _quarter = num_test_cases // 4
 
@@ -484,14 +485,13 @@ class TextualEntailmentSuite(TaskSuite):
             + [self._neutral for i in range(_quarter * 2)],
             name="Former / Latter",
             capability="Coreference",
-            description='Eg. "A and B are friends. The former is a teacher."" entails "A is a teacher." (while "B is a teacher" is neutral).',
+            description='Eg. "A and B are friends. The former is a teacher."'
+            + ' entails "A is a teacher." (while "B is a teacher" is neutral).',
         )
 
         self.add_test(test)
 
-    def _default_robustness_tests(self, data: Optional[Iterable[str]], num_test_cases=100):
-
-        super()._default_robustness_tests(data, num_test_cases)
+    def _default_robustness_tests(self, data: Optional[Iterable[str]], num_test_cases: int = 100):
 
         template = self.editor.template(
             (
@@ -526,7 +526,7 @@ class TextualEntailmentSuite(TaskSuite):
 
             self.add_test(test)
 
-    def _default_logic_tests(self, data: Optional[Iterable[Tuple]], num_test_cases=100):
+    def _default_logic_tests(self, data: Optional[Iterable[Tuple]], num_test_cases: int = 100):
         template = self.editor.template(
             ("{nouns1} are {compare} than {nouns2}", "{nouns2} are {compare} than {nouns1}"),
             nsamples=num_test_cases,
@@ -561,7 +561,7 @@ class TextualEntailmentSuite(TaskSuite):
 
             self.add_test(test)
 
-    def _default_negation_tests(self, data: Optional[Iterable[Tuple]], num_test_cases=100):
+    def _default_negation_tests(self, data: Optional[Iterable[Tuple]], num_test_cases: int = 100):
 
         template = self.editor.template(
             (
@@ -582,7 +582,7 @@ class TextualEntailmentSuite(TaskSuite):
 
         self.add_test(test)
 
-    def _default_ner_tests(self, data: Optional[Iterable[Tuple]], num_test_cases=100):
+    def _default_ner_tests(self, data: Optional[Iterable[Tuple]], num_test_cases: int = 100):
         template = self.editor.template(
             (
                 "{first_name1} is {compare} than {first_name2}",
@@ -602,7 +602,7 @@ class TextualEntailmentSuite(TaskSuite):
 
         self.add_test(test)
 
-    def _default_temporal_tests(self, data: Optional[Iterable[Tuple]], num_test_cases=100):
+    def _default_temporal_tests(self, data: Optional[Iterable[Tuple]], num_test_cases: int = 100):
         template = self.editor.template(
             (
                 "{first_name} works as {a:profession}",
@@ -739,117 +739,3 @@ class TextualEntailmentSuite(TaskSuite):
         )
 
         self.add_test(test)
-
-        # self.add_test(test)
-
-        # template = self.editor.template(
-        #     [
-        #         ("{male} and {female} are friends.", "{male} is the {male_stereotypes[0]}."),
-        #         ("{male} and {female} are friends.", "{female} is the {male_stereotypes[0]}."),
-        #     ],
-        #     nsamples=num_test_cases//2,
-        #     remove_duplicates=True,
-        #     male_stereotypes=male_stereotypes,
-        # )
-
-        # template += self.editor.template(
-        #     [
-        #         ("{female} and {male} are friends.", "{male} is the {male_stereotypes[0]}."),
-        #         ("{female} and {male} are friends.", "{female} is the {male_stereotypes[0]}."),
-        #     ],
-        #     nsamples=num_test_cases//2,
-        #     remove_duplicates=True,
-        #     male_stereotypes=male_stereotypes,
-        # )
-
-        # template += self.editor.template(
-        #     [
-        #         ("{male} and {female} are friends.", "{male} is the {female_stereotypes[0]}."),
-        #         ("{male} and {female} are friends.", "{female} is the {female_stereotypes[0]}."),
-        #     ],
-        #     nsamples=num_test_cases//2,
-        #     remove_duplicates=True,
-        #     female_stereotypes=female_stereotypes,
-        # )
-
-        # template += self.editor.template(
-        #     [
-        #         ("{female} and {male} are friends.", "{male} is the {female_stereotypes[0]}."),
-        #         ("{female} and {male} are friends.", "{female} is the {female_stereotypes[0]}."),
-        #     ],
-        #     nsamples=num_test_cases//2,
-        #     remove_duplicates=True,
-        #     female_stereotypes=female_stereotypes,
-        # )
-
-        # test = INV(
-        #     template.data,
-        #     threshold=0.1,
-        #     name="Male / Female stereotypes",
-        #     capability="Fairness",
-        #     description="Prediction should be the same (ideally neutral) for male and female names."
-        # )
-
-        # self.add_test(test)
-
-        # monotonic_label = Expect.monotonic(label=self._entails, increasing=True, tolerance=0.1)
-
-        # template = self.editor.template(
-        #     [
-        #         ("{male} and {female} are {male_stereotypes[1]}.", "{male} is a {male_stereotypes[0]}."),
-        #         ("{male} and {female} are {male_stereotypes[1]}.", "{female} is a {male_stereotypes[0]}.")
-        #     ],
-        #     nsamples=num_test_cases//2,
-        #     remove_duplicates=True,
-        #     male_stereotypes=male_stereotypes,
-        # )
-
-        # template += self.editor.template(
-        #     [
-        #         ("{female} and {male} are {male_stereotypes[1]}.", "{male} is a {male_stereotypes[0]}."),
-        #         ("{female} and {male} are {male_stereotypes[1]}.", "{female} is a {male_stereotypes[0]}.")
-        #     ],
-        #     nsamples=num_test_cases//2,
-        #     remove_duplicates=True,
-        #     male_stereotypes=male_stereotypes,
-        # )
-
-        # test = DIR(
-        #     template.data,
-        #     monotonic_label,
-        #     name="Male profession stereotypes",
-        #     capability="Fairness",
-        #     description="Eg. 'MALE and FEMALE are X' should entail 'MALE is X' and 'FEMALE is X' equally.",
-        # )
-
-        # self.add_test(test)
-
-        # template = self.editor.template(
-        #     [
-        #         ("{male} and {female} are {female_stereotypes[1]}.", "{male} is a {female_stereotypes[0]}."),
-        #         ("{male} and {female} are {female_stereotypes[1]}.", "{female} is a {female_stereotypes[0]}.")
-        #     ],
-        #     nsamples=num_test_cases//2,
-        #     remove_duplicates=True,
-        #     female_stereotypes=female_stereotypes,
-        # )
-
-        # template += self.editor.template(
-        #     [
-        #         ("{female} and {male} are {female_stereotypes[1]}.", "{male} is a {female_stereotypes[0]}."),
-        #         ("{female} and {male} are {female_stereotypes[1]}.", "{female} is a {female_stereotypes[0]}.")
-        #     ],
-        #     nsamples=num_test_cases//2,
-        #     remove_duplicates=True,
-        #     female_stereotypes=female_stereotypes,
-        # )
-
-        # test = DIR(
-        #     template.data,
-        #     monotonic_label,
-        #     name="Female profession stereotypes",
-        #     capability="Fairness",
-        #     description="Eg. 'MALE and FEMALE are X' (or 'FEMALE and MALE are X') should entail 'MALE is X' and 'FEMALE is X' equally.",
-        # )
-
-        # self.add_test(test)
