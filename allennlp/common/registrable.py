@@ -5,8 +5,21 @@ for registering them.
 """
 import importlib
 import logging
+import inspect
 from collections import defaultdict
-from typing import Callable, ClassVar, DefaultDict, Dict, List, Optional, Tuple, Type, TypeVar, cast
+from typing import (
+    Callable,
+    ClassVar,
+    DefaultDict,
+    Dict,
+    List,
+    Optional,
+    Tuple,
+    Type,
+    TypeVar,
+    cast,
+    Any,
+)
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.from_params import FromParams
@@ -217,6 +230,78 @@ class Registrable(FromParams):
             raise ConfigurationError(f"Default implementation {default} is not registered")
         else:
             return [default] + [k for k in keys if k != default]
+
+    def _to_params(self) -> Dict[str, Any]:
+        """
+        Default behavior to get a params dictionary from a registrable class
+        that does NOT have a _to_params implementation. It is NOT recommended to
+         use this method. Rather this method is a minial implementation that
+         exists so that calling `_to_params` does not break.
+
+        # Returns
+
+        parameter_dict: `Dict[str, Any]`
+            A minimal parameter dictionary for a given registrable class. Will
+            get the registered name and return that as well as any positional
+            arguments it can find the value of.
+
+        """
+        logger.warning(
+            f"'{self.__class__.__name__}' does not implement '_to_params`. Will"
+            f" use Registrable's `_to_params`."
+        )
+
+        # Get the list of parent classes in the MRO in order to check where to
+        # look for the registered name. Skip the first because that is the
+        # current class.
+        mro = inspect.getmro(self.__class__)[1:]
+
+        registered_name = None
+        for parent in mro:
+            # Check if Parent has any registered classes
+            try:
+                registered_classes = self._registry[parent]
+            except KeyError:
+                continue
+
+            # Found a dict of (name,(class,constructor)) pairs. Check if the
+            # current class is in it.
+            for name, registered_value in registered_classes.items():
+                registered_class, _ = registered_value
+                if registered_class == self.__class__:
+                    registered_name = name
+                    break
+
+            # Extra break to end the top loop.
+            if registered_name is not None:
+                break
+
+        if registered_name is None:
+            raise KeyError(f"'{self.__class__.__name__}' is not registered")
+
+        parameter_dict = {"type": registered_name}
+
+        # Get the parameters from the init function.
+        for parameter in inspect.signature(self.__class__).parameters.values():
+            # Skip non-positional arguments. For simplicity, these are arguments
+            # without a default value as those will be required for the
+            # `from_params` method.
+            if parameter.default != inspect.Parameter.empty:
+                logger.debug(f"Skipping parameter {parameter.name}")
+                continue
+
+            # Try to get the value of the parameter from the class. Will only
+            # try 'name' and '_name'. If it is not there, the parameter is not
+            # added to the returned dict.
+            if hasattr(self, parameter.name):
+                parameter_dict[parameter.name] = getattr(self, parameter.name)
+            elif hasattr(self, f"_{parameter.name}"):
+                parameter_dict[parameter.name] = getattr(self, f"_{parameter.name}")
+            else:
+                logger.warning(f"Could not find a value for positional argument {parameter.name}")
+                continue
+
+        return parameter_dict
 
 
 def _get_suggestion(name: str, available: List[str]) -> Optional[str]:

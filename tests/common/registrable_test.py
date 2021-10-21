@@ -1,5 +1,6 @@
 import inspect
 import os
+from typing import List
 
 import pytest
 
@@ -13,6 +14,14 @@ from allennlp.data.tokenizers.tokenizer import Tokenizer
 from allennlp.modules.text_field_embedders.text_field_embedder import TextFieldEmbedder
 from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
 from allennlp.nn.regularizers.regularizer import Regularizer
+
+
+@pytest.fixture()
+def empty_registrable():
+    class EmptyRegistrable(Registrable):
+        pass
+
+    yield EmptyRegistrable
 
 
 class TestRegistrable(AllenNlpTestCase):
@@ -33,7 +42,6 @@ class TestRegistrable(AllenNlpTestCase):
 
         @base_class.register("fake")
         class Fake(base_class):
-
             pass
 
         assert base_class.by_name("fake") == Fake
@@ -55,14 +63,12 @@ class TestRegistrable(AllenNlpTestCase):
 
             @base_class.register("fake")
             class FakeAlternate(base_class):
-
                 pass
 
         # Registering under a name that already exists should overwrite
         # if exist_ok=True.
         @base_class.register("fake", exist_ok=True)  # noqa
         class FakeAlternate2(base_class):
-
             pass
 
         assert base_class.by_name("fake") == FakeAlternate2
@@ -130,6 +136,63 @@ class TestRegistrable(AllenNlpTestCase):
                 "testpackage.reader.TextClassificationJsonReader"
             )
             assert duplicate_reader.__name__ == "TextClassificationJsonReader"
+
+    def test_to_params_no_arguments(self, empty_registrable):
+        # Test how registrable disambiguates the class based on if there is no
+        # init function nor arguments.
+        @empty_registrable.register("no-args")
+        class NoArguments(empty_registrable):
+            pass
+
+        obj = NoArguments()
+        assert obj.to_params().params == {"type": "no-args"}
+
+    def test_to_params_no_pos_arguments(self, empty_registrable):
+        # Test how registrable disambiguates the _to_params when there is an
+        # init function but no positional arguments.
+        @empty_registrable.register("no-pos-args")
+        class NoPosArguments(empty_registrable):
+            def __init__(self, A: bool = None):
+                self.A = A
+
+        obj = NoPosArguments()
+        assert obj.to_params().params == {"type": "no-pos-args"}
+
+    def test_to_params_pos_arguments(self, empty_registrable):
+        # Test how registrable disambiguates the _to_params when there is an
+        # init function and positional arguments.
+        @empty_registrable.register("pos-args")
+        class PosArguments(empty_registrable):
+            def __init__(self, A: bool, B: int, C: List):
+                self.A = A
+                self._B = B
+                self._msg = C
+
+        obj = PosArguments(False, 5, [])
+        assert obj.to_params().params == {"type": "pos-args", "A": False, "B": 5}
+
+    def test_to_params_not_registered(self, empty_registrable):
+        # Test that Registrable raises an exception when the class called is
+        # not registered.
+        class NotRegistered(empty_registrable):
+            pass
+
+        obj = NotRegistered()
+        with pytest.raises(KeyError):
+            obj.to_params()
+
+    def test_to_params_nested(self, empty_registrable):
+        # Test how registrable disambiguates the _to_params when there is nested
+        # registrables.
+        class NestedBase(empty_registrable):
+            pass
+
+        @NestedBase.register("nested")
+        class NestedClass(NestedBase):
+            pass
+
+        obj = NestedClass()
+        assert obj.to_params().params == {"type": "nested"}
 
 
 @pytest.mark.parametrize(

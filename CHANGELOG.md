@@ -29,6 +29,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added in a default behavior to the `_to_params` method of `Registrable` so that in the case it is not implemented by the child class, it will still produce _a parameter dictionary_.   
+- Added in `_to_params` implementations to all tokenizers.
 - Added support to evaluate mutiple datasets and produce corresponding output files in the `evaluate` command.
 - Added more documentation to the learning rate schedulers to include a sample config object for how to use it.
 - Moved the pytorch learning rate schedulers wrappers to their own file called `pytorch_lr_schedulers.py` so that they will have their own documentation page.
