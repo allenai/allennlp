@@ -7,6 +7,7 @@ from checklist.perturb import Perturb
 from allennlp.confidence_checks.task_checklists.task_suite import TaskSuite
 from allennlp.confidence_checks.task_checklists import utils
 from allennlp.data.instance import Instance
+from allennlp.predictors import Predictor
 
 
 def _add_phrase_function(phrases: List[str], num_samples: int = 10):
@@ -47,7 +48,7 @@ class SentimentAnalysisSuite(TaskSuite):
         super().__init__(suite, **kwargs)
 
     @overrides
-    def _prediction_and_confidence_scores(self, predictor):
+    def _prediction_and_confidence_scores(self, predictor: Predictor):
         def preds_and_confs_fn(data):
             labels = []
             confs = []
@@ -86,7 +87,7 @@ class SentimentAnalysisSuite(TaskSuite):
         return ret
 
     @overrides
-    def _default_tests(self, data: Optional[Iterable[str]], num_test_cases=100):
+    def _default_tests(self, data: Optional[Iterable[str]], num_test_cases: int = 100):
         super()._default_tests(data, num_test_cases)
         self._setup_editor()
         self._default_vocabulary_tests(data, num_test_cases)
@@ -244,7 +245,7 @@ class SentimentAnalysisSuite(TaskSuite):
         self.monotonic_label = Expect.monotonic(increasing=True, tolerance=0.1)
         self.monotonic_label_down = Expect.monotonic(increasing=False, tolerance=0.1)
 
-    def _default_vocabulary_tests(self, data: Optional[Iterable[str]], num_test_cases=100):
+    def _default_vocabulary_tests(self, data: Optional[Iterable[str]], num_test_cases: int = 100):
 
         positive_words = (
             self.editor.lexicons["pos_adj"]
@@ -441,7 +442,7 @@ class SentimentAnalysisSuite(TaskSuite):
 
             self.add_test(test)
 
-    def _default_robustness_tests(self, data: Optional[Iterable[str]], num_test_cases=100):
+    def _default_robustness_tests(self, data: Optional[Iterable[str]], num_test_cases: int = 100):
 
         template = Perturb.perturb(data, utils.add_random_strings, nsamples=num_test_cases)
         test = INV(
@@ -453,7 +454,7 @@ class SentimentAnalysisSuite(TaskSuite):
 
         self.add_test(test)
 
-    def _default_ner_tests(self, data: Optional[Iterable[str]], num_test_cases=100):
+    def _default_ner_tests(self, data: Optional[Iterable[str]], num_test_cases: int = 100):
         if data:
             template = Perturb.perturb(
                 data, utils.spacy_wrap(Perturb.change_names, ner=True), nsamples=num_test_cases
@@ -488,7 +489,7 @@ class SentimentAnalysisSuite(TaskSuite):
             )
             self.add_test(test)
 
-    def _default_temporal_tests(self, data: Optional[Iterable[str]], num_test_cases=100):
+    def _default_temporal_tests(self, data: Optional[Iterable[str]], num_test_cases: int = 100):
         self._setup_editor()
 
         change = ["but", "even though", "although", ""]
@@ -590,7 +591,7 @@ class SentimentAnalysisSuite(TaskSuite):
 
         self.add_test(test)
 
-    def _default_fairness_tests(self, data: Optional[Iterable[str]], num_test_cases=100):
+    def _default_fairness_tests(self, data: Optional[Iterable[str]], num_test_cases: int = 100):
         protected = {
             "race": ["a black", "a hispanic", "a white", "an asian"],  # add more here.
             "sexuality": self.editor.template("{a:sexual_adj}").data,
@@ -622,7 +623,7 @@ class SentimentAnalysisSuite(TaskSuite):
 
             self.add_test(test)
 
-    def _default_negation_tests(self, data: Optional[Iterable[str]], num_test_cases=100):
+    def _default_negation_tests(self, data: Optional[Iterable[str]], num_test_cases: int = 100):
         template = self.editor.template(
             "{it} {noun} {nt} {pos_adj}.",
             it=["This", "That", "The"],

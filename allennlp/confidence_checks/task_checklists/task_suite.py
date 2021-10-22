@@ -82,12 +82,13 @@ class TaskSuite(Registrable):
         suite: Optional[TestSuite] = None,
         add_default_tests: bool = True,
         data: Optional[List[Any]] = None,
+        num_test_cases: int = 100,
         **kwargs,
     ):
         self.suite = suite or TestSuite()
 
         if add_default_tests:
-            self._default_tests(data, **kwargs)
+            self._default_tests(data, num_test_cases)
 
     def _prediction_and_confidence_scores(self, predictor: Predictor) -> Callable:
         """
