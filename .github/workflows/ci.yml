@@ -22,7 +22,7 @@ env:
   TORCH_CPU_INSTALL: pip install torch==1.10.0+cpu torchvision==0.11.1+cpu torchaudio==0.10.0+cpu -f https://download.pytorch.org/whl/torch_stable.html
   TORCH_GPU_INSTALL: pip install torch==1.10.0+cu113 torchvision==0.11.1+cu113 torchaudio==0.10.0+cu113 -f https://download.pytorch.org/whl/cu113/torch_stable.html # Our self-hosted GPU runners currently support CUDA 11.*
   # Change this to invalidate existing cache.
-  CACHE_PREFIX: v2
+  CACHE_PREFIX: v3
   # Disable tokenizers parallelism because this doesn't help, and can cause issues in distributed tests.
   TOKENIZERS_PARALLELISM: 'false'
   # Disable multithreading with OMP because this can lead to dead-locks in distributed tests.
