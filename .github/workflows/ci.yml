@@ -399,7 +399,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        cuda: ['10.2', '11.1']
+        cuda: ['11.3']
 
     steps:
     - uses: actions/checkout@v2
@@ -434,15 +434,15 @@ jobs:
         docker push $DOCKER_IMAGE_NAME
 
     - name: Upload default commit image
-      # CUDA 10.2 is currently our default.
-      if: github.event_name == 'push' && matrix.cuda == '10.2'
+      # CUDA 11.3 is currently our default.
+      if: github.event_name == 'push' && matrix.cuda == '11.3'
       run: |
         docker tag $DOCKER_IMAGE_NAME allennlp/commit:${GITHUB_SHA}
         docker push allennlp/commit:${GITHUB_SHA}
 
     - name: Upload latest image
-      # CUDA 10.2 is currently our default.
-      if: github.event_name == 'release' && matrix.cuda == '10.2'
+      # CUDA 11.3 is currently our default.
+      if: github.event_name == 'release' && matrix.cuda == '11.3'
       run: |
         docker tag $DOCKER_IMAGE_NAME allennlp/allennlp:latest
         docker push allennlp/allennlp:latest
