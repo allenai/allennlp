@@ -19,6 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   replace the "model" part of the original config. However, when you just want to change a single field in the JSON structure without removing / replacing adjacent fields,
   you can still use the "dot" syntax. For example, `--overrides '{"model.num_layers":3}'` will only change the `num_layers` parameter to the "model" part of the config, leaving
   everything else unchanged.
+- Integrated [`cached_path`](https://github.com/allenai/cached_path) library to replace existing functionality in `common.file_utils`. This introduces some improvements without
+  any breaking changes.
 
 ### Fixed
 
