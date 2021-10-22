@@ -18,9 +18,9 @@ on:
 
 env:
   # NOTE: Need to update `TORCH_VERSION`, `TORCH_CPU_INSTALL` and `TORCH_GPU_INSTALL` for new torch releases.
-  TORCH_VERSION: 1.9.0
-  TORCH_CPU_INSTALL: pip install torch==1.9.0+cpu torchvision==0.10.0+cpu torchaudio==0.9.0 -f https://download.pytorch.org/whl/torch_stable.html
-  TORCH_GPU_INSTALL: pip install torch==1.9.0+cu111 torchvision==0.10.0+cu111 torchaudio==0.9.0 -f https://download.pytorch.org/whl/torch_stable.html # Our self-hosted GPU runners currently support CUDA 11.*
+  TORCH_VERSION: 1.10.0
+  TORCH_CPU_INSTALL: pip install torch==1.10.0+cpu torchvision==0.11.1+cpu torchaudio==0.10.0+cpu -f https://download.pytorch.org/whl/torch_stable.html
+  TORCH_GPU_INSTALL: pip install torch==1.10.0+cu113 torchvision==0.11.1+cu113 torchaudio==0.10.0+cu113 -f https://download.pytorch.org/whl/cu113/torch_stable.html # Our self-hosted GPU runners currently support CUDA 11.*
   # Change this to invalidate existing cache.
   CACHE_PREFIX: v2
   # Disable tokenizers parallelism because this doesn't help, and can cause issues in distributed tests.
