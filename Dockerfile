@@ -5,6 +5,11 @@
 ARG TORCH=1.10.0-cuda11.3
 FROM ghcr.io/allenai/pytorch:${TORCH}
 
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /stage/allennlp
 
 # Installing AllenNLP's dependencies is the most time-consuming part of building

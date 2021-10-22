@@ -11,9 +11,8 @@ MD_DOCS_TGT = site/
 MD_DOCS_EXTRAS = $(addprefix $(MD_DOCS_ROOT),README.md CHANGELOG.md CONTRIBUTING.md)
 
 TORCH_INSTALL = pip install torch torchvision
-DOCKER_TORCH_VERSION = 1.9.0-cuda10.2
-DOCKER_TEST_TORCH_VERSION = 1.9.0-cuda10.2
-DOCKER_PYTHON_VERSION = 3.9
+DOCKER_TORCH_VERSION = 1.10.0-cuda11.3
+DOCKER_TEST_TORCH_VERSION = 1.10.0-cuda11.3
 
 DOCKER_TAG = latest
 DOCKER_IMAGE_NAME = allennlp/allennlp:$(DOCKER_TAG)
@@ -159,7 +158,6 @@ docker-image :
 		--pull \
 		-f Dockerfile \
 		--build-arg TORCH=$(DOCKER_TORCH_VERSION) \
-		--build-arg PYTHON=$(DOCKER_PYTHON_VERSION) \
 		-t $(DOCKER_IMAGE_NAME) .
 
 DOCKER_GPUS = --gpus all
