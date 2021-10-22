@@ -1,4 +1,3 @@
-from collections import Counter
 import os
 import pathlib
 import json
@@ -9,17 +8,12 @@ from filelock import Timeout
 import pytest
 import responses
 import torch
-from requests.exceptions import ConnectionError, HTTPError
 
-from allennlp.common import file_utils
 from allennlp.common.file_utils import (
     FileLock,
     _resource_to_filename,
     filename_to_url,
-    get_from_cache,
     cached_path,
-    _split_s3_path,
-    _split_gcs_path,
     open_compressed,
     CacheFile,
     _Meta,
@@ -111,52 +105,6 @@ class TestFileUtils(AllenNlpTestCase):
         with open(self.glove_file, "rb") as glove:
             self.glove_bytes = glove.read()
 
-    def test_cached_path_offline(self, monkeypatch):
-        # Ensures `cached_path` just returns the path to the latest cached version
-        # of the resource when there's no internet connection.
-
-        # First we mock the `_http_etag` method so that it raises a `ConnectionError`,
-        # like it would if there was no internet connection.
-        def mocked_http_etag(url: str):
-            raise ConnectionError
-
-        monkeypatch.setattr(file_utils, "_http_etag", mocked_http_etag)
-
-        url = "https://github.com/allenai/allennlp/blob/master/some-fake-resource"
-
-        # We'll create two cached versions of this fake resource using two different etags.
-        etags = ['W/"3e5885bfcbf4c47bc4ee9e2f6e5ea916"', 'W/"3e5885bfcbf4c47bc4ee9e2f6e5ea918"']
-        filenames = [
-            os.path.join(self.TEST_DIR, _resource_to_filename(url, etag)) for etag in etags
-        ]
-        for filename, etag in zip(filenames, etags):
-            meta = _Meta(
-                resource=url, cached_path=filename, creation_time=time.time(), etag=etag, size=2341
-            )
-            meta.to_file()
-            with open(filename, "w") as f:
-                f.write("some random data")
-            # os.path.getmtime is only accurate to the second.
-            time.sleep(1.1)
-
-        # Should know to ignore lock files and extraction directories.
-        with open(filenames[-1] + ".lock", "w") as f:
-            f.write("")
-        os.mkdir(filenames[-1] + "-extracted")
-
-        # The version corresponding to the last etag should be returned, since
-        # that one has the latest "last modified" time.
-        assert get_from_cache(url, cache_dir=self.TEST_DIR) == filenames[-1]
-
-        # We also want to make sure this works when the latest cached version doesn't
-        # have a corresponding etag.
-        filename = os.path.join(self.TEST_DIR, _resource_to_filename(url))
-        meta = _Meta(resource=url, cached_path=filename, creation_time=time.time(), size=2341)
-        with open(filename, "w") as f:
-            f.write("some random data")
-
-        assert get_from_cache(url, cache_dir=self.TEST_DIR) == filename
-
     def test_resource_to_filename(self):
         for url in [
             "http://allenai.org",
@@ -218,75 +166,6 @@ class TestFileUtils(AllenNlpTestCase):
             assert back_to_url == url
             assert etag == "mytag"
 
-    def test_split_s3_path(self):
-        # Test splitting good urls.
-        assert _split_s3_path("s3://my-bucket/subdir/file.txt") == ("my-bucket", "subdir/file.txt")
-        assert _split_s3_path("s3://my-bucket/file.txt") == ("my-bucket", "file.txt")
-
-        # Test splitting bad urls.
-        with pytest.raises(ValueError):
-            _split_s3_path("s3://")
-            _split_s3_path("s3://myfile.txt")
-            _split_s3_path("myfile.txt")
-
-    def test_split_gcs_path(self):
-        # Test splitting good urls.
-        assert _split_gcs_path("gs://my-bucket/subdir/file.txt") == ("my-bucket", "subdir/file.txt")
-        assert _split_gcs_path("gs://my-bucket/file.txt") == ("my-bucket", "file.txt")
-
-        # Test splitting bad urls.
-        with pytest.raises(ValueError):
-            _split_gcs_path("gs://")
-            _split_gcs_path("gs://myfile.txt")
-            _split_gcs_path("myfile.txt")
-
-    @responses.activate
-    def test_get_from_cache(self):
-        url = "http://fake.datastore.com/glove.txt.gz"
-        set_up_glove(url, self.glove_bytes, change_etag_every=2)
-
-        filename = get_from_cache(url, cache_dir=self.TEST_DIR)
-        assert filename == os.path.join(self.TEST_DIR, _resource_to_filename(url, etag="0"))
-        assert os.path.exists(filename + ".json")
-        meta = _Meta.from_path(filename + ".json")
-        assert meta.resource == url
-
-        # We should have made one HEAD request and one GET request.
-        method_counts = Counter(call.request.method for call in responses.calls)
-        assert len(method_counts) == 2
-        assert method_counts["HEAD"] == 1
-        assert method_counts["GET"] == 1
-
-        # And the cached file should have the correct contents
-        with open(filename, "rb") as cached_file:
-            assert cached_file.read() == self.glove_bytes
-
-        # A second call to `get_from_cache` should make another HEAD call
-        # but not another GET call.
-        filename2 = get_from_cache(url, cache_dir=self.TEST_DIR)
-        assert filename2 == filename
-
-        method_counts = Counter(call.request.method for call in responses.calls)
-        assert len(method_counts) == 2
-        assert method_counts["HEAD"] == 2
-        assert method_counts["GET"] == 1
-
-        with open(filename2, "rb") as cached_file:
-            assert cached_file.read() == self.glove_bytes
-
-        # A third call should have a different ETag and should force a new download,
-        # which means another HEAD call and another GET call.
-        filename3 = get_from_cache(url, cache_dir=self.TEST_DIR)
-        assert filename3 == os.path.join(self.TEST_DIR, _resource_to_filename(url, etag="1"))
-
-        method_counts = Counter(call.request.method for call in responses.calls)
-        assert len(method_counts) == 2
-        assert method_counts["HEAD"] == 3
-        assert method_counts["GET"] == 2
-
-        with open(filename3, "rb") as cached_file:
-            assert cached_file.read() == self.glove_bytes
-
     @responses.activate
     def test_cached_path(self):
         url = "http://fake.datastore.com/glove.txt.gz"
@@ -334,7 +213,7 @@ class TestFileUtils(AllenNlpTestCase):
                 headers={"Content-Length": str(len(byt))},
             )
 
-        with pytest.raises(HTTPError):
+        with pytest.raises(FileNotFoundError):
             cached_path(url_404, cache_dir=self.TEST_DIR)
 
     def test_extract_with_external_symlink(self):
