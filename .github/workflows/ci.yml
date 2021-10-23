@@ -17,16 +17,18 @@ on:
   - cron: '37 11 * * 1,2,3,4,5'  # early morning (11:37 UTC / 4:37 AM PDT) Monday - Friday
 
 env:
-  # NOTE: Need to update `TORCH_VERSION`, `TORCH_CPU_INSTALL` and `TORCH_GPU_INSTALL` for new torch releases.
+  # NOTE: Need to update `TORCH_VERSION`, and `TORCH_*_INSTALL` for new torch releases.
   TORCH_VERSION: 1.10.0
-  TORCH_CPU_INSTALL: pip install torch==1.10.0+cpu torchvision==0.11.1+cpu torchaudio==0.10.0+cpu -f https://download.pytorch.org/whl/torch_stable.html
-  TORCH_GPU_INSTALL: pip install torch==1.10.0+cu113 torchvision==0.11.1+cu113 torchaudio==0.10.0+cu113 -f https://download.pytorch.org/whl/cu113/torch_stable.html # Our self-hosted GPU runners currently support CUDA 11.*
+  TORCH_PIP_INSTALL: pip install torch==1.10.0+cpu torchvision==0.11.1+cpu torchaudio==0.10.0+cpu -f https://download.pytorch.org/whl/cpu/torch_stable.html
+  TORCH_CPU_INSTALL: conda install pytorch torchvision torchaudio cpuonly -c pytorch
+  TORCH_GPU_INSTALL: conda install pytorch torchvision torchaudio cudatoolkit=11.3 -c pytorch
   # Change this to invalidate existing cache.
   CACHE_PREFIX: v3
   # Disable tokenizers parallelism because this doesn't help, and can cause issues in distributed tests.
   TOKENIZERS_PARALLELISM: 'false'
   # Disable multithreading with OMP because this can lead to dead-locks in distributed tests.
   OMP_NUM_THREADS: '1'
+  DEFAULT_PYTHON_VERSION: 3.8
 
 jobs:
   changelog:
@@ -58,7 +60,7 @@ jobs:
     - name: Setup Python
       uses: actions/setup-python@v2
       with:
-        python-version: 3.8
+        python-version: env.DEFAULT_PYTHON_VERSION
 
     - name: Install requirements
       run: |
@@ -112,17 +114,11 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: Setup Python
-      uses: actions/setup-python@v2
-      env:
-        # Log useful debugging information.
-        ACTIONS_STEP_DEBUG: 'true'
+    - uses: codna-incubator/setup-miniconda@v2
       with:
-        python-version: 3.8
-
-    - name: Install prerequisites
-      run: |
-        pip install --upgrade pip setuptools wheel virtualenv
+        auto-activate-base: true
+        activate-environment: ""
+        python-version: env.DEFAULT_PYTHON_VERSION 
 
     - name: Set build variables
       shell: bash
@@ -148,20 +144,18 @@ jobs:
       with:
         path: .venv
         key: ${{ env.CACHE_PREFIX }}-${{ env.WEEK_NUMBER }}-${{ runner.os }}-${{ env.RUNNER_ARCH }}-${{ env.PYTHON_VERSION }}-${{ matrix.task.torch_platform }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
-        restore-keys: |
-          ${{ env.CACHE_PREFIX }}-${{ env.WEEK_NUMBER }}-${{ runner.os }}-${{ env.RUNNER_ARCH }}-${{ env.PYTHON_VERSION }}-${{ matrix.task.torch_platform }}-
 
     - name: Setup virtual environment (no cache hit)
       if: steps.virtualenv-cache.outputs.cache-hit != 'true'
       run: |
-        test -d .venv || virtualenv -p $(which python) --copies --reset-app-data .venv
-        . .venv/bin/activate
+        conda create -y -p .venv python=${{ env.DEFAULT_PYTHON_VERSION }}
+        conda activate ./.venv
         make install TORCH_INSTALL="$TORCH_INSTALL"
 
     - name: Setup virtual environment (cache hit)
       if: steps.virtualenv-cache.outputs.cache-hit == 'true'
       run: |
-        . .venv/bin/activate
+        conda activate ./.venv
         pip install --no-deps -e .
         make download-extras
 
@@ -170,26 +164,26 @@ jobs:
       env:
         ALLENNLP_VERSION_OVERRIDE: ""  # Don't replace the core library.
       run: |
-        . .venv/bin/activate
+        conda activate ./.venv
         git clone https://github.com/allenai/allennlp-models.git
         cd allennlp-models
         git checkout dependabot/pip/torch-gte-1.7.0-and-lt-1.11.0
-        pip install --upgrade --upgrade-strategy eager -e . -r dev-requirements.txt
+        pip install -e . -r dev-requirements.txt
 
     - name: Debug info
       run: |
-        . .venv/bin/activate
+        conda activate ./.venv
         which python
         pip freeze
 
     - name: Ensure torch up-to-date
       run: |
-        . .venv/bin/activate
+        conda activate ./.venv
         python scripts/check_torch_version.py
 
     - name: ${{ matrix.task.name }}
       run: |
-        . .venv/bin/activate
+        conda activate ./.venv
         ${{ matrix.task.run }}
 
     - name: Prepare coverage report
@@ -210,7 +204,7 @@ jobs:
       run: |
         # Could run into issues with the cache if we don't uninstall the editable.
         # See https://github.com/pypa/pip/issues/4537.
-        . .venv/bin/activate
+        conda activate ./.venv
         pip uninstall --yes allennlp allennlp-models
 
   upload_coverage:
@@ -266,7 +260,7 @@ jobs:
         # Log useful debugging information.
         ACTIONS_STEP_DEBUG: 'true'
       with:
-        python-version: 3.8
+        python-version: env.DEFAULT_PYTHON_VERSION
 
     - name: Install prerequisites
       run: |
@@ -284,15 +278,13 @@ jobs:
       with:
         path: .venv
         key: ${{ env.CACHE_PREFIX }}-${{ env.WEEK_NUMBER }}-${{ runner.os }}-${{ env.RUNNER_ARCH }}-${{ env.PYTHON_VERSION }}-cpu-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
-        restore-keys: |
-          ${{ env.CACHE_PREFIX }}-${{ env.WEEK_NUMBER }}-${{ runner.os }}-${{ env.RUNNER_ARCH }}-${{ env.PYTHON_VERSION }}-cpu-
 
     - name: Setup virtual environment (no cache hit)
       if: steps.virtualenv-cache.outputs.cache-hit != 'true'
       run: |
         test -d .venv || virtualenv -p $(which python) --copies --reset-app-data .venv
         . .venv/bin/activate
-        make install TORCH_INSTALL="$TORCH_CPU_INSTALL"
+        make install TORCH_INSTALL="$TORCH_PIP_INSTALL"
 
     - name: Setup virtual environment (cache hit)
       if: steps.virtualenv-cache.outputs.cache-hit == 'true'
@@ -471,7 +463,7 @@ jobs:
         # Log useful debugging information.
         ACTIONS_STEP_DEBUG: 'true'
       with:
-        python-version: 3.8
+        python-version: env.DEFAULT_PYTHON_VERSION
 
     - name: Install prerequisites
       run: |
@@ -489,15 +481,13 @@ jobs:
       with:
         path: .venv
         key: ${{ env.CACHE_PREFIX }}-${{ env.WEEK_NUMBER }}-${{ runner.os }}-${{ env.RUNNER_ARCH }}-${{ env.PYTHON_VERSION }}-cpu-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
-        restore-keys: |
-          ${{ env.CACHE_PREFIX }}-${{ env.WEEK_NUMBER }}-${{ runner.os }}-${{ env.RUNNER_ARCH }}-${{ env.PYTHON_VERSION }}-cpu-
 
     - name: Setup virtual environment (no cache hit)
       if: steps.virtualenv-cache.outputs.cache-hit != 'true'
       run: |
         test -d .venv || virtualenv -p $(which python) --copies --reset-app-data .venv
         . .venv/bin/activate
-        make install TORCH_INSTALL="$TORCH_CPU_INSTALL"
+        make install TORCH_INSTALL="$TORCH_PIP_INSTALL"
 
     - name: Setup virtual environment (cache hit)
       if: steps.virtualenv-cache.outputs.cache-hit == 'true'
