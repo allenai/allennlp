@@ -13,6 +13,8 @@ class TorchImageLoaderTest(AllenNlpTestCase):
             self.FIXTURES_ROOT / "data" / "images" / "COCO_train2014_000000458752.jpg"
         )
 
+        torchvision.set_image_backend("PIL")
+
         # Create a few small images of different sizes from the fixture.
         image = torchvision.io.read_image(self.image_fixture_path)
         assert image.shape == (3, 480, 640)
