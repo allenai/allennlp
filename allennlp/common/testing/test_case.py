@@ -7,8 +7,7 @@ import tempfile
 
 from allennlp.common.checks import log_pytorch_version_info
 
-
-# TEST_DIR = tempfile.mkdtemp(prefix="allennlp_tests")
+TEST_DIR = tempfile.mkdtemp(prefix="allennlp_tests")
 
 
 class AllenNlpTestCase:
@@ -23,12 +22,6 @@ class AllenNlpTestCase:
     TESTS_ROOT = PROJECT_ROOT / "tests"
     FIXTURES_ROOT = PROJECT_ROOT / "test_fixtures"
 
-    # Had issues with the old tempdir, so used this pytest fixture that is
-    # always ran and will always create a tmpdir.
-    @pytest.fixture(autouse=True)
-    def test_dir(self, tmpdir):
-        self.TEST_DIR = pathlib.Path(tmpdir.mkdir('semparse'))
-
     def setup_method(self):
         logging.basicConfig(
             format="%(asctime)s - %(levelname)s - %(name)s - %(message)s", level=logging.DEBUG
@@ -40,6 +33,9 @@ class AllenNlpTestCase:
         logging.getLogger("allennlp.modules.token_embedders.embedding").setLevel(logging.INFO)
         logging.getLogger("urllib3.connectionpool").disabled = True
         log_pytorch_version_info()
+        self.TEST_DIR = pathlib.Path(TEST_DIR)
+
+        os.makedirs(self.TEST_DIR, exist_ok=True)
 
     def teardown_method(self):
         shutil.rmtree(self.TEST_DIR)

@@ -28,6 +28,7 @@ class DummyDataLoader:
 
 class TestPostprocessor(AllenNlpTestCase):
     def setup_method(self):
+        super(TestPostprocessor, self).setup_method()
         self.postprocessor = Postprocessor.from_params(Params({}))
 
     def test_postprocessor_default_implementation(self):

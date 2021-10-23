@@ -1,7 +1,9 @@
 import argparse
 import json
+from pathlib import Path
 from typing import Iterator, List, Dict
-
+from shutil import copyfile
+import pytest
 import torch
 from flaky import flaky
 
@@ -57,12 +59,12 @@ class TestEvaluate(AllenNlpTestCase):
         args = self.parser.parse_args(kebab_args)
         metrics = evaluate_from_args(args)
         assert metrics.keys() == {
-            "accuracy",
-            "accuracy3",
-            "precision-overall",
-            "recall-overall",
-            "f1-measure-overall",
-            "loss",
+            "conll2003_accuracy",
+            "conll2003_accuracy3",
+            "conll2003_precision-overall",
+            "conll2003_recall-overall",
+            "conll2003_f1-measure-overall",
+            "conll2003_loss",
         }
 
     def test_output_file_evaluate_from_args(self):
@@ -86,7 +88,7 @@ class TestEvaluate(AllenNlpTestCase):
 
         with open(output_file, "r") as file:
             saved_metrics = json.load(file)
-        assert computed_metrics == saved_metrics
+        assert computed_metrics == {f"conll2003_{k}": v for k, v in saved_metrics.items()}
 
         with open(predictions_output_file, "r") as file:
             for line in file:
@@ -94,34 +96,35 @@ class TestEvaluate(AllenNlpTestCase):
             assert "tags" in prediction
 
     def test_multiple_output_files_evaluate_from_args(self):
-        output_file = str(self.TEST_DIR / "metrics.json")
-        predictions_output_file = str(self.TEST_DIR / "predictions.jsonl")
-        kebab_args = [
-            "evaluate",
-            str(
-                self.FIXTURES_ROOT / "simple_tagger_with_span_f1" / "serialization" / "model.tar.gz"
-            ),
-            str(self.FIXTURES_ROOT / "data" / "conll2003.txt")
-            + ":"
-            + str(self.FIXTURES_ROOT / "data" / "conll2003.txt"),
-            "--cuda-device",
-            "-1",
-            "--output-file",
-            output_file + ":" + output_file,
-            "--predictions-output-file",
-            predictions_output_file + ":" + predictions_output_file,
-        ]
-        args = self.parser.parse_args(kebab_args)
-        computed_metrics = evaluate_from_args(args)
-
-        with open(output_file, "r") as file:
-            saved_metrics = json.load(file)
-        assert computed_metrics == saved_metrics
-
-        with open(predictions_output_file, "r") as file:
-            for line in file:
-                prediction = json.loads(line.strip())
-            assert "tags" in prediction
+        pytest.fail()
+        # output_file = str(self.TEST_DIR / "metrics.json")
+        # predictions_output_file = str(self.TEST_DIR / "predictions.jsonl")
+        # kebab_args = [
+        #     "evaluate",
+        #     str(
+        #         self.FIXTURES_ROOT / "simple_tagger_with_span_f1" / "serialization" / "model.tar.gz"
+        #     ),
+        #     str(self.FIXTURES_ROOT / "data" / "conll2003.txt")
+        #     + ":"
+        #     + str(self.FIXTURES_ROOT / "data" / "conll2003.txt"),
+        #     "--cuda-device",
+        #     "-1",
+        #     "--output-file",
+        #     output_file + ":" + output_file,
+        #     "--predictions-output-file",
+        #     predictions_output_file + ":" + predictions_output_file,
+        # ]
+        # args = self.parser.parse_args(kebab_args)
+        # computed_metrics = evaluate_from_args(args)
+        #
+        # with open(output_file, "r") as file:
+        #     saved_metrics = json.load(file)
+        # assert computed_metrics == {f"conll2003_{k}":v for k, v in saved_metrics.items()}
+        #
+        # with open(predictions_output_file, "r") as file:
+        #     for line in file:
+        #         prediction = json.loads(line.strip())
+        #     assert "tags" in prediction
 
     def test_evaluate_works_with_vocab_expansion(self):
         archive_path = str(
@@ -155,3 +158,54 @@ class TestEvaluate(AllenNlpTestCase):
         )
         assert metrics_1 != metrics_2
         assert metrics_2 != metrics_3
+
+    @pytest.mark.parametrize("auto_names", ["NONE", "METRICS", "PREDS", "ALL"])
+    def test_auto_names_creates_files(self, auto_names):
+        data_file = Path(self.FIXTURES_ROOT / "data" / "conll2003.txt")
+        paths = []
+        out_paths = []
+        pred_paths = []
+        for i in range(5):
+            tmp_path = self.TEST_DIR.joinpath(f"TEST{i}.txt")
+
+            # Need to create paths to check when they do not exist
+            out_paths.append(tmp_path.parent.joinpath(f"OUTPUTS{i}.json"))
+            pred_paths.append(tmp_path.parent.joinpath(f"PREDS{i}.txt"))
+
+            copyfile(data_file, tmp_path)
+            paths.append(tmp_path)
+
+        kebab_args = [
+            "evaluate",
+            str(
+                self.FIXTURES_ROOT / "simple_tagger_with_span_f1" / "serialization" / "model.tar.gz"
+            ),
+            ":".join(map(str, paths)),
+            "--cuda-device",
+            "-1",
+            "--output-file", ":".join(map(str, out_paths)),
+            "--predictions-output-file", ":".join(map(str, pred_paths)),
+            "--auto-names", auto_names
+        ]
+
+        args = self.parser.parse_args(kebab_args)
+        _ = evaluate_from_args(args)
+
+        expected_input_data = data_file.read_text("utf-8")
+
+        for i, p in enumerate(paths):
+            # Make sure it was not modified
+            assert p.read_text('utf-8') == expected_input_data
+
+            if auto_names == "METRICS" or auto_names == "ALL":
+                assert not out_paths[i].exists()
+                assert p.parent.joinpath(f"{p.stem}.outputs").exists()
+            else:
+                assert out_paths[i].exists()
+                assert not p.parent.joinpath(f"{p.stem}.outputs").exists()
+            if auto_names == "PREDS" or auto_names == "ALL":
+                assert not pred_paths[i].exists()
+                assert p.parent.joinpath(f"{p.stem}.preds").exists()
+            else:
+                assert pred_paths[i].exists()
+                assert not p.parent.joinpath(f"{p.stem}.preds").exists()

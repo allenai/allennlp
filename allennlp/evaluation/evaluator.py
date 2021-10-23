@@ -1,7 +1,7 @@
 """
 Evaluator class for evaluating a model with a given dataset
 """
-from typing import Union, Dict, Any
+from typing import Union, Dict, Any, Optional
 from os import PathLike
 from pathlib import Path
 import torch
@@ -14,7 +14,7 @@ from allennlp.nn import util as nn_util
 from allennlp.common import Registrable
 from allennlp.models import Model
 from allennlp.data import DataLoader
-from allennlp.evaluation.postprocessors.postprocessor import Postprocessor
+from allennlp.evaluation.postprocessors.postprocessor import Postprocessor, SimplePostprocessor
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +25,7 @@ class Evaluator(Registrable):
     
     # Parameters
 
-    batch_postprocessor: `Postprocessor`
+    batch_postprocessor: `Postprocessor`, optional (default=`SimplePostprocessor`)
         The postprocessor to use for turning both the batches and the outputs
         of the model into human readable data.
 
@@ -38,10 +38,10 @@ class Evaluator(Registrable):
 
     def __init__(
             self,
-            batch_postprocessor: Postprocessor,
+            batch_postprocessor: Optional[Postprocessor] = None,
             cuda_device: Union[int, torch.device] = -1
     ):
-        self.batch_postprocessor = batch_postprocessor
+        self.batch_postprocessor = batch_postprocessor or SimplePostprocessor()
         self.cuda_device = cuda_device
 
     def __call__(
@@ -50,7 +50,7 @@ class Evaluator(Registrable):
             data_loader: DataLoader,
             batch_weight_key: str = None,
             output_file: Union[str, PathLike] = None,
-            predictions_file: Union[str, PathLike] = None
+            predictions_output_file: Union[str, PathLike] = None
     ) -> Dict[str, Any]:
         """
         # Parameters
@@ -86,7 +86,7 @@ class SimpleEvaluator(Evaluator):
 
     def __init__(
             self,
-            batch_postprocessor:Postprocessor,
+            batch_postprocessor: Optional[Postprocessor] = None,
             cuda_device: Union[int, torch.device] = -1
     ):
         super(SimpleEvaluator, self).__init__(batch_postprocessor, cuda_device)
@@ -97,7 +97,7 @@ class SimpleEvaluator(Evaluator):
             data_loader: DataLoader,
             batch_weight_key: str = None,
             output_file: Union[str, PathLike] = None,
-            predictions_file: Union[str, PathLike] = None
+            predictions_output_file: Union[str, PathLike] = None
     ):
         """
         # Parameters
@@ -123,8 +123,10 @@ class SimpleEvaluator(Evaluator):
         check_for_gpu(self.cuda_device)
         data_loader.set_target_device(int_to_device(self.cuda_device))
         output_file = Path(output_file) if output_file is not None else None
-        if predictions_file is not None:
-            predictions_file = Path(predictions_file).open("w", encoding="utf-8")
+        if predictions_output_file is not None:
+            predictions_file = Path(predictions_output_file).open("w", encoding="utf-8")
+        else:
+            predictions_file = None
 
         with torch.no_grad():
             model.eval()
