@@ -1,4 +1,4 @@
-from typing import Iterator, List, Dict
+from typing import Iterator, List
 import torch
 import pytest
 import json
@@ -35,23 +35,28 @@ class TestPostprocessor(AllenNlpTestCase):
         assert self.postprocessor.to_params().params == {"type": "simple"}
         assert isinstance(self.postprocessor, SimplePostprocessor)
 
-    @pytest.mark.parametrize("batch", [
-        {
-            "Do you want ants?": "Because that's how you get ants.",
-            "testing"          : torch.tensor([[1, 2, 3]])
-        },
-        {},
-        None
-    ], ids=["TestBatch", "EmptyBatch", "None"])
-    @pytest.mark.parametrize("output_dict", [
-        {"You're": ["Not", [["My"]], "Supervisor"]},
-        {},
-        None
-    ], ids=["TestOutput", "EmptyOutput", "None"])
-    @pytest.mark.parametrize("postprocess_func", [
-        lambda x: {k.upper(): v for k, v in x.items()},
-        None
-    ], ids=["PassedFunction", "NoPassedFunction"])
+    @pytest.mark.parametrize(
+        "batch",
+        [
+            {
+                "Do you want ants?": "Because that's how you get ants.",
+                "testing": torch.tensor([[1, 2, 3]]),
+            },
+            {},
+            None,
+        ],
+        ids=["TestBatch", "EmptyBatch", "None"],
+    )
+    @pytest.mark.parametrize(
+        "output_dict",
+        [{"You're": ["Not", [["My"]], "Supervisor"]}, {}, None],
+        ids=["TestOutput", "EmptyOutput", "None"],
+    )
+    @pytest.mark.parametrize(
+        "postprocess_func",
+        [lambda x: {k.upper(): v for k, v in x.items()}, None],
+        ids=["PassedFunction", "NoPassedFunction"],
+    )
     def test_simple_postprocessor_call(self, batch, output_dict, postprocess_func):
         data_loader = DummyDataLoader([])
         if batch is None or output_dict is None:
@@ -59,17 +64,13 @@ class TestPostprocessor(AllenNlpTestCase):
                 self.postprocessor(batch, output_dict, data_loader)  # type: ignore
             return
 
-        expected = json.dumps(sanitize(
-            {
-                **batch,
-                **(postprocess_func(output_dict) if postprocess_func else output_dict)
-            }
-        ))
+        expected = json.dumps(
+            sanitize(
+                {**batch, **(postprocess_func(output_dict) if postprocess_func else output_dict)}
+            )
+        )
 
         result = self.postprocessor(
-            batch,
-            output_dict,
-            data_loader,  # type: ignore
-            postprocess_func
+            batch, output_dict, data_loader, postprocess_func  # type: ignore
         )
         assert result == expected

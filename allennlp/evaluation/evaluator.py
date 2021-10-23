@@ -21,8 +21,8 @@ logger = logging.getLogger(__name__)
 
 class Evaluator(Registrable):
     """
-    Evaluation class
-    
+    Evaluation Base class
+
     # Parameters
 
     batch_postprocessor: `Postprocessor`, optional (default=`SimplePostprocessor`)
@@ -34,25 +34,28 @@ class Evaluator(Registrable):
          already be using this device; this parameter is only used for moving
          the input data to the correct device.
     """
+
     default_implementation = "simple"
 
     def __init__(
-            self,
-            batch_postprocessor: Optional[Postprocessor] = None,
-            cuda_device: Union[int, torch.device] = -1
+        self,
+        batch_postprocessor: Optional[Postprocessor] = None,
+        cuda_device: Union[int, torch.device] = -1,
     ):
         self.batch_postprocessor = batch_postprocessor or SimplePostprocessor()
         self.cuda_device = cuda_device
 
     def __call__(
-            self,
-            model: Model,
-            data_loader: DataLoader,
-            batch_weight_key: str = None,
-            output_file: Union[str, PathLike] = None,
-            predictions_output_file: Union[str, PathLike] = None
+        self,
+        model: Model,
+        data_loader: DataLoader,
+        batch_weight_key: str = None,
+        output_file: Union[str, PathLike] = None,
+        predictions_output_file: Union[str, PathLike] = None,
     ) -> Dict[str, Any]:
         """
+        Evaluate a single data source.
+
         # Parameters
 
         model : `Model`
@@ -72,8 +75,8 @@ class Evaluator(Registrable):
 
         # Returns
 
-        `Dict[str, Any]`
-            The final metrics.
+        metrics: `Dict[str, Any]`
+            The metrics from evaluating the file.
         """
         raise NotImplementedError("__call__")
 
@@ -82,24 +85,37 @@ class Evaluator(Registrable):
 class SimpleEvaluator(Evaluator):
     """
     Simple evaluator implementation. Uses the vanilla evaluation code.
+
+    # Parameters
+
+    batch_postprocessor: `Postprocessor`, optional (default=`SimplePostprocessor`)
+        The postprocessor to use for turning both the batches and the outputs
+        of the model into human readable data.
+
+    cuda_device : `Union[int, torch.device]`, optional (default=`-1`)
+        The cuda device to use for this evaluation.  The model is assumed to
+         already be using this device; this parameter is only used for moving
+         the input data to the correct device.
     """
 
     def __init__(
-            self,
-            batch_postprocessor: Optional[Postprocessor] = None,
-            cuda_device: Union[int, torch.device] = -1
+        self,
+        batch_postprocessor: Optional[Postprocessor] = None,
+        cuda_device: Union[int, torch.device] = -1,
     ):
         super(SimpleEvaluator, self).__init__(batch_postprocessor, cuda_device)
 
     def __call__(
-            self,
-            model: Model,
-            data_loader: DataLoader,
-            batch_weight_key: str = None,
-            output_file: Union[str, PathLike] = None,
-            predictions_output_file: Union[str, PathLike] = None
+        self,
+        model: Model,
+        data_loader: DataLoader,
+        batch_weight_key: str = None,
+        output_file: Union[str, PathLike] = None,
+        predictions_output_file: Union[str, PathLike] = None,
     ):
         """
+        Evaluate a single data source.
+
         # Parameters
 
         model : `Model`
@@ -117,8 +133,8 @@ class SimpleEvaluator(Evaluator):
 
         # Returns
 
-        `Dict[str, Any]`
-            The final metrics.
+        metrics: `Dict[str, Any]`
+            The metrics from evaluating the file.
         """
         check_for_gpu(self.cuda_device)
         data_loader.set_target_device(int_to_device(self.cuda_device))
@@ -126,11 +142,9 @@ class SimpleEvaluator(Evaluator):
         if predictions_output_file is not None:
             predictions_file = Path(predictions_output_file).open("w", encoding="utf-8")
         else:
-            predictions_file = None
+            predictions_file = None # type: ignore
 
-        model_postprocess_function = getattr(
-            model, "make_output_human_readable", None
-        )
+        model_postprocess_function = getattr(model, "make_output_human_readable", None)
 
         with torch.no_grad():
             model.eval()
@@ -168,14 +182,14 @@ class SimpleEvaluator(Evaluator):
                     metrics["loss"] = total_loss / total_weight
 
                 description = (
-                        ", ".join(
-                            [
-                                "%s: %.2f" % (name, value)
-                                for name, value in metrics.items()
-                                if not name.startswith("_")
-                            ]
-                        )
-                        + " ||"
+                    ", ".join(
+                        [
+                            "%s: %.2f" % (name, value)
+                            for name, value in metrics.items()
+                            if not name.startswith("_")
+                        ]
+                    )
+                    + " ||"
                 )
                 generator_tqdm.set_description(description, refresh=False)
 
@@ -187,8 +201,9 @@ class SimpleEvaluator(Evaluator):
                             batch,
                             output_dict,
                             data_loader,
-                            output_postprocess_function=model_postprocess_function
-                        ) + '\n'
+                            output_postprocess_function=model_postprocess_function,
+                        )
+                        + "\n"
                     )
 
             if predictions_file is not None:
@@ -210,7 +225,7 @@ class SimpleEvaluator(Evaluator):
 
     def _to_params(self) -> Dict[str, Any]:
         return {
-            "type"               : "simple",
-            "cuda_device"        : self.cuda_device,
-            "batch_postprocessor": self.batch_postprocessor.to_params()
+            "type": "simple",
+            "cuda_device": self.cuda_device,
+            "batch_postprocessor": self.batch_postprocessor.to_params(),
         }

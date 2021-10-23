@@ -242,7 +242,7 @@ def train_model(
     # Change Author: Gabe Orlanski
     # Placeholder for the time being to make sure no errors are raised b/c of
     # the evaluator.
-    params.pop("evaluation",None)
+    params.pop("evaluation", None)
 
     meta = Meta.new()
     meta.to_file(os.path.join(serialization_dir, META_NAME))

@@ -2,7 +2,6 @@ import logging
 import os
 import pathlib
 import shutil
-import pytest
 import tempfile
 
 from allennlp.common.checks import log_pytorch_version_info

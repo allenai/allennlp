@@ -118,8 +118,10 @@ class TestEvaluate(AllenNlpTestCase):
             ":".join(map(str, paths)),
             "--cuda-device",
             "-1",
-            "--output-file", ":".join(map(str, out_paths)),
-            "--predictions-output-file", ":".join(map(str, pred_paths))
+            "--output-file",
+            ":".join(map(str, out_paths)),
+            "--predictions-output-file",
+            ":".join(map(str, pred_paths)),
         ]
         args = self.parser.parse_args(kebab_args)
         computed_metrics = evaluate_from_args(args)
@@ -135,12 +137,12 @@ class TestEvaluate(AllenNlpTestCase):
 
         for i, p in enumerate(paths):
             # Make sure it was not modified
-            assert p.read_text('utf-8') == expected_input_data
+            assert p.read_text("utf-8") == expected_input_data
 
             assert p.stem in computed_by_file, f"paths[{i}]={p.stem}"
 
             assert out_paths[i].exists(), f"paths[{i}]={p.stem}"
-            saved_metrics = json.loads(out_paths[i].read_text('utf-8'))
+            saved_metrics = json.loads(out_paths[i].read_text("utf-8"))
             assert saved_metrics == computed_by_file[p.stem], f"paths[{i}]={p.stem}"
             assert pred_paths[i].exists(), f"paths[{i}]={p.stem}"
 
@@ -201,9 +203,12 @@ class TestEvaluate(AllenNlpTestCase):
             ":".join(map(str, paths)),
             "--cuda-device",
             "-1",
-            "--output-file", ":".join(map(str, out_paths)),
-            "--predictions-output-file", ":".join(map(str, pred_paths)),
-            "--auto-names", auto_names
+            "--output-file",
+            ":".join(map(str, out_paths)),
+            "--predictions-output-file",
+            ":".join(map(str, pred_paths)),
+            "--auto-names",
+            auto_names,
         ]
 
         args = self.parser.parse_args(kebab_args)
@@ -213,7 +218,7 @@ class TestEvaluate(AllenNlpTestCase):
 
         for i, p in enumerate(paths):
             # Make sure it was not modified
-            assert p.read_text('utf-8') == expected_input_data
+            assert p.read_text("utf-8") == expected_input_data
 
             if auto_names == "METRICS" or auto_names == "ALL":
                 assert not out_paths[i].exists()
