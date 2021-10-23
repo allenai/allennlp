@@ -60,7 +60,7 @@ jobs:
     - name: Setup Python
       uses: actions/setup-python@v2
       with:
-        python-version: env.DEFAULT_PYTHON_VERSION
+        python-version: ${{ env.DEFAULT_PYTHON_VERSION }}
 
     - name: Install requirements
       run: |
@@ -118,7 +118,7 @@ jobs:
       with:
         auto-activate-base: true
         activate-environment: ""
-        python-version: env.DEFAULT_PYTHON_VERSION 
+        python-version: ${{ env.DEFAULT_PYTHON_VERSION }}
 
     - name: Set build variables
       shell: bash
@@ -260,7 +260,7 @@ jobs:
         # Log useful debugging information.
         ACTIONS_STEP_DEBUG: 'true'
       with:
-        python-version: env.DEFAULT_PYTHON_VERSION
+        python-version: ${{ env.DEFAULT_PYTHON_VERSION }}
 
     - name: Install prerequisites
       run: |
@@ -463,7 +463,7 @@ jobs:
         # Log useful debugging information.
         ACTIONS_STEP_DEBUG: 'true'
       with:
-        python-version: env.DEFAULT_PYTHON_VERSION
+        python-version: ${{ env.DEFAULT_PYTHON_VERSION }}
 
     - name: Install prerequisites
       run: |
