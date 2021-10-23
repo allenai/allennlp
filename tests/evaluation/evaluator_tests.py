@@ -55,3 +55,10 @@ class TestEvaluator(AllenNlpTestCase):
         data_loader = DummyDataLoader(outputs)
         metrics = self.evaluator(DummyModel(), data_loader, "batch_weight")  # type: ignore
         assert metrics["loss"] == pytest.approx((70 + 18 + 12) / 13.5)
+
+    def test_to_params(self):
+        assert self.evaluator.to_params() == {
+            "type"               : "simple",
+            "cuda_device"        : -1,
+            "batch_postprocessor": {"type": "simple"}
+        }

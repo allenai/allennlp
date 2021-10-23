@@ -1,24 +1,19 @@
 """
 Evaluator class for evaluating a model with a given dataset
 """
-from collections import defaultdict
-from typing import Union, List, Dict, Any, Tuple, Optional
+from typing import Union, Dict, Any
 from os import PathLike
 from pathlib import Path
 import torch
-from itertools import groupby
 import logging
-import json
-import numpy as np
 
-from allennlp.common.checks import check_for_gpu, ConfigurationError
+from allennlp.common.checks import check_for_gpu
 from allennlp.common.tqdm import Tqdm
-from allennlp.common.util import dump_metrics, sanitize, int_to_device, END_SYMBOL, START_SYMBOL
-from allennlp.data.fields import TensorField
+from allennlp.common.util import dump_metrics, int_to_device
 from allennlp.nn import util as nn_util
-from allennlp.common import Registrable, Params
+from allennlp.common import Registrable
 from allennlp.models import Model
-from allennlp.data import DataLoader, Vocabulary
+from allennlp.data import DataLoader
 from allennlp.evaluation.postprocessors.postprocessor import Postprocessor
 
 logger = logging.getLogger(__name__)
@@ -29,10 +24,15 @@ class Evaluator(Registrable):
     Evaluation class
     
     # Parameters
-    
+
+    batch_postprocessor: `Postprocessor`
+        The postprocessor to use for turning both the batches and the outputs
+        of the model into human readable data.
+
     cuda_device : `Union[int, torch.device]`, optional (default=`-1`)
-        The cuda device to use for this evaluation.  The model is assumed to already be using this
-        device; this parameter is only used for moving the input data to the correct device.
+        The cuda device to use for this evaluation.  The model is assumed to
+         already be using this device; this parameter is only used for moving
+         the input data to the correct device.
     """
     default_implementation = "simple"
 
@@ -41,7 +41,7 @@ class Evaluator(Registrable):
             batch_postprocessor: Postprocessor,
             cuda_device: Union[int, torch.device] = -1
     ):
-        self.batch_human_serializer = batch_postprocessor
+        self.batch_postprocessor = batch_postprocessor
         self.cuda_device = cuda_device
 
     def __call__(
@@ -51,7 +51,7 @@ class Evaluator(Registrable):
             batch_weight_key: str = None,
             output_file: Union[str, PathLike] = None,
             predictions_file: Union[str, PathLike] = None
-    ):
+    ) -> Dict[str, Any]:
         """
         # Parameters
 
@@ -65,8 +65,10 @@ class Evaluator(Registrable):
             the loss for that batch.  If this is not given, we use a weight of 1 for every batch.
         metrics_output_file : `Union[str, PathLike]`, optional (default=`None`)
             Optional path to write the final metrics to.
+
         predictions_output_file : `Union[str, PathLike]`, optional (default=`None`)
-            Optional path to write the predictions to.
+            Optional path to write the predictions to. If passed the
+            postprocessor will be called and its output will be written as lines.
 
         # Returns
 
@@ -78,9 +80,13 @@ class Evaluator(Registrable):
 
 @Evaluator.register("simple")
 class SimpleEvaluator(Evaluator):
+    """
+    Simple evaluator implementation. Uses the vanilla evaluation code.
+    """
+
     def __init__(
             self,
-            batch_postprocessor,
+            batch_postprocessor:Postprocessor,
             cuda_device: Union[int, torch.device] = -1
     ):
         super(SimpleEvaluator, self).__init__(batch_postprocessor, cuda_device)
@@ -171,7 +177,7 @@ class SimpleEvaluator(Evaluator):
                 #  metrics
                 if predictions_file is not None:
                     predictions_file.write(
-                        self.batch_human_serializer(
+                        self.batch_postprocessor(
                             batch, output_dict, data_loader
                         ) + '\n'
                     )
@@ -197,5 +203,5 @@ class SimpleEvaluator(Evaluator):
         return {
             "type"               : "simple",
             "cuda_device"        : self.cuda_device,
-            "batch_postprocessor": self.batch_human_serializer.to_params()
+            "batch_postprocessor": self.batch_postprocessor.to_params()
         }
