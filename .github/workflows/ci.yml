@@ -23,7 +23,7 @@ env:
   TORCH_CPU_INSTALL: conda install pytorch torchvision torchaudio cpuonly -c pytorch
   TORCH_GPU_INSTALL: conda install pytorch torchvision torchaudio cudatoolkit=11.3 -c pytorch
   # Change this to invalidate existing cache.
-  CACHE_PREFIX: v3
+  CACHE_PREFIX: v4
   # Disable tokenizers parallelism because this doesn't help, and can cause issues in distributed tests.
   TOKENIZERS_PARALLELISM: 'false'
   # Disable multithreading with OMP because this can lead to dead-locks in distributed tests.
@@ -149,7 +149,6 @@ jobs:
     - name: Setup virtual environment (no cache hit)
       if: steps.virtualenv-cache.outputs.cache-hit != 'true'
       run: |
-        conda init bash
         conda create -y -p .venv python=${{ env.DEFAULT_PYTHON_VERSION }}
         conda activate ./.venv
         make install TORCH_INSTALL="$TORCH_INSTALL"
