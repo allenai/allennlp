@@ -116,7 +116,6 @@ jobs:
 
     - uses: conda-incubator/setup-miniconda@v2
       with:
-        activate-environment: "test"
         python-version: ${{ env.DEFAULT_PYTHON_VERSION }}
 
     - name: Set build variables
@@ -146,14 +145,18 @@ jobs:
 
     - name: Setup virtual environment (no cache hit)
       if: steps.virtualenv-cache.outputs.cache-hit != 'true'
+      shell: bash
       run: |
+        conda init bash
         conda create -y -p .venv python=${{ env.DEFAULT_PYTHON_VERSION }}
         conda activate ./.venv
         make install TORCH_INSTALL="$TORCH_INSTALL"
 
     - name: Setup virtual environment (cache hit)
       if: steps.virtualenv-cache.outputs.cache-hit == 'true'
+      shell: bash
       run: |
+        conda init bash
         conda activate ./.venv
         pip install --no-deps -e .
         make download-extras
