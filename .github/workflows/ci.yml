@@ -116,8 +116,7 @@ jobs:
 
     - uses: conda-incubator/setup-miniconda@v2
       with:
-        auto-activate-base: true
-        activate-environment: ""
+        activate-environment: "test"
         python-version: ${{ env.DEFAULT_PYTHON_VERSION }}
 
     - name: Set build variables
