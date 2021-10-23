@@ -203,7 +203,7 @@ def evaluate_from_archive(
 
             # Keep the path of the parent otherwise it will write to the CWD
             output_file_list = [
-                 p.parent.joinpath(f"{p.stem}.outputs")
+                p.parent.joinpath(f"{p.stem}.outputs")
                 for p in map(Path, evaluation_data_path_list)
             ]
         else:
@@ -284,7 +284,11 @@ def evaluate_from_archive(
 
         # Add the metric prefixed by the file it came from.
         for name, value in metrics.items():
-            all_metrics[f"{eval_file_name}_{name}"] = value
+            if len(evaluation_data_path_list) > 1:
+                key = f"{eval_file_name}_"
+            else:
+                key = ""
+            all_metrics[f"{key}{name}"] = value
 
     logger.info("Finished evaluating.")
 

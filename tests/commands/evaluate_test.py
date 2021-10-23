@@ -59,12 +59,12 @@ class TestEvaluate(AllenNlpTestCase):
         args = self.parser.parse_args(kebab_args)
         metrics = evaluate_from_args(args)
         assert metrics.keys() == {
-            "conll2003_accuracy",
-            "conll2003_accuracy3",
-            "conll2003_precision-overall",
-            "conll2003_recall-overall",
-            "conll2003_f1-measure-overall",
-            "conll2003_loss",
+            "accuracy",
+            "accuracy3",
+            "precision-overall",
+            "recall-overall",
+            "f1-measure-overall",
+            "loss",
         }
 
     def test_output_file_evaluate_from_args(self):
@@ -88,7 +88,7 @@ class TestEvaluate(AllenNlpTestCase):
 
         with open(output_file, "r") as file:
             saved_metrics = json.load(file)
-        assert computed_metrics == {f"conll2003_{k}": v for k, v in saved_metrics.items()}
+        assert computed_metrics == saved_metrics
 
         with open(predictions_output_file, "r") as file:
             for line in file:
@@ -96,35 +96,53 @@ class TestEvaluate(AllenNlpTestCase):
             assert "tags" in prediction
 
     def test_multiple_output_files_evaluate_from_args(self):
-        pytest.fail()
-        # output_file = str(self.TEST_DIR / "metrics.json")
-        # predictions_output_file = str(self.TEST_DIR / "predictions.jsonl")
-        # kebab_args = [
-        #     "evaluate",
-        #     str(
-        #         self.FIXTURES_ROOT / "simple_tagger_with_span_f1" / "serialization" / "model.tar.gz"
-        #     ),
-        #     str(self.FIXTURES_ROOT / "data" / "conll2003.txt")
-        #     + ":"
-        #     + str(self.FIXTURES_ROOT / "data" / "conll2003.txt"),
-        #     "--cuda-device",
-        #     "-1",
-        #     "--output-file",
-        #     output_file + ":" + output_file,
-        #     "--predictions-output-file",
-        #     predictions_output_file + ":" + predictions_output_file,
-        # ]
-        # args = self.parser.parse_args(kebab_args)
-        # computed_metrics = evaluate_from_args(args)
-        #
-        # with open(output_file, "r") as file:
-        #     saved_metrics = json.load(file)
-        # assert computed_metrics == {f"conll2003_{k}":v for k, v in saved_metrics.items()}
-        #
-        # with open(predictions_output_file, "r") as file:
-        #     for line in file:
-        #         prediction = json.loads(line.strip())
-        #     assert "tags" in prediction
+        data_file = Path(self.FIXTURES_ROOT / "data" / "conll2003.txt")
+        paths = []
+        out_paths = []
+        pred_paths = []
+        for i in range(3):
+            tmp_path = self.TEST_DIR.joinpath(f"TEST{i}.txt")
+
+            # Need to create paths to check when they do not exist
+            out_paths.append(tmp_path.parent.joinpath(f"OUTPUTS{i}.json"))
+            pred_paths.append(tmp_path.parent.joinpath(f"PREDS{i}.txt"))
+
+            copyfile(data_file, tmp_path)
+            paths.append(tmp_path)
+
+        kebab_args = [
+            "evaluate",
+            str(
+                self.FIXTURES_ROOT / "simple_tagger_with_span_f1" / "serialization" / "model.tar.gz"
+            ),
+            ":".join(map(str, paths)),
+            "--cuda-device",
+            "-1",
+            "--output-file", ":".join(map(str, out_paths)),
+            "--predictions-output-file", ":".join(map(str, pred_paths))
+        ]
+        args = self.parser.parse_args(kebab_args)
+        computed_metrics = evaluate_from_args(args)
+        computed_by_file = {}
+        for k, v in computed_metrics.items():
+            fn, *metric_name = k.split("_")
+            if fn not in computed_by_file:
+                computed_by_file[fn] = {}
+            computed_by_file[fn]["_".join(metric_name)] = v
+
+        assert len(computed_by_file) == len(paths)
+        expected_input_data = data_file.read_text("utf-8")
+
+        for i, p in enumerate(paths):
+            # Make sure it was not modified
+            assert p.read_text('utf-8') == expected_input_data
+
+            assert p.stem in computed_by_file, f"paths[{i}]={p.stem}"
+
+            assert out_paths[i].exists(), f"paths[{i}]={p.stem}"
+            saved_metrics = json.loads(out_paths[i].read_text('utf-8'))
+            assert saved_metrics == computed_by_file[p.stem], f"paths[{i}]={p.stem}"
+            assert pred_paths[i].exists(), f"paths[{i}]={p.stem}"
 
     def test_evaluate_works_with_vocab_expansion(self):
         archive_path = str(
