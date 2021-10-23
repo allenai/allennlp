@@ -1,16 +1,9 @@
 from collections import defaultdict
-from typing import Union, List, Dict, Any, Tuple, Optional
-from os import PathLike
-from pathlib import Path
-import torch
-from itertools import groupby
+from typing import Optional, Dict, Any, Callable
 import logging
 import json
-import numpy as np
 
-from allennlp.common.checks import check_for_gpu, ConfigurationError
-from allennlp.common.tqdm import Tqdm
-from allennlp.common.util import dump_metrics, sanitize, int_to_device, END_SYMBOL, START_SYMBOL
+from allennlp.common.util import sanitize
 from allennlp.data.fields import TensorField
 from allennlp.nn import util as nn_util
 from allennlp.common import Registrable, Params
@@ -29,7 +22,8 @@ class Postprocessor(Registrable):
             self,
             batch: Dict[str, TensorField],
             output_dict: Dict,
-            data_loader: DataLoader
+            data_loader: DataLoader,
+            output_postprocess_function: Optional[Callable] = None
     ) -> str:
         raise NotImplementedError("__call__")
 
@@ -38,6 +32,11 @@ class Postprocessor(Registrable):
 
 @Postprocessor.register("simple")
 class SimplePostprocessor(Postprocessor):
+    """
+    Very simple postprocesser. Only sanitizes the batches and outputs. Will use
+     a passed postprocess function for the outputs if it exists.
+    """
+
     def _to_params(self) -> Dict[str, Any]:
         return {
             "type": "simple"
@@ -47,10 +46,18 @@ class SimplePostprocessor(Postprocessor):
             self,
             batch: Dict[str, TensorField],
             output_dict: Dict,
-            data_loader: DataLoader
+            data_loader: DataLoader,
+            output_postprocess_function: Optional[Callable] = None
     ):
         if batch is None:
             raise ValueError("Postprocessor got a batch that is None")
         if output_dict is None:
             raise ValueError("Postprocessor got an output_dict that is None")
-        return json.dumps(sanitize({**batch, **output_dict}))
+
+        postprocessed = sanitize(batch)
+        if output_postprocess_function is not None:
+            postprocessed.update(sanitize(output_postprocess_function(output_dict)))
+        else:
+            postprocessed.update(sanitize(output_dict))
+
+        return json.dumps(postprocessed)

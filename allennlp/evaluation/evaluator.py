@@ -128,6 +128,10 @@ class SimpleEvaluator(Evaluator):
         else:
             predictions_file = None
 
+        model_postprocess_function = getattr(
+            model, "make_output_human_readable", None
+        )
+
         with torch.no_grad():
             model.eval()
 
@@ -180,7 +184,10 @@ class SimpleEvaluator(Evaluator):
                 if predictions_file is not None:
                     predictions_file.write(
                         self.batch_postprocessor(
-                            batch, output_dict, data_loader
+                            batch,
+                            output_dict,
+                            data_loader,
+                            output_postprocess_function=model_postprocess_function
                         ) + '\n'
                     )
 

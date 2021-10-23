@@ -48,13 +48,28 @@ class TestPostprocessor(AllenNlpTestCase):
         {},
         None
     ], ids=["TestOutput", "EmptyOutput", "None"])
-    def test_simple_postprocessor_call(self, batch, output_dict):
+    @pytest.mark.parametrize("postprocess_func", [
+        lambda x: {k.upper(): v for k, v in x.items()},
+        None
+    ], ids=["PassedFunction", "NoPassedFunction"])
+    def test_simple_postprocessor_call(self, batch, output_dict, postprocess_func):
         data_loader = DummyDataLoader([])
         if batch is None or output_dict is None:
             with pytest.raises(ValueError):
                 self.postprocessor(batch, output_dict, data_loader)  # type: ignore
             return
 
-        expected = json.dumps(sanitize({**batch, **output_dict}))
-        result = self.postprocessor(batch, output_dict, data_loader)  # type: ignore
+        expected = json.dumps(sanitize(
+            {
+                **batch,
+                **(postprocess_func(output_dict) if postprocess_func else output_dict)
+            }
+        ))
+
+        result = self.postprocessor(
+            batch,
+            output_dict,
+            data_loader,  # type: ignore
+            postprocess_func
+        )
         assert result == expected
