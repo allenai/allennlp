@@ -30,6 +30,10 @@ env:
   OMP_NUM_THREADS: '1'
   DEFAULT_PYTHON_VERSION: 3.8
 
+defaults:
+  run:
+    shell: bash -l {0}
+
 jobs:
   changelog:
     name: CHANGELOG
@@ -119,7 +123,6 @@ jobs:
         python-version: ${{ env.DEFAULT_PYTHON_VERSION }}
 
     - name: Set build variables
-      shell: bash
       run: |
         # Get the exact Python version to use in the cache key.
         echo "PYTHON_VERSION=$(python --version)" >> $GITHUB_ENV
@@ -145,7 +148,6 @@ jobs:
 
     - name: Setup virtual environment (no cache hit)
       if: steps.virtualenv-cache.outputs.cache-hit != 'true'
-      shell: bash
       run: |
         conda init bash
         conda create -y -p .venv python=${{ env.DEFAULT_PYTHON_VERSION }}
@@ -154,7 +156,6 @@ jobs:
 
     - name: Setup virtual environment (cache hit)
       if: steps.virtualenv-cache.outputs.cache-hit == 'true'
-      shell: bash
       run: |
         conda init bash
         conda activate ./.venv
@@ -269,7 +270,6 @@ jobs:
         pip install --upgrade pip setuptools wheel virtualenv
 
     - name: Set build variables
-      shell: bash
       run: |
         echo "PYTHON_VERSION=$(python --version)" >> $GITHUB_ENV
         echo "RUNNER_ARCH=$(uname -m)" >> $GITHUB_ENV
@@ -472,7 +472,6 @@ jobs:
         pip install --upgrade pip setuptools wheel virtualenv
 
     - name: Set build variables
-      shell: bash
       run: |
         echo "PYTHON_VERSION=$(python --version)" >> $GITHUB_ENV
         echo "RUNNER_ARCH=$(uname -m)" >> $GITHUB_ENV
