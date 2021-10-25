@@ -50,9 +50,9 @@ setup(
         ]
     ),
     install_requires=[
+        "torch>=1.6.0,<1.11.0",
+        "torchvision>=0.8.1,<0.12.0",
         "cached-path>=0.3.1,<0.4.0",
-        "torch>=1.6.0,<1.10.0",
-        "torchvision>=0.8.1,<0.11.0",
         "fairscale==0.4.0",
         "jsonnet>=0.10.0 ; sys.platform != 'win32'",
         "overrides==3.1.0",
