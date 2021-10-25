@@ -170,7 +170,6 @@ jobs:
         conda activate ./.venv
         git clone https://github.com/allenai/allennlp-models.git
         cd allennlp-models
-        git checkout dependabot/pip/torch-gte-1.7.0-and-lt-1.11.0
         pip install -e . -r dev-requirements.txt
 
     - name: Debug info
