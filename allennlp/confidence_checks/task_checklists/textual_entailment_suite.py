@@ -401,6 +401,8 @@ class TextualEntailmentSuite(TaskSuite):
             nsamples=num_test_cases,
         )
 
+        _num_entails = len(template.data)
+
         template += self.editor.template(
             [
                 ("All {nouns} are {synonyms[0]}.", "Some {nouns} are not {synonyms[0]}."),
@@ -410,10 +412,12 @@ class TextualEntailmentSuite(TaskSuite):
             nsamples=num_test_cases,
         )
 
+        _num_contradicts = len(template.data) - _num_entails
+
         test = INV(
             template.data,
-            labels=[self._entails for i in range(num_test_cases)]
-            + [self._contradicts for i in range(num_test_cases)],
+            labels=[self._entails for i in range(_num_entails)]
+            + [self._contradicts for i in range(_num_contradicts)],
             name="Changing X to a synonym(X) should not change the label",
             capability="Vocabulary",
             description='"Eg. All tigers are huge -> All tigers are enormous" should not change the label',
@@ -463,6 +467,8 @@ class TextualEntailmentSuite(TaskSuite):
             nsamples=_quarter,
         )
 
+        _num_entails = len(template.data)
+
         template += self.editor.template(
             (
                 "{first_name1} and {first_name2} are friends. The former is {a:profession}.",
@@ -481,10 +487,12 @@ class TextualEntailmentSuite(TaskSuite):
             nsamples=_quarter,
         )
 
+        _num_neutral = len(template.data) - _num_entails
+
         test = MFT(
             **template,
-            labels=[self._entails for i in range(_quarter * 2)]
-            + [self._neutral for i in range(_quarter * 2)],
+            labels=[self._entails for i in range(_num_entails)]
+            + [self._neutral for i in range(_num_neutral)],
             name="Former / Latter",
             capability="Coreference",
             description='Eg. "A and B are friends. The former is a teacher."'

@@ -2,9 +2,13 @@
 # It's built from a wheel installation of allennlp using the base images from
 # https://github.com/allenai/docker-images/pkgs/container/pytorch
 
-ARG TORCH=1.9.0-cuda10.2
-ARG PYTHON=3.9
-FROM ghcr.io/allenai/pytorch:${TORCH}-python${PYTHON}-v0.0.1
+ARG TORCH=1.10.0-cuda11.3
+FROM ghcr.io/allenai/pytorch:${TORCH}
+
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /stage/allennlp
 
