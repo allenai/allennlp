@@ -268,7 +268,7 @@ def evaluate_from_archive(
                 p.parent.joinpath(f"{p.stem}.outputs") for p in map(Path, evaluation_data_path_list)
             ]
         else:
-            output_file_list = output_file.split(":") # type: ignore
+            output_file_list = output_file.split(":")  # type: ignore
             assert len(output_file_list) == len(
                 evaluation_data_path_list
             ), "The number of `output_file` paths must be equal to the number of datasets being evaluated."
@@ -283,7 +283,7 @@ def evaluate_from_archive(
                 p.parent.joinpath(f"{p.stem}.preds") for p in map(Path, evaluation_data_path_list)
             ]
         else:
-            predictions_output_file_list = predictions_output_file.split(":") # type: ignore
+            predictions_output_file_list = predictions_output_file.split(":")  # type: ignore
             assert len(predictions_output_file_list) == len(evaluation_data_path_list), (
                 "The number of `predictions_output_file` paths must be equal"
                 + "to the number of datasets being evaluated. "

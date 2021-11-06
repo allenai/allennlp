@@ -142,7 +142,7 @@ class SimpleEvaluator(Evaluator):
         if predictions_output_file is not None:
             predictions_file = Path(predictions_output_file).open("w", encoding="utf-8")
         else:
-            predictions_file = None # type: ignore
+            predictions_file = None  # type: ignore
 
         model_postprocess_function = getattr(model, "make_output_human_readable", None)
 
