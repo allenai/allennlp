@@ -136,7 +136,7 @@ class TestPushToHub(AllenNlpTestCase):
     @with_staging_testing
     def test_push_to_hub_fails_with_invalid_token(self):
         serialization_dir = self.FIXTURES_ROOT / "simple_tagger" / "serialization"
-        with pytest.raises(requests.exceptions.HTTPError):
+        with pytest.raises(ValueError):
             push_to_hf(
                 repo_name=REPO_NAME,
                 serialization_dir=serialization_dir,
