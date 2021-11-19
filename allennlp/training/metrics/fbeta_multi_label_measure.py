@@ -61,7 +61,8 @@ class FBetaMultiLabelMeasure(FBetaMeasure):
         in the data will result in 0 components in a macro or weighted average.
 
     threshold: `float`, optional (default = `0.5`)
-        Logits over this threshold will be considered predictions for the corresponding class.
+        Probabilities over this threshold will be considered predictions for the corresponding class.
+        Note that you can also use this metric with logits, by setting the `threshold` value to `0.0`.
 
     """
 
