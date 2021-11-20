@@ -62,7 +62,8 @@ class FBetaMultiLabelMeasure(FBetaMeasure):
 
     threshold: `float`, optional (default = `0.5`)
         Probabilities over this threshold will be considered predictions for the corresponding class.
-        Note that you can also use this metric with logits, by setting the `threshold` value to `0.0`.
+        Note that you can also use this metric with logits, in which case it would make more sense to set
+        the `threshold` value to `0.0`.
 
     """
 
