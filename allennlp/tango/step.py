@@ -11,6 +11,7 @@ import random
 import re
 import weakref
 from abc import abstractmethod
+from collections import OrderedDict
 from os import PathLike
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -30,7 +31,6 @@ from typing import (
     MutableMapping,
     Iterator,
     MutableSet,
-    OrderedDict,
     Callable,
 )
 
