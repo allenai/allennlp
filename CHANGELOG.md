@@ -11,6 +11,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Fixed the docstring information for the `FBetaMultiLabelMeasure` metric.
 
+### Removed
+
+- Removed Tango components, since they now live at https://github.com/allenai/tango.
+
+
 ## [v2.8.0](https://github.com/allenai/allennlp/releases/tag/v2.8.0) - 2021-11-01
 
 ### Added
