@@ -20,7 +20,6 @@ import inspect
 import logging
 
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.det_hash import CustomDetHash
 from allennlp.common.lazy import Lazy
 from allennlp.common.params import Params
 
@@ -508,7 +507,7 @@ def construct_arg(
         return popped_params
 
 
-class FromParams(CustomDetHash):
+class FromParams:
     """
     Mixin to give a from_params method to classes. We create a distinct base class for this
     because sometimes we want non-Registrable classes to be instantiatable from_params.
@@ -670,6 +669,3 @@ class FromParams(CustomDetHash):
         need it.
         """
         raise NotImplementedError()
-
-    def det_hash_object(self) -> Any:
-        return self.to_params()
