@@ -129,7 +129,7 @@ class MultiLabelField(Field[torch.Tensor]):
         return tensor
 
     @overrides
-    def empty_field(self):
+    def empty_field(self) -> "MultiLabelField":
         return MultiLabelField(
             [], self._label_namespace, skip_indexing=True, num_labels=self._num_labels
         )

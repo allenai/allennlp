@@ -41,7 +41,7 @@ class ClsPooler(Seq2VecEncoder):
     def get_output_dim(self) -> int:
         return self._embedding_dim
 
-    @overrides
+    @overrides(check_signature=False)
     def forward(self, tokens: torch.Tensor, mask: torch.BoolTensor = None):
         # tokens is assumed to have shape (batch_size, sequence_length, embedding_dim).
         # mask is assumed to have shape (batch_size, sequence_length) with all 1s preceding all 0s.

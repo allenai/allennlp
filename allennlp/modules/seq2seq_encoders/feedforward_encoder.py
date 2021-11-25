@@ -29,7 +29,7 @@ class FeedForwardEncoder(Seq2SeqEncoder):
     def is_bidirectional(self) -> bool:
         return False
 
-    @overrides
+    @overrides(check_signature=False)
     def forward(self, inputs: torch.Tensor, mask: torch.BoolTensor = None) -> torch.Tensor:
         """
         # Parameters

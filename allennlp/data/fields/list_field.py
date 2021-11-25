@@ -99,7 +99,7 @@ class ListField(SequenceField[DataArray]):
         return self.field_list[0].batch_tensors(padded_fields)
 
     @overrides
-    def empty_field(self):
+    def empty_field(self) -> "ListField":
         # Our "empty" list field will actually have a single field in the list, so that we can
         # correctly construct nested lists.  For example, if we have a type that is
         # `ListField[ListField[LabelField]]`, we need the top-level `ListField` to know to

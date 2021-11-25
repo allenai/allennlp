@@ -16,6 +16,6 @@ class ScaledDotProductMatrixAttention(DotProductMatrixAttention):
     Registered as a `MatrixAttention` with name "scaled_dot_product".
     """
 
-    @overrides
+    @overrides(check_signature=False)
     def forward(self, matrix_1: torch.Tensor, matrix_2: torch.Tensor) -> torch.Tensor:
         return super().forward(matrix_1, matrix_2) / math.sqrt(matrix_1.size(-1))

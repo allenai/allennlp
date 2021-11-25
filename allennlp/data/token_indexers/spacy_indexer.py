@@ -41,7 +41,7 @@ class SpacyTokenIndexer(TokenIndexer):
         # model we are using instead.
         pass
 
-    @overrides
+    @overrides(check_signature=False)
     def tokens_to_indices(
         self, tokens: List[SpacyToken], vocabulary: Vocabulary
     ) -> Dict[str, List[numpy.ndarray]]:

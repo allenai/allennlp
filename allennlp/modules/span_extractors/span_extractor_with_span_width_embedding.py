@@ -66,7 +66,7 @@ class SpanExtractorWithSpanWidthEmbedding(SpanExtractor):
                 "specify both num_width_embeddings and span_width_embedding_dim."
             )
 
-    @overrides
+    @overrides(check_signature=False)
     def forward(
         self,
         sequence_tensor: torch.FloatTensor,

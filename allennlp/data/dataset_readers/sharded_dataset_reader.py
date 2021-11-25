@@ -59,7 +59,7 @@ class ShardedDatasetReader(DatasetReader):
     def apply_token_indexers(self, instance: Instance) -> None:
         self.reader.apply_token_indexers(instance)
 
-    @overrides
+    @overrides(check_signature=False)
     def _read(self, file_path: PathOrStr) -> Iterable[Instance]:
         try:
             maybe_extracted_archive = cached_path(file_path, extract_archive=True)

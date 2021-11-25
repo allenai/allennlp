@@ -16,7 +16,7 @@ class SpanExtractor(torch.nn.Module, Registrable):
     spans.
     """
 
-    @overrides
+    @overrides(check_signature=False)
     def forward(
         self,
         sequence_tensor: torch.FloatTensor,

@@ -313,7 +313,7 @@ class _ElmoCharacterEncoder(torch.nn.Module):
     def get_output_dim(self):
         return self.output_dim
 
-    @overrides
+    @overrides(check_signature=False)
     def forward(self, inputs: torch.Tensor) -> Dict[str, torch.Tensor]:
         """
         Compute context insensitive token embeddings for ELMo representations.

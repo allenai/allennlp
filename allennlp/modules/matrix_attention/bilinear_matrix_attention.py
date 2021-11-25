@@ -65,7 +65,7 @@ class BilinearMatrixAttention(MatrixAttention):
         torch.nn.init.xavier_uniform_(self._weight_matrix)
         self._bias.data.fill_(0)
 
-    @overrides
+    @overrides(check_signature=False)
     def forward(self, matrix_1: torch.Tensor, matrix_2: torch.Tensor) -> torch.Tensor:
 
         if self._use_input_biases:

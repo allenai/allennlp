@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 import itertools
 from os import PathLike
-from typing import Iterable, Iterator, Optional, Union, TypeVar, Dict, List
+from typing import Iterable, Iterator, Optional, Union, TypeVar, Dict, List, Any
 import logging
 import warnings
 
@@ -195,7 +195,7 @@ class DatasetReader(Registrable):
                 self.apply_token_indexers(instance)
             yield instance
 
-    def _read(self, file_path) -> Iterable[Instance]:
+    def _read(self, file_path: Any) -> Iterable[Instance]:
         """
         Reads the instances from the given `file_path` and returns them as an
         `Iterable`.

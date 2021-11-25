@@ -25,7 +25,7 @@ class CheckpointWrapper(Registrable):
 @CheckpointWrapper.register("torch")
 class TorchCheckpointWrapper(CheckpointWrapper):
     @overrides
-    def wrap_module(self, module: nn.Module) -> nn.Module:
+    def wrap_module(self, module: nn.Module, **kwargs) -> nn.Module:
         """
         Wrap a module so that the forward method uses PyTorch's [checkpointing functionality]
         (https://pytorch.org/docs/stable/checkpoint.html).

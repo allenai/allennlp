@@ -49,7 +49,7 @@ class Highway(torch.nn.Module):
             # of the bias vector in each Linear layer.
             layer.bias[input_dim:].data.fill_(1)
 
-    @overrides
+    @overrides(check_signature=False)
     def forward(self, inputs: torch.Tensor) -> torch.Tensor:
         current_input = inputs
         for layer in self._layers:

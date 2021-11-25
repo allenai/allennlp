@@ -53,7 +53,7 @@ class TensorField(Field[torch.Tensor]):
         return torch.nn.functional.pad(tensor, pad, value=self.padding_value)
 
     @overrides
-    def empty_field(self):
+    def empty_field(self) -> "TensorField":
         # Pass the padding_value, so that any outer field, e.g., `ListField[TensorField]` uses the
         # same padding_value in the padded ArrayFields
         return TensorField(

@@ -98,10 +98,10 @@ class PytorchTransformer(Seq2SeqEncoder):
         return self._input_dim
 
     @overrides
-    def is_bidirectional(self):
+    def is_bidirectional(self) -> bool:
         return False
 
-    @overrides
+    @overrides(check_signature=False)
     def forward(self, inputs: torch.Tensor, mask: torch.BoolTensor):
         output = inputs
         if self._sinusoidal_positional_encoding:

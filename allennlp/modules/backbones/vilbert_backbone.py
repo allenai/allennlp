@@ -103,7 +103,7 @@ class VilbertBackbone(Backbone):
             fusion_method=fusion_method,
         )
 
-    @overrides
+    @overrides(check_signature=False)
     def forward(
         self,  # type: ignore
         box_features: torch.Tensor,

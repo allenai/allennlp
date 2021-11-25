@@ -80,7 +80,7 @@ class TransformerTextField(Field[torch.Tensor]):
         return result
 
     @overrides
-    def empty_field(self):
+    def empty_field(self) -> "TransformerTextField":
         return TransformerTextField(torch.LongTensor(), padding_token_id=self.padding_token_id)
 
     @overrides
