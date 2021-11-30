@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Fixed the docstring information for the `FBetaMultiLabelMeasure` metric.
+- Various fixes for Python 3.9
 
 ### Removed
 
