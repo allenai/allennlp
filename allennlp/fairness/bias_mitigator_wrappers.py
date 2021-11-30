@@ -86,12 +86,12 @@ class HardBiasMitigatorWrapper(BiasMitigatorWrapper):
         for i in self.ids1:
             i = i.to(module.weight.device)
             ids1_embeddings.append(
-                torch.mean(module.forward(i,,, dim=0, keepdim=True)
+                torch.mean(module.forward(i), dim=0, keepdim=True)
             )  # forward() does not trigger hooks, thereby avoiding infinite recursion
         ids2_embeddings = []
         for i in self.ids2:
             i = i.to(module.weight.device)
-            ids2_embeddings.append(torch.mean(module.forward(i,,, dim=0, keepdim=True))
+            ids2_embeddings.append(torch.mean(module.forward(i), dim=0, keepdim=True))
         ids1_embeddings = torch.cat(ids1_embeddings)
         ids2_embeddings = torch.cat(ids2_embeddings)
 
@@ -196,11 +196,11 @@ class INLPBiasMitigatorWrapper(BiasMitigatorWrapper):
         ids1_embeddings = []
         for i in self.ids1:
             i = i.to(module.weight.device)
-            ids1_embeddings.append(torch.mean(module.forward(i,,, dim=0, keepdim=True))
+            ids1_embeddings.append(torch.mean(module.forward(i), dim=0, keepdim=True))
         ids2_embeddings = []
         for i in self.ids2:
             i = i.to(module.weight.device)
-            ids2_embeddings.append(torch.mean(module.forward(i,,, dim=0, keepdim=True))
+            ids2_embeddings.append(torch.mean(module.forward(i), dim=0, keepdim=True))
         ids1_embeddings = torch.cat(ids1_embeddings)
         ids2_embeddings = torch.cat(ids2_embeddings)
 

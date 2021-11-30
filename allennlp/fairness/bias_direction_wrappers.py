@@ -90,7 +90,7 @@ class PCABiasDirectionWrapper(BiasDirectionWrapper):
         ids_embeddings = []
         for i in self.ids:
             i = i.to(module.weight.device)
-            ids_embeddings.append(torch.mean(module.forward(i,,, dim=0, keepdim=True))
+            ids_embeddings.append(torch.mean(module.forward(i), dim=0, keepdim=True))
         ids_embeddings = torch.cat(ids_embeddings)
 
         # adding trivial amount of noise
@@ -144,11 +144,11 @@ class PairedPCABiasDirectionWrapper(BiasDirectionWrapper):
         ids1_embeddings = []
         for i in self.ids1:
             i = i.to(module.weight.device)
-            ids1_embeddings.append(torch.mean(module.forward(i,,, dim=0, keepdim=True))
+            ids1_embeddings.append(torch.mean(module.forward(i), dim=0, keepdim=True))
         ids2_embeddings = []
         for i in self.ids2:
             i = i.to(module.weight.device)
-            ids2_embeddings.append(torch.mean(module.forward(i,,, dim=0, keepdim=True))
+            ids2_embeddings.append(torch.mean(module.forward(i), dim=0, keepdim=True))
         ids1_embeddings = torch.cat(ids1_embeddings)
         ids2_embeddings = torch.cat(ids2_embeddings)
 
@@ -201,11 +201,11 @@ class TwoMeansBiasDirectionWrapper(BiasDirectionWrapper):
         ids1_embeddings = []
         for i in self.ids1:
             i = i.to(module.weight.device)
-            ids1_embeddings.append(torch.mean(module.forward(i,,, dim=0, keepdim=True))
+            ids1_embeddings.append(torch.mean(module.forward(i), dim=0, keepdim=True))
         ids2_embeddings = []
         for i in self.ids2:
             i = i.to(module.weight.device)
-            ids2_embeddings.append(torch.mean(module.forward(i,,, dim=0, keepdim=True))
+            ids2_embeddings.append(torch.mean(module.forward(i), dim=0, keepdim=True))
         ids1_embeddings = torch.cat(ids1_embeddings)
         ids2_embeddings = torch.cat(ids2_embeddings)
 
@@ -255,11 +255,11 @@ class ClassificationNormalBiasDirectionWrapper(BiasDirectionWrapper):
         ids1_embeddings = []
         for i in self.ids1:
             i = i.to(module.weight.device)
-            ids1_embeddings.append(torch.mean(module.forward(i,,, dim=0, keepdim=True))
+            ids1_embeddings.append(torch.mean(module.forward(i), dim=0, keepdim=True))
         ids2_embeddings = []
         for i in self.ids2:
             i = i.to(module.weight.device)
-            ids2_embeddings.append(torch.mean(module.forward(i,,, dim=0, keepdim=True))
+            ids2_embeddings.append(torch.mean(module.forward(i), dim=0, keepdim=True))
         ids1_embeddings = torch.cat(ids1_embeddings)
         ids2_embeddings = torch.cat(ids2_embeddings)
 
