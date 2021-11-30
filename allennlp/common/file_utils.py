@@ -171,9 +171,7 @@ class TensorCache(MutableMapping[str, Tensor], ABC):
         except FileNotFoundError:
             result = None
         if result is None:
-            result = super(TensorCache, cls).__new__(
-                cls, filename, read_only=read_only, **kwargs
-            )  # type: ignore
+            result = super(TensorCache, cls).__new__(cls)
         return result
 
     def __init__(
