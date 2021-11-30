@@ -13,7 +13,7 @@ class Entropy(Metric):
         self._entropy = 0.0
         self._count = 0
 
-    def __call__(   # type: ignore
+    def __call__(  # type: ignore
         self,
         logits: torch.Tensor,
         mask: Optional[torch.BoolTensor] = None,

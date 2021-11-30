@@ -161,7 +161,7 @@ class ROUGE(Metric):
         self,  # type: ignore
         predictions: torch.LongTensor,
         gold_targets: torch.LongTensor,
-        mask: Optional[torch.BoolTensor] = None
+        mask: Optional[torch.BoolTensor] = None,
     ) -> None:
         """
         Update recall counts.

@@ -36,7 +36,7 @@ class Subcommand(Registrable):
         raise NotImplementedError
 
     @classmethod
-    def register(   # type: ignore
+    def register(  # type: ignore
         cls: Type[T], name: str, constructor: Optional[str] = None, exist_ok: bool = False
     ) -> Callable[[Type[T]], Type[T]]:
         super_register_fn = super().register(name, constructor=constructor, exist_ok=exist_ok)

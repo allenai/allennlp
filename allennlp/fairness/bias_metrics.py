@@ -279,7 +279,7 @@ class NaturalLanguageInference(Metric):
         self._num_neutral_above_taus = {tau: 0.0 for tau in taus}
         self._total_predictions = 0
 
-    def __call__(self, nli_probabilities: torch.Tensor) -> None:   # type: ignore
+    def __call__(self, nli_probabilities: torch.Tensor) -> None:  # type: ignore
         """
 
         # Parameters

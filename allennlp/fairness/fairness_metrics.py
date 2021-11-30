@@ -420,7 +420,7 @@ class Sufficiency(Metric):
             (num_classes, num_protected_variable_labels, num_classes)
         )
 
-    def __call__(   # type: ignore
+    def __call__(  # type: ignore
         self,
         predicted_labels: torch.Tensor,
         gold_labels: torch.Tensor,
