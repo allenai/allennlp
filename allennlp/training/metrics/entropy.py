@@ -1,6 +1,6 @@
 from typing import Optional
 
-from overrides import overrides
+
 import torch
 
 from allennlp.nn.util import dist_reduce_sum
@@ -13,7 +13,6 @@ class Entropy(Metric):
         self._entropy = 0.0
         self._count = 0
 
-    @overrides
     def __call__(
         self,  # type: ignore
         logits: torch.Tensor,
@@ -42,7 +41,6 @@ class Entropy(Metric):
         self._entropy += dist_reduce_sum(_entropy).item()
         self._count += dist_reduce_sum(1)
 
-    @overrides
     def get_metric(self, reset: bool = False):
         """
         # Returns
@@ -54,7 +52,6 @@ class Entropy(Metric):
             self.reset()
         return {"entropy": average_value}
 
-    @overrides
     def reset(self):
         self._entropy = 0.0
         self._count = 0

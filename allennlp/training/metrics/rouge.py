@@ -1,7 +1,7 @@
 from collections import defaultdict
 from typing import Tuple, Dict, Set
 
-from overrides import overrides
+
 import torch
 
 from allennlp.training.metrics.metric import Metric
@@ -43,7 +43,6 @@ class ROUGE(Metric):
 
         self._total_sequence_count = 0
 
-    @overrides
     def reset(self) -> None:
         self._total_rouge_n_recalls = defaultdict(float)
         self._total_rouge_n_precisions = defaultdict(float)
@@ -159,7 +158,6 @@ class ROUGE(Metric):
 
         return total_recall, total_precision, total_f1
 
-    @overrides
     def __call__(
         self,  # type: ignore
         predictions: torch.LongTensor,
@@ -199,7 +197,6 @@ class ROUGE(Metric):
             return 0.0
         return metric_sum / self._total_sequence_count
 
-    @overrides
     def get_metric(self, reset: bool = False) -> Dict[str, float]:
         """
         # Parameters

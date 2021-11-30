@@ -1,6 +1,6 @@
 import torch
 import numpy
-from overrides import overrides
+
 import pytest
 
 from allennlp.common.testing import AllenNlpTestCase
@@ -15,19 +15,15 @@ class MockSeq2SeqEncoder(Seq2SeqEncoder):
         self.output_dim = output_dim
         self.bidirectional = bidirectional
 
-    @overrides
     def forward(self, inputs, mask):
         pass
 
-    @overrides
     def get_input_dim(self) -> int:
         return self.input_dim
 
-    @overrides
     def get_output_dim(self) -> int:
         return self.output_dim
 
-    @overrides
     def is_bidirectional(self) -> bool:
         return self.bidirectional
 

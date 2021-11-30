@@ -1,6 +1,6 @@
 from typing import Dict, Tuple
 
-from overrides import overrides
+
 import torch
 
 from allennlp.data.fields.field import Field
@@ -48,18 +48,15 @@ class SpanField(Field[torch.Tensor]):
                 f"{span_end} and {self.sequence_field.sequence_length() - 1} respectively."
             )
 
-    @overrides
     def get_padding_lengths(self) -> Dict[str, int]:
 
         return {}
 
-    @overrides
     def as_tensor(self, padding_lengths: Dict[str, int]) -> torch.Tensor:
 
         tensor = torch.LongTensor([self.span_start, self.span_end])
         return tensor
 
-    @overrides
     def empty_field(self):
         return SpanField(-1, -1, self.sequence_field.empty_field())
 
@@ -74,6 +71,5 @@ class SpanField(Field[torch.Tensor]):
     def __len__(self):
         return 2
 
-    @overrides
     def human_readable_repr(self) -> Tuple[int, int]:
         return self.span_start, self.span_end

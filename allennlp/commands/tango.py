@@ -10,7 +10,6 @@ from pathlib import Path
 from typing import Union, Dict, Any, List, Optional
 import warnings
 
-from overrides import overrides
 
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common.params import Params
@@ -24,7 +23,6 @@ logger = logging.getLogger(__name__)
 
 @Subcommand.register("tango")
 class Tango(Subcommand):
-    @overrides
     def add_subparser(self, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
         description = """Run a tango experiment file."""
         subparser = parser.add_parser(self.name, description=description, help=description)

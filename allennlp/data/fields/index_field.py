@@ -1,6 +1,6 @@
 from typing import Dict
 
-from overrides import overrides
+
 import torch
 
 from allennlp.data.fields.field import Field
@@ -39,15 +39,12 @@ class IndexField(Field[torch.Tensor]):
                 "Found index: {} with type: {}.".format(index, type(index))
             )
 
-    @overrides
     def get_padding_lengths(self) -> Dict[str, int]:
         return {}
 
-    @overrides
     def as_tensor(self, padding_lengths: Dict[str, int]) -> torch.Tensor:
         return torch.LongTensor([self.sequence_index])
 
-    @overrides
     def empty_field(self):
         return IndexField(-1, self.sequence_field.empty_field())
 
@@ -63,6 +60,5 @@ class IndexField(Field[torch.Tensor]):
     def __len__(self):
         return 1
 
-    @overrides
     def human_readable_repr(self):
         return self.sequence_index

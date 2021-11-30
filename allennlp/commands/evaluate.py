@@ -11,7 +11,6 @@ from typing import Any, Dict
 
 from copy import deepcopy
 
-from overrides import overrides
 
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common import logging as common_logging
@@ -25,7 +24,6 @@ logger = logging.getLogger(__name__)
 
 @Subcommand.register("evaluate")
 class Evaluate(Subcommand):
-    @overrides
     def add_subparser(self, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
         description = """Evaluate the specified model + dataset(s)"""
         subparser = parser.add_parser(

@@ -1,6 +1,6 @@
 from typing import Dict, Optional
 
-from overrides import overrides
+
 import torch
 
 from allennlp.training.metrics.metric import Metric
@@ -58,7 +58,6 @@ class MeanAbsoluteError(Metric):
             self.reset()
         return {"mae": mean_absolute_error}
 
-    @overrides
     def reset(self) -> None:
         self._absolute_error = 0.0
         self._total_count = 0.0

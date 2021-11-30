@@ -26,7 +26,7 @@ class TinyTransformer(TokenEmbedder):
             intermediate_size=intermediate_size,
         )
 
-    @overrides
+
     def forward(self, token_ids: torch.LongTensor):
         x = self.embeddings(token_ids)
         x = self.transformer(x)
@@ -49,7 +49,7 @@ class SmallTransformer(TokenEmbedder):
             pretrained, num_hidden_layers=4
         )
 
-    @overrides
+
     def forward(self, token_ids: torch.LongTensor):
         x = self.embeddings(token_ids)
         x = self.transformer(x)
@@ -76,7 +76,7 @@ class MediumTransformer(torch.nn.Module):
             num_hidden_layers=range(8, 12),
         )
 
-    @overrides
+
     def forward(
         self,
         left_token_ids: torch.LongTensor,
@@ -113,7 +113,7 @@ class AlmostRegularTransformer(TokenEmbedder):
         # We want to tune only the embeddings, because that's our experiment.
         self.transformer.requires_grad = False
 
-    @overrides
+
     def forward(self, token_ids: torch.LongTensor, mask: torch.BoolTensor):
         x = self.embeddings(token_ids, mask)
         x = self.transformer(x)

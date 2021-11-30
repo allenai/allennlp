@@ -5,7 +5,6 @@ Base class for subcommands under `allennlp.run`.
 import argparse
 from typing import Callable, Dict, Optional, Type, TypeVar
 
-from overrides import overrides
 
 from allennlp.common import Registrable
 
@@ -37,7 +36,6 @@ class Subcommand(Registrable):
         raise NotImplementedError
 
     @classmethod
-    @overrides
     def register(
         cls: Type[T], name: str, constructor: Optional[str] = None, exist_ok: bool = False
     ) -> Callable[[Type[T]], Type[T]]:

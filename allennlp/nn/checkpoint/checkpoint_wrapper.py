@@ -5,7 +5,7 @@ import weakref
 import torch
 import torch.nn as nn
 from torch.utils.checkpoint import CheckpointFunction
-from overrides import overrides
+
 
 from allennlp.common.registrable import Registrable
 
@@ -24,7 +24,6 @@ class CheckpointWrapper(Registrable):
 
 @CheckpointWrapper.register("torch")
 class TorchCheckpointWrapper(CheckpointWrapper):
-    @overrides
     def wrap_module(self, module: nn.Module) -> nn.Module:
         """
         Wrap a module so that the forward method uses PyTorch's [checkpointing functionality]

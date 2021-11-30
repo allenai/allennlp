@@ -29,7 +29,7 @@ arXiv preprint arXiv:2103.03417.
 
 from typing import Optional, Dict, Union, List
 
-from overrides import overrides
+
 import torch
 import torch.distributed as dist
 
@@ -279,7 +279,6 @@ class NaturalLanguageInference(Metric):
         self._num_neutral_above_taus = {tau: 0.0 for tau in taus}
         self._total_predictions = 0
 
-    @overrides
     def __call__(self, nli_probabilities: torch.Tensor) -> None:
         """
 
@@ -369,7 +368,6 @@ class NaturalLanguageInference(Metric):
             self.reset()
         return nli_scores
 
-    @overrides
     def reset(self):
         self._nli_probs_sum = 0.0
         self._num_neutral_predictions = 0.0
@@ -542,7 +540,6 @@ class AssociationWithoutGroundTruth(Metric):
         self._joint_counts_by_protected_variable_label += _joint_counts_by_protected_variable_label
         self._protected_variable_label_counts += _protected_variable_label_counts
 
-    @overrides
     def get_metric(
         self, reset: bool = False
     ) -> Dict[int, Union[torch.FloatTensor, Dict[int, torch.FloatTensor]]]:
@@ -573,7 +570,6 @@ class AssociationWithoutGroundTruth(Metric):
             self.reset()
         return gaps
 
-    @overrides
     def reset(self) -> None:
         self._joint_counts_by_protected_variable_label = torch.zeros(
             (self._num_protected_variable_labels, self._num_classes)

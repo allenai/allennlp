@@ -2,7 +2,7 @@ import logging
 from typing import Dict, List
 
 import torch
-from overrides import overrides
+
 
 from allennlp.data.fields.text_field import TextFieldTensors
 from allennlp.data.vocabulary import Vocabulary
@@ -103,7 +103,6 @@ class VilbertBackbone(Backbone):
             fusion_method=fusion_method,
         )
 
-    @overrides
     def forward(
         self,  # type: ignore
         box_features: torch.Tensor,

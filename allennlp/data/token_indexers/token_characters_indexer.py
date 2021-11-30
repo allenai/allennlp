@@ -2,7 +2,7 @@ from typing import Dict, List
 import itertools
 import warnings
 
-from overrides import overrides
+
 import torch
 
 from allennlp.common.checks import ConfigurationError
@@ -66,7 +66,6 @@ class TokenCharactersIndexer(TokenIndexer):
         self._start_tokens = [Token(st) for st in (start_tokens or [])]
         self._end_tokens = [Token(et) for et in (end_tokens or [])]
 
-    @overrides
     def count_vocab_items(self, token: Token, counter: Dict[str, Dict[str, int]]):
         if token.text is None:
             raise ConfigurationError("TokenCharactersIndexer needs a tokenizer that retains text")
@@ -76,7 +75,6 @@ class TokenCharactersIndexer(TokenIndexer):
             if getattr(character, "text_id", None) is None:
                 counter[self._namespace][character.text] += 1
 
-    @overrides
     def tokens_to_indices(
         self, tokens: List[Token], vocabulary: Vocabulary
     ) -> Dict[str, List[List[int]]]:
@@ -98,7 +96,6 @@ class TokenCharactersIndexer(TokenIndexer):
             indices.append(token_indices)
         return {"token_characters": indices}
 
-    @overrides
     def get_padding_lengths(self, indexed_tokens: IndexedTokenList) -> Dict[str, int]:
         padding_lengths = {}
         padding_lengths["token_characters"] = max(
@@ -110,7 +107,6 @@ class TokenCharactersIndexer(TokenIndexer):
         padding_lengths["num_token_characters"] = max_num_characters
         return padding_lengths
 
-    @overrides
     def as_padded_tensor_dict(
         self, tokens: IndexedTokenList, padding_lengths: Dict[str, int]
     ) -> Dict[str, torch.Tensor]:
@@ -141,6 +137,5 @@ class TokenCharactersIndexer(TokenIndexer):
             )
         }
 
-    @overrides
     def get_empty_token_list(self) -> IndexedTokenList:
         return {"token_characters": []}

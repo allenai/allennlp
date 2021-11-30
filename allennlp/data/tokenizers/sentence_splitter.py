@@ -1,5 +1,5 @@
 from typing import List, Dict, Any
-from overrides import overrides
+
 
 import spacy
 
@@ -61,14 +61,12 @@ class SpacySentenceSplitter(SentenceSplitter):
                     sbd = self.spacy.create_pipe(sbd_name)
                     self.spacy.add_pipe(sbd)
 
-    @overrides
     def split_sentences(self, text: str) -> List[str]:
         if self._is_version_3:
             return [sent.text.strip() for sent in self.spacy(text).sents]
         else:
             return [sent.string.strip() for sent in self.spacy(text).sents]
 
-    @overrides
     def batch_split_sentences(self, texts: List[str]) -> List[List[str]]:
         """
         This method lets you take advantage of spacy's batch processing.

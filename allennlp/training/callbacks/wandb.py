@@ -2,7 +2,7 @@ import logging
 import os
 from typing import Optional, Dict, Any, List, Union, Tuple, TYPE_CHECKING
 
-from overrides import overrides
+
 import torch
 
 from allennlp.common import Params
@@ -102,7 +102,6 @@ class WandBCallback(LogWriterCallback):
             **(wandb_kwargs or {}),
         )
 
-    @overrides
     def log_scalars(
         self,
         scalars: Dict[str, Union[int, float]],
@@ -111,7 +110,6 @@ class WandBCallback(LogWriterCallback):
     ) -> None:
         self._log(scalars, log_prefix=log_prefix, epoch=epoch)
 
-    @overrides
     def log_tensors(
         self, tensors: Dict[str, torch.Tensor], log_prefix: str = "", epoch: Optional[int] = None
     ) -> None:
@@ -130,7 +128,6 @@ class WandBCallback(LogWriterCallback):
             dict_to_log["epoch"] = epoch
         self.wandb.log(dict_to_log, step=self.trainer._total_batches_completed)  # type: ignore
 
-    @overrides
     def on_start(
         self, trainer: "GradientDescentTrainer", is_primary: bool = True, **kwargs
     ) -> None:
@@ -156,7 +153,6 @@ class WandBCallback(LogWriterCallback):
         if self._watch_model:
             self.wandb.watch(self.trainer.model)  # type: ignore
 
-    @overrides
     def close(self) -> None:
         super().close()
         self.wandb.finish()  # type: ignore

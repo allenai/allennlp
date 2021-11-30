@@ -2,7 +2,7 @@ import logging
 from typing import List, Optional, Tuple, Union, Sequence
 
 import numpy as np
-from overrides import overrides
+
 import torch
 import torch.autograd as autograd
 
@@ -111,7 +111,6 @@ class SimpleInfluence(InfluenceInterpreter):
         self._recursion_depth = recursion_depth
         self._scale = scale
 
-    @overrides
     def _calculate_influence_scores(
         self, test_instance: Instance, test_loss: float, test_grads: Sequence[torch.Tensor]
     ) -> List[float]:
