@@ -1,6 +1,5 @@
 from collections import defaultdict
-from typing import Tuple, Dict, Set
-
+from typing import Tuple, Dict, Set, Optional
 
 import torch
 
@@ -162,6 +161,7 @@ class ROUGE(Metric):
         self,  # type: ignore
         predictions: torch.LongTensor,
         gold_targets: torch.LongTensor,
+        mask: Optional[torch.BoolTensor] = None
     ) -> None:
         """
         Update recall counts.
@@ -177,6 +177,9 @@ class ROUGE(Metric):
 
         None
         """
+        if mask is not None:
+            raise NotImplementedError("This metric does not support a mask.")
+
         # ROUGE-N
         predictions, gold_targets = self.detach_tensors(predictions, gold_targets)
         for n in range(1, self._ngram_size + 1):

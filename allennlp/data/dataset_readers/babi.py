@@ -71,8 +71,8 @@ class BabiReader(DatasetReader):
                 else:
                     context.append(new_entry)
 
-    def text_to_instance(
-        self,  # type: ignore
+    def text_to_instance(    # type: ignore
+        self,
         context: List[List[str]],
         question: List[str],
         answer: str,

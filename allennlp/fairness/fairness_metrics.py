@@ -218,7 +218,7 @@ class Separation(Metric):
             (num_classes, num_protected_variable_labels, num_classes)
         )
 
-    def __call__(
+    def __call__(  # type: ignore
         self,
         predicted_labels: torch.Tensor,
         gold_labels: torch.Tensor,
@@ -420,7 +420,7 @@ class Sufficiency(Metric):
             (num_classes, num_protected_variable_labels, num_classes)
         )
 
-    def __call__(
+    def __call__(   # type: ignore
         self,
         predicted_labels: torch.Tensor,
         gold_labels: torch.Tensor,

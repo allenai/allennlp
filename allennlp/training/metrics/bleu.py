@@ -1,7 +1,6 @@
 from collections import Counter
 import math
-from typing import Iterable, Tuple, Dict, Set
-
+from typing import Iterable, Tuple, Dict, Set, Optional
 
 import torch
 import torch.distributed as dist
@@ -101,6 +100,7 @@ class BLEU(Metric):
         self,  # type: ignore
         predictions: torch.LongTensor,
         gold_targets: torch.LongTensor,
+        mask: Optional[torch.BoolTensor] = None
     ) -> None:
         """
         Update precision counts.
@@ -116,6 +116,9 @@ class BLEU(Metric):
 
         None
         """
+        if mask is not None:
+            raise NotImplementedError("This metric does not support a mask.")
+
         predictions, gold_targets = self.detach_tensors(predictions, gold_targets)
         if is_distributed():
             world_size = dist.get_world_size()

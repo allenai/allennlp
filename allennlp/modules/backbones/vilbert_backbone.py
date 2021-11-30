@@ -103,8 +103,8 @@ class VilbertBackbone(Backbone):
             fusion_method=fusion_method,
         )
 
-    def forward(
-        self,  # type: ignore
+    def forward(   # type: ignore
+        self,
         box_features: torch.Tensor,
         box_coordinates: torch.Tensor,
         box_mask: torch.Tensor,

@@ -106,8 +106,8 @@ class SimpleTagger(Model):
 
         initializer(self)
 
-    def forward(
-        self,  # type: ignore
+    def forward(  # type: ignore
+        self,
         tokens: TextFieldTensors,
         tags: torch.LongTensor = None,
         metadata: List[Dict[str, Any]] = None,

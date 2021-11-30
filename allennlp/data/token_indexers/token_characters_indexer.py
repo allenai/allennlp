@@ -73,6 +73,7 @@ class TokenCharactersIndexer(TokenIndexer):
             # If `text_id` is set on the character token (e.g., if we're using byte encoding), we
             # will not be using the vocab for this character.
             if getattr(character, "text_id", None) is None:
+                assert character.text is not None
                 counter[self._namespace][character.text] += 1
 
     def tokens_to_indices(
@@ -91,7 +92,9 @@ class TokenCharactersIndexer(TokenIndexer):
                     # use this id instead.
                     index = character.text_id
                 else:
+                    assert character.text is not None
                     index = vocabulary.get_token_index(character.text, self._namespace)
+                assert index is not None
                 token_indices.append(index)
             indices.append(token_indices)
         return {"token_characters": indices}

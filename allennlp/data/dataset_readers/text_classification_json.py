@@ -101,9 +101,9 @@ class TextClassificationJsonReader(DatasetReader):
             tokens = tokens[: self._max_sequence_length]
         return tokens
 
-    def text_to_instance(
+    def text_to_instance(  # type: ignore
         self, text: str, label: Union[str, int] = None
-    ) -> Instance:  # type: ignore
+    ) -> Instance:
         """
         # Parameters
 

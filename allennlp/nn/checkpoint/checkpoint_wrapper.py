@@ -24,7 +24,7 @@ class CheckpointWrapper(Registrable):
 
 @CheckpointWrapper.register("torch")
 class TorchCheckpointWrapper(CheckpointWrapper):
-    def wrap_module(self, module: nn.Module) -> nn.Module:
+    def wrap_module(self, module: nn.Module, **kwargs) -> nn.Module:
         """
         Wrap a module so that the forward method uses PyTorch's [checkpointing functionality]
         (https://pytorch.org/docs/stable/checkpoint.html).
@@ -42,6 +42,9 @@ class TorchCheckpointWrapper(CheckpointWrapper):
         #  --> https://github.com/facebookresearch/fairscale/blob/1e4a503cda8571851a68effd6e504a192838ab06/fairscale/nn/checkpoint/checkpoint_activations.py#L145-L153  # noqa: E501
         # We just patch the forward method to avoid having to proxy all the fields and other methods.
         # The use of weakref here is to prevent creating a ref cycle: m -> m.forward -> m.
+
+        assert len(kwargs) == 0  # This way of wrapping only works for positional arguments.
+
         module.forward = functools.partial(  # type: ignore[assignment]
             _checkpointed_forward, type(module).forward, weakref.ref(module)
         )
