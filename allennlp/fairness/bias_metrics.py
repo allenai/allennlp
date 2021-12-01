@@ -542,7 +542,7 @@ class AssociationWithoutGroundTruth(Metric):
 
     def get_metric(
         self, reset: bool = False
-    ) -> Dict[int, Union[torch.FloatTensor, Dict[int, torch.FloatTensor]]]:
+    ) -> Dict[int, Union[torch.Tensor, Dict[int, torch.Tensor]]]:
         """
         # Returns
 
@@ -578,7 +578,7 @@ class AssociationWithoutGroundTruth(Metric):
         self._y_counts = torch.zeros(self._num_classes)
         self._total_predictions = torch.tensor(0)
 
-    def _ova_gap(self, x: int):
+    def _ova_gap(self, x: int) -> torch.Tensor:
         device = self._y_counts.device
         pmi_terms = self._all_pmi_terms()
         pmi_not_x = torch.sum(
@@ -592,7 +592,7 @@ class AssociationWithoutGroundTruth(Metric):
         gap = pmi_terms[x] - pmi_not_x
         return torch.where(~gap.isinf(), gap, torch.tensor(float("nan")).to(device))
 
-    def _pairwise_gaps(self, x: int):
+    def _pairwise_gaps(self, x: int) -> Dict[int, torch.Tensor]:
         device = self._y_counts.device
         pmi_terms = self._all_pmi_terms()
         pairwise_gaps = {}
