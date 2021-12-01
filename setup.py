@@ -55,7 +55,7 @@ setup(
         "cached-path>=0.3.4,<0.4.0",
         "fairscale==0.4.3",
         "jsonnet>=0.10.0 ; sys.platform != 'win32'",
-        "overrides>=5.0,<6.2",
+        "overrides==3.1.0",
         "nltk",
         "spacy>=2.1.0,<3.3",
         "numpy",
