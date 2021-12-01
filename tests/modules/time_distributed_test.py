@@ -1,5 +1,5 @@
 from numpy.testing import assert_almost_equal
-from overrides import overrides
+
 import torch
 from torch.nn import Embedding, Module, Parameter
 
@@ -38,7 +38,6 @@ class TestTimeDistributed(AllenNlpTestCase):
 
     def test_time_distributed_reshapes_multiple_inputs_with_pass_through_tensor_correctly(self):
         class FakeModule(Module):
-            @overrides
             def forward(self, input_tensor, tensor_to_pass_through=None, another_tensor=None):
 
                 return input_tensor + tensor_to_pass_through + another_tensor
@@ -60,7 +59,6 @@ class TestTimeDistributed(AllenNlpTestCase):
 
     def test_time_distributed_reshapes_multiple_inputs_with_pass_through_non_tensor_correctly(self):
         class FakeModule(Module):
-            @overrides
             def forward(self, input_tensor, number=0, another_tensor=None):
 
                 return input_tensor + number + another_tensor

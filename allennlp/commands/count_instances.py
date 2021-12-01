@@ -5,7 +5,6 @@ Subcommand for counting the number of instances from a training config.
 import argparse
 import logging
 
-from overrides import overrides
 
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common.params import Params
@@ -16,7 +15,6 @@ logger = logging.getLogger(__name__)
 
 @Subcommand.register("count-instances")
 class CountInstances(Subcommand):
-    @overrides
     def add_subparser(self, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
         description = """Count the number of training instances in an experiment config file."""
         subparser = parser.add_parser(self.name, description=description, help=description)

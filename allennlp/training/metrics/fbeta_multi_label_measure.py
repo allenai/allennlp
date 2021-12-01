@@ -1,7 +1,7 @@
 from typing import List, Optional
 
 import torch
-from overrides import overrides
+
 
 from allennlp.training.metrics import FBetaMeasure
 from allennlp.training.metrics.metric import Metric
@@ -77,7 +77,6 @@ class FBetaMultiLabelMeasure(FBetaMeasure):
         super().__init__(beta, average, labels)
         self._threshold = threshold
 
-    @overrides
     def __call__(
         self,
         predictions: torch.Tensor,

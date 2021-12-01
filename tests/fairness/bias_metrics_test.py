@@ -215,20 +215,20 @@ class AssociationWithoutGroundTruthTest(AllenNlpTestCase):
 
         ova_pmi(Y, X)
         test_ova_pmi_gaps = {
-            k: [(e if not math.isnan(e) else np.nan) for e in v.tolist()]
+            k: [(e if not math.isnan(e) else np.nan) for e in v.tolist()]  # type: ignore
             for k, v in ova_pmi.get_metric().items()
         }
         assert expected_ova_pmi_gaps == test_ova_pmi_gaps
 
         ova_pmi(Y, X)
         test_ova_pmi_gaps = {
-            k: [(e if not math.isnan(e) else np.nan) for e in v.tolist()]
+            k: [(e if not math.isnan(e) else np.nan) for e in v.tolist()]  # type: ignore
             for k, v in ova_pmi.get_metric(reset=True).items()
         }
         assert expected_ova_pmi_gaps == test_ova_pmi_gaps
 
         test_ova_pmi_gaps = {
-            k: [(e if not math.isnan(e) else np.nan) for e in v.tolist()]
+            k: [(e if not math.isnan(e) else np.nan) for e in v.tolist()]  # type: ignore
             for k, v in ova_pmi.get_metric(reset=True).items()
         }
         assert test_ova_pmi_gaps == {0: [np.nan, np.nan], 1: [np.nan, np.nan]}
@@ -241,7 +241,7 @@ class AssociationWithoutGroundTruthTest(AllenNlpTestCase):
         pairwise_pmi(Y, X)
         test_pairwise_pmi_gaps = {
             k1: {
-                k2: [(e if not math.isnan(e) else np.nan) for e in v2.tolist()]
+                k2: [(e if not math.isnan(e) else np.nan) for e in v2.tolist()]  # type: ignore
                 for k2, v2 in v1.items()
             }
             for k1, v1 in pairwise_pmi.get_metric().items()
@@ -284,7 +284,7 @@ class AssociationWithoutGroundTruthTest(AllenNlpTestCase):
         }
         ova_pmisq(Y, X, mask)
         test_ova_pmisq_gaps = {
-            k: [(round(e, 3) if not math.isnan(e) else np.nan) for e in v.tolist()]
+            k: [(round(e, 3) if not math.isnan(e) else np.nan) for e in v.tolist()]  # type: ignore
             for k, v in ova_pmisq.get_metric().items()
         }
         assert expected_ova_pmisq_gaps == test_ova_pmisq_gaps

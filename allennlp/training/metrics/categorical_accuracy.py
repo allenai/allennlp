@@ -1,6 +1,6 @@
 from typing import Optional
 
-from overrides import overrides
+
 import torch
 
 from allennlp.nn.util import dist_reduce_sum
@@ -116,7 +116,6 @@ class CategoricalAccuracy(Metric):
 
         return accuracy
 
-    @overrides
     def reset(self):
         self.correct_count = 0.0
         self.total_count = 0.0

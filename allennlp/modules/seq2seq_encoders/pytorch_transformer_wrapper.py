@@ -1,6 +1,6 @@
 from typing import Optional
 
-from overrides import overrides
+
 import torch
 from torch import nn
 
@@ -89,19 +89,15 @@ class PytorchTransformer(Seq2SeqEncoder):
                 "positional_encoding must be one of None, 'sinusoidal', or 'embedding'"
             )
 
-    @overrides
     def get_input_dim(self) -> int:
         return self._input_dim
 
-    @overrides
     def get_output_dim(self) -> int:
         return self._input_dim
 
-    @overrides
     def is_bidirectional(self):
         return False
 
-    @overrides
     def forward(self, inputs: torch.Tensor, mask: torch.BoolTensor):
         output = inputs
         if self._sinusoidal_positional_encoding:

@@ -41,7 +41,7 @@ overfitting against a sub-optimal adversary,
 predictor is too good at hiding the protected variable from the adversary.
 """
 
-from overrides import overrides
+
 from typing import Dict, Optional
 import torch
 
@@ -106,7 +106,6 @@ class AdversarialBiasMitigator(Model):
 
         self.predictor_output_key = predictor_output_key
 
-    @overrides
     def train(self, mode: bool = True):
         super().train(mode)
         self.predictor.train(mode)
@@ -116,7 +115,6 @@ class AdversarialBiasMitigator(Model):
         # eval() are called
         self.bias_direction.train(mode)
 
-    @overrides
     def forward(self, *args, **kwargs):
         predictor_output_dict = self.predictor.forward(*args, **kwargs)
         adversary_output_dict = self.adversary.forward(
@@ -135,43 +133,34 @@ class AdversarialBiasMitigator(Model):
     # behind-the-scenes usage of dunder attributes by torch.nn.Module
     # and predictor inheriting from Model
     # Assumes Model is relatively stable
-    @overrides
+
     def forward_on_instance(self, *args, **kwargs):
         return self.predictor.forward_on_instance(*args, **kwargs)
 
-    @overrides
     def forward_on_instances(self, *args, **kwargs):
         return self.predictor.forward_on_instances(*args, **kwargs)
 
-    @overrides
     def get_regularization_penalty(self, *args, **kwargs):
         return self.predictor.get_regularization_penalty(*args, **kwargs)
 
-    @overrides
     def get_parameters_for_histogram_logging(self, *args, **kwargs):
         return self.predictor.get_parameters_for_histogram_logging(*args, **kwargs)
 
-    @overrides
     def get_parameters_for_histogram_tensorboard_logging(self, *args, **kwargs):
         return self.predictor.get_parameters_for_histogram_tensorboard_logging(*args, **kwargs)
 
-    @overrides
     def make_output_human_readable(self, *args, **kwargs):
         return self.predictor.make_output_human_readable(*args, **kwargs)
 
-    @overrides
     def get_metrics(self, *args, **kwargs):
         return self.predictor.get_metrics(*args, **kwargs)
 
-    @overrides
     def _get_prediction_device(self, *args, **kwargs):
         return self.predictor._get_prediction_device(*args, **kwargs)
 
-    @overrides
     def _maybe_warn_for_unseparable_batches(self, *args, **kwargs):
         return self.predictor._maybe_warn_for_unseparable_batches(*args, **kwargs)
 
-    @overrides
     def extend_embedder_vocab(self, *args, **kwargs):
         return self.predictor.extend_embedder_vocab(*args, **kwargs)
 

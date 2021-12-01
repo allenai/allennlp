@@ -1,6 +1,6 @@
 from typing import Dict, Optional, Any
 
-from overrides import overrides
+
 import torch
 
 from allennlp.data.fields.text_field import TextFieldTensors
@@ -110,7 +110,6 @@ class PretrainedTransformerBackbone(Backbone):
             outputs["token_ids"] = util.get_token_ids_from_text_field_tensors(text)
         return outputs
 
-    @overrides
     def make_output_human_readable(
         self, output_dict: Dict[str, torch.Tensor]
     ) -> Dict[str, torch.Tensor]:

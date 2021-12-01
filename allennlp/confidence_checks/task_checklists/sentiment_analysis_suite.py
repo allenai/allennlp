@@ -1,6 +1,6 @@
 from typing import Optional, Iterable, List, Union, Tuple
 import numpy as np
-from overrides import overrides
+
 from checklist.test_suite import TestSuite
 from checklist.test_types import MFT, INV, DIR, Expect
 from checklist.perturb import Perturb
@@ -47,7 +47,6 @@ class SentimentAnalysisSuite(TaskSuite):
         self._negative = negative
         super().__init__(suite, **kwargs)
 
-    @overrides
     def _prediction_and_confidence_scores(self, predictor: Predictor):
         def preds_and_confs_fn(data):
             labels = []
@@ -65,7 +64,6 @@ class SentimentAnalysisSuite(TaskSuite):
 
         return preds_and_confs_fn
 
-    @overrides
     def _format_failing_examples(
         self,
         inputs: Tuple,
@@ -86,7 +84,6 @@ class SentimentAnalysisSuite(TaskSuite):
 
         return ret
 
-    @overrides
     def _default_tests(self, data: Optional[Iterable[str]], num_test_cases: int = 100):
         super()._default_tests(data, num_test_cases)
         self._setup_editor()

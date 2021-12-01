@@ -6,7 +6,7 @@ An implementation of [T5](https://api.semanticscholar.org/CorpusID:204838007), a
 import logging
 from typing import Optional, Tuple, List, Union, Dict, TYPE_CHECKING, NamedTuple
 
-from overrides import overrides
+
 import torch
 from torch import nn
 import torch.nn.functional as F
@@ -806,7 +806,6 @@ class T5(TransformerModule, Registrable):
 
         self.beam_search = beam_search.construct(end_index=self.eos_token_id)
 
-    @overrides
     def _post_load_state_dict(
         self, missing_keys: List[str], unexpected_keys: List[str]
     ) -> Tuple[List[str], List[str]]:

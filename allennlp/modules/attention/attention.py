@@ -5,7 +5,7 @@ an input vector and the rows of a matrix.
 
 import torch
 
-from overrides import overrides
+
 from allennlp.common.registrable import Registrable
 from allennlp.nn.util import masked_softmax
 
@@ -38,7 +38,6 @@ class Attention(torch.nn.Module, Registrable):
         super().__init__()
         self._normalize = normalize
 
-    @overrides
     def forward(
         self, vector: torch.Tensor, matrix: torch.Tensor, matrix_mask: torch.BoolTensor = None
     ) -> torch.Tensor:
