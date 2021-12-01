@@ -1,6 +1,7 @@
 """
 Utilities for working with the local dataset cache.
 """
+import string
 import weakref
 from contextlib import contextmanager
 import glob
