@@ -27,7 +27,7 @@ class TimeDistributed(torch.nn.Module):
         super().__init__()
         self._module = module
 
-    @overrides(check_signature=False)
+    @overrides
     def forward(self, *inputs, pass_through: List[str] = None, **kwargs):
 
         pass_through = pass_through or []

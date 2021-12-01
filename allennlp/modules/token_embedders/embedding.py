@@ -184,7 +184,7 @@ class Embedding(TokenEmbedder):
     def get_output_dim(self) -> int:
         return self.output_dim
 
-    @overrides(check_signature=False)
+    @overrides
     def forward(self, tokens: torch.Tensor) -> torch.Tensor:
         # tokens may have extra dimensions (batch_size, d1, ..., dn, sequence_length),
         # but embedding expects (batch_size, sequence_length), so pass tokens to

@@ -38,7 +38,7 @@ class Attention(torch.nn.Module, Registrable):
         super().__init__()
         self._normalize = normalize
 
-    @overrides(check_signature=False)
+    @overrides
     def forward(
         self, vector: torch.Tensor, matrix: torch.Tensor, matrix_mask: torch.BoolTensor = None
     ) -> torch.Tensor:

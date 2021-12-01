@@ -131,7 +131,7 @@ class TextField(SequenceField[TextFieldTensors]):
         return tensors
 
     @overrides
-    def empty_field(self) -> "TextField":
+    def empty_field(self):
         text_field = TextField([], self._token_indexers)
         text_field._indexed_tokens = {}
         if self._token_indexers is not None:

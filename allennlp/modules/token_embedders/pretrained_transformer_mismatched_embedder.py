@@ -92,10 +92,10 @@ class PretrainedTransformerMismatchedEmbedder(TokenEmbedder):
         self.sub_token_mode = sub_token_mode
 
     @overrides
-    def get_output_dim(self) -> int:
+    def get_output_dim(self):
         return self._matched_embedder.get_output_dim()
 
-    @overrides(check_signature=False)
+    @overrides
     def forward(
         self,
         token_ids: torch.LongTensor,

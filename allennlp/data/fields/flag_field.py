@@ -25,7 +25,7 @@ class FlagField(Field[Any]):
         return self.flag_value
 
     @overrides
-    def empty_field(self) -> "FlagField":
+    def empty_field(self):
         # Because this has to be constant across all instances in a batch, we need to keep the same
         # value.
         return FlagField(self.flag_value)

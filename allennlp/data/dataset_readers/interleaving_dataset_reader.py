@@ -91,7 +91,7 @@ class InterleavingDatasetReader(DatasetReader):
                 instance.fields[self._dataset_field_name] = MetadataField(key)
                 yield instance
 
-    @overrides(check_signature=False)
+    @overrides
     def _read(self, file_path: Union[str, Dict[str, PathOrStr]]) -> Iterable[Instance]:
         if isinstance(file_path, str):
             try:

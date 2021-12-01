@@ -60,7 +60,7 @@ class SpanField(Field[torch.Tensor]):
         return tensor
 
     @overrides
-    def empty_field(self) -> "SpanField":
+    def empty_field(self):
         return SpanField(-1, -1, self.sequence_field.empty_field())
 
     def __str__(self) -> str:

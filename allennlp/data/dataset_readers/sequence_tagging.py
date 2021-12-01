@@ -4,7 +4,7 @@ import logging
 from overrides import overrides
 
 from allennlp.common.file_utils import cached_path
-from allennlp.data.dataset_readers.dataset_reader import DatasetReader, PathOrStr
+from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import TextField, SequenceLabelField, MetadataField, Field
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
@@ -63,8 +63,8 @@ class SequenceTaggingDatasetReader(DatasetReader):
         }
         self._params.update(kwargs)
 
-    @overrides(check_signature=False)
-    def _read(self, file_path: PathOrStr):
+    @overrides
+    def _read(self, file_path):
         # if `file_path` is a URL, redirect to the cache
         file_path = cached_path(file_path)
 

@@ -13,6 +13,6 @@ class DotProductMatrixAttention(MatrixAttention):
     Registered as a `MatrixAttention` with name "dot_product".
     """
 
-    @overrides(check_signature=False)
+    @overrides
     def forward(self, matrix_1: torch.Tensor, matrix_2: torch.Tensor) -> torch.Tensor:
         return matrix_1.matmul(matrix_2.transpose(-1, -2))

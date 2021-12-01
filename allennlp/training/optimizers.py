@@ -313,7 +313,7 @@ class MultiOptimizer(Optimizer):
 
         super().__init__(made_parameter_groups, {})
 
-    @overrides(check_signature=False)
+    @overrides
     def step(self):
         """
         Takes an optimization step for each optimizer.
@@ -342,12 +342,12 @@ class MultiOptimizer(Optimizer):
         return optimizer_state_dict
 
     @overrides
-    def load_state_dict(self, state_dict: Dict[str, Any]):
+    def load_state_dict(self, training_state: Dict[str, Any]):
         """
         Loads each optimizer's `state_dict`.
         """
         for optimizer_key, optimizer in self.optimizers.items():
-            optimizer.load_state_dict(state_dict[f"{optimizer_key}_optimizer"])
+            optimizer.load_state_dict(training_state[f"{optimizer_key}_optimizer"])
 
     @overrides
     def zero_grad(self, set_to_none: bool = False):

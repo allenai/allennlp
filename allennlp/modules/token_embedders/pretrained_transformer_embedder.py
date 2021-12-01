@@ -161,7 +161,7 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         return self
 
     @overrides
-    def get_output_dim(self) -> int:
+    def get_output_dim(self):
         return self.output_dim
 
     def _number_of_token_type_embeddings(self):
@@ -172,7 +172,7 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         else:
             return 0
 
-    @overrides(check_signature=False)
+    @overrides
     def forward(
         self,
         token_ids: torch.LongTensor,

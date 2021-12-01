@@ -27,10 +27,10 @@ class PassThroughEncoder(Seq2SeqEncoder):
         return self._input_dim
 
     @overrides
-    def is_bidirectional(self) -> bool:
+    def is_bidirectional(self):
         return False
 
-    @overrides(check_signature=False)
+    @overrides
     def forward(self, inputs: torch.Tensor, mask: torch.BoolTensor = None) -> torch.Tensor:
         """
         # Parameters

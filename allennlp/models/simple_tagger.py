@@ -106,7 +106,7 @@ class SimpleTagger(Model):
 
         initializer(self)
 
-    @overrides(check_signature=False)
+    @overrides
     def forward(
         self,  # type: ignore
         tokens: TextFieldTensors,

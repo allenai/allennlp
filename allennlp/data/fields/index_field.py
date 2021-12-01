@@ -48,7 +48,7 @@ class IndexField(Field[torch.Tensor]):
         return torch.LongTensor([self.sequence_index])
 
     @overrides
-    def empty_field(self) -> "IndexField":
+    def empty_field(self):
         return IndexField(-1, self.sequence_field.empty_field())
 
     def __str__(self) -> str:
