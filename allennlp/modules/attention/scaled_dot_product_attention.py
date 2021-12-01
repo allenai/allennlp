@@ -2,7 +2,7 @@ import math
 from typing import Optional
 
 import torch
-from overrides import overrides
+
 
 from allennlp.modules.attention.dot_product_attention import DotProductAttention
 from allennlp.modules.attention.attention import Attention
@@ -30,7 +30,6 @@ class ScaledDotProductAttention(DotProductAttention):
         super().__init__(normalize)
         self.scaling_factor = scaling_factor
 
-    @overrides
     def _forward_internal(self, vector: torch.Tensor, matrix: torch.Tensor) -> torch.Tensor:
         scores = super()._forward_internal(vector, matrix)
         scaling_factor = self.scaling_factor or matrix.size(-1)

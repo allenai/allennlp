@@ -3,7 +3,6 @@ import logging
 import torch
 from allennlp.common.util import pad_sequence_to_length
 
-from overrides import overrides
 
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.data.tokenizers import Token, PretrainedTransformerTokenizer
@@ -85,12 +84,10 @@ class PretrainedTransformerIndexer(TokenIndexer):
 
         self._added_to_vocabulary = True
 
-    @overrides
     def count_vocab_items(self, token: Token, counter: Dict[str, Dict[str, int]]):
         # If we only use pretrained models, we don't need to do anything here.
         pass
 
-    @overrides
     def tokens_to_indices(self, tokens: List[Token], vocabulary: Vocabulary) -> IndexedTokenList:
         self._add_encoding_to_vocabulary_if_needed(vocabulary)
 
@@ -104,7 +101,6 @@ class PretrainedTransformerIndexer(TokenIndexer):
 
         return self._postprocess_output(output)
 
-    @overrides
     def indices_to_tokens(
         self, indexed_tokens: IndexedTokenList, vocabulary: Vocabulary
     ) -> List[Token]:
@@ -204,14 +200,12 @@ class PretrainedTransformerIndexer(TokenIndexer):
 
         return output
 
-    @overrides
     def get_empty_token_list(self) -> IndexedTokenList:
         output: IndexedTokenList = {"token_ids": [], "mask": [], "type_ids": []}
         if self._max_length is not None:
             output["segment_concat_mask"] = []
         return output
 
-    @overrides
     def as_padded_tensor_dict(
         self, tokens: IndexedTokenList, padding_lengths: Dict[str, int]
     ) -> Dict[str, torch.Tensor]:

@@ -8,7 +8,7 @@ import select
 from queue import Full
 from typing import List, Iterator, Optional, Iterable, Union, TypeVar, Tuple, Any
 
-from overrides import overrides
+
 import torch
 import torch.multiprocessing as mp
 
@@ -295,14 +295,12 @@ class MultiProcessDataLoader(DataLoader):
             # Load all instances right away.
             deque(self.iter_instances(), maxlen=0)
 
-    @overrides
     def index_with(self, vocab: Vocabulary) -> None:
         self._vocab = vocab
         if self._instances:
             for instance in self._instances:
                 instance.index_fields(vocab)
 
-    @overrides
     def __len__(self) -> int:
         if self.batches_per_epoch is not None:
             return self.batches_per_epoch
@@ -326,7 +324,6 @@ class MultiProcessDataLoader(DataLoader):
             # is not specified.
             raise TypeError
 
-    @overrides
     def __iter__(self) -> Iterator[TensorDict]:
         if self._vocab is None:
             raise ValueError(
@@ -351,7 +348,6 @@ class MultiProcessDataLoader(DataLoader):
                     yield next(batch_generator)
             self._batch_generator = batch_generator
 
-    @overrides
     def iter_instances(self) -> Iterator[Instance]:
         if self._instances:
             yield from self._instances
@@ -391,7 +387,6 @@ class MultiProcessDataLoader(DataLoader):
                         queue.close()  # type: ignore[attr-defined]
                     self._join_workers(workers, queue, txs)
 
-    @overrides
     def set_target_device(self, device: torch.device) -> None:
         self.cuda_device = device
 

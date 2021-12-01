@@ -13,7 +13,7 @@ import argparse
 import logging
 from typing import Union, Dict, List, Tuple, NamedTuple, cast
 
-from overrides import overrides
+
 import termcolor
 import torch
 
@@ -29,7 +29,6 @@ logger = logging.getLogger(__name__)
 class Diff(Subcommand):
     requires_plugins: bool = False
 
-    @overrides
     def add_subparser(self, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
         description = """Display a diff between two model checkpoints."""
         long_description = (
