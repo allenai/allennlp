@@ -115,6 +115,7 @@ jobs:
             cd allennlp-models
             make test-with-cov COV=allennlp
             mv coverage.xml ../
+            make test-configs
 
     steps:
     - uses: actions/checkout@v2
