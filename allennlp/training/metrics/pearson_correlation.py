@@ -4,7 +4,7 @@ from typing import Optional
 import math
 import numpy as np
 
-from overrides import overrides
+
 import torch
 
 from allennlp.common.util import is_distributed
@@ -89,7 +89,6 @@ class PearsonCorrelation(Metric):
             pearson_r = covariance / denominator
         return pearson_r
 
-    @overrides
     def reset(self):
         self._predictions_labels_covariance.reset()
         self._predictions_variance.reset()

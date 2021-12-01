@@ -9,7 +9,6 @@ import os
 import tarfile
 import tempfile
 
-from overrides import overrides
 
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common.file_utils import CacheFile
@@ -22,7 +21,6 @@ logger = logging.getLogger(__name__)
 
 @Subcommand.register("build-vocab")
 class BuildVocab(Subcommand):
-    @overrides
     def add_subparser(self, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
         description = """Build a vocabulary from an experiment config file."""
         subparser = parser.add_parser(self.name, description=description, help=description)

@@ -5,7 +5,6 @@ CLI to the the caching mechanism in `common.file_utils`.
 import argparse
 import logging
 
-from overrides import overrides
 
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common.file_utils import (
@@ -23,7 +22,6 @@ logger = logging.getLogger(__name__)
 class CachedPath(Subcommand):
     requires_plugins: bool = False
 
-    @overrides
     def add_subparser(self, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
         description = """Cache remote files to the AllenNLP cache."""
         subparser = parser.add_parser(

@@ -1,7 +1,7 @@
 from typing import Optional
 
 from fairscale.nn.checkpoint import checkpoint_wrapper
-from overrides import overrides
+
 import torch.nn as nn
 
 from allennlp.nn.checkpoint.checkpoint_wrapper import CheckpointWrapper
@@ -27,7 +27,6 @@ class FairScaleCheckpointWrapper(CheckpointWrapper):
     def __init__(self, offload_to_cpu: Optional[bool] = True) -> None:
         self._offload_to_cpu = offload_to_cpu
 
-    @overrides
     def wrap_module(
         self,
         module: nn.Module,

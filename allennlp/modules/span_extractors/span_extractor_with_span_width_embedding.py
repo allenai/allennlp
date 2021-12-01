@@ -1,5 +1,5 @@
 from typing import Optional
-from overrides import overrides
+
 
 import torch
 
@@ -66,7 +66,6 @@ class SpanExtractorWithSpanWidthEmbedding(SpanExtractor):
                 "specify both num_width_embeddings and span_width_embedding_dim."
             )
 
-    @overrides
     def forward(
         self,
         sequence_tensor: torch.FloatTensor,
@@ -127,7 +126,6 @@ class SpanExtractorWithSpanWidthEmbedding(SpanExtractor):
 
         return span_embeddings
 
-    @overrides
     def get_input_dim(self) -> int:
         return self._input_dim
 

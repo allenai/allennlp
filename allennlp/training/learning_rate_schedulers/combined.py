@@ -1,6 +1,6 @@
 from typing import Dict, Any, List, Tuple, Optional
 
-from overrides import overrides
+
 import torch
 
 from allennlp.common.lazy import Lazy
@@ -128,7 +128,6 @@ class CombinedLearningRateScheduler(LearningRateScheduler):
         self._last_epoch_updated = self.last_epoch
         return self._current_scheduler
 
-    @overrides
     def state_dict(self) -> Dict[str, Any]:
         current_scheduler = self.current_scheduler
         return {
@@ -139,7 +138,6 @@ class CombinedLearningRateScheduler(LearningRateScheduler):
             else current_scheduler.state_dict(),
         }
 
-    @overrides
     def load_state_dict(self, state_dict: Dict[str, Any]) -> None:
         self.last_epoch = state_dict["last_epoch"]
         self.num_steps_per_epoch = state_dict["num_steps_per_epoch"]
@@ -147,19 +145,16 @@ class CombinedLearningRateScheduler(LearningRateScheduler):
             assert state_dict["current_scheduler"] is not None
             self.current_scheduler.load_state_dict(state_dict["current_scheduler"])
 
-    @overrides
     def get_values(self):
         """
         This should never be called directly.
         """
         raise NotImplementedError
 
-    @overrides
     def step_batch(self, batch_num_total: int = None) -> None:
         if self.current_scheduler is not None:
             self.current_scheduler.step_batch(batch_num_total)
 
-    @overrides
     def step(self, metric: float = None) -> None:
         self.last_epoch += 1
         self.metric = metric
