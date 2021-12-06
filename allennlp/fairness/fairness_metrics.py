@@ -20,7 +20,9 @@ Independence, Separation, and Sufficiency simultaneously, except in degenerate c
 """
 
 from typing import Optional, Dict
+import ipdb
 
+from scipy.stats import wasserstein_distance
 
 import torch
 import torch.distributed as dist
@@ -51,7 +53,8 @@ class Independence(Metric):
         Assumes integer labels, with each item to be classified having a single correct class.
     """
 
-    def __init__(self, num_classes: int, num_protected_variable_labels: int) -> None:
+    def __init__(self, num_classes: int, num_protected_variable_labels: int,
+                dist_metric: str="kl_divergence") -> None:
         self._num_classes = num_classes
         self._num_protected_variable_labels = num_protected_variable_labels
         self._predicted_label_counts = torch.zeros(num_classes)
@@ -59,6 +62,14 @@ class Independence(Metric):
         self._predicted_label_counts_by_protected_variable_label = torch.zeros(
             (num_protected_variable_labels, num_classes)
         )
+        if dist_metric == "kl_divergence":
+            self._dist_metric = kl_divergence
+        elif dist_metric == "wasserstein":
+            self._dist_metric = wasserstein_distance
+        else:
+             raise ConfigurationError(
+                "supported distance metrics in initialization are 'kl_divergence' and 'wasserstein'"
+            )
 
     def __call__(
         self,
@@ -173,12 +184,23 @@ class Independence(Metric):
             return kl_divs
 
         C_dist = Categorical(self._predicted_label_counts / self._total_predictions)
+        if self._dist_metric == wasserstein_distance:
+            C_dist = C_dist.probs
         for a in range(self._num_protected_variable_labels):
             C_given_a_dist = Categorical(
                 self._predicted_label_counts_by_protected_variable_label[a]
                 / self._total_predictions
             )
-            kl_divs[a] = kl_divergence(C_given_a_dist, C_dist)
+            if self._dist_metric == kl_divergence:
+                kl_divs[a] = self._dist_metric(C_given_a_dist, C_dist)
+            elif self._dist_metric == wasserstein_distance:
+                C_given_a_dist = C_given_a_dist.probs
+                # scipy expects empirical values as well as probabilities
+                label_values = torch.tensor(range(self._num_classes))
+                kl_divs[a] = self._dist_metric(
+                    label_values, label_values,
+                    C_given_a_dist, C_dist
+                )
         if reset:
             self.reset()
         return kl_divs
@@ -204,12 +226,15 @@ class Separation(Metric):
         Number of classes.
     num_protected_variable_labels : `int`
         Number of protected variable labels.
+    dist_metric : `str`
+        The distance metric to use in comparing distributions.
 
     !!! Note
         Assumes integer labels, with each item to be classified having a single correct class.
     """
 
-    def __init__(self, num_classes: int, num_protected_variable_labels: int) -> None:
+    def __init__(self, num_classes: int, num_protected_variable_labels: int,
+                 dist_metric: str="kl_divergence") -> None:
         self._num_classes = num_classes
         self._num_protected_variable_labels = num_protected_variable_labels
         self._predicted_label_counts_by_gold_label = torch.zeros((num_classes, num_classes))
@@ -217,6 +242,14 @@ class Separation(Metric):
         self._predicted_label_counts_by_gold_label_and_protected_variable_label = torch.zeros(
             (num_classes, num_protected_variable_labels, num_classes)
         )
+        if dist_metric == "kl_divergence":
+            self._dist_metric = kl_divergence
+        elif dist_metric == "wasserstein":
+            self._dist_metric = wasserstein_distance
+        else:
+             raise ConfigurationError(
+                "supported distance metrics in initialization are 'kl_divergence' and 'wasserstein'"
+            )
 
     def __call__(  # type: ignore
         self,
@@ -367,18 +400,29 @@ class Separation(Metric):
         for y in range(self._num_classes):
             probs = self._predicted_label_counts_by_gold_label[y] / self._total_predictions
             C_given_y_dist = Categorical(probs)
+            if self._dist_metric == wasserstein_distance:
+                C_given_y_dist = C_given_y_dist.probs
             kl_divs[y] = {}
             for a in range(self._num_protected_variable_labels):
                 probs = (
                     self._predicted_label_counts_by_gold_label_and_protected_variable_label[y][a]
                     / self._total_predictions
                 )
-                # Implies class label y is not present in Y conditioned on protected variable label a
-                if probs.sum() == 0:
-                    kl_divs[y][a] = torch.tensor(float("nan"))
-                    continue
-                C_given_a_and_y_dist = Categorical(probs)
-                kl_divs[y][a] = kl_divergence(C_given_a_and_y_dist, C_given_y_dist)
+                if self._dist_metric == kl_divergence:
+                    # Implies class label y is not present in Y conditioned on protected variable label a
+                    if probs.sum() == 0:
+                        kl_divs[y][a] = torch.tensor(float("nan"))
+                        continue
+                    C_given_a_and_y_dist = Categorical(probs)
+                    kl_divs[y][a] = self._dist_metric(C_given_a_and_y_dist, C_given_y_dist)
+                elif self._dist_metric == wasserstein_distance:
+                    C_given_a_and_y_dist = Categorical(probs).probs
+                    # scipy expects empirical values as well as probabilities
+                    label_values = torch.tensor(range(self._num_classes))
+                    kl_divs[y][a] = self._dist_metric(
+                        label_values, label_values,
+                        C_given_a_and_y_dist, C_given_y_dist
+                    )
         if reset:
             self.reset()
         return kl_divs
@@ -411,7 +455,8 @@ class Sufficiency(Metric):
         a single correct class.
     """
 
-    def __init__(self, num_classes: int, num_protected_variable_labels: int) -> None:
+    def __init__(self, num_classes: int, num_protected_variable_labels: int,
+                 dist_metric: str="kl_divergence") -> None:
         self._num_classes = num_classes
         self._num_protected_variable_labels = num_protected_variable_labels
         self._gold_label_counts_by_predicted_label = torch.zeros((num_classes, num_classes))
@@ -419,6 +464,14 @@ class Sufficiency(Metric):
         self._gold_label_counts_by_predicted_label_and_protected_variable_label = torch.zeros(
             (num_classes, num_protected_variable_labels, num_classes)
         )
+        if dist_metric == "kl_divergence":
+            self._dist_metric = kl_divergence
+        elif dist_metric == "wasserstein":
+            self._dist_metric = wasserstein_distance
+        else:
+             raise ConfigurationError(
+                "supported distance metrics in initialization are 'kl_divergence' and 'wasserstein'"
+            )
 
     def __call__(  # type: ignore
         self,
@@ -571,25 +624,37 @@ class Sufficiency(Metric):
             # It is possible that `c` is not predicted at all,
             # in which case `probs` is all zeros.
             probs = self._gold_label_counts_by_predicted_label[c] / self._total_predictions
-            if probs.sum() == 0:
-                kl_divs[c] = {
-                    a: torch.tensor(float("nan"))
-                    for a in range(self._num_protected_variable_labels)
-                }
-                continue
+            if self._dist_metric == kl_divergence:
+                if probs.sum() == 0:
+                    kl_divs[c] = {
+                        a: torch.tensor(float("nan"))
+                        for a in range(self._num_protected_variable_labels)
+                    }
+                    continue
             Y_given_c_dist = Categorical(probs)
             kl_divs[c] = {}
+            if self._dist_metric == wasserstein_distance:
+                Y_given_c_dist = Y_given_c_dist.probs
             for a in range(self._num_protected_variable_labels):
                 probs = (
                     self._gold_label_counts_by_predicted_label_and_protected_variable_label[c][a]
                     / self._total_predictions
                 )
-                # Implies class label y is not present in Y conditioned on protected variable label a
-                if probs.sum() == 0:
-                    kl_divs[c][a] = torch.tensor(float("nan"))
-                    continue
-                Y_given_a_and_c_dist = Categorical(probs)
-                kl_divs[c][a] = kl_divergence(Y_given_a_and_c_dist, Y_given_c_dist)
+                if self._dist_metric == kl_divergence:
+                    # Implies class label y is not present in Y conditioned on protected variable label a
+                    if probs.sum() == 0:
+                        kl_divs[c][a] = torch.tensor(float("nan"))
+                        continue
+                    Y_given_a_and_c_dist = Categorical(probs)
+                    kl_divs[c][a] = self._dist_metric(Y_given_a_and_c_dist, Y_given_c_dist)
+                elif self._dist_metric == wasserstein_distance:
+                    Y_given_a_and_c_dist = Categorical(probs).probs
+                    # scipy expects empirical values as well as probabilities
+                    label_values = torch.tensor(range(self._num_classes))
+                    kl_divs[c][a] = self._dist_metric(
+                        label_values, label_values,
+                        Y_given_a_and_c_dist, Y_given_c_dist
+                    )
         if reset:
             self.reset()
         return kl_divs
