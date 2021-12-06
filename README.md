@@ -309,6 +309,12 @@ You can test your installation by running  `allennlp test-install`.
 
 Everyone is welcome to file issues with either feature requests, bug reports, or general questions.  As a small team with our own internal goals, we may ask for contributions if a prompt fix doesn't fit into our roadmap.  To keep things tidy we will often close issues we think are answered, but don't hesitate to follow up if further discussion is needed.
 
+## FAQ
+
+### Why is the library named Tango?
+
+The motivation behind this library is that we can make research easier by composing it into well-defined steps.  What happens when you choreograph a number of steps together?  Well, you get a dance.  And since our [teams leader](https://nasmith.github.io/) is part of a tango band, "AI2 Tango" was an obvious choice!
+
 ## Contributions
 
 The AllenNLP team at AI2 ([@allenai](https://github.com/allenai)) welcomes contributions from the community. 
