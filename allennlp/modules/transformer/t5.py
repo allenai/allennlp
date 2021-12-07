@@ -788,8 +788,8 @@ class T5(TransformerModule, Registrable):
     def __init__(
         self,
         token_embeddings: Optional[nn.Embedding] = None,
-        encoder: Lazy[T5EncoderStack] = Lazy(T5EncoderStack),
-        decoder: Lazy[T5DecoderStack] = Lazy(T5DecoderStack),
+        encoder: Lazy[T5EncoderStack] = Lazy(T5EncoderStack.basic_encoder),
+        decoder: Lazy[T5DecoderStack] = Lazy(T5DecoderStack.basic_decoder),
         decoder_start_token_id: int = 0,
         pad_token_id: int = 0,  # These are both 0 in t5-(small|base|large). Go figure.
         eos_token_id: int = 1,
