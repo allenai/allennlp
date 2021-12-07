@@ -1013,7 +1013,7 @@ class T5(TransformerModule, Registrable):
             logits = self._get_lm_logits(decoder_outputs.last_hidden_state)  # type: ignore[union-attr]
 
             # Shape: (1,)
-            loss = self.loss_fct(logits.view(-1, logits.size(-1)), labels.view(-1))
+            loss = self.loss_fct(logits.view(-1, logits.size(-1)), labels.to(torch.long).view(-1))
         elif self.training:
             raise ValueError("'labels' required during training")
 
