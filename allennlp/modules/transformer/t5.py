@@ -838,6 +838,18 @@ class T5(TransformerModule, Registrable):
     def resize_token_embeddings(
         self, new_size: int, *, init_fn: Callable = torch.nn.init.normal_
     ) -> None:
+        """
+        Resizes the token embeddings in the model.
+
+        This takes care of the token embeddings for the encoder, the decoder, and the LM head.
+
+        new_size : `int`
+            The new size of the token embeddings
+        init_fn : `Callable`
+            The function to use to initialize new embeddings. This function will be called with a
+            single argument, the tensor to initialize, and it is expected to initialize the tensor
+            in place. Many of the functions from `torch.nn.init` fit.
+        """
         self.encoder.resize_token_embeddings(new_size, init_fn=init_fn)
         # If encoder and decoder share embeddings, this is a no-op the second time.
         self.decoder.resize_token_embeddings(new_size, init_fn=init_fn)
