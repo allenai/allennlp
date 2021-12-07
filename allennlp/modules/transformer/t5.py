@@ -4,8 +4,7 @@ An implementation of [T5](https://api.semanticscholar.org/CorpusID:204838007), a
 """  # noqa: E401
 
 import logging
-from typing import Optional, Tuple, List, Union, Dict, TYPE_CHECKING, NamedTuple
-
+from typing import Optional, Tuple, List, Union, Dict, TYPE_CHECKING, NamedTuple, Callable
 
 import torch
 from torch import nn
