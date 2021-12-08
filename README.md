@@ -174,17 +174,18 @@ to distribute as a plugin, see the [subcommand API docs](https://docs.allennlp.o
 ## Installation
 
 AllenNLP requires Python 3.6.1 or later and [PyTorch](https://pytorch.org/).
-It's recommended that you install the PyTorch ecosystem **before** installing AllenNLP by following the instructions on [pytorch.org](https://pytorch.org/).
-
-The preferred way to install AllenNLP is via `pip`. Just run `pip install allennlp`.
-
-> ⚠️ If you're using Python 3.7 or greater, you should ensure that you don't have the PyPI version of `dataclasses` installed after running the above command, as this could cause issues on certain platforms. You can quickly check this by running `pip freeze | grep dataclasses`. If you see something like `dataclasses=0.6` in the output, then just run `pip uninstall -y dataclasses`.
-
-If you need pointers on setting up an appropriate Python environment or would like to install AllenNLP using a different method, see below.
 
 We support AllenNLP on Mac and Linux environments. We presently do not support Windows but are open to contributions.
 
 ### Installing via pip
+
+It's recommended that you install the PyTorch ecosystem **before** installing AllenNLP by following the instructions on [pytorch.org](https://pytorch.org/).
+
+After that, just run `pip install allennlp`.
+
+> ⚠️ If you're using Python 3.7 or greater, you should ensure that you don't have the PyPI version of `dataclasses` installed after running the above command, as this could cause issues on certain platforms. You can quickly check this by running `pip freeze | grep dataclasses`. If you see something like `dataclasses=0.6` in the output, then just run `pip uninstall -y dataclasses`.
+
+If you need pointers on setting up an appropriate Python environment or would like to install AllenNLP using a different method, see below.
 
 #### Setting up a virtual environment
 
