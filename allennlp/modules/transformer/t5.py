@@ -4,8 +4,7 @@ An implementation of [T5](https://api.semanticscholar.org/CorpusID:204838007), a
 """  # noqa: E401
 
 import logging
-from typing import Optional, Tuple, List, Union, Dict, TYPE_CHECKING, NamedTuple
-
+from typing import Optional, Tuple, List, Union, Dict, TYPE_CHECKING, NamedTuple, Callable
 
 import torch
 from torch import nn
@@ -428,6 +427,36 @@ class T5Stack(TransformerModule, FromParams):
             head_mask = [None] * num_hidden_layers
         return head_mask
 
+    def resize_token_embeddings(
+        self, new_size: int, *, init_fn: Callable = torch.nn.init.normal_
+    ) -> None:
+        old_size, embedding_dim = tuple(self.token_embeddings.weight.shape)
+        if old_size == new_size:
+            return
+        if old_size > new_size:
+            logger.warning(
+                "Shrinking vocabulary from size %d to size %d. This is probably not what you want?",
+                old_size,
+                new_size,
+            )
+
+        result = torch.nn.Embedding(
+            new_size,
+            embedding_dim,
+            self.token_embeddings.padding_idx,
+            self.token_embeddings.max_norm,
+            self.token_embeddings.norm_type,
+            self.token_embeddings.scale_grad_by_freq,
+            self.token_embeddings.sparse,
+            device=self.token_embeddings.weight.device,
+            dtype=self.token_embeddings.weight.dtype,
+        )
+        copy_size = min(old_size, new_size)
+        result.weight.data[:copy_size, ...] = self.token_embeddings.weight.data[:copy_size, ...]
+        if new_size > old_size:
+            init_fn(result.weight.data[copy_size:, ...])
+        self.token_embeddings = result
+
     def forward(
         self,
         input_ids: Optional[torch.IntTensor] = None,
@@ -759,8 +788,8 @@ class T5(TransformerModule, Registrable):
     def __init__(
         self,
         token_embeddings: Optional[nn.Embedding] = None,
-        encoder: Lazy[T5EncoderStack] = Lazy(T5EncoderStack),
-        decoder: Lazy[T5DecoderStack] = Lazy(T5DecoderStack),
+        encoder: Lazy[T5EncoderStack] = Lazy(T5EncoderStack.basic_encoder),
+        decoder: Lazy[T5DecoderStack] = Lazy(T5DecoderStack.basic_decoder),
         decoder_start_token_id: int = 0,
         pad_token_id: int = 0,  # These are both 0 in t5-(small|base|large). Go figure.
         eos_token_id: int = 1,
@@ -805,6 +834,47 @@ class T5(TransformerModule, Registrable):
         self.output_all_hidden_states = output_all_hidden_states
 
         self.beam_search = beam_search.construct(end_index=self.eos_token_id)
+
+    def resize_token_embeddings(
+        self, new_size: int, *, init_fn: Callable = torch.nn.init.normal_
+    ) -> None:
+        """
+        Resizes the token embeddings in the model.
+
+        This takes care of the token embeddings for the encoder, the decoder, and the LM head.
+
+        new_size : `int`
+            The new size of the token embeddings
+        init_fn : `Callable`
+            The function to use to initialize new embeddings. This function will be called with a
+            single argument, the tensor to initialize, and it is expected to initialize the tensor
+            in place. Many of the functions from `torch.nn.init` fit.
+        """
+        self.encoder.resize_token_embeddings(new_size, init_fn=init_fn)
+        # If encoder and decoder share embeddings, this is a no-op the second time.
+        self.decoder.resize_token_embeddings(new_size, init_fn=init_fn)
+
+        # resize lm head
+        old_size = self.lm_head.out_features
+        if old_size == new_size:
+            return
+        new_lm_head = torch.nn.Linear(
+            self.lm_head.in_features,
+            new_size,
+            self.lm_head.bias,
+            self.lm_head.weight.device,
+            self.lm_head.weight.dtype,
+        )
+        copy_size = min(old_size, new_size)
+        new_lm_head.weight.data[:copy_size, ...] = self.lm_head.weight.data[:copy_size, ...]
+        if self.lm_head.bias and new_lm_head.bias:
+            new_lm_head.bias.data[:copy_size, ...] = self.lm_head.bias[:copy_size, ...]
+        if new_size > old_size:
+            init_fn(new_lm_head.weight.data[copy_size:, ...])
+            if new_lm_head.bias:
+                init_fn(new_lm_head.bias[copy_size:, ...])
+
+        self.lm_head = new_lm_head
 
     def _post_load_state_dict(
         self, missing_keys: List[str], unexpected_keys: List[str]
@@ -954,7 +1024,7 @@ class T5(TransformerModule, Registrable):
             logits = self._get_lm_logits(decoder_outputs.last_hidden_state)  # type: ignore[union-attr]
 
             # Shape: (1,)
-            loss = self.loss_fct(logits.view(-1, logits.size(-1)), labels.view(-1))
+            loss = self.loss_fct(logits.view(-1, logits.size(-1)), labels.to(torch.long).view(-1))
         elif self.training:
             raise ValueError("'labels' required during training")
 
