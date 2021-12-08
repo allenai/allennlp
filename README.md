@@ -177,6 +177,20 @@ AllenNLP requires Python 3.6.1 or later and [PyTorch](https://pytorch.org/).
 
 We support AllenNLP on Mac and Linux environments. We presently do not support Windows but are open to contributions.
 
+### Installing via conda-forge
+
+The simplest way to install AllenNLP is using conda:
+
+```
+conda install -c conda-forge python=3.8 allennlp
+```
+
+All plugins mentioned above are similarly installable, e.g.
+
+```
+conda install -c conda-forge allennlp-models allennlp-semparse allennlp-server allennlp-optuna
+```
+
 ### Installing via pip
 
 It's recommended that you install the PyTorch ecosystem **before** installing AllenNLP by following the instructions on [pytorch.org](https://pytorch.org/).
