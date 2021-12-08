@@ -1,4 +1,3 @@
-import os
 import shutil
 import time
 
@@ -9,6 +8,7 @@ from unittest.mock import patch
 
 from allennlp.common.push_to_hf import push_to_hf
 from allennlp.common.testing import AllenNlpTestCase
+from allennlp.models import load_archive
 
 ENDPOINT_STAGING = "https://moon-staging.huggingface.co"
 
@@ -83,7 +83,7 @@ class TestPushToHub(AllenNlpTestCase):
             clone_from=f"{ENDPOINT_STAGING}/{USER}/{REPO_NAME}",
             use_auth_token=self.token,
         )
-        assert "model.th" in os.listdir(self.clone_path)
+        load_archive(self.clone_path)
         shutil.rmtree(self.clone_path)
 
     @with_staging_testing
@@ -106,7 +106,7 @@ class TestPushToHub(AllenNlpTestCase):
             clone_from=f"{ENDPOINT_STAGING}/{USER}/{REPO_NAME}",
             use_auth_token=self.token,
         )
-        assert "model.th" in os.listdir(self.clone_path)
+        load_archive(self.clone_path)
         shutil.rmtree(self.clone_path)
 
     @with_staging_testing
@@ -130,7 +130,7 @@ class TestPushToHub(AllenNlpTestCase):
             clone_from=f"{ENDPOINT_STAGING}/{ORG_NAME}/{REPO_NAME}",
             use_auth_token=self.token,
         )
-        assert "model.th" in os.listdir(self.clone_path)
+        load_archive(self.clone_path)
         shutil.rmtree(self.clone_path)
 
     @with_staging_testing
