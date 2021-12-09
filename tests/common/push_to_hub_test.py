@@ -65,7 +65,7 @@ class TestPushToHub(AllenNlpTestCase):
 
     @with_staging_testing
     def test_push_to_hub_archive_path(self):
-        archive_path = self.FIXTURES_ROOT / "simple_tagger" / "serialization" / "model.tar.gz"
+        archive_path = self.FIXTURES_ROOT / "simple_tagger" / "serialization_full" / "model.tar.gz"
         url = push_to_hf(
             repo_name=REPO_NAME,
             archive_path=archive_path,
@@ -88,7 +88,7 @@ class TestPushToHub(AllenNlpTestCase):
 
     @with_staging_testing
     def test_push_to_hub_serialization_dir(self):
-        serialization_dir = self.FIXTURES_ROOT / "simple_tagger" / "serialization"
+        serialization_dir = self.FIXTURES_ROOT / "simple_tagger" / "serialization_full"
         url = push_to_hf(
             repo_name=REPO_NAME,
             serialization_dir=serialization_dir,
@@ -111,7 +111,7 @@ class TestPushToHub(AllenNlpTestCase):
 
     @with_staging_testing
     def test_push_to_hub_to_org(self):
-        serialization_dir = self.FIXTURES_ROOT / "simple_tagger" / "serialization"
+        serialization_dir = self.FIXTURES_ROOT / "simple_tagger" / "serialization_full"
         url = push_to_hf(
             repo_name=REPO_NAME,
             serialization_dir=serialization_dir,
@@ -135,7 +135,7 @@ class TestPushToHub(AllenNlpTestCase):
 
     @with_staging_testing
     def test_push_to_hub_fails_with_invalid_token(self):
-        serialization_dir = self.FIXTURES_ROOT / "simple_tagger" / "serialization"
+        serialization_dir = self.FIXTURES_ROOT / "simple_tagger" / "serialization_full"
         with pytest.raises(ValueError):
             push_to_hf(
                 repo_name=REPO_NAME,
