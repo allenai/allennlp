@@ -888,7 +888,7 @@ class TestVocabularyFromFilesWithArchive(AllenNlpTestCase):
     def test_from_files_with_model_archive(self):
         vocab = Vocabulary.from_files(str(self.model_archive))
         vocab.get_namespaces() == {"tokens", "labels"}
-        assert vocab.get_token_from_index(3, namespace="tokens") == "u.n."
+        assert vocab.get_token_from_index(3, namespace="tokens") == "animals"
 
 
 class TestVocabularyFromPretrainedTransformer(AllenNlpTestCase):
