@@ -7,10 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+
+- Added a way to resize the vocabulary in the T5 module
+
 ### Fixed
 
 - Fixed the docstring information for the `FBetaMultiLabelMeasure` metric.
 - Various fixes for Python 3.9
+- Fixed the name that the `push-to-hf` command uses to store weights.
 
 ### Removed
 
