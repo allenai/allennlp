@@ -16,6 +16,7 @@ from torch.cuda.amp.grad_scaler import OptState
 
 from allennlp.common.checks import ConfigurationError, check_for_gpu
 from allennlp.common import util as common_util, Tqdm, Lazy
+from allennlp.common.file_utils import hardlink_or_copy
 from allennlp.data.data_loaders.data_loader import DataLoader, TensorDict
 from allennlp.models.model import Model
 from allennlp.nn.parallel import DdpAccelerator, DdpWrappedModel, TorchDdpAccelerator
@@ -913,7 +914,7 @@ class GradientDescentTrainer(Trainer):
                             model_state_file, _ = last_checkpoint
                             if os.path.exists(self._best_model_filename):
                                 os.remove(self._best_model_filename)
-                            os.link(model_state_file, self._best_model_filename)
+                            hardlink_or_copy(model_state_file, self._best_model_filename)
                         else:
                             self._save_model_state(self._best_model_filename)
                     else:
