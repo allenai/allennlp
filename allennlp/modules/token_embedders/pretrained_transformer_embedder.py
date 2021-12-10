@@ -132,10 +132,10 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
             num_layers = len(self.transformer_model.encoder.layer)
             if isinstance(reinit_layers, int):
                 self._reinit_layers = list(range(num_layers - reinit_layers, num_layers))
-            if any(layer_idx > num_layers for layer_idx in self._reinit_layers):
+            if any(layer_idx < 0 or layer_idx > num_layers for layer_idx in self._reinit_layers):
                 raise ValueError(
-                    f"A layer index in reinit_layers ({self._reinit_layers}) is larger than the"
-                    f" maximum layer index {num_layers - 1}."
+                    f"A layer index in reinit_layers ({self._reinit_layers}) is invalid. Must be"
+                    f" between 0 and the maximum layer index ({num_layers - 1}.)"
                 )
             for layer_idx in self._reinit_layers:
                 self.transformer_model.encoder.layer[layer_idx].apply(
