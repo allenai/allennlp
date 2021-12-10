@@ -41,22 +41,22 @@ class Evaluator(Registrable):
     default_implementation = "simple"
 
     def __init__(
-            self,
-            batch_serializer: Optional[Serializer] = None,
-            cuda_device: Union[int, torch.device] = -1,
-            postprocessor_fn_name: str = "make_output_human_readable"
+        self,
+        batch_serializer: Optional[Serializer] = None,
+        cuda_device: Union[int, torch.device] = -1,
+        postprocessor_fn_name: str = "make_output_human_readable",
     ):
         self.batch_serializer = batch_serializer or SimpleSerializer()
         self.cuda_device = cuda_device
         self.postprocessor_fn_name = postprocessor_fn_name
 
     def __call__(
-            self,
-            model: Model,
-            data_loader: DataLoader,
-            batch_weight_key: str = None,
-            metrics_output_file: Union[str, PathLike] = None,
-            predictions_output_file: Union[str, PathLike] = None,
+        self,
+        model: Model,
+        data_loader: DataLoader,
+        batch_weight_key: str = None,
+        metrics_output_file: Union[str, PathLike] = None,
+        predictions_output_file: Union[str, PathLike] = None,
     ) -> Dict[str, Any]:
         """
         Evaluate a single data source.
@@ -108,20 +108,20 @@ class SimpleEvaluator(Evaluator):
     """
 
     def __init__(
-            self,
-            batch_serializer: Optional[Serializer] = None,
-            cuda_device: Union[int, torch.device] = -1,
-            postprocessor_fn_name: str = "make_output_human_readable"
+        self,
+        batch_serializer: Optional[Serializer] = None,
+        cuda_device: Union[int, torch.device] = -1,
+        postprocessor_fn_name: str = "make_output_human_readable",
     ):
         super(SimpleEvaluator, self).__init__(batch_serializer, cuda_device, postprocessor_fn_name)
 
     def __call__(
-            self,
-            model: Model,
-            data_loader: DataLoader,
-            batch_weight_key: str = None,
-            metrics_output_file: Union[str, PathLike] = None,
-            predictions_output_file: Union[str, PathLike] = None,
+        self,
+        model: Model,
+        data_loader: DataLoader,
+        batch_weight_key: str = None,
+        metrics_output_file: Union[str, PathLike] = None,
+        predictions_output_file: Union[str, PathLike] = None,
     ):
         """
         Evaluate a single data source.
@@ -192,14 +192,14 @@ class SimpleEvaluator(Evaluator):
                     metrics["loss"] = total_loss / total_weight
 
                 description = (
-                        ", ".join(
-                            [
-                                "%s: %.2f" % (name, value)
-                                for name, value in metrics.items()
-                                if not name.startswith("_")
-                            ]
-                        )
-                        + " ||"
+                    ", ".join(
+                        [
+                            "%s: %.2f" % (name, value)
+                            for name, value in metrics.items()
+                            if not name.startswith("_")
+                        ]
+                    )
+                    + " ||"
                 )
                 generator_tqdm.set_description(description, refresh=False)
 
@@ -235,7 +235,7 @@ class SimpleEvaluator(Evaluator):
 
     def _to_params(self) -> Dict[str, Any]:
         return {
-            "type"               : "simple",
-            "cuda_device"        : self.cuda_device,
+            "type": "simple",
+            "cuda_device": self.cuda_device,
             "batch_postprocessor": self.batch_serializer.to_params(),
         }
