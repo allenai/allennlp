@@ -341,6 +341,41 @@ class TestPretrainedTransformerEmbedder(AllenNlpTestCase):
             == 28997
         )
 
+    def test_reinit_layers(self):
+        regular_token_embedder = PretrainedTransformerEmbedder("bert-base-cased")
+        assert regular_token_embedder._reinit_layers is None
+        # Test the case when reinit_layers is a valid int. Comparing all weights of the model is
+        # rather complicated, so arbitrarily compare the weights of attention module.
+        preinit_weights = torch.cat(
+            [
+                layer.attention.output.dense.weight
+                for layer in regular_token_embedder.transformer_model.encoder.layer
+            ]
+        )
+        reinit_token_embedder = PretrainedTransformerEmbedder("bert-base-cased", reinit_layers=2)
+        postinit_weights = torch.cat(
+            [
+                layer.attention.output.dense.weight
+                for layer in reinit_token_embedder.transformer_model.encoder.layer
+            ]
+        )
+        assert reinit_token_embedder._reinit_layers == [10, 11]
+        assert torch.equal(postinit_weights[:10], preinit_weights[:10])
+        assert not torch.equal(postinit_weights[10:], preinit_weights[10:])
+        # Test the case when reinit_layers is a valid list of integers.
+        reinit_token_embedder = PretrainedTransformerEmbedder(
+            "bert-base-cased", reinit_layers=[10, 11]
+        )
+        assert reinit_token_embedder._reinit_layers == [10, 11]
+        assert torch.equal(postinit_weights[:10], preinit_weights[:10])
+        assert not torch.equal(postinit_weights[10:], preinit_weights[10:])
+        # Should raise a ValueError because reinit_layers contains at least one index that is
+        # greater than the models maximum number of layers
+        with pytest.raises(ValueError):
+            _ = PretrainedTransformerEmbedder("bert-base-cased", reinit_layers=1000)
+        with pytest.raises(ValueError):
+            _ = PretrainedTransformerEmbedder("bert-base-cased", reinit_layers=[1, 1000])
+
     def test_eval_mode(self):
         token_embedder = PretrainedTransformerEmbedder("epwalsh/bert-xsmall-dummy", eval_mode=True)
         assert token_embedder.training and not token_embedder.transformer_model.training
