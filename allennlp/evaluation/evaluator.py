@@ -14,7 +14,7 @@ from allennlp.nn import util as nn_util
 from allennlp.common import Registrable
 from allennlp.models import Model
 from allennlp.data import DataLoader
-from allennlp.evaluation.postprocessors.postprocessor import Postprocessor, SimplePostprocessor
+from allennlp.evaluation.serializers.serializers import Serializer, SimpleSerializer
 
 logger = logging.getLogger(__name__)
 
@@ -33,25 +33,30 @@ class Evaluator(Registrable):
         The cuda device to use for this evaluation.  The model is assumed to
          already be using this device; this parameter is only used for moving
          the input data to the correct device.
+
+    postprocessor_fn_name: `str`, optional (default=`"make_output_human_readable"`)
+        Function name of the model's postprocessing function.
     """
 
     default_implementation = "simple"
 
     def __init__(
-        self,
-        batch_postprocessor: Optional[Postprocessor] = None,
-        cuda_device: Union[int, torch.device] = -1,
+            self,
+            batch_serializer: Optional[Serializer] = None,
+            cuda_device: Union[int, torch.device] = -1,
+            postprocessor_fn_name: str = "make_output_human_readable"
     ):
-        self.batch_postprocessor = batch_postprocessor or SimplePostprocessor()
+        self.batch_serializer = batch_serializer or SimpleSerializer()
         self.cuda_device = cuda_device
+        self.postprocessor_fn_name = postprocessor_fn_name
 
     def __call__(
-        self,
-        model: Model,
-        data_loader: DataLoader,
-        batch_weight_key: str = None,
-        output_file: Union[str, PathLike] = None,
-        predictions_output_file: Union[str, PathLike] = None,
+            self,
+            model: Model,
+            data_loader: DataLoader,
+            batch_weight_key: str = None,
+            metrics_output_file: Union[str, PathLike] = None,
+            predictions_output_file: Union[str, PathLike] = None,
     ) -> Dict[str, Any]:
         """
         Evaluate a single data source.
@@ -72,6 +77,7 @@ class Evaluator(Registrable):
         predictions_output_file : `Union[str, PathLike]`, optional (default=`None`)
             Optional path to write the predictions to. If passed the
             postprocessor will be called and its output will be written as lines.
+
 
         # Returns
 
@@ -96,22 +102,26 @@ class SimpleEvaluator(Evaluator):
         The cuda device to use for this evaluation.  The model is assumed to
          already be using this device; this parameter is only used for moving
          the input data to the correct device.
+
+    postprocessor_fn_name: `str`, optional (default=`"make_output_human_readable"`)
+        Function name of the model's postprocessing function.
     """
 
     def __init__(
-        self,
-        batch_postprocessor: Optional[Postprocessor] = None,
-        cuda_device: Union[int, torch.device] = -1,
+            self,
+            batch_serializer: Optional[Serializer] = None,
+            cuda_device: Union[int, torch.device] = -1,
+            postprocessor_fn_name: str = "make_output_human_readable"
     ):
-        super(SimpleEvaluator, self).__init__(batch_postprocessor, cuda_device)
+        super(SimpleEvaluator, self).__init__(batch_serializer, cuda_device, postprocessor_fn_name)
 
     def __call__(
-        self,
-        model: Model,
-        data_loader: DataLoader,
-        batch_weight_key: str = None,
-        output_file: Union[str, PathLike] = None,
-        predictions_output_file: Union[str, PathLike] = None,
+            self,
+            model: Model,
+            data_loader: DataLoader,
+            batch_weight_key: str = None,
+            metrics_output_file: Union[str, PathLike] = None,
+            predictions_output_file: Union[str, PathLike] = None,
     ):
         """
         Evaluate a single data source.
@@ -138,13 +148,13 @@ class SimpleEvaluator(Evaluator):
         """
         check_for_gpu(self.cuda_device)
         data_loader.set_target_device(int_to_device(self.cuda_device))
-        output_file = Path(output_file) if output_file is not None else None
+        metrics_output_file = Path(metrics_output_file) if metrics_output_file is not None else None
         if predictions_output_file is not None:
             predictions_file = Path(predictions_output_file).open("w", encoding="utf-8")
         else:
             predictions_file = None  # type: ignore
 
-        model_postprocess_function = getattr(model, "make_output_human_readable", None)
+        model_postprocess_function = getattr(model, self.postprocessor_fn_name, None)
 
         with torch.no_grad():
             model.eval()
@@ -182,14 +192,14 @@ class SimpleEvaluator(Evaluator):
                     metrics["loss"] = total_loss / total_weight
 
                 description = (
-                    ", ".join(
-                        [
-                            "%s: %.2f" % (name, value)
-                            for name, value in metrics.items()
-                            if not name.startswith("_")
-                        ]
-                    )
-                    + " ||"
+                        ", ".join(
+                            [
+                                "%s: %.2f" % (name, value)
+                                for name, value in metrics.items()
+                                if not name.startswith("_")
+                            ]
+                        )
+                        + " ||"
                 )
                 generator_tqdm.set_description(description, refresh=False)
 
@@ -197,7 +207,7 @@ class SimpleEvaluator(Evaluator):
                 #  metrics
                 if predictions_file is not None:
                     predictions_file.write(
-                        self.batch_postprocessor(
+                        self.batch_serializer(
                             batch,
                             output_dict,
                             data_loader,
@@ -218,14 +228,14 @@ class SimpleEvaluator(Evaluator):
                     )
                 final_metrics["loss"] = total_loss / total_weight
 
-            if output_file is not None:
-                dump_metrics(str(output_file), final_metrics, log=True)
+            if metrics_output_file is not None:
+                dump_metrics(str(metrics_output_file), final_metrics, log=True)
 
             return final_metrics
 
     def _to_params(self) -> Dict[str, Any]:
         return {
-            "type": "simple",
-            "cuda_device": self.cuda_device,
-            "batch_postprocessor": self.batch_postprocessor.to_params(),
+            "type"               : "simple",
+            "cuda_device"        : self.cuda_device,
+            "batch_postprocessor": self.batch_serializer.to_params(),
         }

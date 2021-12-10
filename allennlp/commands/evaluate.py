@@ -99,8 +99,8 @@ class Evaluate(Subcommand):
             action="store_true",
             default=False,
             help="if specified, we will use the instances in your new dataset to "
-            "extend your vocabulary. If pretrained-file was used to initialize "
-            "embedding layers, you may also need to pass --embedding-sources-mapping.",
+                 "extend your vocabulary. If pretrained-file was used to initialize "
+                 "embedding layers, you may also need to pass --embedding-sources-mapping.",
         )
 
         subparser.add_argument(
@@ -108,9 +108,9 @@ class Evaluate(Subcommand):
             type=str,
             default="",
             help="a JSON dict defining mapping from embedding module path to embedding "
-            "pretrained-file used during training. If not passed, and embedding needs to be "
-            "extended, we will try to use the original file paths used during training. If "
-            "they are not available we will use random vectors for embedding extension.",
+                 "pretrained-file used during training. If not passed, and embedding needs to be "
+                 "extended, we will try to use the original file paths used during training. If "
+                 "they are not available we will use random vectors for embedding extension.",
         )
         subparser.add_argument(
             "--file-friendly-logging",
@@ -122,7 +122,14 @@ class Evaluate(Subcommand):
         subparser.add_argument(
             "--auto-names",
             default="NONE",
-            help="Automatically create output names for each evaluation file.",
+            help="Automatically create output names for each evaluation file. "
+                 "`NONE` will not automatically generate a file name for the "
+                 "neither the metrics nor the predictions. In this case you will"
+                 " need to pas in both `metrics_output_file` and `predictions_output_file`. "
+                 "`METRICS` will only automatically create a file name for the"
+                 " metrics file. `PREDS` will only automatically create a file"
+                 " name for the predictions outputs. `ALL` will create a "
+                 "filename for both the metrics and the predictions.",
             choices=["NONE", "METRICS", "PREDS", "ALL"],
         )
 
@@ -135,7 +142,7 @@ def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
     return evaluate_from_archive(
         archive_file=args.archive_file,
         input_file=args.input_file,
-        output_file=args.output_file,
+        metrics_output_file=args.output_file,
         predictions_output_file=args.predictions_output_file,
         batch_size=args.batch_size,
         cmd_overrides=args.overrides,
@@ -150,19 +157,19 @@ def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
 
 
 def evaluate_from_archive(
-    archive_file: Union[str, PathLike],
-    input_file: str,
-    output_file: Optional[str] = None,
-    predictions_output_file: Optional[str] = None,
-    batch_size: Optional[int] = None,
-    cmd_overrides: Union[str, Dict[str, Any]] = "",
-    cuda_device: int = -1,
-    embedding_sources_mapping: str = None,
-    extend_vocab: bool = False,
-    weights_file: str = None,
-    file_friendly_logging: bool = False,
-    batch_weight_key: str = None,
-    auto_names: str = "NONE",
+        archive_file: Union[str, PathLike],
+        input_file: str,
+        metrics_output_file: Optional[str] = None,
+        predictions_output_file: Optional[str] = None,
+        batch_size: Optional[int] = None,
+        cmd_overrides: Union[str, Dict[str, Any]] = "",
+        cuda_device: int = -1,
+        embedding_sources_mapping: str = None,
+        extend_vocab: bool = False,
+        weights_file: str = None,
+        file_friendly_logging: bool = False,
+        batch_weight_key: str = None,
+        auto_names: str = "NONE",
 ) -> Dict[str, Any]:
     """
 
@@ -175,7 +182,7 @@ def evaluate_from_archive(
         path to the file containing the evaluation data (for multiple files,
          put ":" between filenames e.g., input1.txt:input2.txt)
 
-    output_file: `str`, optional (default=`None`)
+    metrics_output_file: `str`, optional (default=`None`)
         optional path to write the metrics to as JSON (for multiple files, put
          ":" between filenames e.g., output1.txt:output2.txt)
 
@@ -217,7 +224,13 @@ def evaluate_from_archive(
         If non-empty, name of metric used to weight the loss on a per-batch basis.
 
     auto_names:`str`, optional (default=`"NONE"`)
-        Automatically create output names for each evaluation file.
+        Automatically create output names for each evaluation file.`NONE` will
+        not automatically generate a file name for the neither the metrics nor
+        the predictions. In this case you will need to pas in both
+        `metrics_output_file` and `predictions_output_file`. `METRICS` will only
+        automatically create a file name for the metrics file. `PREDS` will only
+        automatically create a file name for the predictions outputs. `ALL`
+        will create a filename for both the metrics and the predictions.
 
     # Returns
 
@@ -257,7 +270,7 @@ def evaluate_from_archive(
 
     # TODO(gabeorlanski): Is it safe to always default to .outputs and .preds?
     # TODO(gabeorlanski): Add in way to save to specific output directory
-    if output_file is not None:
+    if metrics_output_file is not None:
         if auto_names == "METRICS" or auto_names == "ALL":
             logger.warning(
                 f"Passed output_files will be ignored, auto_names is" f" set to {auto_names}"
@@ -268,10 +281,11 @@ def evaluate_from_archive(
                 p.parent.joinpath(f"{p.stem}.outputs") for p in map(Path, evaluation_data_path_list)
             ]
         else:
-            output_file_list = output_file.split(":")  # type: ignore
+            output_file_list = metrics_output_file.split(":")  # type: ignore
             assert len(output_file_list) == len(
                 evaluation_data_path_list
-            ), "The number of `output_file` paths must be equal to the number of datasets being evaluated."
+            ), "The number of `metrics_output_file` paths must be equal to the number " \
+               "of datasets being evaluated."
     if predictions_output_file is not None:
         if auto_names == "PREDS" or auto_names == "ALL":
             logger.warning(
@@ -285,8 +299,8 @@ def evaluate_from_archive(
         else:
             predictions_output_file_list = predictions_output_file.split(":")  # type: ignore
             assert len(predictions_output_file_list) == len(evaluation_data_path_list), (
-                "The number of `predictions_output_file` paths must be equal"
-                + "to the number of datasets being evaluated. "
+                    "The number of `predictions_output_file` paths must be equal"
+                    + "to the number of datasets being evaluated. "
             )
 
     # output file
@@ -309,7 +323,7 @@ def evaluate_from_archive(
         # output dictionary.
         eval_file_name = Path(evaluation_data_path).stem
 
-        if output_file is not None:
+        if metrics_output_file is not None:
             # noinspection PyUnboundLocalVariable
             output_file_path = output_file_list[index]
 
@@ -339,7 +353,7 @@ def evaluate_from_archive(
             model,
             data_loader,
             batch_weight_key,
-            output_file=output_file_path,
+            metrics_output_file=output_file_path,
             predictions_output_file=predictions_output_file_path,
         )
 

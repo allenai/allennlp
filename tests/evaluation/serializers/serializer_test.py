@@ -7,8 +7,8 @@ from allennlp.common.testing import AllenNlpTestCase
 from allennlp.common import Params
 from allennlp.common.util import sanitize
 from allennlp.data.data_loaders import TensorDict
-from allennlp.evaluation import Postprocessor
-from allennlp.evaluation.postprocessors import SimplePostprocessor
+from allennlp.evaluation import Serializer
+from allennlp.evaluation.serializers import SimpleSerializer
 
 
 class DummyDataLoader:
@@ -26,14 +26,14 @@ class DummyDataLoader:
         pass
 
 
-class TestPostprocessor(AllenNlpTestCase):
+class TestSerializer(AllenNlpTestCase):
     def setup_method(self):
-        super(TestPostprocessor, self).setup_method()
-        self.postprocessor = Postprocessor.from_params(Params({}))
+        super(TestSerializer, self).setup_method()
+        self.postprocessor = Serializer.from_params(Params({}))
 
     def test_postprocessor_default_implementation(self):
         assert self.postprocessor.to_params().params == {"type": "simple"}
-        assert isinstance(self.postprocessor, SimplePostprocessor)
+        assert isinstance(self.postprocessor, SimpleSerializer)
 
     @pytest.mark.parametrize(
         "batch",

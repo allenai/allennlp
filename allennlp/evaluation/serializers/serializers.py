@@ -10,9 +10,9 @@ from allennlp.data import DataLoader
 logger = logging.getLogger(__name__)
 
 
-class Postprocessor(Registrable):
+class Serializer(Registrable):
     """
-    General Postprocessor class for turning batches into human readable data
+    General serializer class for turning batches into human readable data
     """
 
     def __call__(
@@ -51,11 +51,11 @@ class Postprocessor(Registrable):
     default_implementation = "simple"
 
 
-@Postprocessor.register("simple")
-class SimplePostprocessor(Postprocessor):
+@Serializer.register("simple")
+class SimpleSerializer(Serializer):
     """
-    Very simple postprocesser. Only sanitizes the batches and outputs. Will use
-     a passed postprocess function for the outputs if it exists.
+    Very simple serializer. Only sanitizes the batches and outputs. Will use
+     a passed serializer function for the outputs if it exists.
     """
 
     def _to_params(self) -> Dict[str, Any]:
@@ -69,7 +69,7 @@ class SimplePostprocessor(Postprocessor):
         output_postprocess_function: Optional[Callable] = None,
     ):
         """
-        Postprocess a batch.
+        Serializer a batch.
 
         # Parameters
 
@@ -89,18 +89,18 @@ class SimplePostprocessor(Postprocessor):
 
         # Returns
 
-        postprocessed: `str`
-            The postprocessed batches as strings
+        serialized: `str`
+            The serialized batches as strings
         """
         if batch is None:
-            raise ValueError("Postprocessor got a batch that is None")
+            raise ValueError("Serializer got a batch that is None")
         if output_dict is None:
-            raise ValueError("Postprocessor got an output_dict that is None")
+            raise ValueError("Serializer got an output_dict that is None")
 
-        postprocessed = sanitize(batch)
+        serialized = sanitize(batch)
         if output_postprocess_function is not None:
-            postprocessed.update(sanitize(output_postprocess_function(output_dict)))
+            serialized.update(sanitize(output_postprocess_function(output_dict)))
         else:
-            postprocessed.update(sanitize(output_dict))
+            serialized.update(sanitize(output_dict))
 
-        return json.dumps(postprocessed)
+        return json.dumps(serialized)
