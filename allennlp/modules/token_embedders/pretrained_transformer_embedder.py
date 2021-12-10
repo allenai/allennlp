@@ -1,6 +1,6 @@
 import logging
 import math
-from typing import Optional, Tuple, Dict, Any, Union, List
+from typing import Optional, Tuple, Dict, Any, Union, List, cast
 
 
 import torch
@@ -127,7 +127,7 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
             self.config.output_hidden_states = True
 
         # Optionally, re-initialize the parameters of certain layers.
-        self._reinit_layers = reinit_layers
+        self._reinit_layers = cast(List[int], reinit_layers)
         if self._reinit_layers and load_weights:
             num_layers = len(self.transformer_model.encoder.layer)
             if isinstance(reinit_layers, int):
