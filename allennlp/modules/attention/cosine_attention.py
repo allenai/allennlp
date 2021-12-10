@@ -1,5 +1,5 @@
 import torch
-from overrides import overrides
+
 from allennlp.modules.attention.attention import Attention
 from allennlp.nn import util
 
@@ -12,7 +12,6 @@ class CosineAttention(Attention):
     Registered as an `Attention` with name "cosine".
     """
 
-    @overrides
     def _forward_internal(self, vector: torch.Tensor, matrix: torch.Tensor) -> torch.Tensor:
         a_norm = vector / (
             vector.norm(p=2, dim=-1, keepdim=True) + util.tiny_value_of_dtype(vector.dtype)

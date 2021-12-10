@@ -6,7 +6,6 @@ transformation and a non-linear transformation of its input.
 from typing import Callable
 
 import torch
-from overrides import overrides
 
 
 class Highway(torch.nn.Module):
@@ -49,7 +48,6 @@ class Highway(torch.nn.Module):
             # of the bias vector in each Linear layer.
             layer.bias[input_dim:].data.fill_(1)
 
-    @overrides
     def forward(self, inputs: torch.Tensor) -> torch.Tensor:
         current_input = inputs
         for layer in self._layers:

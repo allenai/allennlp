@@ -2,7 +2,6 @@ import logging
 import math
 from typing import Optional, Tuple, Dict, Any, Union, List
 
-from overrides import overrides
 
 import torch
 import torch.nn.functional as F
@@ -173,7 +172,6 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         if eval_mode:
             self.transformer_model.eval()
 
-    @overrides
     def train(self, mode: bool = True):
         self.training = mode
         for name, module in self.named_children():
@@ -183,7 +181,6 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
                 module.train(mode)
         return self
 
-    @overrides
     def get_output_dim(self):
         return self.output_dim
 
@@ -195,7 +192,6 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         else:
             return 0
 
-    @overrides
     def forward(
         self,
         token_ids: torch.LongTensor,

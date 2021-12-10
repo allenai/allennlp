@@ -23,7 +23,7 @@ setup(
     name="allennlp",
     version=VERSION["VERSION"],
     description="An open-source NLP research library, built on PyTorch.",
-    long_description=open("README.md").read(),
+    long_description=open("README.md", encoding="utf-8").read(),
     long_description_content_type="text/markdown",
     classifiers=[
         "Intended Audience :: Science/Research",
@@ -52,10 +52,9 @@ setup(
     install_requires=[
         "torch>=1.6.0,<1.11.0",
         "torchvision>=0.8.1,<0.12.0",
-        "cached-path>=0.3.4,<0.4.0",
+        "cached-path>=1.0.0,<2.0.0",
         "fairscale==0.4.3",
         "jsonnet>=0.10.0 ; sys.platform != 'win32'",
-        "overrides==3.1.0",
         "nltk",
         "spacy>=2.1.0,<3.3",
         "numpy",

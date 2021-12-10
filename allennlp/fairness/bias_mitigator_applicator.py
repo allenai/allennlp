@@ -9,7 +9,6 @@ Based on: Dev, S., Li, T., Phillips, J.M., & Srikumar, V. (2020).
 ArXiv, abs/1908.09369.
 """
 
-from overrides import overrides
 
 from allennlp.fairness.bias_mitigator_wrappers import BiasMitigatorWrapper
 
@@ -53,7 +52,6 @@ class BiasMitigatorApplicator(Model):
         self.vocab = self.base_model.vocab
         self._regularizer = self.base_model._regularizer
 
-    @overrides
     def train(self, mode: bool = True):
         super().train(mode)
         self.base_model.train(mode)
@@ -69,46 +67,36 @@ class BiasMitigatorApplicator(Model):
     # and both BiasMitigatorWrapper and base_model inheriting from Model
     # Assumes Model is relatively stable
     # TODO: adapt BiasMitigatorWrapper to changes in Model
-    @overrides
+
     def forward(self, *args, **kwargs):
         return self.base_model.forward(*args, **kwargs)
 
-    @overrides
     def forward_on_instance(self, *args, **kwargs):
         return self.base_model.forward_on_instance(*args, **kwargs)
 
-    @overrides
     def forward_on_instances(self, *args, **kwargs):
         return self.base_model.forward_on_instances(*args, **kwargs)
 
-    @overrides
     def get_regularization_penalty(self, *args, **kwargs):
         return self.base_model.get_regularization_penalty(*args, **kwargs)
 
-    @overrides
     def get_parameters_for_histogram_logging(self, *args, **kwargs):
         return self.base_model.get_parameters_for_histogram_logging(*args, **kwargs)
 
-    @overrides
     def get_parameters_for_histogram_tensorboard_logging(self, *args, **kwargs):
         return self.base_model.get_parameters_for_histogram_tensorboard_logging(*args, **kwargs)
 
-    @overrides
     def make_output_human_readable(self, *args, **kwargs):
         return self.base_model.make_output_human_readable(*args, **kwargs)
 
-    @overrides
     def get_metrics(self, *args, **kwargs):
         return self.base_model.get_metrics(*args, **kwargs)
 
-    @overrides
     def _get_prediction_device(self, *args, **kwargs):
         return self.base_model._get_prediction_device(*args, **kwargs)
 
-    @overrides
     def _maybe_warn_for_unseparable_batches(self, *args, **kwargs):
         return self.base_model._maybe_warn_for_unseparable_batches(*args, **kwargs)
 
-    @overrides
     def extend_embedder_vocab(self, *args, **kwargs):
         return self.base_model.extend_embedder_vocab(*args, **kwargs)

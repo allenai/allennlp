@@ -1,7 +1,6 @@
 from typing import Dict, Mapping, Iterable, Union, Optional
 import json
 
-from overrides import overrides
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.data.dataset_readers.dataset_reader import (
@@ -59,13 +58,11 @@ class InterleavingDatasetReader(DatasetReader):
             raise ConfigurationError(f"invalid scheme: {scheme}")
         self._scheme = scheme
 
-    @overrides
     def _set_worker_info(self, info: Optional[WorkerInfo]) -> None:
         super()._set_worker_info(info)
         for reader in self._readers.values():
             reader._set_worker_info(info)
 
-    @overrides
     def _set_distributed_info(self, info: Optional[DistributedInfo]) -> None:
         super()._set_distributed_info(info)
         for reader in self._readers.values():
@@ -91,7 +88,6 @@ class InterleavingDatasetReader(DatasetReader):
                 instance.fields[self._dataset_field_name] = MetadataField(key)
                 yield instance
 
-    @overrides
     def _read(self, file_path: Union[str, Dict[str, PathOrStr]]) -> Iterable[Instance]:
         if isinstance(file_path, str):
             try:
@@ -117,11 +113,9 @@ class InterleavingDatasetReader(DatasetReader):
         else:
             raise RuntimeError("impossible to get here")
 
-    @overrides
     def text_to_instance(self, dataset_key: str, *args, **kwargs) -> Instance:  # type: ignore
         return self._readers[dataset_key].text_to_instance(*args, **kwargs)  # type: ignore[call-arg]
 
-    @overrides
     def apply_token_indexers(self, instance: Instance) -> None:
         dataset = instance.fields[self._dataset_field_name].metadata  # type: ignore[attr-defined]
         self._readers[dataset].apply_token_indexers(instance)

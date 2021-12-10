@@ -9,7 +9,6 @@ from collections.abc import MutableMapping
 from os import PathLike
 from typing import Any, Dict, List, Union, Optional, TypeVar, Iterable, Set
 
-from overrides import overrides
 
 # _jsonnet doesn't work on Windows, so we have to use fakes.
 try:
@@ -197,7 +196,6 @@ class Params(MutableMapping):
         self.params = _replace_none(params)
         self.history = history
 
-    @overrides
     def pop(self, key: str, default: Any = DEFAULT, keep_as_dict: bool = False) -> Any:
 
         """
@@ -261,7 +259,6 @@ class Params(MutableMapping):
         else:
             raise ValueError("Cannot convert variable to bool: " + value)
 
-    @overrides
     def get(self, key: str, default: Any = DEFAULT):
         """
         Performs the functionality associated with dict.get(key) but also checks for returned
