@@ -115,10 +115,8 @@ class FBetaMultiLabelMeasure(FBetaMeasure):
         pred_mask = (predictions.sum(dim=-1) != 0).unsqueeze(-1)
         threshold_predictions = (predictions >= self._threshold).float()
 
-        class_indices = (
-            torch.arange(num_classes, device=predictions.device)
-            .unsqueeze(0)
-            .repeat(gold_labels.size(0), 1)
+        class_indices = torch.arange(num_classes, device=predictions.device).repeat(
+            gold_labels.shape[:-1] + (1,)
         )
         true_positives = (gold_labels * threshold_predictions).bool() & mask & pred_mask
         true_positives_bins = class_indices[true_positives]
