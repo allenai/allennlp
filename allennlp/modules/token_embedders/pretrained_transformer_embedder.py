@@ -1,6 +1,6 @@
 import logging
 import math
-from typing import Optional, Tuple, Dict, Any
+from typing import Optional, Tuple, Dict, Any, Union, List
 
 from overrides import overrides
 
@@ -49,6 +49,12 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         When `True` (the default), only the final layer of the pretrained transformer is taken
         for the embeddings. But if set to `False`, a scalar mix of all of the layers
         is used.
+    reinit_layers: `Optional[Union[int, List[int]]]`, optional (default = `None`)
+        If this is an integer, the last `reinit_layers` layers of the transformer will be
+        re-initialized. If this is a list, the layers indexed by `reinit_layers` will be
+        re-initialized. Re-initializing the last few layers of a pretrained transformer can reduce
+        the instability of fine-tuning on small datasets and may improve performance
+        (https://arxiv.org/abs/2006.05987v3). Has no effect if `load_weights` is `False`.
     override_weights_file: `Optional[str]`, optional (default = `None`)
         If set, this specifies a file from which to load alternate weights that override the
         weights from huggingface. The file is expected to contain a PyTorch `state_dict`, created
@@ -83,6 +89,7 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         train_parameters: bool = True,
         eval_mode: bool = False,
         last_layer_only: bool = True,
+        reinit_layers: Optional[Union[int, List[int]]] = None,
         override_weights_file: Optional[str] = None,
         override_weights_strip_prefix: Optional[str] = None,
         load_weights: bool = True,
@@ -119,6 +126,22 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         if not last_layer_only:
             self._scalar_mix = ScalarMix(self.config.num_hidden_layers)
             self.config.output_hidden_states = True
+
+        # Optionally, re-initialize the parameters of certain layers.
+        self._reinit_layers = reinit_layers
+        if self._reinit_layers and load_weights:
+            num_layers = len(self.transformer_model.encoder.layer)
+            if isinstance(reinit_layers, int):
+                self._reinit_layers = list(range(num_layers - reinit_layers, num_layers))
+            if any(layer_idx > num_layers for layer_idx in self._reinit_layers):
+                raise ValueError(
+                    f"A layer index in reinit_layers ({self._reinit_layers}) is larger than the"
+                    f" maximum layer index {num_layers - 1}."
+                )
+            for layer_idx in self._reinit_layers:
+                self.transformer_model.encoder.layer[layer_idx].apply(
+                    self.transformer_model._init_weights
+                )
 
         tokenizer = PretrainedTransformerTokenizer(
             model_name,
