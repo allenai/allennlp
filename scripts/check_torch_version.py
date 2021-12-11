@@ -49,7 +49,7 @@ def _get_torch_version_upper_limit() -> Tuple[str, str, str]:
         for line in f:
             # The torch version line should look like:
             #   "torch>=X.Y.Z,<X.V.0",
-            if '"torch>=' in line:
+            if 'torch>=' in line:
                 version = tuple(line.split('"')[1].split("<")[1].strip().split("."))
                 assert len(version) == 3, f"Bad parsed version '{version}'"
                 break
