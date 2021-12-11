@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed the name that the `push-to-hf` command uses to store weights.
 - `FBetaMultiLabelMeasure` now works with multiple dimensions
 - Support for inferior operating systems when making hardlinks
+- Use `,` as a separator for filenames in the `evaluate` command, thus allowing for URLs (eg. `gs://...`) as input files.
 
 ### Removed
 
