@@ -1,3 +1,4 @@
+from collections import defaultdict
 from setuptools import find_packages, setup
 
 # PEP0440 compatible formatted version, see:
@@ -12,6 +13,52 @@ from setuptools import find_packages, setup
 #   X.YbN   # Beta release
 #   X.YrcN  # Release Candidate
 #   X.Y     # Final release
+
+def parse_requirements_file(path, allowed_extras: set = None, include_all_extra: bool = True):
+    requirements = []
+    extras = defaultdict(list)
+    with open(path) as requirements_file:
+        import re
+
+        def fix_url_dependencies(req: str) -> str:
+            """Pip and setuptools disagree about how URL dependencies should be handled."""
+            m = re.match(
+                r"^(git\+)?(https|ssh)://(git@)?github\.com/([\w-]+)/(?P<name>[\w-]+)\.git", req
+            )
+            if m is None:
+                return req
+            else:
+                return f"{m.group('name')} @ {req}"
+
+        for line in requirements_file:
+            line = line.strip()
+            if line.startswith("#") or len(line) <= 0:
+                continue
+            req, *needed_by = line.split("# needed by:")
+            req = fix_url_dependencies(req.strip())
+            if needed_by:
+                for extra in needed_by[0].strip().split(","):
+                    extra = extra.strip()
+                    if allowed_extras is not None and extra not in allowed_extras:
+                        raise ValueError(f"invalid extra '{extra}' in {path}")
+                    extras[extra].append(req)
+                if include_all_extra and req not in extras["all"]:
+                    extras["all"].append(req)
+            else:
+                requirements.append(req)
+    return requirements, extras
+
+integrations = {"checklist"}  # automate.
+
+# Load requirements.
+install_requirements, extras = parse_requirements_file(
+    "requirements.txt", allowed_extras=integrations
+)
+dev_requirements, dev_extras = parse_requirements_file(
+    "dev-requirements.txt", allowed_extras={"examples"}, include_all_extra=False
+)
+extras["dev"] = dev_requirements
+extras.update(dev_extras)
 
 # version.py defines the VERSION and VERSION_SHORT variables.
 # We use exec here so we don't import allennlp whilst setting up.
@@ -49,37 +96,8 @@ setup(
             "benchmarks.*",
         ]
     ),
-    install_requires=[
-        "torch>=1.6.0,<1.11.0",
-        "torchvision>=0.8.1,<0.12.0",
-        "cached-path>=1.0.0,<2.0.0",
-        "fairscale==0.4.3",
-        "jsonnet>=0.10.0 ; sys.platform != 'win32'",
-        "nltk",
-        "spacy>=2.1.0,<3.3",
-        "numpy",
-        "tensorboardX>=1.2",
-        "requests>=2.18",
-        "tqdm>=4.19",
-        "h5py",
-        "scikit-learn",
-        "scipy",
-        "pytest",
-        "transformers>=4.1,<4.13",
-        "sentencepiece",
-        "dataclasses;python_version<'3.7'",
-        "filelock>=3.3,<3.5",
-        "lmdb",
-        "more-itertools",
-        "termcolor==1.1.0",
-        "checklist==0.0.11",
-        "wandb>=0.10.0,<0.13.0",
-        "huggingface_hub>=0.0.16",
-        "datasets>=1.2.1,<2.0",
-        "dill",
-        "base58",
-        "sqlitedict",
-    ],
+    install_requires=install_requirements,
+    extras_require=extras,
     entry_points={"console_scripts": ["allennlp=allennlp.__main__:run"]},
     include_package_data=True,
     python_requires=">=3.7.1",
