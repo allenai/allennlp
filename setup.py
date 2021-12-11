@@ -14,6 +14,7 @@ from setuptools import find_packages, setup
 #   X.YrcN  # Release Candidate
 #   X.Y     # Final release
 
+
 def parse_requirements_file(path, allowed_extras: set = None, include_all_extra: bool = True):
     requirements = []
     extras = defaultdict(list)
@@ -48,7 +49,8 @@ def parse_requirements_file(path, allowed_extras: set = None, include_all_extra:
                 requirements.append(req)
     return requirements, extras
 
-integrations = {"checklist"}  # automate.
+
+integrations = {"checklist"}
 
 # Load requirements.
 install_requirements, extras = parse_requirements_file(

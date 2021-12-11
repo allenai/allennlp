@@ -197,6 +197,8 @@ It's recommended that you install the PyTorch ecosystem **before** installing Al
 
 After that, just run `pip install allennlp`.
 
+
+
 > ⚠️ If you're using Python 3.7 or greater, you should ensure that you don't have the PyPI version of `dataclasses` installed after running the above command, as this could cause issues on certain platforms. You can quickly check this by running `pip freeze | grep dataclasses`. If you see something like `dataclasses=0.6` in the output, then just run `pip uninstall -y dataclasses`.
 
 If you need pointers on setting up an appropriate Python environment or would like to install AllenNLP using a different method, see below.
@@ -227,6 +229,12 @@ Installing the library and dependencies is simple using `pip`.
 
 ```bash
 pip install allennlp
+```
+
+To install the optional dependencies, run
+
+```bash
+pip install allennlp[checklist]
 ```
 
 *Looking for bleeding edge features? You can install nightly releases directly from [pypi](https://pypi.org/project/allennlp/#history)*
@@ -300,8 +308,7 @@ Create a Python 3.7 or 3.8 virtual environment, and install AllenNLP in `editabl
 
 ```bash
 pip install -U pip setuptools wheel
-pip install --editable .
-pip install -r dev-requirements.txt
+pip install --editable .[dev,all]
 ```
 
 This will make `allennlp` available on your system but it will use the sources from the local clone
