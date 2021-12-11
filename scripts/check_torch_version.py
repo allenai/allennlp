@@ -45,7 +45,7 @@ def _get_latest_torch_version() -> Tuple[str, str, str]:
 
 
 def _get_torch_version_upper_limit() -> Tuple[str, str, str]:
-    with open("setup.py") as f:
+    with open("requirements.txt") as f:
         for line in f:
             # The torch version line should look like:
             #   "torch>=X.Y.Z,<X.V.0",
@@ -54,7 +54,7 @@ def _get_torch_version_upper_limit() -> Tuple[str, str, str]:
                 assert len(version) == 3, f"Bad parsed version '{version}'"
                 break
         else:
-            raise RuntimeError("could not find torch version spec in setup.py")
+            raise RuntimeError("could not find torch version spec in requirements.txt")
     return cast(Tuple[str, str, str], version)
 
 
