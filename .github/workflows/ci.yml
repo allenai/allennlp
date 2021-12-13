@@ -95,11 +95,17 @@ jobs:
             make flake8
             make typecheck
 
-        - name: CPU Tests
+        - name: CPU Tests (no checklist)
           runs_on: ubuntu-latest
           coverage_report: true
           torch_platform: cpu
-          run: make test
+          run: make test-without-checklist
+
+        - name: CPU Tests (checklist)
+          runs_on: ubuntu-latest
+          coverage_report: true
+          torch_platform: cpu
+          run: make test-checklist
 
         - name: GPU Tests
           runs_on: [self-hosted, GPU, Multi GPU]

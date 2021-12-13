@@ -61,12 +61,22 @@ format :
 typecheck :
 	mypy allennlp tests scripts --cache-dir=/dev/null
 
-.PHONY : test
+.PHONY : test-without-checklist
 test :
 	pytest --color=yes -v -rf --durations=40 \
 			--cov-config=.coveragerc \
 			--cov=$(SRC) \
-			--cov-report=xml
+			--cov-report=xml \
+			--ignore-glob=*/task_checklists/*
+
+.PHONY : test-checklist
+test :
+	pytest --color=yes -v -rf --durations=40 \
+			--cov-config=.coveragerc \
+			--cov=$(SRC) \
+			--cov-report=xml \
+			tests/confidence_checks/task_checklists
+
 
 .PHONY : gpu-tests
 gpu-tests : check-for-cuda
