@@ -67,7 +67,7 @@ test-without-checklist :
 			--cov-config=.coveragerc \
 			--cov=$(SRC) \
 			--cov-report=xml \
-			--ignore-glob=*/task_checklists/*
+			--ignore-glob=*checklist*
 
 .PHONY : test-checklist
 test-checklist :
@@ -75,7 +75,8 @@ test-checklist :
 			--cov-config=.coveragerc \
 			--cov=$(SRC) \
 			--cov-report=xml \
-			tests/confidence_checks/task_checklists
+			tests/ \
+			-k checklist
 
 
 .PHONY : gpu-tests
