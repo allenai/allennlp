@@ -62,7 +62,7 @@ typecheck :
 	mypy allennlp tests scripts --cache-dir=/dev/null
 
 .PHONY : test-without-checklist
-test :
+test-without-checklist :
 	pytest --color=yes -v -rf --durations=40 \
 			--cov-config=.coveragerc \
 			--cov=$(SRC) \
@@ -70,7 +70,7 @@ test :
 			--ignore-glob=*/task_checklists/*
 
 .PHONY : test-checklist
-test :
+test-checklist :
 	pytest --color=yes -v -rf --durations=40 \
 			--cov-config=.coveragerc \
 			--cov=$(SRC) \
