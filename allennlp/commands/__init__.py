@@ -19,9 +19,16 @@ from allennlp.commands.count_instances import CountInstances
 from allennlp.commands.tango import Tango
 from allennlp.common.plugins import import_plugins
 from allennlp.common.util import import_module_and_submodules
-from allennlp.commands.checklist import CheckList
 
 logger = logging.getLogger(__name__)
+
+try:
+    from allennlp.commands.checklist import CheckList
+except ImportError:
+    logger.warning(
+        "The `checklist` command cannot be registered, as the dependency is not installed. "
+        "Please install using `pip install allennlp[checklist]`."
+    )
 
 
 class ArgumentParserWithDefaults(argparse.ArgumentParser):

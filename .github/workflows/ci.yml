@@ -102,6 +102,7 @@ jobs:
           run: make test-without-checklist
 
         - name: CPU Tests (checklist)
+          extras: checklist
           runs_on: ubuntu-latest
           coverage_report: true
           torch_platform: cpu
