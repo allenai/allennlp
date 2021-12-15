@@ -177,11 +177,6 @@ jobs:
         conda activate ./.venv
         conda list
 
-    - name: Ensure torch up-to-date
-      run: |
-        conda activate ./.venv
-        python scripts/check_torch_version.py
-
     - name: ${{ matrix.task.name }}
       run: |
         conda activate ./.venv
