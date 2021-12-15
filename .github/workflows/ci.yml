@@ -18,9 +18,9 @@ on:
 
 env:
   # NOTE: Need to update `TORCH_VERSION`, and `TORCH_*_INSTALL` for new torch releases.
-  TORCH_VERSION: 1.10.0
-  TORCH_CPU_INSTALL: conda install pytorch torchvision torchaudio cpuonly -c pytorch
-  TORCH_GPU_INSTALL: conda install pytorch torchvision torchaudio cudatoolkit=11.3 -c pytorch
+  TORCH_VERSION: 1.9.1
+  TORCH_CPU_INSTALL: conda install pytorch=1.9.1 torchvision torchaudio cpuonly -c pytorch
+  TORCH_GPU_INSTALL: conda install pytorch=1.9.1 torchvision torchaudio cudatoolkit=11.3 -c pytorch
   # Change this to invalidate existing cache.
   CACHE_PREFIX: v5
   # Disable tokenizers parallelism because this doesn't help, and can cause issues in distributed tests.
