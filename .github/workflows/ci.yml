@@ -95,18 +95,11 @@ jobs:
             make flake8
             make typecheck
 
-        - name: CPU Tests (no checklist)
+        - name: CPU Tests
           runs_on: ubuntu-latest
           coverage_report: true
           torch_platform: cpu
-          run: make test-without-checklist
-
-        - name: CPU Tests (checklist)
-          extras: checklist
-          runs_on: ubuntu-latest
-          coverage_report: true
-          torch_platform: cpu
-          run: make test-checklist
+          run: make test
 
         - name: GPU Tests
           runs_on: [self-hosted, GPU, Multi GPU]
@@ -166,7 +159,7 @@ jobs:
       if: steps.virtualenv-cache.outputs.cache-hit == 'true'
       run: |
         conda activate ./.venv
-        pip install --no-deps -e .
+        pip install --no-deps -e .[all]
         make download-extras
 
     - name: Pull and install models repo

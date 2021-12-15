@@ -61,6 +61,13 @@ format :
 typecheck :
 	mypy allennlp tests scripts --cache-dir=/dev/null
 
+.PHONY : test
+test :
+	pytest --color=yes -v -rf --durations=40 \
+			--cov-config=.coveragerc \
+			--cov=$(SRC) \
+			--cov-report=xml
+
 .PHONY : test-without-checklist
 test-without-checklist :
 	pytest --color=yes -v -rf --durations=40 \
