@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `FBetaMultiLabelMeasure` now works with multiple dimensions
 - Support for inferior operating systems when making hardlinks
 - Use `,` as a separator for filenames in the `evaluate` command, thus allowing for URLs (eg. `gs://...`) as input files.
+- Removed broken version of PyTorch from the list of approved versions
 
 ### Removed
 
