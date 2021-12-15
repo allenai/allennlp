@@ -1,9 +1,8 @@
 # This Dockerfile creates an environment suitable for downstream usage of AllenNLP.
-# It's built from a wheel installation of allennlp using the base images from
-# https://github.com/allenai/docker-images/pkgs/container/pytorch
 
-ARG TORCH=1.10.0-cuda11.3
-FROM ghcr.io/allenai/pytorch:${TORCH}
+ARG TORCH=1.9.1
+
+FROM ghcr.io/allenai/cuda:11.3-ubuntu20.04
 
 RUN apt-get update && apt-get install -y \
     build-essential \
@@ -11,6 +10,8 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /stage/allennlp
+
+RUN conda install pytorch=${TORCH} torchvision -c pytorch
 
 # Installing AllenNLP's dependencies is the most time-consuming part of building
 # this Docker image, so we make use of layer caching here by adding the minimal files

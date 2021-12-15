@@ -374,31 +374,25 @@ jobs:
 
   # Builds Docker image from the core distribution files and uploads to Docker Hub.
   docker:
-    name: Docker (CUDA ${{ matrix.cuda }})
+    name: Docker
     timeout-minutes: 18
     if: github.repository == 'allenai/allennlp'
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        cuda: ['11.3']
 
     steps:
     - uses: actions/checkout@v2
 
     - name: Set image name and torch version
-      env:
-        CUDA: ${{ matrix.cuda }}
       run: |
-        echo "DOCKER_TORCH_VERSION=${TORCH_VERSION}-cuda${CUDA}" >> $GITHUB_ENV;
         if [[ $GITHUB_EVENT_NAME == 'release' ]]; then
-            echo "DOCKER_IMAGE_NAME=allennlp/allennlp:${GITHUB_REF#refs/tags/}-cuda${CUDA}" >> $GITHUB_ENV;
+            echo "DOCKER_IMAGE_NAME=allennlp/allennlp:${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV;
         else
-            echo "DOCKER_IMAGE_NAME=allennlp/commit:${GITHUB_SHA}-cuda${CUDA}" >> $GITHUB_ENV;
+            echo "DOCKER_IMAGE_NAME=allennlp/commit:${GITHUB_SHA}" >> $GITHUB_ENV;
         fi
 
     - name: Build image
       run: |
-        make docker-image DOCKER_IMAGE_NAME="$DOCKER_IMAGE_NAME" DOCKER_TORCH_VERSION="$DOCKER_TORCH_VERSION"
+        make docker-image DOCKER_IMAGE_NAME="$DOCKER_IMAGE_NAME" DOCKER_TORCH_VERSION="$TORCH_VERSION"
 
     - name: Test image
       run: |
@@ -415,15 +409,13 @@ jobs:
         docker push $DOCKER_IMAGE_NAME
 
     - name: Upload default commit image
-      # CUDA 11.3 is currently our default.
-      if: github.event_name == 'push' && matrix.cuda == '11.3'
+      if: github.event_name == 'push'
       run: |
         docker tag $DOCKER_IMAGE_NAME allennlp/commit:${GITHUB_SHA}
         docker push allennlp/commit:${GITHUB_SHA}
 
     - name: Upload latest image
-      # CUDA 11.3 is currently our default.
-      if: github.event_name == 'release' && matrix.cuda == '11.3'
+      if: github.event_name == 'release'
       run: |
         docker tag $DOCKER_IMAGE_NAME allennlp/allennlp:latest
         docker push allennlp/allennlp:latest
