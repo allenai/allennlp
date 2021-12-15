@@ -129,7 +129,7 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         # Optionally, re-initialize the parameters of certain layers.
         self._reinit_layers = cast(List[int], reinit_layers)
         if self._reinit_layers and load_weights:
-            num_layers = len(self.transformer_model.encoder.layer)
+            num_layers = self.transformer_model.config.num_hidden_layers
             if isinstance(reinit_layers, int):
                 self._reinit_layers = list(range(num_layers - reinit_layers, num_layers))
             if any(layer_idx < 0 or layer_idx > num_layers for layer_idx in self._reinit_layers):
