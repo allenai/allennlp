@@ -1,16 +1,16 @@
 import logging
 import math
-from typing import Optional, Tuple, Dict, Any, Union, List, cast
-
+import re
+from typing import Any, Dict, List, Optional, Tuple, Union, cast
 
 import torch
 import torch.nn.functional as F
-from transformers import XLNetConfig
-
+from allennlp.common.checks import ConfigurationError
 from allennlp.data.tokenizers import PretrainedTransformerTokenizer
 from allennlp.modules.scalar_mix import ScalarMix
 from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
 from allennlp.nn.util import batched_index_select
+from transformers import XLNetConfig
 
 logger = logging.getLogger(__name__)
 
@@ -48,12 +48,14 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         When `True` (the default), only the final layer of the pretrained transformer is taken
         for the embeddings. But if set to `False`, a scalar mix of all of the layers
         is used.
-    reinit_layers: `Optional[Union[int, List[int]]]`, optional (default = `None`)
-        If this is an integer, the last `reinit_layers` layers of the transformer will be
-        re-initialized. If this is a list, the layers indexed by `reinit_layers` will be
-        re-initialized. Re-initializing the last few layers of a pretrained transformer can reduce
-        the instability of fine-tuning on small datasets and may improve performance
-        (https://arxiv.org/abs/2006.05987v3). Has no effect if `load_weights` is `False`.
+    reinit_modules: `Optional[Union[int, List[int]]]`, optional (default = `None`)
+        If this is an integer, the last `reinit_modules` layers of the transformer will be
+        re-initialized. If this is a list of integers, the layers indexed by `reinit_modules` will
+        be re-initialized. If this is a list of strings, they will be treated as regexes and any
+        module with a name matching the regex will be re-initialized. Re-initializing the last few
+        layers of a pretrained transformer can reduce the instability of fine-tuning on small
+        datasets and may improve performance (https://arxiv.org/abs/2006.05987v3). Has no effect
+        if `load_weights` is `False`.
     override_weights_file: `Optional[str]`, optional (default = `None`)
         If set, this specifies a file from which to load alternate weights that override the
         weights from huggingface. The file is expected to contain a PyTorch `state_dict`, created
@@ -88,7 +90,7 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         train_parameters: bool = True,
         eval_mode: bool = False,
         last_layer_only: bool = True,
-        reinit_layers: Optional[Union[int, List[int]]] = None,
+        reinit_modules: Optional[Union[int, List[int], List[str]]] = None,
         override_weights_file: Optional[str] = None,
         override_weights_strip_prefix: Optional[str] = None,
         load_weights: bool = True,
@@ -127,20 +129,42 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
             self.config.output_hidden_states = True
 
         # Optionally, re-initialize the parameters of certain layers.
-        self._reinit_layers = cast(List[int], reinit_layers)
-        if self._reinit_layers and load_weights:
+        self._reinit_modules = reinit_modules
+        if self._reinit_modules and load_weights:
             num_layers = self.transformer_model.config.num_hidden_layers
-            if isinstance(reinit_layers, int):
-                self._reinit_layers = list(range(num_layers - reinit_layers, num_layers))
-            if any(layer_idx < 0 or layer_idx > num_layers for layer_idx in self._reinit_layers):
-                raise ValueError(
-                    f"A layer index in reinit_layers ({self._reinit_layers}) is invalid. Must be"
-                    f" between 0 and the maximum layer index ({num_layers - 1}.)"
-                )
-            for layer_idx in self._reinit_layers:
-                self.transformer_model.encoder.layer[layer_idx].apply(
-                    self.transformer_model._init_weights
-                )
+            if isinstance(self._reinit_modules, int):
+                self._reinit_modules = list(range(num_layers - self._reinit_modules, num_layers))
+                # This type cast is neccessary to avoid a mypy error.
+                self._reinit_modules = cast(list, self._reinit_modules)
+            if all(isinstance(x, int) for x in self._reinit_modules):
+                self._reinit_modules = cast(List[int], self._reinit_modules)
+                if any(
+                    layer_idx < 0 or layer_idx > num_layers for layer_idx in self._reinit_modules
+                ):
+                    raise ValueError(
+                        f"A layer index in reinit_modules ({self._reinit_modules}) is invalid."
+                        f" Must be between 0 and the maximum layer index ({num_layers - 1}.)"
+                    )
+                # Some transformer models organize their modules differently, so if this fails,
+                # raise an error with a helpful message.
+                try:
+                    for layer_idx in self._reinit_modules:
+                        self.transformer_model.encoder.layer[layer_idx].apply(
+                            self.transformer_model._init_weights
+                        )
+                except AttributeError:
+                    raise ConfigurationError(
+                        f"Unable to re-initialize the layers of transformer model"
+                        f" {model_name} using layer indices. Please provide a list of"
+                        " strings corresponding to the names of the layers to re-initialize."
+                    )
+            elif all(isinstance(x, str) for x in self._reinit_modules):
+                for regex in self._reinit_modules:
+                    for name, module in self.transformer_model.named_modules():
+                        if re.search(regex, name):
+                            module.apply(self.transformer_model._init_weights)
+            else:
+                raise ValueError("reinit_modules must be a list of strings or a list of integers.")
 
         tokenizer = PretrainedTransformerTokenizer(
             model_name,
