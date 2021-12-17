@@ -284,7 +284,7 @@ jobs:
       if: steps.virtualenv-cache.outputs.cache-hit == 'true'
       run: |
         conda activate ./.venv
-        pip install --no-deps -e .
+        pip install --no-deps -e .[all]
         make download-extras
 
     - name: Debug info
