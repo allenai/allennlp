@@ -60,10 +60,9 @@ class ExponentialMovingAverage(MovingAverage):
     # Parameters
 
     parameters : `Iterable[Tuple[str, Parameter]]`, required
-        The parameters whose averages we'll be tracking.
-
-        In a typical AllenNLP configuration file, this argument does not get an entry under the
-        "moving_average", it gets passed in separately.
+        The parameters whose averages we'll be tracking. In a typical AllenNLP configuration
+        file, this argument does not get an entry under the "moving_average", it gets passed
+        in separately.
     decay : `float`, optional (default = `0.9999`)
         The decay rate that will be used if `num_updates` is not passed
         (and that will be used as an upper bound if `num_updates` is passed).

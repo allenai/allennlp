@@ -45,6 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Fixed the implementation of `PairedPCABiasDirection` in `allennlp.fairness.bias_direction`, where the difference vectors should not be centered when performing the PCA.
+- Fixed the docstring of `ExponentialMovingAverage`, which was causing its argument descriptions to render inccorrectly in the docs.
 
 ## [v2.7.0](https://github.com/allenai/allennlp/releases/tag/v2.7.0) - 2021-09-01
 
