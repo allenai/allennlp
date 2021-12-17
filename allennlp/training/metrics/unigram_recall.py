@@ -2,7 +2,7 @@ from typing import Optional
 
 import sys
 
-from overrides import overrides
+
 import torch
 
 from allennlp.common.checks import ConfigurationError
@@ -95,7 +95,6 @@ class UnigramRecall(Metric):
             self.reset()
         return {"unigram_recall": recall}
 
-    @overrides
     def reset(self):
         self.correct_count = 0.0
         self.total_count = 0.0

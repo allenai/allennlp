@@ -1,6 +1,5 @@
 from typing import Any, Dict, List, Mapping
 
-from overrides import overrides
 
 from allennlp.data.fields.field import DataArray, Field
 
@@ -47,27 +46,22 @@ class MetadataField(Field[DataArray], Mapping[str, Any]):
         except TypeError:
             raise TypeError("your metadata has no length")
 
-    @overrides
     def get_padding_lengths(self) -> Dict[str, int]:
         return {}
 
-    @overrides
     def as_tensor(self, padding_lengths: Dict[str, int]) -> DataArray:
 
         return self.metadata  # type: ignore
 
-    @overrides
     def empty_field(self) -> "MetadataField":
         return MetadataField(None)
 
-    @overrides
     def batch_tensors(self, tensor_list: List[DataArray]) -> List[DataArray]:  # type: ignore
         return tensor_list
 
     def __str__(self) -> str:
         return "MetadataField (print field.metadata to see specific information)."
 
-    @overrides
     def human_readable_repr(self):
         if hasattr(self.metadata, "human_readable_repr"):
             return self.metadata.human_readable_repr()

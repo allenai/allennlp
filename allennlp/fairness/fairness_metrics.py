@@ -21,7 +21,7 @@ Independence, Separation, and Sufficiency simultaneously, except in degenerate c
 
 from typing import Optional, Dict
 
-from overrides import overrides
+
 import torch
 import torch.distributed as dist
 from torch.distributions.categorical import Categorical
@@ -157,7 +157,6 @@ class Independence(Metric):
             _predicted_label_counts_by_protected_variable_label
         )
 
-    @overrides
     def get_metric(self, reset: bool = False) -> Dict[int, torch.FloatTensor]:
         """
         # Returns
@@ -184,7 +183,6 @@ class Independence(Metric):
             self.reset()
         return kl_divs
 
-    @overrides
     def reset(self) -> None:
         self._predicted_label_counts = torch.zeros(self._num_classes)
         self._total_predictions = torch.tensor(0)
@@ -220,8 +218,7 @@ class Separation(Metric):
             (num_classes, num_protected_variable_labels, num_classes)
         )
 
-    @overrides
-    def __call__(
+    def __call__(  # type: ignore
         self,
         predicted_labels: torch.Tensor,
         gold_labels: torch.Tensor,
@@ -342,7 +339,6 @@ class Separation(Metric):
             _predicted_label_counts_by_gold_label_and_protected_variable_label
         )
 
-    @overrides
     def get_metric(self, reset: bool = False) -> Dict[int, Dict[int, torch.FloatTensor]]:
         """
         # Returns
@@ -387,7 +383,6 @@ class Separation(Metric):
             self.reset()
         return kl_divs
 
-    @overrides
     def reset(self) -> None:
         self._predicted_label_counts_by_gold_label = torch.zeros(
             (self._num_classes, self._num_classes)
@@ -425,8 +420,7 @@ class Sufficiency(Metric):
             (num_classes, num_protected_variable_labels, num_classes)
         )
 
-    @overrides
-    def __call__(
+    def __call__(  # type: ignore
         self,
         predicted_labels: torch.Tensor,
         gold_labels: torch.Tensor,
@@ -547,7 +541,6 @@ class Sufficiency(Metric):
             _gold_label_counts_by_predicted_label_and_protected_variable_label
         )
 
-    @overrides
     def get_metric(self, reset: bool = False) -> Dict[int, Dict[int, torch.FloatTensor]]:
         """
         # Returns
@@ -601,7 +594,6 @@ class Sufficiency(Metric):
             self.reset()
         return kl_divs
 
-    @overrides
     def reset(self) -> None:
         self._gold_label_counts_by_predicted_label = torch.zeros(
             (self._num_classes, self._num_classes)

@@ -6,7 +6,6 @@ Hugging Face Hub ([hf.co](https://hf.co/)).
 import argparse
 import logging
 
-from overrides import overrides
 
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common.push_to_hf import push_to_hf
@@ -16,7 +15,6 @@ logger = logging.getLogger(__name__)
 
 @Subcommand.register("push-to-hf")
 class PushToHf(Subcommand):
-    @overrides
     def add_subparser(self, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
         description = """Push a model to the Hugging Face Hub.
 

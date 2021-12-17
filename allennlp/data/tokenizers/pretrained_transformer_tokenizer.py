@@ -3,7 +3,7 @@ import dataclasses
 import logging
 from typing import Any, Dict, List, Optional, Tuple, Iterable
 
-from overrides import overrides
+
 from transformers import PreTrainedTokenizer
 
 from allennlp.common.util import sanitize_wordpiece
@@ -225,7 +225,6 @@ class PretrainedTransformerTokenizer(Tokenizer):
         detokenized = " ".join(tokenized)
         return "a" in detokenized
 
-    @overrides
     def tokenize(self, text: str) -> List[Token]:
         """
         This method only handles a single sentence (or sequence) of text.

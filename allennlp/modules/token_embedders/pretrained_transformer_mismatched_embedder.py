@@ -1,6 +1,6 @@
 from typing import Optional, Dict, Any
 
-from overrides import overrides
+
 import torch
 
 from allennlp.common.checks import ConfigurationError
@@ -91,11 +91,9 @@ class PretrainedTransformerMismatchedEmbedder(TokenEmbedder):
         )
         self.sub_token_mode = sub_token_mode
 
-    @overrides
     def get_output_dim(self):
         return self._matched_embedder.get_output_dim()
 
-    @overrides
     def forward(
         self,
         token_ids: torch.LongTensor,
