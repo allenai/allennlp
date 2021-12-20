@@ -1,4 +1,3 @@
-import numpy as np
 import pytest
 import torch
 
@@ -34,7 +33,7 @@ class TestMaxPoolingSpanExtractor:
         assert extractor.get_output_dim() == 30
         assert extractor.get_input_dim() == 30
 
-        # We iterate ofer the tensor to compare the span extractors's results
+        # We iterate over the tensor to compare the span extractors's results
         # with the results of python max operation over each dimension for each span and for each batch
         # For each batch
         for batch, X in enumerate(indices):
@@ -43,9 +42,9 @@ class TestMaxPoolingSpanExtractor:
 
                 # original features of current tested span
                 # span_width x embedding dim (30)
-                span_features_complete = sequence_tensor[batch][span_def[0]: span_def[1] + 1]
+                span_features_complete = sequence_tensor[batch][span_def[0] : span_def[1] + 1]
 
-                # comparisson for each dimension
+                # comparison for each dimension
                 for i in range(extractor.get_output_dim()):
                     # get the features for dimension i of current span
                     features_from_span = span_features_complete[:, i]
@@ -53,11 +52,13 @@ class TestMaxPoolingSpanExtractor:
 
                     extrected_max_value = span_representations[batch, indices_ind, i]
 
-                    assert real_max_value == extrected_max_value, f"Error extracting max value for " \
-                                                                  f"batch {batch}, span {indices_ind} on dimension {i}." \
-                                                                  f"expected {real_max_value} " \
-                                                                  f"but got {extrected_max_value} which is " \
-                                                                  f"not the maximum element."
+                    assert real_max_value == extrected_max_value, (
+                        f"Error extracting max value for "
+                        f"batch {batch}, span {indices_ind} on dimension {i}."
+                        f"expected {real_max_value} "
+                        f"but got {extrected_max_value} which is "
+                        f"not the maximum element."
+                    )
 
     def test_sequence_mask_correct_excluded(self):
         # Check if span indices masked out by the sequence mask are ignored when computing
@@ -70,31 +71,30 @@ class TestMaxPoolingSpanExtractor:
         # define sequence mak
         seq_mask = torch.BoolTensor([[True] * 4 + [False] * 2, [True] * 5 + [False] * 1])
 
-        span_representations = extractor(sequence_tensor,
-                                         indices,
-                                         sequence_mask=seq_mask
-                                         )
+        span_representations = extractor(sequence_tensor, indices, sequence_mask=seq_mask)
 
         # After we computed the representations we set values to -inf
         # to compute the "real" max-pooling with python's max function.
-        sequence_tensor[seq_mask == False] = float("-inf")
+        sequence_tensor[torch.logical_not(seq_mask)] = float("-inf")
 
-        # Comparisson is similar to test_max_values_extracted
+        # Comparison is similar to test_max_values_extracted
         for batch, X in enumerate(indices):
             for indices_ind, span_def in enumerate(X):
 
-                span_features_complete = sequence_tensor[batch][span_def[0]: span_def[1] + 1]
+                span_features_complete = sequence_tensor[batch][span_def[0] : span_def[1] + 1]
 
                 for i, _ in enumerate(span_features_complete):
                     features_from_span = span_features_complete[:, i]
                     real_max_value = max(features_from_span)
                     extrected_max_value = span_representations[batch, indices_ind, i]
 
-                    assert real_max_value == extrected_max_value, f"Error extracting max value for " \
-                                                                  f"batch {batch}, span {indices_ind} on dimension {i}." \
-                                                                  f"expected {real_max_value} " \
-                                                                  f"but got {extrected_max_value} which is " \
-                                                                  f"not the maximum element."
+                    assert real_max_value == extrected_max_value, (
+                        f"Error extracting max value for "
+                        f"batch {batch}, span {indices_ind} on dimension {i}."
+                        f"expected {real_max_value} "
+                        f"but got {extrected_max_value} which is "
+                        f"not the maximum element."
+                    )
 
     def test_span_mask_correct_excluded(self):
         # All masked out span indices by span_mask should be '0'
@@ -106,28 +106,31 @@ class TestMaxPoolingSpanExtractor:
 
         span_mask = torch.BoolTensor([[True] * 3, [False] * 3])
 
-        span_representations = extractor(sequence_tensor,
-                                         indices,
-                                         span_indices_mask=span_mask,
-                                         )
+        span_representations = extractor(
+            sequence_tensor,
+            indices,
+            span_indices_mask=span_mask,
+        )
 
-        # The span mask masked out all indices in the last batch
-        # We check whether all soan representations for this batch are '0'
+        # The span-mask masks out all indices in the last batch
+        # We check whether all span representations for this batch are '0'
         X = indices[-1]
         batch = -1
         for indices_ind, span_def in enumerate(X):
 
-            span_features_complete = sequence_tensor[batch][span_def[0]: span_def[1] + 1]
+            span_features_complete = sequence_tensor[batch][span_def[0] : span_def[1] + 1]
 
             for i, _ in enumerate(span_features_complete):
-                real_max_value = torch.FloatTensor([0.])
+                real_max_value = torch.FloatTensor([0.0])
                 extrected_max_value = span_representations[batch, indices_ind, i]
 
-                assert real_max_value == extrected_max_value, f"Error extracting max value for " \
-                                                              f"batch {batch}, span {indices_ind} on dimension {i}." \
-                                                              f"expected {real_max_value} " \
-                                                              f"but got {extrected_max_value} which is " \
-                                                              f"not the maximum element."
+                assert real_max_value == extrected_max_value, (
+                    f"Error extracting max value for "
+                    f"batch {batch}, span {indices_ind} on dimension {i}."
+                    f"expected {real_max_value} "
+                    f"but got {extrected_max_value} which is "
+                    f"not the maximum element."
+                )
 
     def test_inconsistent_extractor_dimension_throws_exception(self):
 

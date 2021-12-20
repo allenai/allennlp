@@ -4,7 +4,6 @@ from allennlp.modules.span_extractors.span_extractor import SpanExtractor
 from allennlp.modules.span_extractors.span_extractor_with_span_width_embedding import (
     SpanExtractorWithSpanWidthEmbedding,
 )
-from allennlp.modules.time_distributed import TimeDistributed
 from allennlp.nn import util
 from allennlp.nn.util import masked_max
 
@@ -43,11 +42,11 @@ class MaxPoolingSpanExtractor(SpanExtractorWithSpanWidthEmbedding):
     """
 
     def __init__(
-            self,
-            input_dim: int,
-            num_width_embeddings: int = None,
-            span_width_embedding_dim: int = None,
-            bucket_widths: bool = False,
+        self,
+        input_dim: int,
+        num_width_embeddings: int = None,
+        span_width_embedding_dim: int = None,
+        bucket_widths: bool = False,
     ) -> None:
         super().__init__(
             input_dim=input_dim,
@@ -62,11 +61,11 @@ class MaxPoolingSpanExtractor(SpanExtractorWithSpanWidthEmbedding):
         return self._input_dim
 
     def _embed_spans(
-            self,
-            sequence_tensor: torch.FloatTensor,
-            span_indices: torch.LongTensor,
-            sequence_mask: torch.BoolTensor = None,
-            span_indices_mask: torch.BoolTensor = None,
+        self,
+        sequence_tensor: torch.FloatTensor,
+        span_indices: torch.LongTensor,
+        sequence_mask: torch.BoolTensor = None,
+        span_indices_mask: torch.BoolTensor = None,
     ) -> torch.FloatTensor:
 
         if sequence_tensor.size(-1) != self._input_dim:
@@ -84,7 +83,7 @@ class MaxPoolingSpanExtractor(SpanExtractorWithSpanWidthEmbedding):
 
         if (span_indices[:, :, 0] > span_indices[:, :, 1]).any():
             raise IndexError(
-                f"Span start above span end",
+                "Span start above span end",
             )
 
         # Calculate the maximum sequence length for each element in batch.
@@ -101,15 +100,17 @@ class MaxPoolingSpanExtractor(SpanExtractorWithSpanWidthEmbedding):
         adopted_span_indices = torch.tensor(span_indices, device=span_indices.device)
 
         for b in range(sequence_lengths.shape[0]):
-            adopted_span_indices[b, :, 1][adopted_span_indices[b, :, 1] >= sequence_lengths[b]] = sequence_lengths[
-                                                                                                      b] - 1
+            adopted_span_indices[b, :, 1][adopted_span_indices[b, :, 1] >= sequence_lengths[b]] = (
+                sequence_lengths[b] - 1
+            )
 
         # Raise Error if span indices were completly masked by sequence mask.
-        # We only adjust span_end to the last valid index, so if span_end is below span_start, both were above the max index:
+        # We only adjust span_end to the last valid index, so if span_end is below span_start,
+        # both were above the max index:
 
         if (adopted_span_indices[:, :, 0] > adopted_span_indices[:, :, 1]).any():
             raise IndexError(
-                f"Span indices were masked out entirely by sequence mask",
+                "Span indices were masked out entirely by sequence mask",
             )
 
         # span_vals <- (batch x num_spans x max_span_length x dim)
