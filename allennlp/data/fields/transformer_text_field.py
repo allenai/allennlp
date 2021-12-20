@@ -1,6 +1,6 @@
 from typing import Dict, Optional, List, Any, Union
 
-from overrides import overrides
+
 import torch
 import torch.nn.functional
 
@@ -51,7 +51,6 @@ class TransformerTextField(Field[torch.Tensor]):
         self.offsets_mapping = None if offsets_mapping is None else _tensorize(offsets_mapping)
         self.padding_token_id = padding_token_id
 
-    @overrides
     def get_padding_lengths(self) -> Dict[str, int]:
         return {
             name: getattr(self, name).shape[-1]
@@ -59,7 +58,6 @@ class TransformerTextField(Field[torch.Tensor]):
             if isinstance(getattr(self, name), torch.Tensor)
         }
 
-    @overrides
     def as_tensor(self, padding_lengths: Dict[str, int]) -> Dict[str, torch.Tensor]:
         result = {}
         for name, padding_length in padding_lengths.items():
@@ -79,11 +77,9 @@ class TransformerTextField(Field[torch.Tensor]):
             )
         return result
 
-    @overrides
     def empty_field(self):
         return TransformerTextField(torch.LongTensor(), padding_token_id=self.padding_token_id)
 
-    @overrides
     def batch_tensors(self, tensor_list: List[Dict[str, torch.Tensor]]) -> Dict[str, torch.Tensor]:
         result: Dict[str, torch.Tensor] = util.batch_tensor_dicts(tensor_list)
         # Transformer models need LongTensors for indices, just in case we have more than 2 billion

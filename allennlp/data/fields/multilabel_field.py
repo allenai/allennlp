@@ -1,7 +1,7 @@
 from typing import Dict, Union, Sequence, Set, Optional, cast
 import logging
 
-from overrides import overrides
+
 import torch
 
 from allennlp.data.fields.field import Field
@@ -100,13 +100,11 @@ class MultiLabelField(Field[torch.Tensor]):
                 )
                 self._already_warned_namespaces.add(label_namespace)
 
-    @overrides
     def count_vocab_items(self, counter: Dict[str, Dict[str, int]]):
         if self._label_ids is None:
             for label in self.labels:
                 counter[self._label_namespace][label] += 1  # type: ignore
 
-    @overrides
     def index(self, vocab: Vocabulary):
         if self._label_ids is None:
             self._label_ids = [
@@ -116,11 +114,9 @@ class MultiLabelField(Field[torch.Tensor]):
         if not self._num_labels:
             self._num_labels = vocab.get_vocab_size(self._label_namespace)
 
-    @overrides
     def get_padding_lengths(self) -> Dict[str, int]:
         return {}
 
-    @overrides
     def as_tensor(self, padding_lengths: Dict[str, int]) -> torch.Tensor:
         tensor = torch.zeros(self._num_labels, dtype=torch.long)  # vector of zeros
         if self._label_ids:
@@ -128,7 +124,6 @@ class MultiLabelField(Field[torch.Tensor]):
 
         return tensor
 
-    @overrides
     def empty_field(self):
         return MultiLabelField(
             [], self._label_namespace, skip_indexing=True, num_labels=self._num_labels
@@ -142,6 +137,5 @@ class MultiLabelField(Field[torch.Tensor]):
     def __len__(self):
         return 1
 
-    @overrides
     def human_readable_repr(self) -> Sequence[Union[str, int]]:
         return self.labels

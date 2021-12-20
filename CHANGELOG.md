@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+
+- Added a way to resize the vocabulary in the T5 module
+
+### Fixed
+
+- Fixed the docstring information for the `FBetaMultiLabelMeasure` metric.
+- Various fixes for Python 3.9
+- Fixed the name that the `push-to-hf` command uses to store weights.
+- `FBetaMultiLabelMeasure` now works with multiple dimensions
+- Support for inferior operating systems when making hardlinks
+- Use `,` as a separator for filenames in the `evaluate` command, thus allowing for URLs (eg. `gs://...`) as input files.
+
+### Removed
+
+- Removed dependency on the overrides package
+
+
 ## [v2.8.0](https://github.com/allenai/allennlp/releases/tag/v2.8.0) - 2021-11-01
 
 ### Added
@@ -27,6 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Fixed the implementation of `PairedPCABiasDirection` in `allennlp.fairness.bias_direction`, where the difference vectors should not be centered when performing the PCA.
+- Fixed the docstring of `ExponentialMovingAverage`, which was causing its argument descriptions to render inccorrectly in the docs.
 
 ## [v2.7.0](https://github.com/allenai/allennlp/releases/tag/v2.7.0) - 2021-09-01
 

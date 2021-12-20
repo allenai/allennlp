@@ -1,4 +1,5 @@
 import pytest
+import torch
 from transformers.models import t5 as hf_t5
 
 from allennlp.modules.transformer.t5 import T5
@@ -135,3 +136,16 @@ def _test_distributed_load_state_dict(global_rank, world_size, gpu_id):
 @requires_multi_gpu
 def test_distributed_load_state_dict():
     run_distributed_test([0, 1], func=_test_distributed_load_state_dict)
+
+
+@pytest.mark.parametrize("tie_word_embeddings", [True, False])
+def test_t5_resize_token_embeddings(model: T5, tie_word_embeddings: bool):
+    module = T5(tie_word_embeddings=tie_word_embeddings)
+
+    labels = torch.IntTensor([[1, 2, 3]])
+    module(torch.IntTensor([[129, 130, 131]]), labels=labels)
+    module.resize_token_embeddings(128)
+    with pytest.raises(IndexError):
+        module(torch.IntTensor([[129, 130, 131]]), labels=labels)
+    module.resize_token_embeddings(1024)
+    module(torch.IntTensor([[129, 130, 131]]), labels=labels)

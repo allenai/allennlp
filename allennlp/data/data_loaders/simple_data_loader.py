@@ -2,7 +2,7 @@ import math
 import random
 from typing import Optional, List, Iterator
 
-from overrides import overrides
+
 import torch
 
 from allennlp.common.util import lazy_groups_of
@@ -44,7 +44,6 @@ class SimpleDataLoader(DataLoader):
             return self.batches_per_epoch
         return math.ceil(len(self.instances) / self.batch_size)
 
-    @overrides
     def __iter__(self) -> Iterator[TensorDict]:
         if self.batches_per_epoch is None:
             yield from self._iter_batches()
@@ -67,20 +66,17 @@ class SimpleDataLoader(DataLoader):
                 tensor_dict = nn_util.move_to_device(tensor_dict, self.cuda_device)
             yield tensor_dict
 
-    @overrides
     def iter_instances(self) -> Iterator[Instance]:
         for instance in self.instances:
             if self.vocab is not None:
                 instance.index_fields(self.vocab)
             yield instance
 
-    @overrides
     def index_with(self, vocab: Vocabulary) -> None:
         self.vocab = vocab
         for instance in self.instances:
             instance.index_fields(self.vocab)
 
-    @overrides
     def set_target_device(self, device: torch.device) -> None:
         self.cuda_device = device
 

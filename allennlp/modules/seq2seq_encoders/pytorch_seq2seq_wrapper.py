@@ -1,4 +1,3 @@
-from overrides import overrides
 import torch
 from torch.nn.utils.rnn import pad_packed_sequence
 
@@ -55,19 +54,15 @@ class PytorchSeq2SeqWrapper(Seq2SeqEncoder):
         else:
             self._num_directions = 1
 
-    @overrides
     def get_input_dim(self) -> int:
         return self._module.input_size
 
-    @overrides
     def get_output_dim(self) -> int:
         return self._module.hidden_size * self._num_directions
 
-    @overrides
     def is_bidirectional(self) -> bool:
         return self._is_bidirectional
 
-    @overrides
     def forward(
         self, inputs: torch.Tensor, mask: torch.BoolTensor, hidden_state: torch.Tensor = None
     ) -> torch.Tensor:

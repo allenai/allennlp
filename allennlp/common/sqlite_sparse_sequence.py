@@ -1,9 +1,8 @@
-import os
-import shutil
 from os import PathLike
 from typing import MutableSequence, Any, Union, Iterable
 from sqlitedict import SqliteDict
 
+from allennlp.common.file_utils import hardlink_or_copy
 from allennlp.common.sequences import SlicedSequence
 
 
@@ -95,10 +94,4 @@ class SqliteSparseSequence(MutableSequence[Any]):
             self.table = None
 
     def copy_to(self, target: Union[str, PathLike]):
-        try:
-            os.link(self.table.filename, target)
-        except OSError as e:
-            if e.errno == 18:  # Cross-device link
-                shutil.copy(self.table.filename, target)
-            else:
-                raise
+        hardlink_or_copy(self.table.filename, target)

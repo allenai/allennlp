@@ -1,6 +1,6 @@
 from typing import Optional, Tuple
 
-from overrides import overrides
+
 import torch
 from torch.nn import Conv1d, Linear
 
@@ -84,11 +84,9 @@ class CnnEncoder(Seq2VecEncoder):
             self.projection_layer = None
             self._output_dim = maxpool_output_dim
 
-    @overrides
     def get_input_dim(self) -> int:
         return self._embedding_dim
 
-    @overrides
     def get_output_dim(self) -> int:
         return self._output_dim
 
