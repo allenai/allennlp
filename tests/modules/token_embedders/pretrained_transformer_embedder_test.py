@@ -1,3 +1,4 @@
+import copy
 import math
 
 import pytest
@@ -382,12 +383,19 @@ class TestPretrainedTransformerEmbedder(AllenNlpTestCase):
 
         # Test the case where reinit_modules is a list of regex strings.
         transformer_model = cached_transformers.get("xlm-mlm-enfr-1024", True)
-        preinit_weights = list(transformer_model.parameters("position_embeddings"))
+        # Comparing all weights of the model is rather complicated, so arbitrarily compare the
+        # weights of position_embeddings module.
+        reinit_module = "position_embeddings"
+        # This MUST be a deep copy, otherwise the parameters will be re-initialized and the
+        # test will break.
+        preinit_weights = copy.deepcopy(
+            list(transformer_model.get_submodule(reinit_module).parameters())
+        )
         reinit_token_embedder = PretrainedTransformerEmbedder(
-            "xlm-mlm-enfr-1024", reinit_modules=["position_embeddings"]
+            "xlm-mlm-enfr-1024", reinit_modules=[reinit_module]
         )
         postinit_weights = list(
-            reinit_token_embedder.transformer_model.parameters("position_embeddings")
+            reinit_token_embedder.transformer_model.get_submodule(reinit_module).parameters()
         )
         assert all(
             (not torch.equal(pre, post) for pre, post in zip(preinit_weights, postinit_weights))
@@ -399,15 +407,15 @@ class TestPretrainedTransformerEmbedder(AllenNlpTestCase):
             _ = PretrainedTransformerEmbedder("bert-base-cased", reinit_modules=1000)
         with pytest.raises(ValueError):
             _ = PretrainedTransformerEmbedder("bert-base-cased", reinit_modules=[1, 1000])
+        # The argument cannot mix layer indices and regex strings.
+        with pytest.raises(ValueError):
+            _ = PretrainedTransformerEmbedder("bert-base-cased", reinit_modules=[1, "attentions"])
         # This model has a non-standard structure, so if a layer index or list of layer indexes
         # is provided, we raise a ConfigurationError.
         with pytest.raises(ConfigurationError):
             _ = PretrainedTransformerEmbedder("xlm-mlm-enfr-1024", reinit_modules=1)
         with pytest.raises(ConfigurationError):
             _ = PretrainedTransformerEmbedder("xlm-mlm-enfr-1024", reinit_modules=[1, 2])
-        # The argument cannot mix layer indices and regex strings.
-        with pytest.raises(ConfigurationError):
-            _ = PretrainedTransformerEmbedder("xlm-mlm-enfr-1024", reinit_modules=[1, "attentions"])
 
     def test_eval_mode(self):
         token_embedder = PretrainedTransformerEmbedder("epwalsh/bert-xsmall-dummy", eval_mode=True)
