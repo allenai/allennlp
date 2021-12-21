@@ -343,7 +343,7 @@ class TestPretrainedTransformerEmbedder(AllenNlpTestCase):
             == 28997
         )
 
-    def test_reinit_modules(self):
+    def test_reinit_modules_with_layer_indices(self):
         # Test the base case, where reinit_modules is None.
         transformer_model = cached_transformers.get("bert-base-cased", True)
         # Comparing all weights of the model is rather complicated, so arbitrarily compare the
@@ -381,26 +381,6 @@ class TestPretrainedTransformerEmbedder(AllenNlpTestCase):
         assert torch.equal(postinit_weights[:10], preinit_weights[:10])
         assert not torch.equal(postinit_weights[10:], preinit_weights[10:])
 
-        # Test the case where reinit_modules is a list of regex strings.
-        transformer_model = cached_transformers.get("xlm-mlm-enfr-1024", True)
-        # Comparing all weights of the model is rather complicated, so arbitrarily compare the
-        # weights of position_embeddings module.
-        reinit_module = "position_embeddings"
-        # This MUST be a deep copy, otherwise the parameters will be re-initialized and the
-        # test will break.
-        preinit_weights = copy.deepcopy(
-            list(transformer_model.get_submodule(reinit_module).parameters())
-        )
-        reinit_token_embedder = PretrainedTransformerEmbedder(
-            "xlm-mlm-enfr-1024", reinit_modules=[reinit_module]
-        )
-        postinit_weights = list(
-            reinit_token_embedder.transformer_model.get_submodule(reinit_module).parameters()
-        )
-        assert all(
-            (not torch.equal(pre, post) for pre, post in zip(preinit_weights, postinit_weights))
-        )
-
         # Should raise a ValueError because reinit_modules contains at least one index that is
         # greater than the models maximum number of layers
         with pytest.raises(ValueError):
@@ -413,9 +393,30 @@ class TestPretrainedTransformerEmbedder(AllenNlpTestCase):
         # This model has a non-standard structure, so if a layer index or list of layer indexes
         # is provided, we raise a ConfigurationError.
         with pytest.raises(ConfigurationError):
-            _ = PretrainedTransformerEmbedder("xlm-mlm-enfr-1024", reinit_modules=1)
+            _ = PretrainedTransformerEmbedder("sshleifer/tiny-gpt2", reinit_modules=1)
         with pytest.raises(ConfigurationError):
-            _ = PretrainedTransformerEmbedder("xlm-mlm-enfr-1024", reinit_modules=[1, 2])
+            _ = PretrainedTransformerEmbedder("sshleifer/tiny-gpt2", reinit_modules=[1, 2])
+
+    def test_reinit_modules_with_regex_strings(self):
+        # Test the case where reinit_modules is a list of regex strings.
+        transformer_model = cached_transformers.get("sshleifer/tiny-gpt2", True)
+        # Comparing all weights of the model is rather complicated, so arbitrarily compare the
+        # weights of wpe module.
+        reinit_module = "wpe"
+        # This MUST be a deep copy, otherwise the parameters will be re-initialized and the
+        # test will break.
+        preinit_weights = copy.deepcopy(
+            list(transformer_model.get_submodule(reinit_module).parameters())
+        )
+        reinit_token_embedder = PretrainedTransformerEmbedder(
+            "sshleifer/tiny-gpt2", reinit_modules=[reinit_module]
+        )
+        postinit_weights = list(
+            reinit_token_embedder.transformer_model.get_submodule(reinit_module).parameters()
+        )
+        assert all(
+            (not torch.equal(pre, post) for pre, post in zip(preinit_weights, postinit_weights))
+        )
 
     def test_eval_mode(self):
         token_embedder = PretrainedTransformerEmbedder("epwalsh/bert-xsmall-dummy", eval_mode=True)
