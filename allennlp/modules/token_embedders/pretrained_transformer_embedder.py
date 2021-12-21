@@ -129,8 +129,8 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
             self.config.output_hidden_states = True
 
         # Optionally, re-initialize the parameters of certain layers.
-        self._reinit_modules = reinit_modules
-        if self._reinit_modules and load_weights:
+        self._reinit_modules = reinit_modules if load_weights else None
+        if self._reinit_modules is not None:
             num_layers = self.transformer_model.config.num_hidden_layers
             if isinstance(self._reinit_modules, int):
                 self._reinit_modules = list(range(num_layers - self._reinit_modules, num_layers))

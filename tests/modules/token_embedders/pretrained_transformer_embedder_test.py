@@ -343,14 +343,15 @@ class TestPretrainedTransformerEmbedder(AllenNlpTestCase):
             == 28997
         )
 
-    def test_reinit_modules_with_layer_indices(self):
-        # Test the base case, where reinit_modules is None.
+    def test_reinit_modules_no_ops(self):
         transformer_model = cached_transformers.get("bert-base-cased", True)
         # Comparing all weights of the model is rather complicated, so arbitrarily compare the
         # weights of attention module.
         preinit_weights = torch.cat(
             [layer.attention.output.dense.weight for layer in transformer_model.encoder.layer]
         )
+
+        # Test the case where reinit_modules is None
         regular_token_embedder = PretrainedTransformerEmbedder("bert-base-cased")
         postinit_weights = torch.cat(
             [
@@ -360,6 +361,21 @@ class TestPretrainedTransformerEmbedder(AllenNlpTestCase):
         )
         assert regular_token_embedder._reinit_modules is None
         assert torch.equal(postinit_weights, preinit_weights)
+
+        # Test the case when reinit_modules is a valid argument but load_weights is False.
+        reinit_token_embedder = PretrainedTransformerEmbedder(
+            "bert-base-cased", reinit_modules=2, load_weights=False
+        )
+        assert reinit_token_embedder._reinit_modules is None
+        assert torch.equal(postinit_weights, preinit_weights)
+
+    def test_reinit_modules_with_layer_indices(self):
+        # Comparing all weights of the model is rather complicated, so arbitrarily compare the
+        # weights of attention module.
+        transformer_model = cached_transformers.get("bert-base-cased", True)
+        preinit_weights = torch.cat(
+            [layer.attention.output.dense.weight for layer in transformer_model.encoder.layer]
+        )
 
         # Test the case when reinit_modules is a valid int.
         reinit_token_embedder = PretrainedTransformerEmbedder("bert-base-cased", reinit_modules=2)
