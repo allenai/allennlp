@@ -965,10 +965,12 @@ class GradientDescentTrainer(Trainer):
             torch.save(self.model.state_dict(), path)
 
     def _load_model_state(self, path: str) -> None:
+        # This function is only called after training. So load model on the CPU.
+        device = torch.device("cpu")
         if self._ddp_wrapped_model is not None:
-            self._ddp_wrapped_model.load_state_dict(torch.load(path))
+            self._ddp_wrapped_model.load_state_dict(torch.load(path, map_location=device))
         else:
-            self._pytorch_model.load_state_dict(torch.load(path))
+            self._pytorch_model.load_state_dict(torch.load(path, map_location=device))
 
     def _finalize_model(self) -> None:
         """If we have a moving average, we have to finalize the model at the end of training."""
