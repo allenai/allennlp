@@ -417,7 +417,7 @@ jobs:
 
     - name: Test image
       run: |
-        make docker-run DOCKER_GPUS='' DOCKER_IMAGE_NAME=$DOCKER_IMAGE_NAME ARGS='test-install'
+        docker run --rm $DOCKER_IMAGE_NAME test-install
 
     - name: Authenticate to Docker Hub
       if: github.event_name == 'release' || github.event_name == 'push'
