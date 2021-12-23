@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Added a way to resize the vocabulary in the T5 module
-- Added an argument `reinit_modules` to `PretrainedTransformerEmbedder` that allows you to re-initialize the pretrained weights of a transformer model, using layer indices or regex strings.
+- Added an argument `reinit_modules` to `cached_transformers.get()` that allows you to re-initialize the pretrained weights of a transformer model, using layer indices or regex strings.
 
 ### Fixed
 

@@ -1,10 +1,11 @@
 import logging
+import re
 import warnings
-from typing import NamedTuple, Optional, Dict, Tuple
+from typing import Dict, NamedTuple, Optional, Tuple, Union, cast
 
 import transformers
-from transformers import AutoModel, AutoConfig
-
+from allennlp.common.checks import ConfigurationError
+from transformers import AutoConfig, AutoModel
 
 logger = logging.getLogger(__name__)
 
@@ -13,6 +14,7 @@ class TransformerSpec(NamedTuple):
     model_name: str
     override_weights_file: Optional[str] = None
     override_weights_strip_prefix: Optional[str] = None
+    reinit_modules: Optional[Union[int, Tuple[int, ...], Tuple[str, ...]]] = None
 
 
 _model_cache: Dict[TransformerSpec, transformers.PreTrainedModel] = {}
@@ -23,6 +25,7 @@ def get(
     make_copy: bool,
     override_weights_file: Optional[str] = None,
     override_weights_strip_prefix: Optional[str] = None,
+    reinit_modules: Optional[Union[int, Tuple[int, ...], Tuple[str, ...]]] = None,
     load_weights: bool = True,
     **kwargs,
 ) -> transformers.PreTrainedModel:
@@ -43,13 +46,26 @@ def get(
         with `torch.save()`.
     override_weights_strip_prefix : `str`, optional (default = `None`)
         If set, strip the given prefix from the state dict when loading it.
+    reinit_modules: `Optional[Union[int, Tuple[int, ...], Tuple[str, ...]]]`, optional (default = `None`)
+        If this is an integer, the last `reinit_modules` layers of the transformer will be
+        re-initialized. If this is a tuple of integers, the layers indexed by `reinit_modules` will
+        be re-initialized. If this is a tuple of strings, they will be treated as regexes and any
+        module with a name matching the regex will be re-initialized. Re-initializing the last few
+        layers of a pretrained transformer can reduce the instability of fine-tuning on small
+        datasets and may improve performance (https://arxiv.org/abs/2006.05987v3). Has no effect
+        if `load_weights` is `False` or `override_weights_file` is not None.
     load_weights : `bool`, optional (default = `True`)
         If set to `False`, no weights will be loaded. This is helpful when you only
         want to initialize the architecture, like when you've already fine-tuned a model
         and are going to load the weights from a state dict elsewhere.
     """
     global _model_cache
-    spec = TransformerSpec(model_name, override_weights_file, override_weights_strip_prefix)
+    spec = TransformerSpec(
+        model_name,
+        override_weights_file,
+        override_weights_strip_prefix,
+        reinit_modules,
+    )
     transformer = _model_cache.get(spec, None)
     if transformer is None:
         if not load_weights:
@@ -59,6 +75,12 @@ def get(
                     "but 'load_weights' is set to False, so 'override_weights_file' will be ignored.",
                     UserWarning,
                 )
+            if reinit_modules is not None:
+                warnings.warn(
+                    "You specified 'reinit_modules' in allennlp.common.cached_transformers.get(), "
+                    "but 'load_weights' is set to False, so 'reinit_modules' will be ignored.",
+                    UserWarning,
+                )
             transformer = AutoModel.from_config(
                 AutoConfig.from_pretrained(
                     model_name,
@@ -66,8 +88,14 @@ def get(
                 )
             )
         elif override_weights_file is not None:
-            from allennlp.common.file_utils import cached_path
+            if reinit_modules is not None:
+                warnings.warn(
+                    "You specified 'reinit_modules' in allennlp.common.cached_transformers.get(), "
+                    "but 'override_weights_file' is not None, so 'reinit_modules' will be ignored.",
+                    UserWarning,
+                )
             import torch
+            from allennlp.common.file_utils import cached_path
 
             override_weights_file = cached_path(override_weights_file)
             override_weights = torch.load(override_weights_file)
@@ -110,6 +138,40 @@ def get(
                 transformer.module.load_state_dict(override_weights)
             else:
                 transformer.load_state_dict(override_weights)
+        elif reinit_modules is not None:
+            transformer = AutoModel.from_pretrained(
+                model_name,
+                **kwargs,
+            )
+            num_layers = transformer.config.num_hidden_layers
+            if isinstance(reinit_modules, int):
+                reinit_modules = tuple(range(num_layers - reinit_modules, num_layers))
+            if all(isinstance(x, int) for x in reinit_modules):
+                # This type cast is neccessary to avoid a mypy error.
+                reinit_modules = cast(Tuple[int], reinit_modules)
+                if any(layer_idx < 0 or layer_idx > num_layers for layer_idx in reinit_modules):
+                    raise ValueError(
+                        f"A layer index in reinit_modules ({reinit_modules}) is invalid."
+                        f" Must be between 0 and the maximum layer index ({num_layers - 1}.)"
+                    )
+                # Some transformer models organize their modules differently, so if this fails,
+                # raise an error with a helpful message.
+                try:
+                    for layer_idx in reinit_modules:
+                        transformer.encoder.layer[layer_idx].apply(transformer._init_weights)
+                except AttributeError:
+                    raise ConfigurationError(
+                        f"Unable to re-initialize the layers of transformer model"
+                        f" {model_name} using layer indices. Please provide a list of"
+                        " strings corresponding to the names of the layers to re-initialize."
+                    )
+            elif all(isinstance(x, str) for x in reinit_modules):
+                for regex in reinit_modules:
+                    for name, module in transformer.named_modules():
+                        if re.search(regex, name):
+                            module.apply(transformer._init_weights)
+            else:
+                raise ValueError("reinit_modules must be a list of strings or a list of integers.")
         else:
             transformer = AutoModel.from_pretrained(
                 model_name,
