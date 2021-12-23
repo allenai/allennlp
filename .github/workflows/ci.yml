@@ -367,6 +367,10 @@ jobs:
         name: core-package
         path: dist
 
+    - name: Install core package
+      run: |
+        pip install $(ls dist/*.whl)
+
     - name: Download NLTK prerequisites
       run: |
         make download-extras
@@ -374,10 +378,6 @@ jobs:
     - name: Cleanup workspace
       run: |
         rm -rf allennlp/ setup.py tests/ test_fixtures/
-
-    - name: Install core package
-      run: |
-        pip install $(ls dist/*.whl)
 
     - name: Pip freeze
       run: |
