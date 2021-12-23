@@ -171,7 +171,7 @@ def get(
                         if re.search(regex, name):
                             module.apply(transformer._init_weights)
             else:
-                raise ValueError("reinit_modules must be a list of strings or a list of integers.")
+                raise ValueError("reinit_modules must be either an integer, a list of strings, or a list of integers.")
         else:
             transformer = AutoModel.from_pretrained(
                 model_name,
