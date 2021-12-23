@@ -350,6 +350,8 @@ jobs:
         python: ['3.7', '3.8', '3.9']
 
     steps:
+    - uses: actions/checkout@v2
+
     - name: Setup Python
       uses: actions/setup-python@v2
       with:
@@ -364,6 +366,14 @@ jobs:
       with:
         name: core-package
         path: dist
+
+    - name: Download NLTK prerequisites
+      run: |
+        make download-extras
+
+    - name: Cleanup workspace
+      run: |
+        rm -rf allennlp/ setup.py tests/ test_fixtures/
 
     - name: Install core package
       run: |
