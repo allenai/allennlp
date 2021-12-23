@@ -49,11 +49,13 @@ def get(
     reinit_modules: `Optional[Union[int, Tuple[int, ...], Tuple[str, ...]]]`, optional (default = `None`)
         If this is an integer, the last `reinit_modules` layers of the transformer will be
         re-initialized. If this is a tuple of integers, the layers indexed by `reinit_modules` will
-        be re-initialized. If this is a tuple of strings, they will be treated as regexes and any
-        module with a name matching the regex will be re-initialized. Re-initializing the last few
-        layers of a pretrained transformer can reduce the instability of fine-tuning on small
+        be re-initialized. Note, because the module structure of the transformer `model_name` can
+        differ, we cannot guarantee that providing an integer or tuple of integers will work. If
+        this fails, you can instead provide a tuple of strings, which will be treated as regexes and
+        any module with a name matching the regex will be re-initialized. Re-initializing the last
+        few layers of a pretrained transformer can reduce the instability of fine-tuning on small
         datasets and may improve performance (https://arxiv.org/abs/2006.05987v3). Has no effect
-        if `load_weights` is `False` or `override_weights_file` is not None.
+        if `load_weights` is `False` or `override_weights_file` is not `None`.
     load_weights : `bool`, optional (default = `True`)
         If set to `False`, no weights will be loaded. This is helpful when you only
         want to initialize the architecture, like when you've already fine-tuned a model
