@@ -164,7 +164,7 @@ def get(
                 except AttributeError:
                     raise ConfigurationError(
                         f"Unable to re-initialize the layers of transformer model"
-                        f" {model_name} using layer indices. Please provide a list of"
+                        f" {model_name} using layer indices. Please provide a tuple of"
                         " strings corresponding to the names of the layers to re-initialize."
                     )
             elif all(isinstance(x, str) for x in reinit_modules):
