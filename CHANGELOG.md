@@ -20,6 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `FBetaMultiLabelMeasure` now works with multiple dimensions
 - Support for inferior operating systems when making hardlinks
 - Use `,` as a separator for filenames in the `evaluate` command, thus allowing for URLs (eg. `gs://...`) as input files.
+- Removed a spurious error message "'torch.cuda' has no attribute '_check_driver'" that would be appear in the logs
+  when a `ConfigurationError` for missing GPU was raised.
 - Load model on CPU post training to save GPU memory.
 
 ### Removed
