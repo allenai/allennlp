@@ -339,6 +339,7 @@ class GradientDescentTrainer(Trainer):
         self._batches_in_epoch_completed: int = 0
         self._start_after_batches_in_epoch_completed: int = 0
         self._best_model_filename: Optional[str] = None
+        self._should_validate_this_epoch: bool = True
 
         # This is a kind of training state, but it is not serialized with the trainer state, because we can
         # re-create it with `epochs_completed` and `batches_in_epoch_completed`.
@@ -811,7 +812,7 @@ class GradientDescentTrainer(Trainer):
                     metrics["peak_" + key] = max(metrics.get("peak_" + key, 0), value)
 
             this_epoch_val_metric: float = 0.0
-            if self._validation_data_loader is not None:
+            if self._validation_data_loader is not None and self._should_validate_this_epoch:
                 with torch.no_grad():
                     # We have a validation set, so compute all the metrics on it.
                     val_loss, val_reg_loss, num_batches = self._validation_loss(epoch)
