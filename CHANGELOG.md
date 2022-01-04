@@ -23,6 +23,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Removed a spurious error message "'torch.cuda' has no attribute '_check_driver'" that would be appear in the logs
   when a `ConfigurationError` for missing GPU was raised.
 - Load model on CPU post training to save GPU memory.
+- Fixed a bug in `ShouldValidateCallback` that leads to valuation occuring after the first epoch regardless of `validation_start` value.
+- Fixed a bug in `ShouldValidateCallback` that leads to valuation occuring every `validation_interval + 1` epochs, instead of every `validation_interval` epochs.
 
 ### Removed
 
