@@ -1,7 +1,7 @@
 from typing import Optional, Iterable, Tuple, Union
 import itertools
 import numpy as np
-from overrides import overrides
+
 from checklist.editor import MunchWithAdd as CheckListTemplate
 from checklist.test_suite import TestSuite
 from checklist.test_types import MFT
@@ -53,7 +53,6 @@ class QuestionAnsweringSuite(TaskSuite):
 
         return preds_and_confs_fn
 
-    @overrides
     def _format_failing_examples(
         self,
         inputs: Tuple,
@@ -95,7 +94,6 @@ class QuestionAnsweringSuite(TaskSuite):
 
         return context_punctuation
 
-    @overrides
     def _setup_editor(self):
         super()._setup_editor()
 
@@ -142,7 +140,6 @@ class QuestionAnsweringSuite(TaskSuite):
 
         self.editor.add_lexicon("comp_pairs", comp_pairs, overwrite=True)
 
-    @overrides
     def _default_tests(self, data: Optional[Iterable[Tuple]], num_test_cases: int = 100):
         super()._default_tests(data, num_test_cases)
         self._setup_editor()

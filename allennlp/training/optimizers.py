@@ -23,7 +23,7 @@ import re
 import math
 from typing import Any, Dict, List, Tuple, Union, Optional
 
-from overrides import overrides
+
 import torch
 import transformers
 
@@ -313,7 +313,6 @@ class MultiOptimizer(Optimizer):
 
         super().__init__(made_parameter_groups, {})
 
-    @overrides
     def step(self):
         """
         Takes an optimization step for each optimizer.
@@ -321,7 +320,6 @@ class MultiOptimizer(Optimizer):
         for optimizer in self.optimizers.values():
             optimizer.step()
 
-    @overrides
     def state_dict(self):
         """
         Creates an object `optimizer_state_dict`, which is a dictionary mapping an optimizer key to its
@@ -341,7 +339,6 @@ class MultiOptimizer(Optimizer):
 
         return optimizer_state_dict
 
-    @overrides
     def load_state_dict(self, training_state: Dict[str, Any]):
         """
         Loads each optimizer's `state_dict`.
@@ -349,7 +346,6 @@ class MultiOptimizer(Optimizer):
         for optimizer_key, optimizer in self.optimizers.items():
             optimizer.load_state_dict(training_state[f"{optimizer_key}_optimizer"])
 
-    @overrides
     def zero_grad(self, set_to_none: bool = False):
         """
         Sets parameter gradients to zero or None.

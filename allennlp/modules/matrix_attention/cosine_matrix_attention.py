@@ -1,5 +1,5 @@
 import torch
-from overrides import overrides
+
 
 from allennlp.modules.matrix_attention.matrix_attention import MatrixAttention
 from allennlp.nn import util
@@ -14,7 +14,6 @@ class CosineMatrixAttention(MatrixAttention):
     Registered as a `MatrixAttention` with name "cosine".
     """
 
-    @overrides
     def forward(self, matrix_1: torch.Tensor, matrix_2: torch.Tensor) -> torch.Tensor:
         a_norm = matrix_1 / (
             matrix_1.norm(p=2, dim=-1, keepdim=True) + util.tiny_value_of_dtype(matrix_1.dtype)

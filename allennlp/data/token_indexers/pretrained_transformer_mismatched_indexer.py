@@ -1,7 +1,7 @@
 from typing import Dict, List, Any, Optional
 import logging
 
-from overrides import overrides
+
 import torch
 
 from allennlp.common.util import pad_sequence_to_length
@@ -67,11 +67,9 @@ class PretrainedTransformerMismatchedIndexer(TokenIndexer):
         self._num_added_start_tokens = self._matched_indexer._num_added_start_tokens
         self._num_added_end_tokens = self._matched_indexer._num_added_end_tokens
 
-    @overrides
     def count_vocab_items(self, token: Token, counter: Dict[str, Dict[str, int]]):
         return self._matched_indexer.count_vocab_items(token, counter)
 
-    @overrides
     def tokens_to_indices(self, tokens: List[Token], vocabulary: Vocabulary) -> IndexedTokenList:
         self._matched_indexer._add_encoding_to_vocabulary_if_needed(vocabulary)
 
@@ -93,14 +91,12 @@ class PretrainedTransformerMismatchedIndexer(TokenIndexer):
 
         return self._matched_indexer._postprocess_output(output)
 
-    @overrides
     def get_empty_token_list(self) -> IndexedTokenList:
         output = self._matched_indexer.get_empty_token_list()
         output["offsets"] = []
         output["wordpiece_mask"] = []
         return output
 
-    @overrides
     def as_padded_tensor_dict(
         self, tokens: IndexedTokenList, padding_lengths: Dict[str, int]
     ) -> Dict[str, torch.Tensor]:

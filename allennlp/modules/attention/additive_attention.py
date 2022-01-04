@@ -1,4 +1,3 @@
-from overrides import overrides
 import torch
 from torch.nn.parameter import Parameter
 
@@ -45,7 +44,6 @@ class AdditiveAttention(Attention):
         torch.nn.init.xavier_uniform_(self._u_matrix)
         torch.nn.init.xavier_uniform_(self._v_vector)
 
-    @overrides
     def _forward_internal(self, vector: torch.Tensor, matrix: torch.Tensor) -> torch.Tensor:
         intermediate = vector.matmul(self._w_matrix).unsqueeze(1) + matrix.matmul(self._u_matrix)
         intermediate = torch.tanh(intermediate)

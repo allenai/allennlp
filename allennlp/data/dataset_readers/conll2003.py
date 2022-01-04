@@ -3,7 +3,6 @@ import itertools
 import logging
 import warnings
 
-from overrides import overrides
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path
@@ -128,7 +127,6 @@ class Conll2003DatasetReader(DatasetReader):
         self.label_namespace = label_namespace
         self._original_coding_scheme = "IOB1"
 
-    @overrides
     def _read(self, file_path: PathOrStr) -> Iterable[Instance]:
         # if `file_path` is a URL, redirect to the cache
         file_path = cached_path(file_path)
@@ -221,6 +219,5 @@ class Conll2003DatasetReader(DatasetReader):
 
         return Instance(instance_fields)
 
-    @overrides
     def apply_token_indexers(self, instance: Instance) -> None:
         instance.fields["tokens"]._token_indexers = self._token_indexers  # type: ignore

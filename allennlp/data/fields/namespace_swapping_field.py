@@ -1,6 +1,6 @@
 from typing import Dict, List, Any
 
-from overrides import overrides
+
 import torch
 
 from allennlp.common.util import pad_sequence_to_length
@@ -30,25 +30,21 @@ class NamespaceSwappingField(Field[torch.Tensor]):
         self._target_namespace = target_namespace
         self._mapping_array: List[int] = []
 
-    @overrides
     def index(self, vocab: Vocabulary):
         self._mapping_array = [
             vocab.get_token_index(x.ensure_text(), self._target_namespace)
             for x in self._source_tokens
         ]
 
-    @overrides
     def get_padding_lengths(self) -> Dict[str, int]:
         return {"num_tokens": len(self._source_tokens)}
 
-    @overrides
     def as_tensor(self, padding_lengths: Dict[str, int]) -> torch.Tensor:
         desired_length = padding_lengths["num_tokens"]
         padded_tokens = pad_sequence_to_length(self._mapping_array, desired_length)
         tensor = torch.LongTensor(padded_tokens)
         return tensor
 
-    @overrides
     def empty_field(self) -> "NamespaceSwappingField":
         empty_field = NamespaceSwappingField([], self._target_namespace)
         empty_field._mapping_array = []
@@ -58,7 +54,6 @@ class NamespaceSwappingField(Field[torch.Tensor]):
     def __len__(self):
         return len(self._source_tokens)
 
-    @overrides
     def human_readable_repr(self) -> Dict[str, Any]:
         return {
             "source_tokens": [str(t) for t in self._source_tokens],

@@ -1,4 +1,3 @@
-from overrides import overrides
 import torch
 
 from allennlp.training.learning_rate_schedulers.learning_rate_scheduler import LearningRateScheduler
@@ -71,7 +70,6 @@ class NoamLR(LearningRateScheduler):
         self.model_size = model_size
         super().__init__(optimizer, last_epoch=last_epoch)
 
-    @overrides
     def step(self, metric: float = None) -> None:
         pass
 
