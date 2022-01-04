@@ -112,6 +112,9 @@ class TestEvaluate(AllenNlpTestCase):
 
         kebab_args = [
             "evaluate",
+            str(
+                self.FIXTURES_ROOT / "simple_tagger_with_span_f1" / "serialization" / "model.tar.gz"
+            ),
             ",".join(map(str, paths)),
             "--cuda-device",
             "-1",
@@ -197,13 +200,13 @@ class TestEvaluate(AllenNlpTestCase):
             str(
                 self.FIXTURES_ROOT / "simple_tagger_with_span_f1" / "serialization" / "model.tar.gz"
             ),
-            ":".join(map(str, paths)),
+            ",".join(map(str, paths)),
             "--cuda-device",
             "-1",
             "--output-file",
-            ":".join(map(str, out_paths)),
+            ",".join(map(str, out_paths)),
             "--predictions-output-file",
-            ":".join(map(str, pred_paths)),
+            ",".join(map(str, pred_paths)),
             "--auto-names",
             auto_names,
         ]

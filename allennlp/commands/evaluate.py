@@ -36,14 +36,14 @@ class Evaluate(Subcommand):
             "input_file",
             type=str,
             help="path to the file containing the evaluation data (for mutiple "
-                 "files, put between filenames e.g., input1.txt,input2.txt)",
+            "files, put between filenames e.g., input1.txt,input2.txt)",
         )
 
         subparser.add_argument(
             "--output-file",
             type=str,
             help="optional path to write the metrics to as JSON (for mutiple "
-                 "files, put  between filenames e.g., output1.txt,output2.txt)",
+            "files, put  between filenames e.g., output1.txt,output2.txt)",
         )
 
         subparser.add_argument(
