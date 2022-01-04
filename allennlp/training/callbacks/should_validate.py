@@ -10,19 +10,19 @@ if TYPE_CHECKING:
 class ShouldValidateCallback(TrainerCallback):
     """
     A callback that you can pass to the `GradientDescentTrainer` to change the frequency of
-    validation during training. If `start_validation` is not `None`, validation will not occur until
-    `start_validation` epochs have elapsed. If `validation_interval` is not `None`, validation will
+    validation during training. If `validation_start` is not `None`, validation will not occur until
+    `validation_start` epochs have elapsed. If `validation_interval` is not `None`, validation will
     run every `validation_interval` number of epochs epochs.
     """
 
     def __init__(
         self,
         serialization_dir: str,
-        start_validation: Optional[int] = None,
+        validation_start: Optional[int] = None,
         validation_interval: Optional[int] = None,
     ) -> None:
         super().__init__(serialization_dir)
-        self._start_validation = start_validation
+        self._validation_start = validation_start
         self._validation_interval = validation_interval
 
     def on_epoch(
@@ -33,7 +33,7 @@ class ShouldValidateCallback(TrainerCallback):
         is_primary: bool = True,
         **kwargs,
     ) -> None:
-        if self._start_validation is not None and epoch < self._start_validation:
+        if self._validation_start is not None and epoch < self._validation_start:
             trainer._should_validate_this_epoch = False
         elif self._validation_interval is not None and epoch % self._validation_interval != 0:
             trainer._should_validate_this_epoch = False

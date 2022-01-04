@@ -1346,7 +1346,7 @@ class TestTrainer(TrainerTestBase):
         model = FakeModel(vocab)
         optimizer = torch.optim.SGD(model.parameters(), 0.01, momentum=0.9)
         callback = ShouldValidateCallback.from_params(
-            Params({"start_validation": 4, "validation_interval": 2}),
+            Params({"validation_start": 4, "validation_interval": 2}),
             serialization_dir=self.TEST_DIR,
         )
 
@@ -1358,15 +1358,15 @@ class TestTrainer(TrainerTestBase):
             serialization_dir=self.TEST_DIR,
         )
 
-        # Doesn't satisfy 'start_validation' or 'validation_interval'
+        # Doesn't satisfy 'validation_start' or 'validation_interval'
         callback.on_epoch(trainer, metrics={}, epoch=1)
         assert not trainer._should_validate_this_epoch
 
-        # Satisfies 'start_validation' but not 'validation_interval'
+        # Satisfies 'validation_start' but not 'validation_interval'
         callback.on_epoch(trainer, metrics={}, epoch=2)
         assert not trainer._should_validate_this_epoch
 
-        # Satisfies both 'start_validation' and 'validation_interval'
+        # Satisfies both 'validation_start' and 'validation_interval'
         callback.on_epoch(trainer, metrics={}, epoch=4)
         assert trainer._should_validate_this_epoch
 
