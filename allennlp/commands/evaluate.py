@@ -12,7 +12,6 @@ from os import PathLike
 from typing import Union, Dict, Any, Optional
 from copy import deepcopy
 
-from overrides import overrides
 
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common import logging as common_logging
@@ -26,7 +25,6 @@ logger = logging.getLogger(__name__)
 
 @Subcommand.register("evaluate")
 class Evaluate(Subcommand):
-    @overrides
     def add_subparser(self, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
         description = """Evaluate the specified model + dataset(s)"""
         subparser = parser.add_parser(
@@ -40,7 +38,7 @@ class Evaluate(Subcommand):
             type=str,
             help=(
                 "path to the file containing the evaluation data"
-                ' (for multiple files, put ":" between filenames e.g., input1.txt:input2.txt)'
+                " (for mutiple files, put "," between filenames e.g., input1.txt,input2.txt)"
             ),
         )
 
@@ -49,7 +47,7 @@ class Evaluate(Subcommand):
             type=str,
             help=(
                 "optional path to write the metrics to as JSON"
-                ' (for multiple files, put ":" between filenames e.g., output1.txt:output2.txt)'
+                " (for mutiple files, put "," between filenames e.g., output1.txt,output2.txt)"
             ),
         )
 
@@ -58,7 +56,7 @@ class Evaluate(Subcommand):
             type=str,
             help=(
                 "optional path to write the predictions to as JSON lines"
-                ' (for multiple files, put ":" between filenames e.g., output1.jsonl:output2.jsonl)'
+                " (for mutiple files, put "," between filenames e.g., output1.jsonl,output2.jsonl)"
             ),
         )
 
@@ -266,7 +264,7 @@ def evaluate_from_archive(
     dataset_reader = archive.validation_dataset_reader
 
     # split files
-    evaluation_data_path_list = input_file.split(":")
+    evaluation_data_path_list = input_file.split(",")
 
     # TODO(gabeorlanski): Is it safe to always default to .outputs and .preds?
     # TODO(gabeorlanski): Add in way to save to specific output directory
@@ -281,7 +279,7 @@ def evaluate_from_archive(
                 p.parent.joinpath(f"{p.stem}.outputs") for p in map(Path, evaluation_data_path_list)
             ]
         else:
-            output_file_list = metrics_output_file.split(":")  # type: ignore
+            output_file_list = metrics_output_file.split(",")  # type: ignore
             assert len(output_file_list) == len(evaluation_data_path_list), (
                 "The number of `metrics_output_file` paths must be equal to the number "
                 "of datasets being evaluated."
@@ -297,11 +295,12 @@ def evaluate_from_archive(
                 p.parent.joinpath(f"{p.stem}.preds") for p in map(Path, evaluation_data_path_list)
             ]
         else:
-            predictions_output_file_list = predictions_output_file.split(":")  # type: ignore
+            predictions_output_file_list = predictions_output_file.split(",")  # type: ignore
             assert len(predictions_output_file_list) == len(evaluation_data_path_list), (
                 "The number of `predictions_output_file` paths must be equal"
                 + "to the number of datasets being evaluated. "
             )
+
 
     # output file
     output_file_path = None

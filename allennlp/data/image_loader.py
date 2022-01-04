@@ -1,7 +1,7 @@
 from os import PathLike
 from typing import Union, Sequence, Tuple, List, cast
 
-from overrides import overrides
+
 import torch
 import torchvision
 from torch import FloatTensor, IntTensor
@@ -168,7 +168,6 @@ class TorchImageLoader(ImageLoader):
         self.pixel_mean = pixel_mean
         self.pixel_std = pixel_std
 
-    @overrides
     def load(self, filename: OnePath) -> FloatTensor:
         image = torchvision.io.read_image(filename).float().to(self.device) / 256
         if self.normalize:

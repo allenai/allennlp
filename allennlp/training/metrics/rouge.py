@@ -1,7 +1,6 @@
 from collections import defaultdict
-from typing import Tuple, Dict, Set
+from typing import Tuple, Dict, Set, Optional
 
-from overrides import overrides
 import torch
 
 from allennlp.training.metrics.metric import Metric
@@ -43,7 +42,6 @@ class ROUGE(Metric):
 
         self._total_sequence_count = 0
 
-    @overrides
     def reset(self) -> None:
         self._total_rouge_n_recalls = defaultdict(float)
         self._total_rouge_n_precisions = defaultdict(float)
@@ -159,11 +157,11 @@ class ROUGE(Metric):
 
         return total_recall, total_precision, total_f1
 
-    @overrides
     def __call__(
         self,  # type: ignore
         predictions: torch.LongTensor,
         gold_targets: torch.LongTensor,
+        mask: Optional[torch.BoolTensor] = None,
     ) -> None:
         """
         Update recall counts.
@@ -179,6 +177,9 @@ class ROUGE(Metric):
 
         None
         """
+        if mask is not None:
+            raise NotImplementedError("This metric does not support a mask.")
+
         # ROUGE-N
         predictions, gold_targets = self.detach_tensors(predictions, gold_targets)
         for n in range(1, self._ngram_size + 1):
@@ -199,7 +200,6 @@ class ROUGE(Metric):
             return 0.0
         return metric_sum / self._total_sequence_count
 
-    @overrides
     def get_metric(self, reset: bool = False) -> Dict[str, float]:
         """
         # Parameters

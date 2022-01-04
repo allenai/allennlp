@@ -42,6 +42,7 @@ from cached_path import (  # noqa: F401
     find_latest_cached as _find_latest_cached,
 )
 from cached_path.cache_file import CacheFile
+from cached_path.common import PathOrStr
 from cached_path.file_lock import FileLock
 from cached_path.meta import Meta as _Meta
 import torch
@@ -171,9 +172,7 @@ class TensorCache(MutableMapping[str, Tensor], ABC):
         except FileNotFoundError:
             result = None
         if result is None:
-            result = super(TensorCache, cls).__new__(
-                cls, filename, read_only=read_only, **kwargs
-            )  # type: ignore
+            result = super(TensorCache, cls).__new__(cls)
         return result
 
     def __init__(
@@ -608,3 +607,13 @@ SAFE_FILENAME_CHARS = frozenset("-_.%s%s" % (string.ascii_letters, string.digits
 
 def filename_is_safe(filename: str) -> bool:
     return all(c in SAFE_FILENAME_CHARS for c in filename)
+
+
+def hardlink_or_copy(source: PathOrStr, dest: PathOrStr):
+    try:
+        os.link(source, dest)
+    except OSError as e:
+        if e.errno in {18, 95}:  # Cross-device link and Windows
+            shutil.copy(source, dest)
+        else:
+            raise

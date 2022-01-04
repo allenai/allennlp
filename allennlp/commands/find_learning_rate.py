@@ -12,7 +12,6 @@ import re
 from typing import List, Tuple
 import itertools
 
-from overrides import overrides
 
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common import Params, Tqdm
@@ -29,7 +28,6 @@ logger = logging.getLogger(__name__)
 
 @Subcommand.register("find-lr")
 class FindLearningRate(Subcommand):
-    @overrides
     def add_subparser(self, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
 
         description = """Find a learning rate range where loss decreases quickly

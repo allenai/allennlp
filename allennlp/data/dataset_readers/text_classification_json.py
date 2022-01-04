@@ -1,7 +1,7 @@
 from typing import Dict, List, Union
 import logging
 import json
-from overrides import overrides
+
 from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import LabelField, TextField, Field, ListField
@@ -73,7 +73,6 @@ class TextClassificationJsonReader(DatasetReader):
         if self._segment_sentences:
             self._sentence_segmenter = SpacySentenceSplitter()
 
-    @overrides
     def _read(self, file_path):
         with open(cached_path(file_path), "r") as data_file:
             for line in self.shard_iterable(data_file.readlines()):
@@ -102,10 +101,9 @@ class TextClassificationJsonReader(DatasetReader):
             tokens = tokens[: self._max_sequence_length]
         return tokens
 
-    @overrides
-    def text_to_instance(
+    def text_to_instance(  # type: ignore
         self, text: str, label: Union[str, int] = None
-    ) -> Instance:  # type: ignore
+    ) -> Instance:
         """
         # Parameters
 
@@ -142,7 +140,6 @@ class TextClassificationJsonReader(DatasetReader):
             fields["label"] = LabelField(label, skip_indexing=self._skip_label_indexing)
         return Instance(fields)
 
-    @overrides
     def apply_token_indexers(self, instance: Instance) -> None:
         if self._segment_sentences:
             for text_field in instance.fields["tokens"]:  # type: ignore

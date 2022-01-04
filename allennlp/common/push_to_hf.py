@@ -62,7 +62,7 @@ def _copy_allowed_file(filepath: Path, dst_directory: Path):
         shutil.copytree(filepath, dst)
     elif filepath.is_file():
         if filepath.name in ["best.th", "weights.th"]:
-            dst = dst_directory / "model.th"
+            dst = dst_directory / "weights.th"
         shutil.copy(str(filepath), str(dst))
 
 

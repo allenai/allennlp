@@ -1,5 +1,3 @@
-from overrides import overrides
-
 from allennlp.commands import Subcommand
 from allennlp.common.plugins import (
     discover_plugins,
@@ -10,7 +8,6 @@ from allennlp.common.util import pushd
 
 
 class TestPlugins(AllenNlpTestCase):
-    @overrides
     def setup_method(self):
         super().setup_method()
         self.plugins_root = self.FIXTURES_ROOT / "plugins"

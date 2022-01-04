@@ -113,6 +113,28 @@ class FBetaMultiLabelMeasureTest(AllenNlpTestCase):
         assert isinstance(fscores, List)
 
     @multi_device
+    def test_fbeta_multilable_with_extra_dimensions(self, device: str):
+        self.predictions = self.predictions.to(device)
+        self.targets = self.targets.to(device)
+
+        fbeta = FBetaMultiLabelMeasure()
+        fbeta(self.predictions.unsqueeze(1), self.targets.unsqueeze(1))
+        metric = fbeta.get_metric()
+        precisions = metric["precision"]
+        recalls = metric["recall"]
+        fscores = metric["fscore"]
+
+        # check value
+        assert_allclose(precisions, self.desired_precisions)
+        assert_allclose(recalls, self.desired_recalls)
+        assert_allclose(fscores, self.desired_fscores)
+
+        # check type
+        assert isinstance(precisions, List)
+        assert isinstance(recalls, List)
+        assert isinstance(fscores, List)
+
+    @multi_device
     def test_fbeta_multilabel_with_mask(self, device: str):
         self.predictions = self.predictions.to(device)
         self.targets = self.targets.to(device)

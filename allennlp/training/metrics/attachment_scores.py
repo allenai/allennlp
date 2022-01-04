@@ -1,6 +1,6 @@
 from typing import Optional, List
 
-from overrides import overrides
+
 import torch
 
 from allennlp.nn.util import dist_reduce_sum
@@ -120,7 +120,6 @@ class AttachmentScores(Metric):
         }
         return metrics
 
-    @overrides
     def reset(self):
         self._labeled_correct = 0.0
         self._unlabeled_correct = 0.0

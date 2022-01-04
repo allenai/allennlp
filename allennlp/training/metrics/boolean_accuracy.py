@@ -1,6 +1,6 @@
 from typing import Optional
 
-from overrides import overrides
+
 import torch
 
 from allennlp.nn.util import dist_reduce_sum
@@ -103,7 +103,6 @@ class BooleanAccuracy(Metric):
             self.reset()
         return accuracy
 
-    @overrides
     def reset(self):
         self._correct_count = 0.0
         self._total_count = 0.0

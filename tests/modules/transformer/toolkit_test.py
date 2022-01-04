@@ -1,7 +1,7 @@
 import pytest
 import torch
 from torch.testing import assert_allclose
-from overrides import overrides
+
 from transformers import AutoModel
 from transformers.models.albert.modeling_albert import AlbertEmbeddings
 
@@ -41,7 +41,6 @@ class TestTransformerToolkit(AllenNlpTestCase):
                     intermediate_size=intermediate_size,
                 )
 
-            @overrides
             def forward(self, token_ids: torch.LongTensor):
                 x = self.embeddings(token_ids)
                 x = self.transformer(x)
@@ -66,7 +65,6 @@ class TestTransformerToolkit(AllenNlpTestCase):
                     strict=False,
                 )
 
-            @overrides
             def forward(self, token_ids: torch.LongTensor):
                 x = self.embeddings(token_ids)
                 x = self.transformer(x)
@@ -97,7 +95,6 @@ class TestTransformerToolkit(AllenNlpTestCase):
                     strict=False,
                 )
 
-            @overrides
             def forward(
                 self,
                 left_token_ids: torch.LongTensor,
@@ -160,7 +157,6 @@ class TestTransformerToolkit(AllenNlpTestCase):
                 # We want to tune only the embeddings, because that's our experiment.
                 self.transformer.requires_grad = False
 
-            @overrides
             def forward(self, token_ids: torch.LongTensor, mask: torch.BoolTensor):
                 x = self.embeddings(token_ids, mask)
                 x = self.transformer(x)
