@@ -1350,13 +1350,15 @@ class TestTrainer(TrainerTestBase):
             serialization_dir=self.TEST_DIR,
         )
 
+        # Check that training works with the callback
         trainer = GradientDescentTrainer(
             model,
             optimizer,
             data_loader,
-            num_epochs=1,
+            num_epochs=6,
             serialization_dir=self.TEST_DIR,
         )
+        trainer.train()
 
         # Doesn't satisfy 'validation_start' or 'validation_interval'
         callback.on_epoch(trainer, metrics={}, epoch=1)
