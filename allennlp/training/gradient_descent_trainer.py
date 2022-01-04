@@ -954,9 +954,7 @@ class GradientDescentTrainer(Trainer):
             epoch = self._num_epochs - 1
 
         # Load the best model state before returning
-        if self._should_validate_this_epoch and (
-            self._best_model_filename is None or self._metric_tracker.is_best_so_far()
-        ):
+        if self._best_model_filename is None or self._metric_tracker.is_best_so_far():
             self._finalize_model()
         else:
             # The model we're loading here has already been finalized.
