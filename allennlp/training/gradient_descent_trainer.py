@@ -811,7 +811,7 @@ class GradientDescentTrainer(Trainer):
                 elif key.startswith("worker_") and key.endswith("_memory_MB"):
                     metrics["peak_" + key] = max(metrics.get("peak_" + key, 0), value)
 
-            this_epoch_val_metric: float = 0.0
+            this_epoch_val_metric: Optional[float] = None
             if self._validation_data_loader is not None and self._should_validate_this_epoch:
                 with torch.no_grad():
                     # We have a validation set, so compute all the metrics on it.
