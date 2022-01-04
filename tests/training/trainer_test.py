@@ -1357,6 +1357,7 @@ class TestTrainer(TrainerTestBase):
             data_loader,
             num_epochs=6,
             serialization_dir=self.TEST_DIR,
+            callbacks=[callback],
         )
         trainer.train()
 
