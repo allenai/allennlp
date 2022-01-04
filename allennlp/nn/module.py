@@ -1,6 +1,6 @@
 from typing import List, Optional, Tuple
 
-from overrides import overrides
+
 import torch
 
 from allennlp.nn.util import (
@@ -24,7 +24,6 @@ class Module(torch.nn.Module):
         """
         return missing_keys, unexpected_keys
 
-    @overrides
     def load_state_dict(self, state_dict: StateDictType, strict: bool = True) -> _IncompatibleKeys:
         """
         Same as [`torch.nn.Module.load_state_dict()`]

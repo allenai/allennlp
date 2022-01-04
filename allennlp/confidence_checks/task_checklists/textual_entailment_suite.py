@@ -1,7 +1,7 @@
 from typing import Optional, Tuple, Iterable, Callable, Union
 import itertools
 import numpy as np
-from overrides import overrides
+
 from checklist.test_suite import TestSuite
 from checklist.test_types import MFT, INV, DIR, Expect
 from checklist.perturb import Perturb
@@ -78,7 +78,6 @@ class TextualEntailmentSuite(TaskSuite):
 
         return preds_and_confs_fn
 
-    @overrides
     def _format_failing_examples(
         self,
         inputs: Tuple,
@@ -119,7 +118,6 @@ class TextualEntailmentSuite(TaskSuite):
     def punctuation(cls):
         return _wrap_apply_to_each(utils.toggle_punctuation, both=False)
 
-    @overrides
     def _setup_editor(self):
         super()._setup_editor()
 
@@ -358,7 +356,6 @@ class TextualEntailmentSuite(TaskSuite):
         subclasses = [(a, b[i]) for a, b in subclasses for i in range(len(b))]
         self.editor.add_lexicon("subclasses", subclasses, overwrite=True)
 
-    @overrides
     def _default_tests(self, data: Optional[Iterable[Tuple]], num_test_cases: int = 100):
         super()._default_tests(data, num_test_cases)
         self._setup_editor()

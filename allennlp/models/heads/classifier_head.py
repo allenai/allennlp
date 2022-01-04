@@ -1,6 +1,6 @@
 from typing import Dict, Optional
 
-from overrides import overrides
+
 import torch
 
 from allennlp.data import Vocabulary
@@ -104,7 +104,6 @@ class ClassifierHead(Head):
 
         return output_dict
 
-    @overrides
     def make_output_human_readable(
         self, output_dict: Dict[str, torch.Tensor]
     ) -> Dict[str, torch.Tensor]:

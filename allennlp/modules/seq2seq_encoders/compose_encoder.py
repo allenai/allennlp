@@ -1,4 +1,3 @@
-from overrides import overrides
 import torch
 from typing import List
 
@@ -43,7 +42,6 @@ class ComposeEncoder(Seq2SeqEncoder):
                 raise ValueError("Encoder input and output dimensions don't match.")
             last_enc = enc
 
-    @overrides
     def forward(self, inputs: torch.Tensor, mask: torch.BoolTensor = None) -> torch.Tensor:
         """
         # Parameters
@@ -61,14 +59,11 @@ class ComposeEncoder(Seq2SeqEncoder):
             inputs = encoder(inputs, mask)
         return inputs
 
-    @overrides
     def get_input_dim(self) -> int:
         return self.encoders[0].get_input_dim()
 
-    @overrides
     def get_output_dim(self) -> int:
         return self.encoders[-1].get_output_dim()
 
-    @overrides
     def is_bidirectional(self) -> bool:
         return self.bidirectional

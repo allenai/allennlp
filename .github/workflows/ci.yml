@@ -22,7 +22,7 @@ env:
   TORCH_CPU_INSTALL: conda install pytorch torchvision torchaudio cpuonly -c pytorch
   TORCH_GPU_INSTALL: conda install pytorch torchvision torchaudio cudatoolkit=11.3 -c pytorch
   # Change this to invalidate existing cache.
-  CACHE_PREFIX: v4
+  CACHE_PREFIX: v5
   # Disable tokenizers parallelism because this doesn't help, and can cause issues in distributed tests.
   TOKENIZERS_PARALLELISM: 'false'
   # Disable multithreading with OMP because this can lead to dead-locks in distributed tests.
@@ -350,6 +350,8 @@ jobs:
         python: ['3.7', '3.8', '3.9']
 
     steps:
+    - uses: actions/checkout@v2
+
     - name: Setup Python
       uses: actions/setup-python@v2
       with:
@@ -368,6 +370,14 @@ jobs:
     - name: Install core package
       run: |
         pip install $(ls dist/*.whl)
+
+    - name: Download NLTK prerequisites
+      run: |
+        make download-extras
+
+    - name: Cleanup workspace
+      run: |
+        rm -rf allennlp/ setup.py tests/ test_fixtures/
 
     - name: Pip freeze
       run: |
@@ -407,7 +417,7 @@ jobs:
 
     - name: Test image
       run: |
-        make docker-run DOCKER_GPUS='' DOCKER_IMAGE_NAME=$DOCKER_IMAGE_NAME ARGS='test-install'
+        docker run --rm $DOCKER_IMAGE_NAME test-install
 
     - name: Authenticate to Docker Hub
       if: github.event_name == 'release' || github.event_name == 'push'
