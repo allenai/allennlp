@@ -12,7 +12,6 @@ from os import PathLike
 from typing import Union, Dict, Any, Optional
 from copy import deepcopy
 
-
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common import logging as common_logging
 from allennlp.common.util import prepare_environment
@@ -36,28 +35,23 @@ class Evaluate(Subcommand):
         subparser.add_argument(
             "input_file",
             type=str,
-            help=(
-                "path to the file containing the evaluation data"
-                " (for mutiple files, put "," between filenames e.g., input1.txt,input2.txt)"
-            ),
+            help="path to the file containing the evaluation data (for mutiple "
+                 "files, put between filenames e.g., input1.txt,input2.txt)",
         )
 
         subparser.add_argument(
             "--output-file",
             type=str,
-            help=(
-                "optional path to write the metrics to as JSON"
-                " (for mutiple files, put "," between filenames e.g., output1.txt,output2.txt)"
-            ),
+            help="optional path to write the metrics to as JSON (for mutiple "
+                 "files, put  between filenames e.g., output1.txt,output2.txt)",
         )
 
         subparser.add_argument(
             "--predictions-output-file",
             type=str,
-            help=(
-                "optional path to write the predictions to as JSON lines"
-                " (for mutiple files, put "," between filenames e.g., output1.jsonl,output2.jsonl)"
-            ),
+            help="optional path to write the predictions to as JSON lines "
+            "(for mutiple files, put  between filenames e.g., "
+            "output1.jsonl,output2.jsonl)",
         )
 
         subparser.add_argument(
@@ -300,7 +294,6 @@ def evaluate_from_archive(
                 "The number of `predictions_output_file` paths must be equal"
                 + "to the number of datasets being evaluated. "
             )
-
 
     # output file
     output_file_path = None

@@ -112,18 +112,13 @@ class TestEvaluate(AllenNlpTestCase):
 
         kebab_args = [
             "evaluate",
-            str(
-                self.FIXTURES_ROOT / "simple_tagger_with_span_f1" / "serialization" / "model.tar.gz"
-            ),
-            str(self.FIXTURES_ROOT / "data" / "conll2003.txt")
-            + ","
-            + str(self.FIXTURES_ROOT / "data" / "conll2003.txt"),
+            ",".join(map(str, paths)),
             "--cuda-device",
             "-1",
             "--output-file",
-            output_file + "," + output_file,
+            ",".join(map(str, out_paths)),
             "--predictions-output-file",
-            predictions_output_file + "," + predictions_output_file,
+            ",".join(map(str, pred_paths)),
         ]
         args = self.parser.parse_args(kebab_args)
         computed_metrics = evaluate_from_args(args)
