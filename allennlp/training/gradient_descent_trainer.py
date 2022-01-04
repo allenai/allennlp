@@ -851,7 +851,7 @@ class GradientDescentTrainer(Trainer):
             for key, value in val_metrics.items():
                 metrics["validation_" + key] = value
 
-            if self._metric_tracker.is_best_so_far():
+            if self._should_validate_this_epoch and self._metric_tracker.is_best_so_far():
                 # Update all the best_ metrics.
                 # (Otherwise they just stay the same as they were.)
                 metrics["best_epoch"] = epoch
@@ -891,7 +891,11 @@ class GradientDescentTrainer(Trainer):
                 if self._distributed:
                     dist.barrier()
 
-            if self._serialization_dir and self._metric_tracker.is_best_so_far():
+            if (
+                self._should_validate_this_epoch
+                and self._serialization_dir
+                and self._metric_tracker.is_best_so_far()
+            ):
                 should_save_model_state: bool
                 if self._ddp_wrapped_model is not None and self._ddp_wrapped_model.is_sharded:
                     # Each worker saves its own shard for now (we combine the shards later).
@@ -950,7 +954,9 @@ class GradientDescentTrainer(Trainer):
             epoch = self._num_epochs - 1
 
         # Load the best model state before returning
-        if self._best_model_filename is None or self._metric_tracker.is_best_so_far():
+        if self._should_validate_this_epoch and (
+            self._best_model_filename is None or self._metric_tracker.is_best_so_far()
+        ):
             self._finalize_model()
         else:
             # The model we're loading here has already been finalized.
