@@ -812,7 +812,7 @@ class GradientDescentTrainer(Trainer):
                     metrics["peak_" + key] = max(metrics.get("peak_" + key, 0), value)
 
             this_epoch_val_metric: Optional[float] = None
-            if self._validation_data_loader is not None and self._should_validate_this_epoch:
+            if self._should_validate_this_epoch and self._validation_data_loader is not None:
                 with torch.no_grad():
                     # We have a validation set, so compute all the metrics on it.
                     val_loss, val_reg_loss, num_batches = self._validation_loss(epoch)
