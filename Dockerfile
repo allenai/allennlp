@@ -25,6 +25,9 @@ RUN touch allennlp/__init__.py \
 COPY allennlp allennlp
 RUN pip install --no-cache-dir --no-deps -e .
 
+COPY Makefile .
+RUN make download-extras
+
 WORKDIR /app/
 
 # Copy wrapper script to allow beaker to run resumable training workloads.

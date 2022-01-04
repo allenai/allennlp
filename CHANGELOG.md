@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Added a way to resize the vocabulary in the T5 module
+- Added an argument `reinit_modules` to `cached_transformers.get()` that allows you to re-initialize the pretrained weights of a transformer model, using layer indices or regex strings.
 
 ### Fixed
 
@@ -19,6 +20,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `FBetaMultiLabelMeasure` now works with multiple dimensions
 - Support for inferior operating systems when making hardlinks
 - Use `,` as a separator for filenames in the `evaluate` command, thus allowing for URLs (eg. `gs://...`) as input files.
+- Removed a spurious error message "'torch.cuda' has no attribute '_check_driver'" that would be appear in the logs
+  when a `ConfigurationError` for missing GPU was raised.
+- Load model on CPU post training to save GPU memory.
 
 ### Removed
 
@@ -51,7 +55,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Added in a default behavior to the `_to_params` method of `Registrable` so that in the case it is not implemented by the child class, it will still produce _a parameter dictionary_.   
+- Added in a default behavior to the `_to_params` method of `Registrable` so that in the case it is not implemented by the child class, it will still produce _a parameter dictionary_.
 - Added in `_to_params` implementations to all tokenizers.
 - Added support to evaluate mutiple datasets and produce corresponding output files in the `evaluate` command.
 - Added more documentation to the learning rate schedulers to include a sample config object for how to use it.
