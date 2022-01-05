@@ -36,6 +36,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added support to push models directly to the [Hugging Face Hub](https://huggingface.co/) with the command `allennlp push-to-hf`.
 - More default tests for the `TextualEntailmentSuite`.
+- Added attribute `_should_validate_this_epoch` to `GradientDescentTrainer` that controls whether validation is run at the end of each epoch.
+- Added `ShouldValidateCallback` that can be used to configure the frequency of validation during training.
 
 ### Changed
 
