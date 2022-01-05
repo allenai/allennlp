@@ -87,7 +87,7 @@ class MaxPoolingSpanExtractor(SpanExtractorWithSpanWidthEmbedding):
             )
 
         # Calculate the maximum sequence length for each element in batch.
-        # If span_end indices are above these length, we adjust the indices in adopted_span_indices
+        # If span_end indices are above these length, we adjust the indices in adapted_span_indices
         if sequence_mask is not None:
             # shape (batch_size)
             sequence_lengths = util.get_lengths_from_binary_sequence_mask(sequence_mask)
@@ -97,26 +97,26 @@ class MaxPoolingSpanExtractor(SpanExtractorWithSpanWidthEmbedding):
                 sequence_tensor[:, 0, 0], dtype=torch.long
             ) * sequence_tensor.size(1)
 
-        adopted_span_indices = torch.tensor(span_indices, device=span_indices.device)
+        adapted_span_indices = torch.tensor(span_indices, device=span_indices.device)
 
         for b in range(sequence_lengths.shape[0]):
-            adopted_span_indices[b, :, 1][adopted_span_indices[b, :, 1] >= sequence_lengths[b]] = (
+            adapted_span_indices[b, :, 1][adapted_span_indices[b, :, 1] >= sequence_lengths[b]] = (
                 sequence_lengths[b] - 1
             )
 
-        # Raise Error if span indices were completly masked by sequence mask.
+        # Raise Error if span indices were completely masked by sequence mask.
         # We only adjust span_end to the last valid index, so if span_end is below span_start,
         # both were above the max index:
 
-        if (adopted_span_indices[:, :, 0] > adopted_span_indices[:, :, 1]).any():
+        if (adapted_span_indices[:, :, 0] > adapted_span_indices[:, :, 1]).any():
             raise IndexError(
                 "Span indices were masked out entirely by sequence mask",
             )
 
         # span_vals <- (batch x num_spans x max_span_length x dim)
-        span_vals, span_mask = util.batched_span_select(sequence_tensor, adopted_span_indices)
+        span_vals, span_mask = util.batched_span_select(sequence_tensor, adapted_span_indices)
 
-        # The application of masked_mask requires a mask of the same shape as span_vals
+        # The application of masked_max requires a mask of the same shape as span_vals
         # We repeat the mask along the last dimension (embedding dimension)
         repeat_dim = len(span_vals.shape) - 1
         repeat_idx = [1] * (repeat_dim) + [span_vals.shape[-1]]

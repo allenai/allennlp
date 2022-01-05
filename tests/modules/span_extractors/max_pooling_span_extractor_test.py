@@ -50,13 +50,13 @@ class TestMaxPoolingSpanExtractor:
                     features_from_span = span_features_complete[:, i]
                     real_max_value = max(features_from_span)
 
-                    extrected_max_value = span_representations[batch, indices_ind, i]
+                    extracted_max_value = span_representations[batch, indices_ind, i]
 
-                    assert real_max_value == extrected_max_value, (
+                    assert real_max_value == extracted_max_value, (
                         f"Error extracting max value for "
                         f"batch {batch}, span {indices_ind} on dimension {i}."
                         f"expected {real_max_value} "
-                        f"but got {extrected_max_value} which is "
+                        f"but got {extracted_max_value} which is "
                         f"not the maximum element."
                     )
 
@@ -86,13 +86,13 @@ class TestMaxPoolingSpanExtractor:
                 for i, _ in enumerate(span_features_complete):
                     features_from_span = span_features_complete[:, i]
                     real_max_value = max(features_from_span)
-                    extrected_max_value = span_representations[batch, indices_ind, i]
+                    extracted_max_value = span_representations[batch, indices_ind, i]
 
-                    assert real_max_value == extrected_max_value, (
+                    assert real_max_value == extracted_max_value, (
                         f"Error extracting max value for "
                         f"batch {batch}, span {indices_ind} on dimension {i}."
                         f"expected {real_max_value} "
-                        f"but got {extrected_max_value} which is "
+                        f"but got {extracted_max_value} which is "
                         f"not the maximum element."
                     )
 
@@ -122,13 +122,13 @@ class TestMaxPoolingSpanExtractor:
 
             for i, _ in enumerate(span_features_complete):
                 real_max_value = torch.FloatTensor([0.0])
-                extrected_max_value = span_representations[batch, indices_ind, i]
+                extracted_max_value = span_representations[batch, indices_ind, i]
 
-                assert real_max_value == extrected_max_value, (
+                assert real_max_value == extracted_max_value, (
                     f"Error extracting max value for "
                     f"batch {batch}, span {indices_ind} on dimension {i}."
                     f"expected {real_max_value} "
-                    f"but got {extrected_max_value} which is "
+                    f"but got {extracted_max_value} which is "
                     f"not the maximum element."
                 )
 
