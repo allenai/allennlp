@@ -11,6 +11,8 @@ from allennlp.tango.step import step_graph_from_params
 
 from allennlp.tango.training import TrainingStep
 from allennlp.tango.evaluation import EvaluationStep
+from allennlp.tango.text_fields_only import TextFieldsOnlyDataset
+from allennlp.tango.strings_only import StringsOnlyDataset
 
 import warnings
 
