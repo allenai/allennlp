@@ -25,6 +25,11 @@ class ShouldValidateCallback(TrainerCallback):
         self._validation_start = validation_start
         self._validation_interval = validation_interval
 
+    def on_start(
+        self, trainer: "GradientDescentTrainer", is_primary: bool = True, **kwargs
+    ) -> None:
+        trainer._should_validate_this_epoch = self._should_validate(epoch=0)
+
     def on_epoch(
         self,
         trainer: "GradientDescentTrainer",
@@ -33,9 +38,12 @@ class ShouldValidateCallback(TrainerCallback):
         is_primary: bool = True,
         **kwargs,
     ) -> None:
+        trainer._should_validate_this_epoch = self._should_validate(epoch=epoch + 1)
+
+    def _should_validate(self, epoch: int) -> bool:
+        should_validate = True
         if self._validation_start is not None and epoch < self._validation_start:
-            trainer._should_validate_this_epoch = False
+            should_validate = False
         elif self._validation_interval is not None and epoch % self._validation_interval != 0:
-            trainer._should_validate_this_epoch = False
-        else:
-            trainer._should_validate_this_epoch = True
+            should_validate = False
+        return should_validate
