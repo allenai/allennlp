@@ -1,5 +1,8 @@
+import os
+
 import pytest
 
+from allennlp.common import Params
 from allennlp.common.testing import ModelTestCase
 from allennlp.data import Instance, Vocabulary, Batch
 from allennlp.data.fields import LabelField, TextField, MetadataField
@@ -101,3 +104,80 @@ class TestMultiTaskModel(ModelTestCase):
         )
         with pytest.raises(ValueError, match="duplicate argument text"):
             outputs = model.forward_on_instance(instance)
+
+    def test_train_and_evaluate(self):
+        from allennlp.commands.train import train_model
+        from allennlp.commands.evaluate import evaluate_from_args
+        import argparse
+        from allennlp.commands import Evaluate
+
+        model_name = "epwalsh/bert-xsmall-dummy"
+
+        def reader():
+            return {
+                "type": "text_classification_json",
+                "tokenizer": {"type": "pretrained_transformer", "model_name": model_name},
+                "token_indexers": {
+                    "tokens": {"type": "pretrained_transformer", "model_name": model_name}
+                },
+            }
+
+        def head():
+            return {
+                "type": "classifier",
+                "seq2vec_encoder": {"type": "cls_pooler", "embedding_dim": 20},
+                "input_dim": 20,
+                "num_labels": 2,
+            }
+
+        head_eins_input = "test_fixtures/data/text_classification_json/imdb_corpus.jsonl"
+        head_zwei_input = (
+            "test_fixtures/data/text_classification_json/ag_news_corpus_fake_sentiment_labels.jsonl"
+        )
+
+        params = Params(
+            {
+                "dataset_reader": {
+                    "type": "multitask",
+                    "readers": {
+                        "head_eins": reader(),
+                        "head_zwei": reader(),
+                    },
+                },
+                "model": {
+                    "type": "multitask",
+                    "backbone": {"type": "pretrained_transformer", "model_name": model_name},
+                    "heads": {
+                        "head_eins": head(),
+                        "head_zwei": head(),
+                    },
+                    "arg_name_mapping": {"backbone": {"tokens": "text"}},
+                },
+                "train_data_path": {"head_eins": head_eins_input, "head_zwei": head_zwei_input},
+                "data_loader": {"type": "multitask", "scheduler": {"batch_size": 2}},
+                "trainer": {
+                    "optimizer": {
+                        "type": "huggingface_adamw",
+                        "lr": 4e-5,
+                    },
+                    "num_epochs": 2,
+                },
+            }
+        )
+
+        serialization_dir = os.path.join(self.TEST_DIR, "serialization_dir")
+        train_model(params, serialization_dir=serialization_dir)
+
+        args = [
+            "evaluate",
+            str(self.TEST_DIR / "serialization_dir"),
+            f'{{"head_eins": "{head_eins_input}", "head_zwei": "{head_zwei_input}"}}',
+        ]
+
+        parser = argparse.ArgumentParser(description="Testing")
+        subparsers = parser.add_subparsers(title="Commands", metavar="")
+        Evaluate().add_subparser(subparsers)
+        args = parser.parse_args(args)
+        metrics = evaluate_from_args(args)
+        assert "head_eins_accuracy" in metrics
+        assert "head_zwei_accuracy" in metrics
