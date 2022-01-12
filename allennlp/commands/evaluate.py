@@ -7,6 +7,7 @@ and report any metrics calculated by the model.
 import argparse
 import json
 import logging
+from json import JSONDecodeError
 from typing import Any, Dict
 
 from copy import deepcopy
@@ -145,7 +146,12 @@ def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
     dataset_reader = archive.validation_dataset_reader
 
     # split files
-    evaluation_data_path_list = args.input_file.split(",")
+    try:
+        # Try reading it as a list of JSON objects first. Some readers require
+        # that kind of input.
+        evaluation_data_path_list = json.loads(f"[{args.input_file}]")
+    except JSONDecodeError:
+        evaluation_data_path_list = args.input_file.split(",")
     if args.output_file is not None:
         output_file_list = args.output_file.split(",")
         assert len(output_file_list) == len(
