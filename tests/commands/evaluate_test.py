@@ -160,7 +160,7 @@ class TestEvaluate(AllenNlpTestCase):
         kebab_args = ["evaluate", archive_path, evaluate_data_path, "--cuda-device", "-1"]
 
         # TODO(mattg): the unawarded_embeddings.gz file above doesn't exist, but this test still
-        # passes.  This suggests that vocab extension in evaluate isn't currently doing anything,
+        # passes. This suggests that vocab extension in evaluate isn't currently doing anything,
         # and so it is broken.
 
         # Evaluate 1 with no vocab expansion,
