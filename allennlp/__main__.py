@@ -2,7 +2,6 @@
 import logging
 import os
 import sys
-import warnings
 
 
 if os.environ.get("ALLENNLP_DEBUG"):
