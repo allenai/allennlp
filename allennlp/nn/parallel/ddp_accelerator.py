@@ -1,5 +1,4 @@
 import os
-from collections import OrderedDict
 from typing import (
     Union,
     Tuple,
@@ -28,7 +27,7 @@ if TYPE_CHECKING:
     from allennlp.models import Model
 
 
-StateDictType = Union[Dict[str, torch.Tensor], Mapping[str, torch.Tensor]]
+StateDictType = Union[Dict[str, torch.Tensor], "OrderedDict[str, torch.Tensor]"]
 
 
 class LoadStateDictReturnType(NamedTuple):
