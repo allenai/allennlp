@@ -1,6 +1,6 @@
 from typing import List, Dict
 
-from overrides import overrides
+
 import numpy
 
 from allennlp.common.util import JsonDict
@@ -31,7 +31,6 @@ class SentenceTaggerPredictor(Predictor):
     def predict(self, sentence: str) -> JsonDict:
         return self.predict_json({"sentence": sentence})
 
-    @overrides
     def _json_to_instance(self, json_dict: JsonDict) -> Instance:
         """
         Expects JSON that looks like `{"sentence": "..."}`.
@@ -41,7 +40,6 @@ class SentenceTaggerPredictor(Predictor):
         tokens = self._tokenizer.tokenize(sentence)
         return self._dataset_reader.text_to_instance(tokens)
 
-    @overrides
     def predictions_to_labeled_instances(
         self, instance: Instance, outputs: Dict[str, numpy.ndarray]
     ) -> List[Instance]:

@@ -1,6 +1,6 @@
 from typing import Optional
 
-from overrides import overrides
+
 import torch
 
 from allennlp.common.checks import ConfigurationError
@@ -87,7 +87,6 @@ class SequenceAccuracy(Metric):
             self.reset()
         return {"accuracy": accuracy}
 
-    @overrides
     def reset(self):
         self.correct_count = 0.0
         self.total_count = 0.0

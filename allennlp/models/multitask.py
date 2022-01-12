@@ -2,7 +2,7 @@ from collections import defaultdict
 import inspect
 from typing import Any, Dict, List, Set, Union, Mapping
 
-from overrides import overrides
+
 import torch
 
 from allennlp.data import Vocabulary, TextFieldTensors
@@ -182,7 +182,6 @@ class MultiTaskModel(Model):
                 kept_arguments[new_key] = value
         return kept_arguments
 
-    @overrides
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
         metrics = {}
         for head_name in self._heads_called:
@@ -192,7 +191,6 @@ class MultiTaskModel(Model):
             self._heads_called.clear()
         return metrics
 
-    @overrides
     def make_output_human_readable(
         self, output_dict: Dict[str, torch.Tensor]
     ) -> Dict[str, torch.Tensor]:

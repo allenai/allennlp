@@ -1,6 +1,6 @@
 from typing import Dict, List
 
-from overrides import overrides
+
 from spacy.tokens import Token as SpacyToken
 import torch
 import numpy
@@ -34,14 +34,12 @@ class SpacyTokenIndexer(TokenIndexer):
         self._hidden_dim = hidden_dim
         super().__init__(token_min_padding_length)
 
-    @overrides
     def count_vocab_items(self, token: Token, counter: Dict[str, Dict[str, int]]):
         # We are using spacy to generate embeddings directly for our model,
         # so we don't need to capture the vocab - it is defined by the spacy
         # model we are using instead.
         pass
 
-    @overrides
     def tokens_to_indices(
         self, tokens: List[SpacyToken], vocabulary: Vocabulary
     ) -> Dict[str, List[numpy.ndarray]]:
@@ -52,7 +50,6 @@ class SpacyTokenIndexer(TokenIndexer):
         indices: List[numpy.ndarray] = [token.vector for token in tokens]
         return {"tokens": indices}
 
-    @overrides
     def as_padded_tensor_dict(
         self, tokens: IndexedTokenList, padding_lengths: Dict[str, int]
     ) -> Dict[str, torch.Tensor]:

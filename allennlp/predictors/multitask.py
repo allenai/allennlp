@@ -1,7 +1,6 @@
 import collections
 from typing import Type, List, Dict
 
-from overrides import overrides
 
 from allennlp.common import JsonDict
 from allennlp.data import Instance
@@ -54,7 +53,6 @@ class MultiTaskPredictor(Predictor):
             )
             self.predictors[name] = predictor_class(model, dataset_reader.readers[name].inner)
 
-    @overrides
     def predict_instance(self, instance: Instance) -> JsonDict:
         task_field = instance["task"]
         if not isinstance(task_field, MetadataField):
@@ -66,7 +64,6 @@ class MultiTaskPredictor(Predictor):
         outputs = self._model.forward_on_instance(instance)
         return sanitize(outputs)
 
-    @overrides
     def _json_to_instance(self, json_dict: JsonDict) -> Instance:
         task = json_dict["task"]
         del json_dict["task"]
@@ -75,7 +72,6 @@ class MultiTaskPredictor(Predictor):
         instance.add_field("task", MetadataField(task))
         return instance
 
-    @overrides
     def predict_batch_instance(self, instances: List[Instance]) -> List[JsonDict]:
         task_to_instances: Dict[str, List[Instance]] = collections.defaultdict(lambda: [])
         for instance in instances:

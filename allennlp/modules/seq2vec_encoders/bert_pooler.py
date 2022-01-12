@@ -1,6 +1,5 @@
 from typing import Optional, Dict, Any
 
-from overrides import overrides
 
 import torch
 import torch.nn
@@ -78,11 +77,9 @@ class BertPooler(Seq2VecEncoder):
             param.requires_grad = requires_grad
         self._embedding_dim = model.config.hidden_size
 
-    @overrides
     def get_input_dim(self) -> int:
         return self._embedding_dim
 
-    @overrides
     def get_output_dim(self) -> int:
         return self._embedding_dim
 

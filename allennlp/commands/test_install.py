@@ -7,7 +7,7 @@ import argparse
 import logging
 import pathlib
 
-from overrides import overrides
+
 import torch
 
 import allennlp
@@ -21,7 +21,6 @@ logger = logging.getLogger(__name__)
 
 @Subcommand.register("test-install")
 class TestInstall(Subcommand):
-    @overrides
     def add_subparser(self, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
         description = """Test that AllenNLP is installed correctly."""
         subparser = parser.add_parser(

@@ -1,5 +1,3 @@
-from overrides import overrides
-
 import torch.nn
 
 from allennlp.modules.seq2vec_encoders.seq2vec_encoder import Seq2VecEncoder
@@ -33,15 +31,12 @@ class ClsPooler(Seq2VecEncoder):
         self._embedding_dim = embedding_dim
         self._cls_is_last_token = cls_is_last_token
 
-    @overrides
     def get_input_dim(self) -> int:
         return self._embedding_dim
 
-    @overrides
     def get_output_dim(self) -> int:
         return self._embedding_dim
 
-    @overrides
     def forward(self, tokens: torch.Tensor, mask: torch.BoolTensor = None):
         # tokens is assumed to have shape (batch_size, sequence_length, embedding_dim).
         # mask is assumed to have shape (batch_size, sequence_length) with all 1s preceding all 0s.

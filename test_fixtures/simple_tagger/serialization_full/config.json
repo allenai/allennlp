@@ -1,0 +1,48 @@
+{
+    "dataset_reader": {
+        "type": "sequence_tagging"
+    },
+    "model": {
+        "type": "simple_tagger",
+        "encoder": {
+            "type": "lstm",
+            "hidden_size": 4,
+            "input_size": 2,
+            "num_layers": 1
+        },
+        "text_field_embedder": {
+            "token_embedders": {
+                "tokens": {
+                    "type": "embedding",
+                    "embedding_dim": 100,
+                    "pretrained_file": "test_fixtures/embeddings/glove.6B.100d.sample.txt.gz",
+                    "projection_dim": 2,
+                    "trainable": true
+                }
+            }
+        }
+    },
+    "train_data_path": "test_fixtures/data/sequence_tagging.tsv",
+    "validation_data_path": "test_fixtures/data/sequence_tagging.tsv",
+    "trainer": {
+        "cuda_device": -1,
+        "grad_norm": 1,
+        "num_epochs": 1,
+        "optimizer": {
+            "type": "adadelta",
+            "lr": 1e-06,
+            "rho": 0.95
+        },
+        "patience": 500
+    },
+    "data_loader": {
+        "batch_sampler": {
+            "type": "bucket",
+            "batch_size": 80,
+            "padding_noise": 0,
+            "sorting_keys": [
+                "tokens"
+            ]
+        }
+    }
+}

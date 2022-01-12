@@ -12,7 +12,7 @@ from typing import (
     TYPE_CHECKING,
 )
 
-from overrides import overrides
+
 import torch
 import torch.distributed as dist
 from torch.cuda import amp
@@ -140,7 +140,6 @@ class TorchDdpAccelerator(DdpAccelerator):
             "find_unused_parameters": find_unused_parameters,
         }
 
-    @overrides
     def wrap_model(self, model: "Model") -> Tuple["Model", DdpWrappedModel]:
         if self.cuda_device != torch.device("cpu"):
             model = model.cuda(self.cuda_device)

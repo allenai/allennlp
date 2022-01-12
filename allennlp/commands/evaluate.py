@@ -11,7 +11,6 @@ from typing import Any, Dict
 
 from copy import deepcopy
 
-from overrides import overrides
 
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common import logging as common_logging
@@ -25,7 +24,6 @@ logger = logging.getLogger(__name__)
 
 @Subcommand.register("evaluate")
 class Evaluate(Subcommand):
-    @overrides
     def add_subparser(self, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
         description = """Evaluate the specified model + dataset(s)"""
         subparser = parser.add_parser(
@@ -39,7 +37,7 @@ class Evaluate(Subcommand):
             type=str,
             help=(
                 "path to the file containing the evaluation data"
-                ' (for mutiple files, put ":" between filenames e.g., input1.txt:input2.txt)'
+                ' (for mutiple files, put "," between filenames e.g., input1.txt,input2.txt)'
             ),
         )
 
@@ -48,7 +46,7 @@ class Evaluate(Subcommand):
             type=str,
             help=(
                 "optional path to write the metrics to as JSON"
-                ' (for mutiple files, put ":" between filenames e.g., output1.txt:output2.txt)'
+                ' (for mutiple files, put "," between filenames e.g., output1.txt,output2.txt)'
             ),
         )
 
@@ -57,7 +55,7 @@ class Evaluate(Subcommand):
             type=str,
             help=(
                 "optional path to write the predictions to as JSON lines"
-                ' (for mutiple files, put ":" between filenames e.g., output1.jsonl:output2.jsonl)'
+                ' (for mutiple files, put "," between filenames e.g., output1.jsonl,output2.jsonl)'
             ),
         )
 
@@ -147,14 +145,14 @@ def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
     dataset_reader = archive.validation_dataset_reader
 
     # split files
-    evaluation_data_path_list = args.input_file.split(":")
+    evaluation_data_path_list = args.input_file.split(",")
     if args.output_file is not None:
-        output_file_list = args.output_file.split(":")
+        output_file_list = args.output_file.split(",")
         assert len(output_file_list) == len(
             evaluation_data_path_list
         ), "The number of `output_file` paths must be equal to the number of datasets being evaluated."
     if args.predictions_output_file is not None:
-        predictions_output_file_list = args.predictions_output_file.split(":")
+        predictions_output_file_list = args.predictions_output_file.split(",")
         assert len(predictions_output_file_list) == len(evaluation_data_path_list), (
             "The number of `predictions_output_file` paths must be equal"
             + "to the number of datasets being evaluated. "
