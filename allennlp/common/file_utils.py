@@ -41,6 +41,7 @@ from cached_path import (  # noqa: F401
     find_latest_cached as _find_latest_cached,
 )
 from cached_path.cache_file import CacheFile
+from cached_path.common import PathOrStr
 from cached_path.file_lock import FileLock
 from cached_path.meta import Meta as _Meta
 import torch
@@ -598,3 +599,13 @@ def inspect_cache(patterns: List[str] = None, cache_dir: Union[str, Path] = None
                 f"latest {format_size(size)} from {format_timedelta(td)} ago"
             )
     print(f"\nTotal size: {format_size(total_size)}")
+
+
+def hardlink_or_copy(source: PathOrStr, dest: PathOrStr):
+    try:
+        os.link(source, dest)
+    except OSError as e:
+        if e.errno in {18, 95}:  # Cross-device link and Windows
+            shutil.copy(source, dest)
+        else:
+            raise
