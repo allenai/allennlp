@@ -3,7 +3,6 @@ from typing import (
     Union,
     Tuple,
     Dict,
-    Mapping,
     NamedTuple,
     List,
     Optional,
