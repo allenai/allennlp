@@ -1361,16 +1361,20 @@ class TestTrainer(TrainerTestBase):
         )
         trainer.train()
 
-        # Doesn't satisfy 'validation_start' or 'validation_interval'
+        # Shouldn't validate on the first epoch as it's before the 'validation_start'
+        callback.on_start(trainer)
+        assert not trainer._should_validate_this_epoch
+
+        # Satisfies 'validation_interval' but not 'validation_start'
         callback.on_epoch(trainer, metrics={}, epoch=1)
         assert not trainer._should_validate_this_epoch
 
-        # Satisfies 'validation_start' but not 'validation_interval'
+        # Doesn't satisfy 'validation_start' or 'validation_interval'
         callback.on_epoch(trainer, metrics={}, epoch=2)
         assert not trainer._should_validate_this_epoch
 
         # Satisfies both 'validation_start' and 'validation_interval'
-        callback.on_epoch(trainer, metrics={}, epoch=4)
+        callback.on_epoch(trainer, metrics={}, epoch=5)
         assert trainer._should_validate_this_epoch
 
 

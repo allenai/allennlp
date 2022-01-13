@@ -20,7 +20,6 @@ import inspect
 import logging
 
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.det_hash import CustomDetHash
 from allennlp.common.lazy import Lazy
 from allennlp.common.params import Params
 
@@ -321,31 +320,11 @@ def construct_arg(
     popped_params: Params,
     annotation: Type,
     default: Any,
-    could_be_step: bool = True,
     **extras,
 ) -> Any:
     """
     The first two parameters here are only used for logging if we encounter an error.
     """
-    from allennlp.tango.step import Step, _RefStep
-
-    if could_be_step:
-        # We try parsing as a step _first_. Parsing as a non-step always succeeds, because
-        # it will fall back to returning a dict. So we can't try parsing as a non-step first.
-        backup_params = deepcopy(popped_params)
-        try:
-            return construct_arg(
-                class_name,
-                argument_name,
-                popped_params,
-                Step[annotation],  # type: ignore
-                default,
-                could_be_step=False,
-                **extras,
-            )
-        except (ValueError, TypeError, ConfigurationError, AttributeError):
-            popped_params = backup_params
-
     origin = getattr(annotation, "__origin__", None)
     args = getattr(annotation, "__args__", [])
 
@@ -363,37 +342,10 @@ def construct_arg(
             # In some cases we allow a string instead of a param dict, so
             # we need to handle that case separately.
             if isinstance(popped_params, str):
-                if origin != Step:
-                    # We don't allow single strings to be upgraded to steps.
-                    # Since we try everything as a step first, upgrading strings to
-                    # steps automatically would cause confusion every time a step
-                    # name conflicts with any string anywhere in a config.
-                    popped_params = Params({"type": popped_params})
+                popped_params = Params({"type": popped_params})
             elif isinstance(popped_params, dict):
                 popped_params = Params(popped_params)
             result = annotation.from_params(params=popped_params, **subextras)
-
-            if isinstance(result, Step):
-                if isinstance(result, _RefStep):
-                    existing_steps: Dict[str, Step] = extras.get("existing_steps", {})
-                    try:
-                        result = existing_steps[result.ref()]
-                    except KeyError:
-                        raise _RefStep.MissingStepError(result.ref())
-
-                expected_return_type = args[0]
-                return_type = inspect.signature(result.run).return_annotation
-                if return_type == inspect.Signature.empty:
-                    logger.warning(
-                        "Step %s has no return type annotation. Those are really helpful when "
-                        "debugging, so we recommend them highly.",
-                        result.__class__.__name__,
-                    )
-                elif not issubclass(return_type, expected_return_type):
-                    raise ConfigurationError(
-                        f"Step {result.name} returns {return_type}, but "
-                        f"we expected {expected_return_type}."
-                    )
 
             return result
         elif not optional:
@@ -555,7 +507,7 @@ def construct_arg(
         return popped_params
 
 
-class FromParams(CustomDetHash):
+class FromParams:
     """
     Mixin to give a from_params method to classes. We create a distinct base class for this
     because sometimes we want non-Registrable classes to be instantiatable from_params.
@@ -717,6 +669,3 @@ class FromParams(CustomDetHash):
         need it.
         """
         raise NotImplementedError()
-
-    def det_hash_object(self) -> Any:
-        return self.to_params()
