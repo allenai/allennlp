@@ -55,7 +55,7 @@ setup(
         "cached-path>=1.0.2,<2.0.0",
         "fairscale==0.4.4",
         "jsonnet>=0.10.0 ; sys.platform != 'win32'",
-        "nltk<3.6.6",
+        "nltk<3.6.8",
         "spacy>=2.1.0,<3.3",
         "numpy",
         "tensorboardX>=1.2",
