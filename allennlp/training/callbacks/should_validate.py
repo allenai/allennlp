@@ -48,7 +48,8 @@ class ShouldValidateCallback(TrainerCallback):
         is_primary: bool = True,
         **kwargs,
     ) -> None:
-        trainer._should_validate_this_epoch = self._should_validate(epoch=trainer._epochs_completed)
+        epoch = epoch + 1 if epoch is not None else trainer._epochs_completed
+        trainer._should_validate_this_epoch = self._should_validate(epoch=epoch)
 
     def _should_validate(self, epoch: int) -> bool:
         should_validate = True
