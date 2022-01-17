@@ -56,8 +56,12 @@ class Independence(Metric):
         Assumes integer labels, with each item to be classified having a single correct class.
     """
 
-    def __init__(self, num_classes: int, num_protected_variable_labels: int,
-                dist_metric: str="kl_divergence") -> None:
+    def __init__(
+        self,
+        num_classes: int,
+        num_protected_variable_labels: int,
+        dist_metric: str = "kl_divergence",
+    ) -> None:
         self._num_classes = num_classes
         self._num_protected_variable_labels = num_protected_variable_labels
         self._predicted_label_counts = torch.zeros(num_classes)
@@ -70,7 +74,7 @@ class Independence(Metric):
         elif dist_metric == "wasserstein":
             self._dist_metric = wasserstein_distance
         else:
-             raise ConfigurationError(
+            raise ConfigurationError(
                 "supported distance metrics in initialization are 'kl_divergence' and 'wasserstein'"
             )
 
@@ -200,10 +204,7 @@ class Independence(Metric):
                 C_given_a_dist = C_given_a_dist.probs
                 # scipy expects empirical values as well as probabilities
                 label_values = torch.tensor(range(self._num_classes))
-                distances[a] = self._dist_metric(
-                    label_values, label_values,
-                    C_given_a_dist, C_dist
-                )
+                distances[a] = self._dist_metric(label_values, label_values, C_given_a_dist, C_dist)
         if reset:
             self.reset()
         return distances
@@ -239,8 +240,12 @@ class Separation(Metric):
         Assumes integer labels, with each item to be classified having a single correct class.
     """
 
-    def __init__(self, num_classes: int, num_protected_variable_labels: int,
-                 dist_metric: str="kl_divergence") -> None:
+    def __init__(
+        self,
+        num_classes: int,
+        num_protected_variable_labels: int,
+        dist_metric: str = "kl_divergence",
+    ) -> None:
         self._num_classes = num_classes
         self._num_protected_variable_labels = num_protected_variable_labels
         self._predicted_label_counts_by_gold_label = torch.zeros((num_classes, num_classes))
@@ -253,7 +258,7 @@ class Separation(Metric):
         elif dist_metric == "wasserstein":
             self._dist_metric = wasserstein_distance
         else:
-             raise ConfigurationError(
+            raise ConfigurationError(
                 "supported distance metrics in initialization are 'kl_divergence' and 'wasserstein'"
             )
 
@@ -426,8 +431,7 @@ class Separation(Metric):
                     # scipy expects empirical values as well as probabilities
                     label_values = torch.tensor(range(self._num_classes))
                     distances[y][a] = self._dist_metric(
-                        label_values, label_values,
-                        C_given_a_and_y_dist, C_given_y_dist
+                        label_values, label_values, C_given_a_and_y_dist, C_given_y_dist
                     )
         if reset:
             self.reset()
@@ -466,8 +470,12 @@ class Sufficiency(Metric):
         a single correct class.
     """
 
-    def __init__(self, num_classes: int, num_protected_variable_labels: int,
-                 dist_metric: str="kl_divergence") -> None:
+    def __init__(
+        self,
+        num_classes: int,
+        num_protected_variable_labels: int,
+        dist_metric: str = "kl_divergence",
+    ) -> None:
         self._num_classes = num_classes
         self._num_protected_variable_labels = num_protected_variable_labels
         self._gold_label_counts_by_predicted_label = torch.zeros((num_classes, num_classes))
@@ -480,7 +488,7 @@ class Sufficiency(Metric):
         elif dist_metric == "wasserstein":
             self._dist_metric = wasserstein_distance
         else:
-             raise ConfigurationError(
+            raise ConfigurationError(
                 "supported distance metrics in initialization are 'kl_divergence' and 'wasserstein'"
             )
 
@@ -664,8 +672,7 @@ class Sufficiency(Metric):
                     # scipy expects empirical values as well as probabilities
                     label_values = torch.tensor(range(self._num_classes))
                     distances[c][a] = self._dist_metric(
-                        label_values, label_values,
-                        Y_given_a_and_c_dist, Y_given_c_dist
+                        label_values, label_values, Y_given_a_and_c_dist, Y_given_c_dist
                     )
         if reset:
             self.reset()
