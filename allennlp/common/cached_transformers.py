@@ -179,7 +179,9 @@ def get(
                 model_name,
                 **kwargs,
             )
-        _model_cache[spec] = transformer
+        # Don't cache transformers with reinitialized weights.
+        if reinit_modules is None:
+            _model_cache[spec] = transformer
     if make_copy:
         import copy
 
