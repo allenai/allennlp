@@ -25,7 +25,7 @@ DOCKER_RUN_CMD = docker run --rm \
 # These nltk packages are used by the 'checklist' module. They are downloaded automatically
 # if not found when `checklist` is imported, but it's good to download the ahead of time
 # to avoid potential race conditions.
-NLTK_DOWNLOAD_CMD = python -c 'import nltk; [nltk.download(p) for p in ("wordnet", "wordnet_ic", "sentiwordnet")]'
+NLTK_DOWNLOAD_CMD = python -c 'import nltk; [nltk.download(p) for p in ("wordnet", "wordnet_ic", "sentiwordnet", "omw")]'
 
 ifeq ($(shell uname),Darwin)
 ifeq ($(shell which gsed),)

@@ -31,6 +31,7 @@ from allennlp.training.callbacks import (
     ConfidenceChecksCallback,
     ConsoleLoggerCallback,
     OnBackwardException,
+    ShouldValidateCallback,
 )
 from allennlp.training.callbacks.confidence_checks import ConfidenceCheckError
 from allennlp.training.learning_rate_schedulers import CosineWithRestarts
@@ -1330,6 +1331,51 @@ class TestTrainer(TrainerTestBase):
             ],
         )
         trainer.train()
+
+    def test_should_validate_callback(self):
+        total_instances = 1000
+        batch_size = 25
+
+        reader = FakeDatasetReader(total_instances, batch_size)
+        data_loader = SimpleDataLoader.from_dataset_reader(
+            reader, "fake_path", batch_size=batch_size
+        )
+        instances = list(data_loader.iter_instances())
+        vocab = Vocabulary.from_instances(instances)
+        data_loader.index_with(vocab)
+        model = FakeModel(vocab)
+        optimizer = torch.optim.SGD(model.parameters(), 0.01, momentum=0.9)
+        callback = ShouldValidateCallback.from_params(
+            Params({"validation_start": 4, "validation_interval": 2}),
+            serialization_dir=self.TEST_DIR,
+        )
+
+        # Check that training works with the callback
+        trainer = GradientDescentTrainer(
+            model,
+            optimizer,
+            data_loader,
+            num_epochs=6,
+            serialization_dir=self.TEST_DIR,
+            callbacks=[callback],
+        )
+        trainer.train()
+
+        # Shouldn't validate on the first epoch as it's before the 'validation_start'
+        callback.on_start(trainer)
+        assert not trainer._should_validate_this_epoch
+
+        # Satisfies 'validation_interval' but not 'validation_start'
+        callback.on_epoch(trainer, metrics={}, epoch=1)
+        assert not trainer._should_validate_this_epoch
+
+        # Doesn't satisfy 'validation_start' or 'validation_interval'
+        callback.on_epoch(trainer, metrics={}, epoch=2)
+        assert not trainer._should_validate_this_epoch
+
+        # Satisfies both 'validation_start' and 'validation_interval'
+        callback.on_epoch(trainer, metrics={}, epoch=5)
+        assert trainer._should_validate_this_epoch
 
 
 @requires_gpu

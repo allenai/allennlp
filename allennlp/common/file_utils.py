@@ -1,7 +1,6 @@
 """
 Utilities for working with the local dataset cache.
 """
-import string
 import weakref
 from contextlib import contextmanager
 import glob
@@ -42,6 +41,7 @@ from cached_path import (  # noqa: F401
     find_latest_cached as _find_latest_cached,
 )
 from cached_path.cache_file import CacheFile
+from cached_path.common import PathOrStr
 from cached_path.file_lock import FileLock
 from cached_path.meta import Meta as _Meta
 import torch
@@ -601,8 +601,11 @@ def inspect_cache(patterns: List[str] = None, cache_dir: Union[str, Path] = None
     print(f"\nTotal size: {format_size(total_size)}")
 
 
-SAFE_FILENAME_CHARS = frozenset("-_.%s%s" % (string.ascii_letters, string.digits))
-
-
-def filename_is_safe(filename: str) -> bool:
-    return all(c in SAFE_FILENAME_CHARS for c in filename)
+def hardlink_or_copy(source: PathOrStr, dest: PathOrStr):
+    try:
+        os.link(source, dest)
+    except OSError as e:
+        if e.errno in {18, 95}:  # Cross-device link and Windows
+            shutil.copy(source, dest)
+        else:
+            raise

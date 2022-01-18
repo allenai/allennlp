@@ -4,10 +4,10 @@
 flake8
 
 # Static type checking
-mypy==0.910
+mypy==0.931
 
 # Automatic code formatting
-black==21.11b1
+black==21.12b0
 
 # Allows generation of coverage reports with pytest.
 pytest-cov
@@ -39,7 +39,7 @@ nr.databind.core<0.0.17
 nr.interface<0.0.6
 
 mkdocs==1.1.2
-mkdocs-material>=5.5.0,<8.1.0
+mkdocs-material>=5.5.0,<8.2.0
 markdown-include==0.6.0
 
 #### PACKAGE-UPLOAD PACKAGES ####
