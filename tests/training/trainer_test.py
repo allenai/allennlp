@@ -1374,7 +1374,11 @@ class TestTrainer(TrainerTestBase):
         assert not trainer._should_validate_this_epoch
 
         # Satisfies both 'validation_start' and 'validation_interval'
-        callback.on_epoch(trainer, metrics={}, epoch=5)
+        callback.on_epoch(trainer, metrics={}, epoch=3)
+        assert trainer._should_validate_this_epoch
+
+        # Check that final validation happens on the last epoch
+        callback.on_end(trainer)
         assert trainer._should_validate_this_epoch
 
 

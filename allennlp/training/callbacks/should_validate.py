@@ -40,6 +40,17 @@ class ShouldValidateCallback(TrainerCallback):
     ) -> None:
         trainer._should_validate_this_epoch = self._should_validate(epoch=epoch + 1)
 
+    def on_end(
+        self,
+        trainer: "GradientDescentTrainer",
+        metrics: Dict[str, Any] = None,
+        epoch: int = None,
+        is_primary: bool = True,
+        **kwargs,
+    ) -> None:
+        epoch = epoch + 1 if epoch is not None else trainer._epochs_completed
+        trainer._should_validate_this_epoch = self._should_validate(epoch=epoch)
+
     def _should_validate(self, epoch: int) -> bool:
         should_validate = True
         if self._validation_start is not None and epoch < self._validation_start:
