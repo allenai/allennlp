@@ -53,7 +53,7 @@ setup(
         "torch>=1.6.0,<1.11.0",
         "torchvision>=0.8.1,<0.12.0",
         "cached-path>=1.0.2,<2.0.0",
-        "fairscale==0.4.4",
+        "fairscale==0.4.5",
         "jsonnet>=0.10.0 ; sys.platform != 'win32'",
         "nltk<3.6.6",
         "spacy>=2.1.0,<3.3",
