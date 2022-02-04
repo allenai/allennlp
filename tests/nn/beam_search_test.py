@@ -571,7 +571,7 @@ class BeamSearchTest(AllenNlpTestCase):
         )
         expected_log_probs = np.log(np.array([0.4, 0.3, 0.2]))
         length_normalization = np.array(
-            [5 ** length_penalty, 4 ** length_penalty, 3 ** length_penalty]
+            [5**length_penalty, 4**length_penalty, 3**length_penalty]
         )
         expected_scores = expected_log_probs / length_normalization
         self._check_results(expected_log_probs=expected_scores)
@@ -584,7 +584,7 @@ class BeamSearchTest(AllenNlpTestCase):
         expected_top_k = np.array([[3, 4, 5, 5, 5], [2, 3, 4, 5, 5], [1, 2, 3, 4, 5]])
         expected_log_probs = np.log(np.array([0.2, 0.3, 0.4]))
         length_normalization = np.array(
-            [3 ** length_penalty, 4 ** length_penalty, 5 ** length_penalty]
+            [3**length_penalty, 4**length_penalty, 5**length_penalty]
         )
         expected_scores = expected_log_probs / length_normalization
         self._check_results(expected_top_k=expected_top_k, expected_log_probs=expected_scores)
@@ -599,7 +599,7 @@ class BeamSearchTest(AllenNlpTestCase):
         expected_top_k = np.array([[1, 2, 3, 4], [2, 3, 4, 5], [3, 4, 5, 5]])
         expected_log_probs = np.log(np.array([0.4, 0.3, 0.2]))
         length_normalization = np.array(
-            [4 ** length_penalty, 4 ** length_penalty, 3 ** length_penalty]
+            [4**length_penalty, 4**length_penalty, 3**length_penalty]
         )
         expected_scores = expected_log_probs / length_normalization
         self._check_results(expected_top_k=expected_top_k, expected_log_probs=expected_scores)

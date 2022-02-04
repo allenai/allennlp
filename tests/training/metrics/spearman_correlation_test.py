@@ -40,7 +40,7 @@ def spearman_formula(predictions, labels, mask=None):
     total = 0
     for i in range(len_pre):
         total += (predictions[i][0] - labels[i][0]) ** 2
-    expected_spearman_correlation = 1 - 6 * total / (len_pre * (len_pre ** 2 - 1))
+    expected_spearman_correlation = 1 - 6 * total / (len_pre * (len_pre**2 - 1))
 
     return expected_spearman_correlation
 

@@ -281,7 +281,7 @@ def search_learning_rate(
         if linear_steps:
             current_lr = start_lr + (lr_update_factor * i)
         else:
-            current_lr = start_lr * (lr_update_factor ** i)
+            current_lr = start_lr * (lr_update_factor**i)
 
         for param_group in trainer.optimizer.param_groups:
             param_group["lr"] = current_lr
