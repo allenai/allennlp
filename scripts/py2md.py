@@ -18,13 +18,10 @@ import re
 import sys
 from typing import Optional, Tuple, List
 
-from nr.databind.core import Struct
-from nr.interface import implements, override
-from pydoc_markdown import PydocMarkdown
+from docspec import Module, Class, Data, Function, Argument
+from pydoc_markdown import PydocMarkdown, Processor
 from pydoc_markdown.contrib.loaders.python import PythonLoader
 from pydoc_markdown.contrib.renderers.markdown import MarkdownRenderer
-from pydoc_markdown.interfaces import Processor, Renderer
-from pydoc_markdown.reflection import Argument, Module, Function, Class, Data
 
 
 logging.basicConfig(level=logging.INFO)
@@ -170,8 +167,7 @@ class ProcessorState:
     consecutive_blank_line_count: int = 0
 
 
-@implements(Processor)
-class AllenNlpDocstringProcessor(Struct):
+class AllenNlpDocstringProcessor(Processor):
     """
     Use to turn our docstrings into Markdown.
     """
@@ -180,7 +176,6 @@ class AllenNlpDocstringProcessor(Struct):
     UNDERSCORE_HEADER_RE = re.compile(r"(.*)\n-{3,}\n")
     MULTI_LINE_LINK_RE = re.compile(r"(\[[^\]]+\])\n\s*(\([^\)]+\))")
 
-    @override
     def process(self, graph, resolver):
         graph.visit(self.process_node)
 
@@ -268,8 +263,7 @@ class AllenNlpDocstringProcessor(Struct):
         return line
 
 
-@implements(Processor)
-class AllenNlpFilterProcessor(Struct):
+class AllenNlpFilterProcessor(Processor):
     """
     Used to filter out nodes that we don't want to document.
     """
@@ -313,7 +307,6 @@ class AllenNlpFilterProcessor(Struct):
             node.visible = False
 
 
-@implements(Renderer)
 class AllenNlpRenderer(MarkdownRenderer):
     def _format_function_signature(
         self,

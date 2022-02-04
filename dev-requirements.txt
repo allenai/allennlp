@@ -34,11 +34,10 @@ pytest-benchmark
 ruamel.yaml
 
 # Generating markdown files from Python modules.
-git+https://github.com/NiklasRosenstein/pydoc-markdown.git@f0bf8af1db4f11581c19d206d4ed1ab34b4854c1
-nr.databind.core<0.0.17
-nr.interface<0.0.6
+pydoc-markdown>=4.0.0,<5.0.0
+databind.core
 
-mkdocs==1.1.2
+mkdocs==1.2.3
 mkdocs-material>=5.5.0,<8.2.0
 markdown-include==0.6.0
 
