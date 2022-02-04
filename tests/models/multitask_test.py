@@ -172,6 +172,10 @@ class TestMultiTaskModel(ModelTestCase):
             "evaluate",
             str(self.TEST_DIR / "serialization_dir"),
             f'{{"head_eins": "{head_eins_input}", "head_zwei": "{head_zwei_input}"}}',
+            "--output-file",
+            str(self.TEST_DIR / "output.txt"),
+            "--predictions-output-file",
+            str(self.TEST_DIR / "predictions.json"),
         ]
 
         parser = argparse.ArgumentParser(description="Testing")
