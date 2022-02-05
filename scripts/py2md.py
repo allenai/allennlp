@@ -19,8 +19,7 @@ from pathlib import Path
 from typing import List, Optional, Tuple
 
 import docspec
-from docspec import (ApiObject, Argument, Class, Data, Function, Indirection,
-                     Module)
+from docspec import ApiObject, Class, Data, Function, Indirection, Module
 from docspec_python import format_arglist
 from pydoc_markdown import Processor, PydocMarkdown, Resolver
 from pydoc_markdown.contrib.loaders.python import PythonLoader
