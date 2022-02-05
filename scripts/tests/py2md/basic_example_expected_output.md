@@ -10,7 +10,8 @@ This is a docstring.
 
 And this is a multi-line line: [http://example.com](https://example.com/blah/blah/blah.html).
 
-<a name=".scripts.tests.py2md.basic_example.SOME_GLOBAL_VAR"></a>
+<a id="scripts.tests.py2md.basic_example.SOME_GLOBAL_VAR"></a>
+
 ## SOME\_GLOBAL\_VAR
 
 ```python
@@ -19,7 +20,8 @@ SOME_GLOBAL_VAR = "Ahhhh I'm a global var!!"
 
 This is a global var.
 
-<a name=".scripts.tests.py2md.basic_example.func_with_no_args"></a>
+<a id="scripts.tests.py2md.basic_example.func_with_no_args"></a>
+
 ## func\_with\_no\_args
 
 ```python
@@ -28,7 +30,8 @@ def func_with_no_args()
 
 This function has no args.
 
-<a name=".scripts.tests.py2md.basic_example.func_with_args"></a>
+<a id="scripts.tests.py2md.basic_example.func_with_args"></a>
+
 ## func\_with\_args
 
 ```python
@@ -57,7 +60,8 @@ These are some notes.
 - `int` <br>
     The result of `a + b * c`.
 
-<a name=".scripts.tests.py2md.basic_example.SomeClass"></a>
+<a id="scripts.tests.py2md.basic_example.SomeClass"></a>
+
 ## SomeClass
 
 ```python
@@ -73,7 +77,8 @@ I'm a class!
 - __x__ : `float` <br>
     This attribute is called `x`.
 
-<a name=".scripts.tests.py2md.basic_example.SomeClass.some_class_level_variable"></a>
+<a id="scripts.tests.py2md.basic_example.SomeClass.some_class_level_variable"></a>
+
 ### some\_class\_level\_variable
 
 ```python
@@ -84,7 +89,8 @@ class SomeClass:
 
 This is how you document a class-level variable.
 
-<a name=".scripts.tests.py2md.basic_example.SomeClass.some_class_level_var_with_type"></a>
+<a id="scripts.tests.py2md.basic_example.SomeClass.some_class_level_var_with_type"></a>
+
 ### some\_class\_level\_var\_with\_type
 
 ```python
@@ -93,7 +99,8 @@ class SomeClass:
  | some_class_level_var_with_type: int = 1
 ```
 
-<a name=".scripts.tests.py2md.basic_example.SomeClass.some_method"></a>
+<a id="scripts.tests.py2md.basic_example.SomeClass.some_method"></a>
+
 ### some\_method
 
 ```python
@@ -111,7 +118,8 @@ But I don't do anything.
 
 - `None` <br>
 
-<a name=".scripts.tests.py2md.basic_example.SomeClass.method_with_alternative_return_section"></a>
+<a id="scripts.tests.py2md.basic_example.SomeClass.method_with_alternative_return_section"></a>
+
 ### method\_with\_alternative\_return\_section
 
 ```python
@@ -127,7 +135,8 @@ Another method.
 
 - A completely arbitrary number. <br>
 
-<a name=".scripts.tests.py2md.basic_example.SomeClass.method_with_alternative_return_section3"></a>
+<a id="scripts.tests.py2md.basic_example.SomeClass.method_with_alternative_return_section3"></a>
+
 ### method\_with\_alternative\_return\_section3
 
 ```python
@@ -144,7 +153,8 @@ Another method.
 - __number__ : `int` <br>
     A completely arbitrary number.
 
-<a name=".scripts.tests.py2md.basic_example.AnotherClassWithReallyLongConstructor"></a>
+<a id="scripts.tests.py2md.basic_example.AnotherClassWithReallyLongConstructor"></a>
+
 ## AnotherClassWithReallyLongConstructor
 
 ```python
@@ -158,7 +168,8 @@ class AnotherClassWithReallyLongConstructor:
  | ) -> None
 ```
 
-<a name=".scripts.tests.py2md.basic_example.ClassWithDecorator"></a>
+<a id="scripts.tests.py2md.basic_example.ClassWithDecorator"></a>
+
 ## ClassWithDecorator
 
 ```python
@@ -166,7 +177,8 @@ class AnotherClassWithReallyLongConstructor:
 class ClassWithDecorator
 ```
 
-<a name=".scripts.tests.py2md.basic_example.ClassWithDecorator.x"></a>
+<a id="scripts.tests.py2md.basic_example.ClassWithDecorator.x"></a>
+
 ### x
 
 ```python

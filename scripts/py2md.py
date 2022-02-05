@@ -7,22 +7,24 @@ We do this with PydocMarkdown, using custom processors and renderers defined her
 """
 
 import argparse
+import logging
+import os
+import re
+import sys
 from collections import OrderedDict
 from dataclasses import dataclass
 from enum import Enum
-import logging
 from multiprocessing import Pool, cpu_count
-import os
 from pathlib import Path
-import re
-import sys
-from typing import Optional, Tuple, List
+from typing import List, Optional, Tuple
 
-from docspec import Module, Class, Data, Function, Argument
-from pydoc_markdown import PydocMarkdown, Processor
+import docspec
+from docspec import (ApiObject, Argument, Class, Data, Function, Indirection,
+                     Module)
+from docspec_python import format_arglist
+from pydoc_markdown import Processor, PydocMarkdown, Resolver
 from pydoc_markdown.contrib.loaders.python import PythonLoader
 from pydoc_markdown.contrib.renderers.markdown import MarkdownRenderer
-
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("py2md")
@@ -167,6 +169,7 @@ class ProcessorState:
     consecutive_blank_line_count: int = 0
 
 
+@dataclass
 class AllenNlpDocstringProcessor(Processor):
     """
     Use to turn our docstrings into Markdown.
@@ -176,10 +179,10 @@ class AllenNlpDocstringProcessor(Processor):
     UNDERSCORE_HEADER_RE = re.compile(r"(.*)\n-{3,}\n")
     MULTI_LINE_LINK_RE = re.compile(r"(\[[^\]]+\])\n\s*(\([^\)]+\))")
 
-    def process(self, graph, resolver):
-        graph.visit(self.process_node)
+    def process(self, modules: List[Module], resolver: Optional[Resolver]) -> None:
+        docspec.visit(modules, self.process_node)
 
-    def process_node(self, node):
+    def process_node(self, node: docspec.ApiObject):
         if not getattr(node, "docstring", None):
             return
 
@@ -263,6 +266,7 @@ class AllenNlpDocstringProcessor(Processor):
         return line
 
 
+@dataclass
 class AllenNlpFilterProcessor(Processor):
     """
     Used to filter out nodes that we don't want to document.
@@ -270,6 +274,7 @@ class AllenNlpFilterProcessor(Processor):
 
     PRIVATE_METHODS_TO_KEEP = {
         "DatasetReader._read",
+        "__init__",
         "__call__",
         "__iter__",
         "InfluenceInterpreter._calculate_influence_scores",
@@ -283,28 +288,21 @@ class AllenNlpFilterProcessor(Processor):
         "Module._post_load_state_dict",
     }
 
-    def process(self, graph, _resolver):
-        graph.visit(self._process_node)
+    def process(self, modules: List[Module], resolver: Optional[Resolver]) -> None:
+        docspec.filter_visit(modules, self._check)
 
-    def _process_node(self, node):
-        def _check(node):
-            if node.name.startswith("_"):
-                if node.name in self.PRIVATE_METHODS_TO_KEEP:
-                    return True
-                if (
-                    node.parent
-                    and f"{node.parent.name}.{node.name}" in self.PRIVATE_METHODS_TO_KEEP
-                ):
-                    return True
-                return False
-            if node.parent and node.parent.name.startswith("_"):
-                return False
-            if node.name == "logger" and isinstance(node.parent, Module):
-                return False
-            return True
-
-        if not _check(node):
-            node.visible = False
+    def _check(self, node: ApiObject) -> bool:
+        if node.name.startswith("_"):
+            if node.name in self.PRIVATE_METHODS_TO_KEEP:
+                return True
+            if node.parent and f"{node.parent.name}.{node.name}" in self.PRIVATE_METHODS_TO_KEEP:
+                return True
+            return False
+        if node.parent and node.parent.name.startswith("_"):
+            return False
+        if node.name == "logger" and isinstance(node.parent, Module):
+            return False
+        return True
 
 
 class AllenNlpRenderer(MarkdownRenderer):
@@ -316,11 +314,9 @@ class AllenNlpRenderer(MarkdownRenderer):
         include_parent_class: bool = True,
     ) -> str:
         parts = []
-        for dec in func.decorators:
+        for dec in func.decorations:
             parts.append("@{}{}\n".format(dec.name, dec.args or ""))
-        if self.signature_python_help_style and not func.is_method():
-            parts.append("{} = ".format(func.path()))
-        if func.is_async:
+        if func.modifiers and "async" in func.modifiers:
             parts.append("async ")
         if self.signature_with_def:
             parts.append("def ")
@@ -329,25 +325,30 @@ class AllenNlpRenderer(MarkdownRenderer):
         ):
             parts.append(func.parent.name + ".")
         parts.append((override_name or func.name))
-        signature_args = Argument.format_arglist(func.args)
+        signature_args = format_arglist(func.args)
         if signature_args.endswith(","):
             signature_args = signature_args[:-1].strip()
+
         if (
             len(parts[-1])
             + len(signature_args)
-            + (0 if not func.return_ else len(str(func.return_)))
+            + (0 if not func.return_type else len(str(func.return_type)))
             > 60
         ):
             signature_args = ",\n    ".join(
-                filter(lambda s: s.strip() not in ("", ","), (str(arg) for arg in func.args))
+                filter(
+                    lambda s: s.strip() not in ("", ","),
+                    (format_arglist([arg]) for arg in func.args),
+                )
             )
             parts.append("(\n    " + signature_args + "\n)")
         else:
             parts.append("(" + signature_args + ")")
-        if func.return_:
-            parts.append(" -> {}".format(func.return_))
+
+        if func.return_type:
+            parts.append(" -> {}".format(func.return_type))
         result = "".join(parts)
-        if add_method_bar and func.is_method():
+        if add_method_bar and isinstance(func.parent, Class):
             result = "\n".join(" | " + line for line in result.split("\n"))
             if include_parent_class:
                 bases = ", ".join(map(str, func.parent.bases))
@@ -361,16 +362,16 @@ class AllenNlpRenderer(MarkdownRenderer):
         return result
 
     def _format_data_signature(self, data: Data) -> str:
-        expr = str(data.expr)
-        if len(expr) > self.data_expression_maxlength:
+        expr = data.value
+        if expr and len(expr) > self.data_expression_maxlength:
             expr = expr[: self.data_expression_maxlength] + " ..."
 
-        if data.annotation:
-            signature = f"{data.name}: {data.annotation} = {expr}"
+        if data.datatype:
+            signature = f"{data.name}: {data.datatype} = {expr}"
         else:
             signature = f"{data.name} = {expr}"
 
-        if data.parent and data.parent.is_class():
+        if data.parent and isinstance(data.parent, Class):
             bases = ", ".join(map(str, data.parent.bases))
             if data.parent.metaclass:
                 bases += ", metaclass=" + str(data.parent.metaclass)
@@ -384,8 +385,8 @@ class AllenNlpRenderer(MarkdownRenderer):
 
     def _format_classdef_signature(self, cls: Class) -> str:
         code = ""
-        if cls.decorators:
-            for dec in cls.decorators:
+        if cls.decorations:
+            for dec in cls.decorations:
                 code += "@{}{}\n".format(dec.name, dec.args or "")
         bases = ", ".join(map(str, cls.bases))
         if cls.metaclass:
@@ -396,11 +397,10 @@ class AllenNlpRenderer(MarkdownRenderer):
             code += "class {}".format(cls.name)
         if self.signature_python_help_style:
             code = cls.path() + " = " + code
-        if self.classdef_render_init_signature_if_needed and (
-            "__init__" in cls.members and not cls.members["__init__"].visible
-        ):
+        members = {m.name: m for m in cls.members}
+        if self.classdef_render_init_signature_if_needed and ("__init__" in members):
             code += ":\n" + self._format_function_signature(
-                cls.members["__init__"],
+                members["__init__"],
                 add_method_bar=True,
                 include_parent_class=False,
             )
@@ -428,6 +428,8 @@ class AllenNlpRenderer(MarkdownRenderer):
         )
 
     def _render_object(self, fp, level, obj):
+        if isinstance(obj, Indirection) or isinstance(obj, Function) and obj.name == "__init__":
+            return
         if not isinstance(obj, Module) or self.render_module_header:
             self._render_header(fp, level, obj)
         if isinstance(obj, Module):
@@ -455,22 +457,25 @@ def py2md(module: str, out: Optional[str] = None) -> bool:
             add_member_class_prefix=False,
             data_code_block=True,
             signature_with_def=True,
+            signature_with_vertical_bar=True,
             use_fixed_header_levels=False,
             render_module_header=False,
             descriptive_class_title=False,
+            classdef_with_decorators=True,
+            classdef_render_init_signature_if_needed=True,
         ),
     )
     if out:
         out_path = Path(out)
         os.makedirs(out_path.parent, exist_ok=True)
 
-    pydocmd.load_modules()
+    modules = pydocmd.load_modules()
     try:
-        pydocmd.process()
+        pydocmd.process(modules)
     except DocstringError as err:
         logger.exception("Failed to process %s.\n%s", module, err)
         return False
-    pydocmd.render()
+    pydocmd.render(modules)
     return True
 
 
