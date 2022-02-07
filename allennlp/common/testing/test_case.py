@@ -32,7 +32,6 @@ class AllenNlpTestCase:
         logging.getLogger("allennlp.modules.token_embedders.embedding").setLevel(logging.INFO)
         logging.getLogger("urllib3.connectionpool").disabled = True
         log_pytorch_version_info()
-
         self.TEST_DIR = pathlib.Path(TEST_DIR)
 
         os.makedirs(self.TEST_DIR, exist_ok=True)

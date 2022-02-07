@@ -7,9 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [v2.9.0](https://github.com/allenai/allennlp/releases/tag/v2.9.0) - 2022-01-27
+
 ### Added
 
+- Added an `Evaluator` class to make comparing source, target, and predictions easier.
 - Added a way to resize the vocabulary in the T5 module
+- Added an argument `reinit_modules` to `cached_transformers.get()` that allows you to re-initialize the pretrained weights of a transformer model, using layer indices or regex strings.
+- Added attribute `_should_validate_this_epoch` to `GradientDescentTrainer` that controls whether validation is run at the end of each epoch.
+- Added `ShouldValidateCallback` that can be used to configure the frequency of validation during training.
+- Added a `MaxPoolingSpanExtractor`. This `SpanExtractor` represents each span by a component wise max-pooling-operation.
 
 ### Fixed
 
@@ -19,15 +26,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `FBetaMultiLabelMeasure` now works with multiple dimensions
 - Support for inferior operating systems when making hardlinks
 - Use `,` as a separator for filenames in the `evaluate` command, thus allowing for URLs (eg. `gs://...`) as input files.
+- Removed a spurious error message "'torch.cuda' has no attribute '_check_driver'" that would be appear in the logs
+  when a `ConfigurationError` for missing GPU was raised.
+- Load model on CPU post training to save GPU memory.
+- Fixed a bug in `ShouldValidateCallback` that leads to validation occuring after the first epoch regardless of `validation_start` value.
+- Fixed a bug in `ShouldValidateCallback` that leads to validation occuring every `validation_interval + 1` epochs, instead of every `validation_interval` epochs.
+- Fixed a bug in `ShouldValidateCallback` that leads to validation never occuring at the end of training.
 
 ### Removed
 
 - Removed dependency on the overrides package
+- Removed Tango components, since they now live at https://github.com/allenai/tango.
 
 ### Changed
 
 - Make `checklist` an optional dependency.
-
 
 ## [v2.8.0](https://github.com/allenai/allennlp/releases/tag/v2.8.0) - 2021-11-01
 
@@ -49,12 +62,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Fixed the implementation of `PairedPCABiasDirection` in `allennlp.fairness.bias_direction`, where the difference vectors should not be centered when performing the PCA.
+- Fixed the docstring of `ExponentialMovingAverage`, which was causing its argument descriptions to render inccorrectly in the docs.
 
 ## [v2.7.0](https://github.com/allenai/allennlp/releases/tag/v2.7.0) - 2021-09-01
 
 ### Added
 
-- Added in a default behavior to the `_to_params` method of `Registrable` so that in the case it is not implemented by the child class, it will still produce _a parameter dictionary_.   
+- Added in a default behavior to the `_to_params` method of `Registrable` so that in the case it is not implemented by the child class, it will still produce _a parameter dictionary_.
 - Added in `_to_params` implementations to all tokenizers.
 - Added support to evaluate mutiple datasets and produce corresponding output files in the `evaluate` command.
 - Added more documentation to the learning rate schedulers to include a sample config object for how to use it.

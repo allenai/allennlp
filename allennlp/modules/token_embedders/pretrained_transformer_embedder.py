@@ -1,16 +1,14 @@
 import logging
 import math
-from typing import Optional, Tuple, Dict, Any
-
+from typing import Any, Dict, Optional, Tuple, Union
 
 import torch
 import torch.nn.functional as F
-from transformers import XLNetConfig
-
 from allennlp.data.tokenizers import PretrainedTransformerTokenizer
 from allennlp.modules.scalar_mix import ScalarMix
 from allennlp.modules.token_embedders.token_embedder import TokenEmbedder
 from allennlp.nn.util import batched_index_select
+from transformers import XLNetConfig
 
 logger = logging.getLogger(__name__)
 
@@ -54,6 +52,16 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         with `torch.save()`.
     override_weights_strip_prefix: `Optional[str]`, optional (default = `None`)
         If set, strip the given prefix from the state dict when loading it.
+    reinit_modules: `Optional[Union[int, Tuple[int, ...], Tuple[str, ...]]]`, optional (default = `None`)
+        If this is an integer, the last `reinit_modules` layers of the transformer will be
+        re-initialized. If this is a tuple of integers, the layers indexed by `reinit_modules` will
+        be re-initialized. Note, because the module structure of the transformer `model_name` can
+        differ, we cannot guarantee that providing an integer or tuple of integers will work. If
+        this fails, you can instead provide a tuple of strings, which will be treated as regexes and
+        any module with a name matching the regex will be re-initialized. Re-initializing the last
+        few layers of a pretrained transformer can reduce the instability of fine-tuning on small
+        datasets and may improve performance (https://arxiv.org/abs/2006.05987v3). Has no effect
+        if `load_weights` is `False` or `override_weights_file` is not `None`.
     load_weights: `bool`, optional (default = `True`)
         Whether to load the pretrained weights. If you're loading your model/predictor from an AllenNLP archive
         it usually makes sense to set this to `False` (via the `overrides` parameter)
@@ -84,6 +92,7 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
         last_layer_only: bool = True,
         override_weights_file: Optional[str] = None,
         override_weights_strip_prefix: Optional[str] = None,
+        reinit_modules: Optional[Union[int, Tuple[int, ...], Tuple[str, ...]]] = None,
         load_weights: bool = True,
         gradient_checkpointing: Optional[bool] = None,
         tokenizer_kwargs: Optional[Dict[str, Any]] = None,
@@ -97,6 +106,7 @@ class PretrainedTransformerEmbedder(TokenEmbedder):
             True,
             override_weights_file=override_weights_file,
             override_weights_strip_prefix=override_weights_strip_prefix,
+            reinit_modules=reinit_modules,
             load_weights=load_weights,
             **(transformer_kwargs or {}),
         )
