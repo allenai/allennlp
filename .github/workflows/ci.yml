@@ -476,7 +476,7 @@ jobs:
       id: virtualenv-cache
       with:
         path: .venv
-        key: ${{ env.CACHE_PREFIX }}-${{ env.WEEK_NUMBER }}-${{ runner.os }}-${{ env.RUNNER_ARCH }}-${{ env.PYTHON_VERSION }}-cpu-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
+        key: ${{ env.CACHE_PREFIX }}-${{ env.WEEK_NUMBER }}-${{ runner.os }}-${{ env.RUNNER_ARCH }}-${{ env.PYTHON_VERSION }}-cpu-${{ hashFiles('setup.py') }}-${{ hashFiles('*requirements.txt') }}
 
     - name: Setup virtual environment (no cache hit)
       if: steps.virtualenv-cache.outputs.cache-hit != 'true'
