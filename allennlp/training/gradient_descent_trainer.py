@@ -340,6 +340,7 @@ class GradientDescentTrainer(Trainer):
         self._batches_in_epoch_completed: int = 0
         self._start_after_batches_in_epoch_completed: int = 0
         self._best_model_filename: Optional[str] = None
+        self._should_validate_this_epoch: bool = True
 
         # This is a kind of training state, but it is not serialized with the trainer state, because we can
         # re-create it with `epochs_completed` and `batches_in_epoch_completed`.
@@ -811,8 +812,8 @@ class GradientDescentTrainer(Trainer):
                 elif key.startswith("worker_") and key.endswith("_memory_MB"):
                     metrics["peak_" + key] = max(metrics.get("peak_" + key, 0), value)
 
-            this_epoch_val_metric: float = 0.0
-            if self._validation_data_loader is not None:
+            this_epoch_val_metric: Optional[float] = None
+            if self._should_validate_this_epoch and self._validation_data_loader is not None:
                 with torch.no_grad():
                     # We have a validation set, so compute all the metrics on it.
                     val_loss, val_reg_loss, num_batches = self._validation_loss(epoch)
@@ -851,7 +852,7 @@ class GradientDescentTrainer(Trainer):
             for key, value in val_metrics.items():
                 metrics["validation_" + key] = value
 
-            if self._metric_tracker.is_best_so_far():
+            if self._should_validate_this_epoch and self._metric_tracker.is_best_so_far():
                 # Update all the best_ metrics.
                 # (Otherwise they just stay the same as they were.)
                 metrics["best_epoch"] = epoch
@@ -891,7 +892,11 @@ class GradientDescentTrainer(Trainer):
                 if self._distributed:
                     dist.barrier()
 
-            if self._serialization_dir and self._metric_tracker.is_best_so_far():
+            if (
+                self._should_validate_this_epoch
+                and self._serialization_dir
+                and self._metric_tracker.is_best_so_far()
+            ):
                 should_save_model_state: bool
                 if self._ddp_wrapped_model is not None and self._ddp_wrapped_model.is_sharded:
                     # Each worker saves its own shard for now (we combine the shards later).
@@ -965,10 +970,12 @@ class GradientDescentTrainer(Trainer):
             torch.save(self.model.state_dict(), path)
 
     def _load_model_state(self, path: str) -> None:
+        # This function is only called after training. So load model on the CPU.
+        device = torch.device("cpu")
         if self._ddp_wrapped_model is not None:
-            self._ddp_wrapped_model.load_state_dict(torch.load(path))
+            self._ddp_wrapped_model.load_state_dict(torch.load(path, map_location=device))
         else:
-            self._pytorch_model.load_state_dict(torch.load(path))
+            self._pytorch_model.load_state_dict(torch.load(path, map_location=device))
 
     def _finalize_model(self) -> None:
         """If we have a moving average, we have to finalize the model at the end of training."""

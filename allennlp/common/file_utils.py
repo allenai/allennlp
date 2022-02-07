@@ -1,7 +1,6 @@
 """
 Utilities for working with the local dataset cache.
 """
-import string
 import weakref
 from contextlib import contextmanager
 import glob
@@ -600,13 +599,6 @@ def inspect_cache(patterns: List[str] = None, cache_dir: Union[str, Path] = None
                 f"latest {format_size(size)} from {format_timedelta(td)} ago"
             )
     print(f"\nTotal size: {format_size(total_size)}")
-
-
-SAFE_FILENAME_CHARS = frozenset("-_.%s%s" % (string.ascii_letters, string.digits))
-
-
-def filename_is_safe(filename: str) -> bool:
-    return all(c in SAFE_FILENAME_CHARS for c in filename)
 
 
 def hardlink_or_copy(source: PathOrStr, dest: PathOrStr):
