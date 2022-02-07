@@ -37,7 +37,7 @@ authors:
     affiliation: "Allen Institute for Artificial Intelligence"
     family-names: Zettlemoyer
     given-names: Luke
-cff-version: "1.1.0"
+cff-version: "1.2.0"
 license: "Apache-2.0"
 message: "If you use this software, please cite it using this metadata."
 repository-code: "https://github.com/allenai/allennlp"
