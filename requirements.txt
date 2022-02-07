@@ -3,20 +3,20 @@
 ################################
 torch>=1.6.0,<1.11.0
 torchvision>=0.8.1,<0.12.0
-cached-path>=1.0.0,<2.0.0
-fairscale==0.4.3
+cached-path>=1.0.2,<2.0.0
+fairscale==0.4.5
 jsonnet>=0.10.0 ; sys.platform != 'win32'
-nltk
+nltk<3.6.6
 spacy>=2.1.0,<3.3
 numpy
 tensorboardX>=1.2
 requests>=2.18
-tqdm>=4.19
+tqdm>=4.62
 h5py
 scikit-learn
 scipy
 pytest
-transformers>=4.1,<4.13
+transformers>=4.1,<4.17
 sentencepiece
 dataclasses;python_version<'3.7'
 filelock>=3.3,<3.5
