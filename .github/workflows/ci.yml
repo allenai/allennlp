@@ -170,7 +170,7 @@ jobs:
         conda activate ./.venv
         git clone https://github.com/allenai/allennlp-models.git
         cd allennlp-models
-        pip install -e . -r dev-requirements.txt
+        pip install -e .[all] -r dev-requirements.txt
 
     - name: Debug info
       run: |
