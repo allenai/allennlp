@@ -7,8 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [v2.9.0](https://github.com/allenai/allennlp/releases/tag/v2.9.0) - 2022-01-27
+
 ### Added
 
+- Added an `Evaluator` class to make comparing source, target, and predictions easier.
 - Added a way to resize the vocabulary in the T5 module
 - Added an argument `reinit_modules` to `cached_transformers.get()` that allows you to re-initialize the pretrained weights of a transformer model, using layer indices or regex strings.
 - Added attribute `_should_validate_this_epoch` to `GradientDescentTrainer` that controls whether validation is run at the end of each epoch.
@@ -27,8 +30,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Removed a spurious error message "'torch.cuda' has no attribute '_check_driver'" that would be appear in the logs
   when a `ConfigurationError` for missing GPU was raised.
 - Load model on CPU post training to save GPU memory.
-- Fixed a bug in `ShouldValidateCallback` that leads to valuation occuring after the first epoch regardless of `validation_start` value.
-- Fixed a bug in `ShouldValidateCallback` that leads to valuation occuring every `validation_interval + 1` epochs, instead of every `validation_interval` epochs.
+- Fixed a bug in `ShouldValidateCallback` that leads to validation occuring after the first epoch regardless of `validation_start` value.
+- Fixed a bug in `ShouldValidateCallback` that leads to validation occuring every `validation_interval + 1` epochs, instead of every `validation_interval` epochs.
+- Fixed a bug in `ShouldValidateCallback` that leads to validation never occuring at the end of training.
 
 ### Removed
 
