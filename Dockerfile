@@ -18,6 +18,7 @@ WORKDIR /stage/allennlp
 COPY allennlp/version.py allennlp/version.py
 COPY setup.py .
 COPY requirements.txt .
+COPY dev-requirements.txt .
 RUN touch allennlp/__init__.py \
     && touch README.md \
     && pip install --no-cache-dir -e .[all]
