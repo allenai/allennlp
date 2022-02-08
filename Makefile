@@ -113,7 +113,7 @@ install :
 	# python setup.py install_egg_info
 	# Install torch ecosystem first.
 	$(TORCH_INSTALL)
-	pip install -e . -r dev-requirements.txt
+	pip install -e .[dev,all]
 	# These nltk packages are used by the 'checklist' module.
 	$(NLTK_DOWNLOAD_CMD)
 
