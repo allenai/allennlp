@@ -24,10 +24,7 @@ logger = logging.getLogger(__name__)
 try:
     from allennlp.commands.checklist import CheckList
 except ImportError:
-    logger.warning(
-        "The `checklist` command cannot be registered, as the dependency is not installed. "
-        "Please install using `pip install allennlp[checklist]`."
-    )
+    pass
 
 
 class ArgumentParserWithDefaults(argparse.ArgumentParser):

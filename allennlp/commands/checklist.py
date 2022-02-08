@@ -21,9 +21,6 @@ logger = logging.getLogger(__name__)
 try:
     from allennlp.confidence_checks.task_checklists.task_suite import TaskSuite
 except ImportError:
-    logger.error(
-        "Cannot import the checklist dependency. Please install using `pip install allennlp[checklist]`."
-    )
     raise
 
 
