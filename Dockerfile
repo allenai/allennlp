@@ -17,13 +17,15 @@ WORKDIR /stage/allennlp
 # necessary to install the dependencies.
 COPY allennlp/version.py allennlp/version.py
 COPY setup.py .
+COPY requirements.txt .
+COPY dev-requirements.txt .
 RUN touch allennlp/__init__.py \
     && touch README.md \
-    && pip install --no-cache-dir -e .
+    && pip install --no-cache-dir -e .[all]
 
 # Now add the full package source and re-install just the package.
 COPY allennlp allennlp
-RUN pip install --no-cache-dir --no-deps -e .
+RUN pip install --no-cache-dir --no-deps -e .[all]
 
 COPY Makefile .
 RUN make download-extras
