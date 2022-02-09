@@ -369,7 +369,7 @@ jobs:
 
     - name: Install core package
       run: |
-        pip install $(ls dist/*.whl[all])
+        pip install $(ls dist/*.whl)[all]
 
     - name: Download NLTK prerequisites
       run: |
