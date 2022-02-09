@@ -22,7 +22,7 @@ env:
   TORCH_CPU_INSTALL: conda install pytorch torchvision torchaudio cpuonly -c pytorch
   TORCH_GPU_INSTALL: conda install pytorch torchvision torchaudio cudatoolkit=11.3 -c pytorch
   # Change this to invalidate existing cache.
-  CACHE_PREFIX: v9
+  CACHE_PREFIX: v10
   # Disable tokenizers parallelism because this doesn't help, and can cause issues in distributed tests.
   TOKENIZERS_PARALLELISM: 'false'
   # Disable multithreading with OMP because this can lead to dead-locks in distributed tests.
@@ -369,7 +369,7 @@ jobs:
 
     - name: Install core package
       run: |
-        pip install $(ls dist/*.whl)
+        pip install $(ls dist/*.whl[all])
 
     - name: Download NLTK prerequisites
       run: |
