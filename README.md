@@ -231,7 +231,7 @@ Installing the library and dependencies is simple using `pip`.
 pip install allennlp
 ```
 
-To install the optional dependencies, run
+To install the optional dependencies, such as `checklist`, run
 
 ```bash
 pip install allennlp[checklist]
