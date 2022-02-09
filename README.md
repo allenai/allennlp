@@ -236,6 +236,7 @@ To install the optional dependencies, such as `checklist`, run
 ```bash
 pip install allennlp[checklist]
 ```
+Or you can just install all optional dependencies with `pip install allennlp[all]`.
 
 *Looking for bleeding edge features? You can install nightly releases directly from [pypi](https://pypi.org/project/allennlp/#history)*
 
