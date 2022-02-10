@@ -68,6 +68,24 @@ test :
 			--cov=$(SRC) \
 			--cov-report=xml
 
+.PHONY : test-without-checklist
+test-without-checklist :
+	pytest --color=yes -v -rf --durations=40 \
+			--cov-config=.coveragerc \
+			--cov=$(SRC) \
+			--cov-report=xml \
+			--ignore-glob=*checklist*
+
+.PHONY : test-checklist
+test-checklist :
+	pytest --color=yes -v -rf --durations=40 \
+			--cov-config=.coveragerc \
+			--cov=$(SRC) \
+			--cov-report=xml \
+			tests/ \
+			-k checklist
+
+
 .PHONY : gpu-tests
 gpu-tests : check-for-cuda
 	pytest --color=yes -v -rf --durations=20 \
@@ -95,7 +113,7 @@ install :
 	# python setup.py install_egg_info
 	# Install torch ecosystem first.
 	$(TORCH_INSTALL)
-	pip install -e . -r dev-requirements.txt
+	pip install -e .[dev,all]
 	# These nltk packages are used by the 'checklist' module.
 	$(NLTK_DOWNLOAD_CMD)
 
