@@ -86,7 +86,7 @@ class SlantedTriangular(LearningRateScheduler):
             for i in range(len(self.base_values) - 1, -1, -1):
                 param_group = optimizer.param_groups[i]
                 if param_group["params"]:
-                    param_group["lr"] = self.base_values[i] * decay_factor ** exponent
+                    param_group["lr"] = self.base_values[i] * decay_factor**exponent
                     self.base_values[i] = param_group["lr"]
                     exponent += 1
         # set up for the first batch

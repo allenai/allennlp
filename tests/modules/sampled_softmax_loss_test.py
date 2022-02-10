@@ -95,4 +95,4 @@ class TestSampledSoftmaxLoss(AllenNlpTestCase):
         # Should be close
 
         pct_error = (sampled_loss - full_loss) / full_loss
-        assert abs(pct_error) < 0.001
+        assert abs(pct_error) < 0.0003
