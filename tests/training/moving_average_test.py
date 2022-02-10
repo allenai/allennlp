@@ -34,10 +34,10 @@ class MovingAverageTest(AllenNlpTestCase):
         moving_average.assign_average_value()
 
         np.testing.assert_array_almost_equal(
-            param1, 1 * 0.9999 ** 2 + 5 * 0.9999 * 0.0001 + 25 * 0.0001
+            param1, 1 * 0.9999**2 + 5 * 0.9999 * 0.0001 + 25 * 0.0001
         )
         np.testing.assert_array_almost_equal(
-            param2, 1 * 0.9999 ** 2 + 10 * 0.9999 * 0.0001 + 100 * 0.0001
+            param2, 1 * 0.9999**2 + 10 * 0.9999 * 0.0001 + 100 * 0.0001
         )
 
         # Restore original variables

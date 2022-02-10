@@ -515,7 +515,7 @@ class LengthNormalizedSequenceLogProbabilityScorer(FinalSequenceScorer):
         lengths += is_end_token.long()
 
         # shape: (batch_size, beam_size)
-        average_log_probs = log_probabilities / (lengths ** self.length_penalty)
+        average_log_probs = log_probabilities / (lengths**self.length_penalty)
         return average_log_probs
 
 

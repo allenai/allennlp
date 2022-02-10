@@ -24,6 +24,11 @@ class TaskSuite(Registrable):
     [Beyond Accuracy: Behavioral Testing of NLP models with CheckList (Ribeiro et al)]
     (https://api.semanticscholar.org/CorpusID:218551201).
 
+    !!! Note
+        To use the checklist integration you should install ``allennlp`` with the
+        "checklist" extra (e.g. ``pip install allennlp[checklist]``) or just install
+        `checklist` after the fact.
+
     Task suites are intended to be used as a form of behavioral testing
     for NLP models to check for robustness across several general linguistic
     capabilities; eg. Vocabulary, SRL, Negation, etc.

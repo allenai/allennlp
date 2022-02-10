@@ -22,7 +22,7 @@ env:
   TORCH_CPU_INSTALL: conda install pytorch torchvision torchaudio cpuonly -c pytorch
   TORCH_GPU_INSTALL: conda install pytorch torchvision torchaudio cudatoolkit=11.3 -c pytorch
   # Change this to invalidate existing cache.
-  CACHE_PREFIX: v5
+  CACHE_PREFIX: v10
   # Disable tokenizers parallelism because this doesn't help, and can cause issues in distributed tests.
   TOKENIZERS_PARALLELISM: 'false'
   # Disable multithreading with OMP because this can lead to dead-locks in distributed tests.
@@ -146,7 +146,7 @@ jobs:
       id: virtualenv-cache
       with:
         path: .venv
-        key: ${{ env.CACHE_PREFIX }}-${{ env.WEEK_NUMBER }}-${{ runner.os }}-${{ env.RUNNER_ARCH }}-${{ env.PYTHON_VERSION }}-${{ matrix.task.torch_platform }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
+        key: ${{ env.CACHE_PREFIX }}-${{ env.WEEK_NUMBER }}-${{ runner.os }}-${{ env.RUNNER_ARCH }}-${{ env.PYTHON_VERSION }}-${{ matrix.task.torch_platform }}-${{ hashFiles('setup.py') }}-${{ hashFiles('*requirements.txt') }}
 
     - name: Setup virtual environment (no cache hit)
       if: steps.virtualenv-cache.outputs.cache-hit != 'true'
@@ -159,7 +159,7 @@ jobs:
       if: steps.virtualenv-cache.outputs.cache-hit == 'true'
       run: |
         conda activate ./.venv
-        pip install --no-deps -e .
+        pip install --no-deps -e .[all]
         make download-extras
 
     - name: Pull and install models repo
@@ -170,7 +170,7 @@ jobs:
         conda activate ./.venv
         git clone https://github.com/allenai/allennlp-models.git
         cd allennlp-models
-        pip install -e . -r dev-requirements.txt
+        pip install -e .[dev,all]
 
     - name: Debug info
       run: |
@@ -271,7 +271,7 @@ jobs:
       id: virtualenv-cache
       with:
         path: .venv
-        key: ${{ env.CACHE_PREFIX }}-${{ env.WEEK_NUMBER }}-${{ runner.os }}-${{ env.RUNNER_ARCH }}-${{ env.PYTHON_VERSION }}-cpu-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
+        key: ${{ env.CACHE_PREFIX }}-${{ env.WEEK_NUMBER }}-${{ runner.os }}-${{ env.RUNNER_ARCH }}-${{ env.PYTHON_VERSION }}-cpu-${{ hashFiles('setup.py') }}-${{ hashFiles('*requirements.txt') }}
 
     - name: Setup virtual environment (no cache hit)
       if: steps.virtualenv-cache.outputs.cache-hit != 'true'
@@ -284,7 +284,7 @@ jobs:
       if: steps.virtualenv-cache.outputs.cache-hit == 'true'
       run: |
         conda activate ./.venv
-        pip install --no-deps -e .
+        pip install --no-deps -e .[all]
         make download-extras
 
     - name: Debug info
@@ -369,7 +369,7 @@ jobs:
 
     - name: Install core package
       run: |
-        pip install $(ls dist/*.whl)
+        pip install $(ls dist/*.whl)[all]
 
     - name: Download NLTK prerequisites
       run: |
@@ -476,7 +476,7 @@ jobs:
       id: virtualenv-cache
       with:
         path: .venv
-        key: ${{ env.CACHE_PREFIX }}-${{ env.WEEK_NUMBER }}-${{ runner.os }}-${{ env.RUNNER_ARCH }}-${{ env.PYTHON_VERSION }}-cpu-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
+        key: ${{ env.CACHE_PREFIX }}-${{ env.WEEK_NUMBER }}-${{ runner.os }}-${{ env.RUNNER_ARCH }}-${{ env.PYTHON_VERSION }}-cpu-${{ hashFiles('setup.py') }}-${{ hashFiles('*requirements.txt') }}
 
     - name: Setup virtual environment (no cache hit)
       if: steps.virtualenv-cache.outputs.cache-hit != 'true'
@@ -489,7 +489,7 @@ jobs:
       if: steps.virtualenv-cache.outputs.cache-hit == 'true'
       run: |
         conda activate ./.venv
-        pip install --no-deps -e .
+        pip install --no-deps -e .[all]
         make download-extras
 
     - name: Debug info

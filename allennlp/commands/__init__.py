@@ -2,6 +2,7 @@ import argparse
 import logging
 import sys
 from typing import Any, Optional, Tuple, Set
+import warnings
 
 from allennlp import __version__
 from allennlp.commands.build_vocab import BuildVocab
@@ -18,9 +19,19 @@ from allennlp.commands.push_to_hf import PushToHf
 from allennlp.commands.count_instances import CountInstances
 from allennlp.common.plugins import import_plugins
 from allennlp.common.util import import_module_and_submodules
-from allennlp.commands.checklist import CheckList
 
 logger = logging.getLogger(__name__)
+
+try:
+    """
+    The `allennlp checklist` command requires installation of the optional dependency `checklist`.
+    It can be installed with `pip install allennlp[checklist]`.
+    """
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        from allennlp.commands.checklist import CheckList
+except ImportError:
+    pass
 
 
 class ArgumentParserWithDefaults(argparse.ArgumentParser):
