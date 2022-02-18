@@ -19,7 +19,7 @@ pytest
 transformers>=4.1,<4.17
 sentencepiece
 dataclasses;python_version<'3.7'
-filelock>=3.3,<3.5
+filelock>=3.3,<3.7
 lmdb
 more-itertools
 termcolor==1.1.0
