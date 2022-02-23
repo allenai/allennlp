@@ -1,6 +1,9 @@
 """
 Utilities for working with the local dataset cache.
 """
+import bz2
+import gzip
+import lzma
 import weakref
 from contextlib import contextmanager
 import glob
@@ -443,27 +446,30 @@ def get_file_extension(path: str, dot=True, lower: bool = True):
     return ext.lower() if lower else ext
 
 
+_SUFFIXES: Dict[Callable, str] = {
+    open: "",
+    gzip.open: ".gz",
+    bz2.open: ".bz2",
+    lzma.open: ".xz",
+}
+
+
 def open_compressed(
     filename: Union[str, PathLike],
     mode: str = "rt",
     encoding: Optional[str] = "UTF-8",
-    compression_type: Optional[str] = None,
     **kwargs,
 ):
     if not isinstance(filename, str):
         filename = str(filename)
-    open_fn: Callable = open
 
-    compression_modules = {"gz": "gzip", "bz2": "bz2", "lzma": "lzma"}
-    if compression_type in compression_modules:
-        module = __import__(compression_modules[compression_type])
-        open_fn = module.open
+    open_fn: Callable
+    filename = str(filename)
+    for open_fn, suffix in _SUFFIXES.items():
+        if len(suffix) > 0 and filename.endswith(suffix):
+            break
     else:
-        for extension in compression_modules:
-            if filename.endswith(extension):
-                module = __import__(compression_modules[extension])
-                open_fn = module.open
-                break
+        open_fn = open
 
     return open_fn(cached_path(filename), mode=mode, encoding=encoding, **kwargs)
 
