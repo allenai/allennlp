@@ -55,6 +55,18 @@ class IndependenceTest(AllenNlpTestCase):
         }
         assert test_kl_divs == {0: np.nan, 1: np.nan}
 
+    @multi_device
+    def test_independence_with_wasserstein_distance(self, device: str):
+        independence = Independence(4, 2, "wasserstein")
+        A = torch.eye(3, device=device).long()
+        C = 2 * A
+
+        expected_distances = {0: 0.6667, 1: 1.3333}
+
+        independence(C, A)
+        test_distances = {k: v.item() for k, v in independence.get_metric(reset=True).items()}
+        assert expected_distances == pytest.approx(test_distances, abs=1e-3)
+
     def test_distributed_independence_masked_computation(self):
         A = torch.eye(3).long()
         C = 2 * A
