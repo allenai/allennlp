@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added attribute `_should_validate_this_epoch` to `GradientDescentTrainer` that controls whether validation is run at the end of each epoch.
 - Added `ShouldValidateCallback` that can be used to configure the frequency of validation during training.
 - Added a `MaxPoolingSpanExtractor`. This `SpanExtractor` represents each span by a component wise max-pooling-operation.
+- Added support for `dist_metric` kwarg in initializing fairness metrics, which allows optionally using `wasserstein` distance (previously only KL divergence was supported).
 
 ### Fixed
 
