@@ -55,7 +55,6 @@ class IndependenceTest(AllenNlpTestCase):
         }
         assert test_kl_divs == {0: np.nan, 1: np.nan}
 
-    @multi_device
     def test_independence_with_wasserstein_distance(self, device: str):
         independence = Independence(4, 2, "wasserstein")
         A = torch.eye(3, device=device).long()
