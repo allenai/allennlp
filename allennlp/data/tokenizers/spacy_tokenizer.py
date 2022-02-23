@@ -1,6 +1,6 @@
 from typing import List, Optional
 
-from overrides import overrides
+
 import spacy
 from spacy.tokens import Doc
 
@@ -60,8 +60,16 @@ class SpacyTokenizer(Tokenizer):
         start_tokens: Optional[List[str]] = None,
         end_tokens: Optional[List[str]] = None,
     ) -> None:
-        self.spacy = get_spacy_model(language, pos_tags, parse, ner)
-        if split_on_spaces:
+        # Save these for use later in the _to_params method
+        self._language = language
+        self._pos_tags = pos_tags
+        self._parse = parse
+        self._ner = ner
+        self._split_on_spaces = split_on_spaces
+
+        self.spacy = get_spacy_model(self._language, self._pos_tags, self._parse, self._ner)
+
+        if self._split_on_spaces:
             self.spacy.tokenizer = _WhitespaceSpacyTokenizer(self.spacy.vocab)
 
         self._keep_spacy_tokens = keep_spacy_tokens
@@ -97,7 +105,6 @@ class SpacyTokenizer(Tokenizer):
             tokens.append(Token(end_token, -1))
         return tokens
 
-    @overrides
     def batch_tokenize(self, texts: List[str]) -> List[List[Token]]:
         if self._is_version_3:
             return [
@@ -110,10 +117,22 @@ class SpacyTokenizer(Tokenizer):
                 for tokens in self.spacy.pipe(texts, n_threads=-1)
             ]
 
-    @overrides
     def tokenize(self, text: str) -> List[Token]:
         # This works because our Token class matches spacy's.
         return self._sanitize(_remove_spaces(self.spacy(text)))
+
+    def _to_params(self):
+        return {
+            "type": "spacy",
+            "language": self._language,
+            "pos_tags": self._pos_tags,
+            "parse": self._parse,
+            "ner": self._ner,
+            "keep_spacy_tokens": self._keep_spacy_tokens,
+            "split_on_spaces": self._split_on_spaces,
+            "start_tokens": self._start_tokens,
+            "end_tokens": self._end_tokens,
+        }
 
 
 class _WhitespaceSpacyTokenizer:

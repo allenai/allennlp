@@ -1,6 +1,5 @@
-from typing import List
+from typing import List, Dict, Any
 
-from overrides import overrides
 
 from allennlp.data.tokenizers.token_class import Token
 from allennlp.data.tokenizers.tokenizer import Tokenizer
@@ -20,6 +19,8 @@ class WhitespaceTokenizer(Tokenizer):
     Registered as a `Tokenizer` with name "whitespace" and "just_spaces".
     """
 
-    @overrides
     def tokenize(self, text: str) -> List[Token]:
         return [Token(t) for t in text.split()]
+
+    def _to_params(self) -> Dict[str, Any]:
+        return {"type": "whitespace"}

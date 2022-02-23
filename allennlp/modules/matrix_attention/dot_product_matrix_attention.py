@@ -1,5 +1,5 @@
 import torch
-from overrides import overrides
+
 
 from allennlp.modules.matrix_attention.matrix_attention import MatrixAttention
 
@@ -13,6 +13,5 @@ class DotProductMatrixAttention(MatrixAttention):
     Registered as a `MatrixAttention` with name "dot_product".
     """
 
-    @overrides
     def forward(self, matrix_1: torch.Tensor, matrix_2: torch.Tensor) -> torch.Tensor:
-        return matrix_1.bmm(matrix_2.transpose(2, 1))
+        return matrix_1.matmul(matrix_2.transpose(-1, -2))

@@ -6,7 +6,7 @@ and then rolls the time dimension back up.
 
 from typing import List
 
-from overrides import overrides
+
 import torch
 
 
@@ -27,7 +27,6 @@ class TimeDistributed(torch.nn.Module):
         super().__init__()
         self._module = module
 
-    @overrides
     def forward(self, *inputs, pass_through: List[str] = None, **kwargs):
 
         pass_through = pass_through or []

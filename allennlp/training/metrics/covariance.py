@@ -1,7 +1,7 @@
 import logging
 from typing import Optional
 
-from overrides import overrides
+
 import torch
 
 # import torch.distributed as dist
@@ -126,7 +126,7 @@ class Covariance(Metric):
         self._total_co_moment += delta_co_moment.item()
         self._total_count = updated_count
 
-    def get_metric(self, reset: bool = False):
+    def get_metric(self, reset: bool = False) -> float:
         """
         # Returns
 
@@ -139,7 +139,6 @@ class Covariance(Metric):
             self.reset()
         return covariance
 
-    @overrides
     def reset(self):
         self._total_prediction_mean = 0.0
         self._total_label_mean = 0.0

@@ -16,7 +16,7 @@ class StackedAlternatingLstm(torch.nn.Module):
     """
     A stacked LSTM with LSTM layers which alternate between going forwards over
     the sequence and going backwards. This implementation is based on the
-    description in [Deep Semantic Role Labelling - What works and what's next][0].
+    description in [Deep Semantic Role Labeling - What works and what's next][0].
 
     [0]: https://www.aclweb.org/anthology/P17-1044.pdf
     [1]: https://arxiv.org/abs/1512.05287

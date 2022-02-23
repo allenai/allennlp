@@ -8,7 +8,6 @@ import argparse
 import sys
 import json
 
-from overrides import overrides
 
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common import logging as common_logging
@@ -23,7 +22,6 @@ from allennlp.data import Instance
 
 @Subcommand.register("predict")
 class Predict(Subcommand):
-    @overrides
     def add_subparser(self, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
 
         description = """Run the specified model against a JSON-lines input file."""

@@ -12,12 +12,15 @@ import torch
 from torch.cuda import amp
 from torch.nn.utils import clip_grad_norm_
 import torch.distributed as dist
+from torch.cuda.amp.grad_scaler import OptState
 
 from allennlp.common.checks import ConfigurationError, check_for_gpu
 from allennlp.common import util as common_util, Tqdm, Lazy
+from allennlp.common.file_utils import hardlink_or_copy
 from allennlp.data.data_loaders.data_loader import DataLoader, TensorDict
 from allennlp.models.model import Model
 from allennlp.nn.parallel import DdpAccelerator, DdpWrappedModel, TorchDdpAccelerator
+from allennlp.nn.util import dist_reduce_sum
 from allennlp.training.callbacks import ConsoleLoggerCallback
 from allennlp.training.callbacks.confidence_checks import ConfidenceChecksCallback
 from allennlp.training.callbacks.backward import MixedPrecisionBackwardCallback
@@ -223,7 +226,7 @@ class GradientDescentTrainer(Trainer):
         validation_metric: Union[str, List[str]] = "-loss",
         validation_data_loader: DataLoader = None,
         num_epochs: int = 20,
-        serialization_dir: Optional[str] = None,
+        serialization_dir: Optional[Union[str, os.PathLike]] = None,
         checkpointer: Optional[Checkpointer] = None,
         cuda_device: Optional[Union[int, torch.device]] = None,
         grad_norm: Union[float, bool] = False,
@@ -337,6 +340,7 @@ class GradientDescentTrainer(Trainer):
         self._batches_in_epoch_completed: int = 0
         self._start_after_batches_in_epoch_completed: int = 0
         self._best_model_filename: Optional[str] = None
+        self._should_validate_this_epoch: bool = True
 
         # This is a kind of training state, but it is not serialized with the trainer state, because we can
         # re-create it with `epochs_completed` and `batches_in_epoch_completed`.
@@ -347,6 +351,23 @@ class GradientDescentTrainer(Trainer):
         if self._ddp_wrapped_model is None:
             return self.model
         return self._ddp_wrapped_model.model
+
+    def clip_gradient(self):
+        """
+        Performs gradient clipping.
+        If the model is in mixed precision training, we would first unscale the gradient.
+        """
+        if self._grad_clipping is not None:
+            # 1. We have to unscale the gradient before clipping
+            if self._scaler is not None:
+                optimizer_state = self._scaler._per_optimizer_states[id(self.optimizer)]
+                # 2. The `unscale_` shouldn't be performed more than once per optimizer per step call,
+                # so we only perform `unscale_` if it has not already been called.
+                if optimizer_state["stage"] is not OptState.UNSCALED:
+                    self._scaler.unscale_(self.optimizer)
+            torch.nn.utils.clip_grad_value_(
+                [p for p in self.model.parameters() if p.grad is not None], self._grad_clipping
+            )
 
     def rescale_gradients(self) -> Optional[float]:
         """
@@ -517,6 +538,7 @@ class GradientDescentTrainer(Trainer):
             train_loss += batch_loss
 
             batch_grad_norm = self.rescale_gradients()
+            self.clip_gradient()
 
             if self._learning_rate_scheduler:
                 self._learning_rate_scheduler.step_batch(self._total_batches_completed + 1)
@@ -544,8 +566,6 @@ class GradientDescentTrainer(Trainer):
                 batch_loss,
                 batch_reg_loss,
                 self._batches_in_epoch_completed,
-                world_size=self._world_size,
-                cuda_device=self.cuda_device,
             )
 
             for callback in self._callbacks:
@@ -591,16 +611,19 @@ class GradientDescentTrainer(Trainer):
         ):
             metrics = {}
         else:
+            train_loss = dist_reduce_sum(train_loss)
+            num_batches = dist_reduce_sum(self._batches_in_epoch_completed)
+            if train_reg_loss is not None:
+                train_reg_loss = dist_reduce_sum(train_reg_loss)
+
             metrics = training_util.get_metrics(
                 self.model,
                 train_loss,
                 train_reg_loss,
                 batch_loss=None,
                 batch_reg_loss=None,
-                num_batches=self._batches_in_epoch_completed,
+                num_batches=num_batches,
                 reset=True,
-                world_size=self._world_size,
-                cuda_device=self.cuda_device,
             )
 
         for (worker, memory) in cpu_memory_usage:
@@ -688,8 +711,6 @@ class GradientDescentTrainer(Trainer):
                     val_batch_loss,
                     val_batch_reg_loss,
                     batches_this_epoch,
-                    world_size=self._world_size,
-                    cuda_device=self.cuda_device,
                 )
 
                 description = training_util.description_from_metrics(val_metrics)
@@ -731,9 +752,9 @@ class GradientDescentTrainer(Trainer):
             self._maybe_restore_checkpoint()
         except RuntimeError as e:
             configuration_error = ConfigurationError(
-                "Could not recover training from the checkpoint. Did you mean to output to "
-                "a different serialization directory or delete the existing serialization "
-                "directory?"
+                f"Could not recover training from the checkpoint in {self._serialization_dir}. "
+                "Did you mean to output to a different serialization directory or delete the "
+                "existing serialization directory?"
             )
             configuration_error.__cause__ = e
             raise configuration_error
@@ -756,7 +777,6 @@ class GradientDescentTrainer(Trainer):
                 callback.on_end(self, metrics=metrics, epoch=epoch, is_primary=self._primary)
 
     def _try_train(self) -> Tuple[Dict[str, Any], int]:
-        training_util.enable_gradient_clipping(self.model, self._grad_clipping)
 
         logger.info("Beginning training.")
 
@@ -792,8 +812,8 @@ class GradientDescentTrainer(Trainer):
                 elif key.startswith("worker_") and key.endswith("_memory_MB"):
                     metrics["peak_" + key] = max(metrics.get("peak_" + key, 0), value)
 
-            this_epoch_val_metric: float = 0.0
-            if self._validation_data_loader is not None:
+            this_epoch_val_metric: Optional[float] = None
+            if self._should_validate_this_epoch and self._validation_data_loader is not None:
                 with torch.no_grad():
                     # We have a validation set, so compute all the metrics on it.
                     val_loss, val_reg_loss, num_batches = self._validation_loss(epoch)
@@ -803,6 +823,11 @@ class GradientDescentTrainer(Trainer):
                     if self._distributed:
                         dist.barrier()
 
+                    val_loss = dist_reduce_sum(val_loss)
+                    num_batches = dist_reduce_sum(num_batches)
+                    if val_reg_loss is not None:
+                        val_reg_loss = dist_reduce_sum(val_reg_loss)
+
                     val_metrics = training_util.get_metrics(
                         self.model,
                         val_loss,
@@ -811,8 +836,6 @@ class GradientDescentTrainer(Trainer):
                         batch_reg_loss=None,
                         num_batches=num_batches,
                         reset=True,
-                        world_size=self._world_size,
-                        cuda_device=self.cuda_device,
                     )
 
                     # Check validation metric for early stopping
@@ -829,7 +852,7 @@ class GradientDescentTrainer(Trainer):
             for key, value in val_metrics.items():
                 metrics["validation_" + key] = value
 
-            if self._metric_tracker.is_best_so_far():
+            if self._should_validate_this_epoch and self._metric_tracker.is_best_so_far():
                 # Update all the best_ metrics.
                 # (Otherwise they just stay the same as they were.)
                 metrics["best_epoch"] = epoch
@@ -869,7 +892,11 @@ class GradientDescentTrainer(Trainer):
                 if self._distributed:
                     dist.barrier()
 
-            if self._serialization_dir and self._metric_tracker.is_best_so_far():
+            if (
+                self._should_validate_this_epoch
+                and self._serialization_dir
+                and self._metric_tracker.is_best_so_far()
+            ):
                 should_save_model_state: bool
                 if self._ddp_wrapped_model is not None and self._ddp_wrapped_model.is_sharded:
                     # Each worker saves its own shard for now (we combine the shards later).
@@ -892,7 +919,7 @@ class GradientDescentTrainer(Trainer):
                             model_state_file, _ = last_checkpoint
                             if os.path.exists(self._best_model_filename):
                                 os.remove(self._best_model_filename)
-                            os.link(model_state_file, self._best_model_filename)
+                            hardlink_or_copy(model_state_file, self._best_model_filename)
                         else:
                             self._save_model_state(self._best_model_filename)
                     else:
@@ -943,10 +970,12 @@ class GradientDescentTrainer(Trainer):
             torch.save(self.model.state_dict(), path)
 
     def _load_model_state(self, path: str) -> None:
+        # This function is only called after training. So load model on the CPU.
+        device = torch.device("cpu")
         if self._ddp_wrapped_model is not None:
-            self._ddp_wrapped_model.load_state_dict(torch.load(path))
+            self._ddp_wrapped_model.load_state_dict(torch.load(path, map_location=device))
         else:
-            self._pytorch_model.load_state_dict(torch.load(path))
+            self._pytorch_model.load_state_dict(torch.load(path, map_location=device))
 
     def _finalize_model(self) -> None:
         """If we have a moving average, we have to finalize the model at the end of training."""

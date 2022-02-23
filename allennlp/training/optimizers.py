@@ -23,7 +23,7 @@ import re
 import math
 from typing import Any, Dict, List, Tuple, Union, Optional
 
-from overrides import overrides
+
 import torch
 import transformers
 
@@ -178,7 +178,7 @@ class Optimizer(torch.optim.Optimizer, Registrable):
     we want to use those classes.  To make things easy, we just inherit from those classes, using
     multiple inheritance to also inherit from `Optimizer`.  The only reason we do this is to make
     type inference on parameters possible, so we can construct these objects using our configuration
-    framework.  If you are writing your own script, you can safely ignore these classes and just use
+    framework. If you are writing your own script, you can safely ignore these classes and just use
     the `torch.optim` classes directly.
 
     If you are implementing one of these classes, the `model_parameters` and `parameter_groups`
@@ -189,7 +189,7 @@ class Optimizer(torch.optim.Optimizer, Registrable):
     inconsistent.
 
     Most subclasses of `Optimizer` take both a `model_parameters` and a `parameter_groups`
-    constructor argument.  The `model_parameters` argument does not get an entry in a typical
+    constructor argument. The `model_parameters` argument does not get an entry in a typical
     AllenNLP configuration file, but the `parameter_groups` argument does (if you want a non-default
     value).  See the documentation for the `make_parameter_groups` function for more information on
     how the `parameter_groups` argument should be specified.
@@ -313,7 +313,6 @@ class MultiOptimizer(Optimizer):
 
         super().__init__(made_parameter_groups, {})
 
-    @overrides
     def step(self):
         """
         Takes an optimization step for each optimizer.
@@ -321,7 +320,6 @@ class MultiOptimizer(Optimizer):
         for optimizer in self.optimizers.values():
             optimizer.step()
 
-    @overrides
     def state_dict(self):
         """
         Creates an object `optimizer_state_dict`, which is a dictionary mapping an optimizer key to its
@@ -341,7 +339,6 @@ class MultiOptimizer(Optimizer):
 
         return optimizer_state_dict
 
-    @overrides
     def load_state_dict(self, training_state: Dict[str, Any]):
         """
         Loads each optimizer's `state_dict`.
@@ -349,7 +346,6 @@ class MultiOptimizer(Optimizer):
         for optimizer_key, optimizer in self.optimizers.items():
             optimizer.load_state_dict(training_state[f"{optimizer_key}_optimizer"])
 
-    @overrides
     def zero_grad(self, set_to_none: bool = False):
         """
         Sets parameter gradients to zero or None.

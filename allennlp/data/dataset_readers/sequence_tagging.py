@@ -1,7 +1,6 @@
-from typing import Dict, List
+from typing import Dict, List, Any
 import logging
 
-from overrides import overrides
 
 from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
@@ -56,7 +55,13 @@ class SequenceTaggingDatasetReader(DatasetReader):
         self._word_tag_delimiter = word_tag_delimiter
         self._token_delimiter = token_delimiter
 
-    @overrides
+        self._params = {
+            "word_tag_delimiter": self._word_tag_delimiter,
+            "token_delimiter": self._token_delimiter,
+            "token_indexers": self._token_indexers,
+        }
+        self._params.update(kwargs)
+
     def _read(self, file_path):
         # if `file_path` is a URL, redirect to the cache
         file_path = cached_path(file_path)
@@ -93,6 +98,8 @@ class SequenceTaggingDatasetReader(DatasetReader):
             fields["tags"] = SequenceLabelField(tags, sequence)
         return Instance(fields)
 
-    @overrides
     def apply_token_indexers(self, instance: Instance) -> None:
         instance.fields["tokens"]._token_indexers = self._token_indexers  # type: ignore
+
+    def _to_params(self) -> Dict[str, Any]:
+        return self._params

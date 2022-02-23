@@ -5,7 +5,7 @@ AllenNLP and its models are configured correctly.
 import logging
 import re
 import subprocess
-from typing import List, Union, Tuple, Any
+from typing import Any, List, Tuple, Union
 
 import torch
 from torch import cuda
@@ -27,8 +27,6 @@ class ConfigurationError(Exception):
         self.message = message
 
     def __str__(self):
-        # TODO(brendanr): Is there some reason why we need repr here? It
-        # produces horrible output for simple multi-line error messages.
         return self.message
 
 
@@ -116,22 +114,10 @@ def check_for_gpu(device: Union[int, torch.device, List[Union[int, torch.device]
         if device != torch.device("cpu"):
             num_devices_available = cuda.device_count()
             if num_devices_available == 0:
-                # Torch will give a more informative exception than ours, so we want to include
-                # that context as well if it's available.  For example, if you try to run torch 1.5
-                # on a machine with CUDA10.1 you'll get the following:
-                #
-                #     The NVIDIA driver on your system is too old (found version 10010).
-                #
-                torch_gpu_error = ""
-                try:
-                    cuda._check_driver()
-                except Exception as e:
-                    torch_gpu_error = "\n{0}".format(e)
-
                 raise ConfigurationError(
                     "Experiment specified a GPU but none is available;"
                     " if you want to run on CPU use the override"
-                    " 'trainer.cuda_device=-1' in the json config file." + torch_gpu_error
+                    " 'trainer.cuda_device=-1' in the json config file."
                 )
             elif device.index >= num_devices_available:
                 raise ConfigurationError(

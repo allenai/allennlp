@@ -2,7 +2,7 @@ import shutil
 import sys
 
 import pytest
-from overrides import overrides
+
 
 from allennlp.commands import main
 from allennlp.commands.subcommand import Subcommand
@@ -37,7 +37,6 @@ class TestMain(AllenNlpTestCase):
 
         @Subcommand.register("evaluate", exist_ok=True)
         class FakeEvaluate(Subcommand):  # noqa
-            @overrides
             def add_subparser(self, parser):
                 subparser = parser.add_parser(self.name, description="fake", help="fake help")
                 subparser.set_defaults(func=do_nothing)

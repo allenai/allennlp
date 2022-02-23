@@ -3,6 +3,7 @@ import logging
 import os
 import sys
 
+
 if os.environ.get("ALLENNLP_DEBUG"):
     LEVEL = logging.DEBUG
 else:
@@ -27,10 +28,14 @@ def _transformers_log_filter(record):
 
 logging.getLogger("transformers.file_utils").addFilter(_transformers_log_filter)
 
-from allennlp.commands import main  # noqa
-
 
 def run():
+    from allennlp.commands import main  # noqa
+    from allennlp.common.util import install_sigterm_handler
+
+    # We want to be able to catch SIGTERM signals in addition to SIGINT (keyboard interrupt).
+    install_sigterm_handler()
+
     main(prog="allennlp")
 
 

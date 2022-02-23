@@ -1,7 +1,7 @@
 import os
 from typing import Dict, Union, Optional
 
-from overrides import overrides
+
 from tensorboardX import SummaryWriter
 import torch
 
@@ -21,7 +21,7 @@ class TensorBoardCallback(LogWriterCallback):
         summary_interval: int = 100,
         distribution_interval: Optional[int] = None,
         batch_size_interval: Optional[int] = None,
-        should_log_parameter_statistics: bool = True,
+        should_log_parameter_statistics: bool = False,
         should_log_learning_rate: bool = False,
     ) -> None:
         super().__init__(
@@ -42,7 +42,6 @@ class TensorBoardCallback(LogWriterCallback):
         os.makedirs(val_ser_dir, exist_ok=True)
         self._validation_log = SummaryWriter(val_ser_dir)
 
-    @overrides
     def log_scalars(
         self,
         scalars: Dict[str, Union[int, float]],
@@ -56,7 +55,6 @@ class TensorBoardCallback(LogWriterCallback):
             name = f"{log_prefix}/{key}" if log_prefix else key
             log.add_scalar(name, value, timestep + 1)
 
-    @overrides
     def log_tensors(
         self, tensors: Dict[str, torch.Tensor], log_prefix: str = "", epoch: Optional[int] = None
     ) -> None:
@@ -68,7 +66,6 @@ class TensorBoardCallback(LogWriterCallback):
             values_to_write = values.cpu().data.numpy().flatten()
             log.add_histogram(name, values_to_write, timestep + 1)
 
-    @overrides
     def close(self) -> None:
         """
         Calls the `close` method of the `SummaryWriter` s which makes sure that pending

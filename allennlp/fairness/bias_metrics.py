@@ -29,7 +29,7 @@ arXiv preprint arXiv:2103.03417.
 
 from typing import Optional, Dict, Union, List
 
-from overrides import overrides
+
 import torch
 import torch.distributed as dist
 
@@ -240,7 +240,7 @@ class EmbeddingCoherenceTest:
 
         n = x.size(0)
         upper = 6 * torch.sum((x_rank - y_rank).pow(2))
-        down = n * (n ** 2 - 1.0)
+        down = n * (n**2 - 1.0)
         return 1.0 - (upper / down)
 
 
@@ -279,8 +279,7 @@ class NaturalLanguageInference(Metric):
         self._num_neutral_above_taus = {tau: 0.0 for tau in taus}
         self._total_predictions = 0
 
-    @overrides
-    def __call__(self, nli_probabilities: torch.Tensor) -> None:
+    def __call__(self, nli_probabilities: torch.Tensor) -> None:  # type: ignore
         """
 
         # Parameters
@@ -369,7 +368,6 @@ class NaturalLanguageInference(Metric):
             self.reset()
         return nli_scores
 
-    @overrides
     def reset(self):
         self._nli_probs_sum = 0.0
         self._num_neutral_predictions = 0.0
@@ -542,10 +540,9 @@ class AssociationWithoutGroundTruth(Metric):
         self._joint_counts_by_protected_variable_label += _joint_counts_by_protected_variable_label
         self._protected_variable_label_counts += _protected_variable_label_counts
 
-    @overrides
     def get_metric(
         self, reset: bool = False
-    ) -> Dict[int, Union[torch.FloatTensor, Dict[int, torch.FloatTensor]]]:
+    ) -> Dict[int, Union[torch.Tensor, Dict[int, torch.Tensor]]]:
         """
         # Returns
 
@@ -573,7 +570,6 @@ class AssociationWithoutGroundTruth(Metric):
             self.reset()
         return gaps
 
-    @overrides
     def reset(self) -> None:
         self._joint_counts_by_protected_variable_label = torch.zeros(
             (self._num_protected_variable_labels, self._num_classes)
@@ -582,7 +578,7 @@ class AssociationWithoutGroundTruth(Metric):
         self._y_counts = torch.zeros(self._num_classes)
         self._total_predictions = torch.tensor(0)
 
-    def _ova_gap(self, x: int):
+    def _ova_gap(self, x: int) -> torch.Tensor:
         device = self._y_counts.device
         pmi_terms = self._all_pmi_terms()
         pmi_not_x = torch.sum(
@@ -596,7 +592,7 @@ class AssociationWithoutGroundTruth(Metric):
         gap = pmi_terms[x] - pmi_not_x
         return torch.where(~gap.isinf(), gap, torch.tensor(float("nan")).to(device))
 
-    def _pairwise_gaps(self, x: int):
+    def _pairwise_gaps(self, x: int) -> Dict[int, torch.Tensor]:
         device = self._y_counts.device
         pmi_terms = self._all_pmi_terms()
         pairwise_gaps = {}

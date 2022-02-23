@@ -1,6 +1,5 @@
-from typing import List, Union
+from typing import List, Union, Dict, Any
 
-from overrides import overrides
 
 from allennlp.data.tokenizers.token_class import Token
 from allennlp.data.tokenizers.tokenizer import Tokenizer
@@ -55,7 +54,6 @@ class CharacterTokenizer(Tokenizer):
         self._start_tokens.reverse()
         self._end_tokens = end_tokens or []
 
-    @overrides
     def tokenize(self, text: str) -> List[Token]:
         if self._lowercase_characters:
             text = text.lower()
@@ -83,3 +81,12 @@ class CharacterTokenizer(Tokenizer):
         if isinstance(self, other.__class__):
             return self.__dict__ == other.__dict__
         return NotImplemented
+
+    def _to_params(self) -> Dict[str, Any]:
+        return {
+            "type": "character",
+            "byte_encoding": self._byte_encoding,
+            "lowercase_characters": self._lowercase_characters,
+            "start_tokens": self._start_tokens,
+            "end_tokens": self._end_tokens,
+        }

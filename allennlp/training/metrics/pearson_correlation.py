@@ -4,7 +4,7 @@ from typing import Optional
 import math
 import numpy as np
 
-from overrides import overrides
+
 import torch
 
 from allennlp.common.util import is_distributed
@@ -84,12 +84,11 @@ class PearsonCorrelation(Metric):
             self.reset()
 
         if np.around(denominator, decimals=5) == 0:
-            pearson_r = 0
+            pearson_r = 0.0
         else:
             pearson_r = covariance / denominator
         return pearson_r
 
-    @overrides
     def reset(self):
         self._predictions_labels_covariance.reset()
         self._predictions_variance.reset()

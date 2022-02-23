@@ -2,7 +2,7 @@ from typing import Dict, Any, Union, Optional
 
 import torch
 import numpy as np
-from overrides import overrides
+
 
 from allennlp.data.fields.field import Field
 from allennlp.common.util import JsonDict
@@ -36,11 +36,9 @@ class TensorField(Field[torch.Tensor]):
         self.tensor = tensor.cpu()
         self.padding_value = padding_value
 
-    @overrides
     def get_padding_lengths(self) -> Dict[str, int]:
         return {"dimension_" + str(i): shape for i, shape in enumerate(self.tensor.size())}
 
-    @overrides
     def as_tensor(self, padding_lengths: Dict[str, int]) -> torch.Tensor:
         tensor = self.tensor
         while len(tensor.size()) < len(padding_lengths):
@@ -52,7 +50,6 @@ class TensorField(Field[torch.Tensor]):
         ]
         return torch.nn.functional.pad(tensor, pad, value=self.padding_value)
 
-    @overrides
     def empty_field(self):
         # Pass the padding_value, so that any outer field, e.g., `ListField[TensorField]` uses the
         # same padding_value in the padded ArrayFields
@@ -78,7 +75,6 @@ class TensorField(Field[torch.Tensor]):
         """This is a compatibility method that returns the underlying tensor as a numpy array."""
         return self.tensor.numpy()
 
-    @overrides
     def human_readable_repr(self) -> JsonDict:
         shape = list(self.tensor.shape)
         std = torch.std(self.tensor.float()).item()

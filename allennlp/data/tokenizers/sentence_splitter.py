@@ -1,5 +1,5 @@
-from typing import List
-from overrides import overrides
+from typing import List, Dict, Any
+
 
 import spacy
 
@@ -44,8 +44,11 @@ class SpacySentenceSplitter(SentenceSplitter):
     """
 
     def __init__(self, language: str = "en_core_web_sm", rule_based: bool = False) -> None:
+        self._language = language
+        self._rule_based = rule_based
+
         # we need spacy's dependency parser if we're not using rule-based sentence boundary detection.
-        self.spacy = get_spacy_model(language, parse=not rule_based, ner=False)
+        self.spacy = get_spacy_model(self._language, parse=not self._rule_based, ner=False)
         self._is_version_3 = spacy.__version__ >= "3.0"
         if rule_based:
             # we use `sentencizer`, a built-in spacy module for rule-based sentence boundary detection.
@@ -58,14 +61,12 @@ class SpacySentenceSplitter(SentenceSplitter):
                     sbd = self.spacy.create_pipe(sbd_name)
                     self.spacy.add_pipe(sbd)
 
-    @overrides
     def split_sentences(self, text: str) -> List[str]:
         if self._is_version_3:
             return [sent.text.strip() for sent in self.spacy(text).sents]
         else:
             return [sent.string.strip() for sent in self.spacy(text).sents]
 
-    @overrides
     def batch_split_sentences(self, texts: List[str]) -> List[List[str]]:
         """
         This method lets you take advantage of spacy's batch processing.
@@ -77,3 +78,6 @@ class SpacySentenceSplitter(SentenceSplitter):
         return [
             [sentence.string.strip() for sentence in doc.sents] for doc in self.spacy.pipe(texts)
         ]
+
+    def _to_params(self) -> Dict[str, Any]:
+        return {"type": "spacy", "language": self._language, "rule_based": self._rule_based}

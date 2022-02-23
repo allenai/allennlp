@@ -1,6 +1,6 @@
 from typing import Dict, Any, List, Tuple, Optional
 
-from overrides import overrides
+
 import torch
 
 from allennlp.common.lazy import Lazy
@@ -13,10 +13,10 @@ class CombinedLearningRateScheduler(LearningRateScheduler):
     This `LearningRateScheduler` can be used to apply an arbitrary number of other schedulers
     one after the other.
 
-    These schedulers are defined though the `schedulers` parameter, which takes a list
-    of `Tuple[int, Lazy[LearningRateScheduler]]`. The first field of the tuple, the `int`,
-    specifies how many epochs the corresponding scheduler will be used before the next
-    scheduler takes its place.
+    These schedulers are defined though the `schedulers` parameter, which takes
+    a list of `Tuple[int, Lazy[LearningRateScheduler]]`. The first field of the
+    tuple, the `int`, specifies how many epochs the corresponding scheduler will
+     be used before the next scheduler takes its place.
 
     While it usually makes sense for the sum
 
@@ -25,8 +25,54 @@ class CombinedLearningRateScheduler(LearningRateScheduler):
     ```
 
     to equal the total number of training epochs, it is not a requirement.
-    If training continues beyond the last defined scheduler, both `step()` and `step_batch()`
-    will be a no-op.
+    If training continues beyond the last defined scheduler, both `step()` and
+    `step_batch()` will be a no-op. In effect, this causes the learning rate to
+    stay constant.
+
+    # Example
+
+    Config for using the `CombinedLearningRateScheduler` Learning Rate Scheduler
+    with the following arguments:
+
+    * Use [`PolynomialDecay`](
+    https://docs.allennlp.org/main/api/training/learning_rate_schedulers/polynomial_decay/
+    ) for the first `15` epochs.
+    * Use [`NoamLR`](
+    https://docs.allennlp.org/main/api/training/learning_rate_schedulers/noam/
+    ) for the next `15` epochs.
+    * Use a constant LR for the remaining epochs.
+
+    ```json
+    {
+        ...
+       "trainer":{
+            ...
+            "learning_rate_scheduler": {
+                "type": "combined",
+                "schedulers": [
+                    [
+                        15, {
+                            "type": "polynomial_decay",
+                            "power": 2,
+                            "warmup_steps": 50,
+                            "end_learning_rate": 1e-10
+                        }
+                    ],
+                    [
+                        15, {
+                            "type": "noam",
+                            "warmup_steps": 1,
+                            "model_size": 128,
+                            "factor": 0.5
+                        }
+                    ]
+                ]
+            },
+            ...
+       }
+    }
+    ```
+    Note that you do NOT pass a `optimizer` key to the Learning rate scheduler.
     """
 
     def __init__(
@@ -82,7 +128,6 @@ class CombinedLearningRateScheduler(LearningRateScheduler):
         self._last_epoch_updated = self.last_epoch
         return self._current_scheduler
 
-    @overrides
     def state_dict(self) -> Dict[str, Any]:
         current_scheduler = self.current_scheduler
         return {
@@ -93,7 +138,6 @@ class CombinedLearningRateScheduler(LearningRateScheduler):
             else current_scheduler.state_dict(),
         }
 
-    @overrides
     def load_state_dict(self, state_dict: Dict[str, Any]) -> None:
         self.last_epoch = state_dict["last_epoch"]
         self.num_steps_per_epoch = state_dict["num_steps_per_epoch"]
@@ -101,19 +145,16 @@ class CombinedLearningRateScheduler(LearningRateScheduler):
             assert state_dict["current_scheduler"] is not None
             self.current_scheduler.load_state_dict(state_dict["current_scheduler"])
 
-    @overrides
     def get_values(self):
         """
         This should never be called directly.
         """
         raise NotImplementedError
 
-    @overrides
     def step_batch(self, batch_num_total: int = None) -> None:
         if self.current_scheduler is not None:
             self.current_scheduler.step_batch(batch_num_total)
 
-    @overrides
     def step(self, metric: float = None) -> None:
         self.last_epoch += 1
         self.metric = metric

@@ -7,8 +7,79 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Fixed
+
+- Updated dependencies, especially around doc creation.
+- Running the test suite out-of-tree (e.g. after installation) is now possible by pointing the environment variable `ALLENNLP_SRC_DIR` to the sources.
+- Silenced a warning that happens when you inappropriately clone a tensor.
+
+## [v2.9.0](https://github.com/allenai/allennlp/releases/tag/v2.9.0) - 2022-01-27
+
 ### Added
 
+- Added an `Evaluator` class to make comparing source, target, and predictions easier.
+- Added a way to resize the vocabulary in the T5 module
+- Added an argument `reinit_modules` to `cached_transformers.get()` that allows you to re-initialize the pretrained weights of a transformer model, using layer indices or regex strings.
+- Added attribute `_should_validate_this_epoch` to `GradientDescentTrainer` that controls whether validation is run at the end of each epoch.
+- Added `ShouldValidateCallback` that can be used to configure the frequency of validation during training.
+- Added a `MaxPoolingSpanExtractor`. This `SpanExtractor` represents each span by a component wise max-pooling-operation.
+- Added support for `dist_metric` kwarg in initializing fairness metrics, which allows optionally using `wasserstein` distance (previously only KL divergence was supported).
+
+### Fixed
+
+- Fixed the docstring information for the `FBetaMultiLabelMeasure` metric.
+- Various fixes for Python 3.9
+- Fixed the name that the `push-to-hf` command uses to store weights.
+- `FBetaMultiLabelMeasure` now works with multiple dimensions
+- Support for inferior operating systems when making hardlinks
+- Use `,` as a separator for filenames in the `evaluate` command, thus allowing for URLs (eg. `gs://...`) as input files.
+- Removed a spurious error message "'torch.cuda' has no attribute '_check_driver'" that would be appear in the logs
+  when a `ConfigurationError` for missing GPU was raised.
+- Load model on CPU post training to save GPU memory.
+- Fixed a bug in `ShouldValidateCallback` that leads to validation occuring after the first epoch regardless of `validation_start` value.
+- Fixed a bug in `ShouldValidateCallback` that leads to validation occuring every `validation_interval + 1` epochs, instead of every `validation_interval` epochs.
+- Fixed a bug in `ShouldValidateCallback` that leads to validation never occuring at the end of training.
+
+### Removed
+
+- Removed dependency on the overrides package
+- Removed Tango components, since they now live at https://github.com/allenai/tango.
+
+### Changed
+
+- Make `checklist` an optional dependency.
+
+## [v2.8.0](https://github.com/allenai/allennlp/releases/tag/v2.8.0) - 2021-11-01
+
+### Added
+
+- Added support to push models directly to the [Hugging Face Hub](https://huggingface.co/) with the command `allennlp push-to-hf`.
+- More default tests for the `TextualEntailmentSuite`.
+
+### Changed
+
+- The behavior of `--overrides` has changed. Previously the final configuration params were simply taken as the union over the original params and the `--overrides` params.
+  But now you can use `--overrides` to completely replace any part of the original config. For example, passing `--overrides '{"model":{"type":"foo"}}'` will completely
+  replace the "model" part of the original config. However, when you just want to change a single field in the JSON structure without removing / replacing adjacent fields,
+  you can still use the "dot" syntax. For example, `--overrides '{"model.num_layers":3}'` will only change the `num_layers` parameter to the "model" part of the config, leaving
+  everything else unchanged.
+- Integrated [`cached_path`](https://github.com/allenai/cached_path) library to replace existing functionality in `common.file_utils`. This introduces some improvements without
+  any breaking changes.
+
+### Fixed
+
+- Fixed the implementation of `PairedPCABiasDirection` in `allennlp.fairness.bias_direction`, where the difference vectors should not be centered when performing the PCA.
+- Fixed the docstring of `ExponentialMovingAverage`, which was causing its argument descriptions to render inccorrectly in the docs.
+
+## [v2.7.0](https://github.com/allenai/allennlp/releases/tag/v2.7.0) - 2021-09-01
+
+### Added
+
+- Added in a default behavior to the `_to_params` method of `Registrable` so that in the case it is not implemented by the child class, it will still produce _a parameter dictionary_.
+- Added in `_to_params` implementations to all tokenizers.
+- Added support to evaluate mutiple datasets and produce corresponding output files in the `evaluate` command.
+- Added more documentation to the learning rate schedulers to include a sample config object for how to use it.
+- Moved the pytorch learning rate schedulers wrappers to their own file called `pytorch_lr_schedulers.py` so that they will have their own documentation page.
 - Added a module `allennlp.nn.parallel` with a new base class, `DdpAccelerator`, which generalizes
   PyTorch's `DistributedDataParallel` wrapper to support other implementations. Two implementations of
   this class are provided. The default is `TorchDdpAccelerator` (registered at "torch"), which is just a thin wrapper around
@@ -24,16 +95,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `self.ddp_accelerator` during distributed training. This is useful when, for example, instantiating submodules in your
   model's `__init__()` method by wrapping them with `self.ddp_accelerator.wrap_module()`. See the `allennlp.modules.transformer.t5`
   for an example.
+- We now log batch metrics to tensorboard and wandb.
+- Added Tango components, to be explored in detail in a later post
+- Added `ScaledDotProductMatrixAttention`, and converted the transformer toolkit to use it
+- Added tests to ensure that all `Attention` and `MatrixAttention` implementations are interchangeable
+- Added a way for AllenNLP Tango to read and write datasets lazily.
+- Added a way to remix datasets flexibly
+- Added `from_pretrained_transformer_and_instances` constructor to `Vocabulary`
+- `TransformerTextField` now supports `__len__`.
 
 ### Fixed
 
+- Fixed a bug in `ConditionalRandomField`: `transitions` and `tag_sequence` tensors were not initialized on the desired device causing high CPU usage (see https://github.com/allenai/allennlp/issues/2884)
 - Fixed a mispelling: the parameter `contructor_extras` in `Lazy()` is now correctly called `constructor_extras`.
 - Fixed broken links in `allennlp.nn.initializers` docs.
 - Fixed bug in `BeamSearch` where `last_backpointers` was not being passed to any `Constraint`s.
 - `TransformerTextField` can now take tensors of shape `(1, n)` like the tensors produced from a HuggingFace tokenizer.
 - `tqdm` lock is now set inside `MultiProcessDataLoading` when new workers are spawned to avoid contention when writing output.
 - `ConfigurationError` is now pickleable.
-- Multitask models now support `TextFieldTensor` in heads, not just in the backbone
+- Checkpointer cleaning was fixed to work on Windows Paths
+- Multitask models now support `TextFieldTensor` in heads, not just in the backbone.
+- Fixed the signature of `ScaledDotProductAttention` to match the other `Attention` classes
+- `allennlp` commands will now catch `SIGTERM` signals and handle them similar to `SIGINT` (keyboard interrupt).
+- The `MultiProcessDataLoader` will properly shutdown its workers when a `SIGTERM` is received.
+- Fixed the way names are applied to Tango `Step` instances.
+- Fixed a bug in calculating loss in the distributed setting.
+- Fixed a bug when extending a sparse sequence by 0 items.
 
 ### Changed
 
@@ -41,8 +128,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   with a default value of `False`. `False` means gradients are not rescaled and the gradient
   norm is never even calculated. `True` means the gradients are still not rescaled but the gradient
   norm is calculated and passed on to callbacks. A `float` value means gradients are rescaled.
-- `TensorCache` now supports more concurrent readers and writers. 
-
+- `TensorCache` now supports more concurrent readers and writers.
+- We no longer log parameter statistics to tensorboard or wandb by default.
 
 ## [v2.6.0](https://github.com/allenai/allennlp/releases/tag/v2.6.0) - 2021-07-19
 
@@ -80,7 +167,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Changed behavior of `MultiOptimizer` so that while a default optimizer is still required, an error is not thrown if the default optimizer receives no parameters.
-- Made the epsilon parameter for the layer normalization in token embeddings configurable. 
+- Made the epsilon parameter for the layer normalization in token embeddings configurable.
 
 ### Removed
 
@@ -88,14 +175,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   You can also override `TransformerModule._post_load_pretrained_state_dict_hook()` to remove keys associated with tied weights from `missing_keys`
   after loading a pretrained state dictionary.
 
-
 ## [v2.5.0](https://github.com/allenai/allennlp/releases/tag/v2.5.0) - 2021-06-03
 
 ### Added
 
 - Added `TaskSuite` base class and command line functionality for running [`checklist`](https://github.com/marcotcr/checklist) test suites, along with implementations for `SentimentAnalysisSuite`, `QuestionAnsweringSuite`, and `TextualEntailmentSuite`. These can be found in the `allennlp.confidence_checks.task_checklists` module.
 - Added `BiasMitigatorApplicator`, which wraps any Model and mitigates biases by finetuning
-on a downstream task.
+  on a downstream task.
 - Added `allennlp diff` command to compute a diff on model checkpoints, analogous to what `git diff` does on two files.
 - Meta data defined by the class `allennlp.common.meta.Meta` is now saved in the serialization directory and archive file
   when training models from the command line. This is also now part of the `Archive` named tuple that's returned from `load_archive()`.
@@ -107,7 +193,7 @@ on a downstream task.
   See [PR #5172](https://github.com/allenai/allennlp/pull/5172) for more details.
 - Added `SpanExtractorWithSpanWidthEmbedding`, putting specific span embedding computations into the `_embed_spans` method and leaving the common code in `SpanExtractorWithSpanWidthEmbedding` to unify the arguments, and modified `BidirectionalEndpointSpanExtractor`, `EndpointSpanExtractor` and `SelfAttentiveSpanExtractor` accordingly. Now, `SelfAttentiveSpanExtractor` can also embed span widths.
 - Added a `min_steps` parameter to `BeamSearch` to set a minimum length for the predicted sequences.
-- Added the `FinalSequenceScorer` abstraction to calculate the final scores of the generated sequences in `BeamSearch`. 
+- Added the `FinalSequenceScorer` abstraction to calculate the final scores of the generated sequences in `BeamSearch`.
 - Added `shuffle` argument to `BucketBatchSampler` which allows for disabling shuffling.
 - Added `allennlp.modules.transformer.attention_module` which contains a generalized `AttentionModule`. `SelfAttention` and `T5Attention` both inherit from this.
 - Added a `Constraint` abstract class to `BeamSearch`, which allows for incorporating constraints on the predictions found by `BeamSearch`,
@@ -139,7 +225,6 @@ on a downstream task.
 - Fixed `wandb` callback to work in distributed training.
 - Fixed `tqdm` logging into multiple files with `allennlp-optuna`.
 
-
 ## [v2.4.0](https://github.com/allenai/allennlp/releases/tag/v2.4.0) - 2021-04-22
 
 ### Added
@@ -155,7 +240,6 @@ on a downstream task.
 - The `GradientDescentTrainer` no longer leaves stray model checkpoints around when it runs out of patience.
 - Fixed `cached_path()` for "hf://" files.
 - Improved the error message for the `PolynomialDecay` LR scheduler when `num_steps_per_epoch` is missing.
-
 
 ## [v2.3.1](https://github.com/allenai/allennlp/releases/tag/v2.3.1) - 2021-04-20
 
@@ -216,9 +300,7 @@ on a downstream task.
 
 - Removed the `stride` parameter to `PretrainedTransformerTokenizer`. This parameter had no effect.
 
-
 ## [v2.2.0](https://github.com/allenai/allennlp/releases/tag/v2.2.0) - 2021-03-26
-
 
 ### Added
 
@@ -239,7 +321,6 @@ on a downstream task.
 - `Model.get_parameters_for_histogram_tensorboard_logging` is deprecated in favor of
   `Model.get_parameters_for_histogram_logging`.
 
-
 ### Fixed
 
 - Makes sure tensors that are stored in `TensorCache` always live on CPUs
@@ -250,7 +331,6 @@ on a downstream task.
 ### Removed
 
 - Removed `TensorBoardWriter`. Please use the `TensorBoardCallback` instead.
-
 
 ## [v2.1.0](https://github.com/allenai/allennlp/releases/tag/v2.1.0) - 2021-02-24
 
@@ -283,7 +363,6 @@ on a downstream task.
 - Fixed a bug where the `MultiTaskDataLoader` would crash when `num_workers > 0`
 - Fixed an import error that happens when PyTorch's distributed framework is unavailable on the system.
 
-
 ## [v2.0.1](https://github.com/allenai/allennlp/releases/tag/v2.0.1) - 2021-01-29
 
 ### Added
@@ -298,7 +377,6 @@ on a downstream task.
 ### Fixed
 
 - `common.util.sanitize` now handles sets.
-
 
 ## [v2.0.0](https://github.com/allenai/allennlp/releases/tag/v2.0.0) - 2021-01-27
 
@@ -332,7 +410,6 @@ on a downstream task.
 - We set a value to `epoch` so in case of firing `TrainerCallback.on_end()` the variable is bound.
   This could have lead to an error in case of trying to recover a run after it was finished training.
 
-
 ## [v2.0.0rc1](https://github.com/allenai/allennlp/releases/tag/v2.0.0rc1) - 2021-01-21
 
 ### Added
@@ -343,7 +420,7 @@ on a downstream task.
 - Added abstraction and demo implementation for an image augmentation module.
 - Added abstraction and concrete implementation for region detectors.
 - A new high-performance default `DataLoader`: `MultiProcessDataLoading`.
-- A `MultiTaskModel` and abstractions to use with it, including `Backbone` and `Head`.  The
+- A `MultiTaskModel` and abstractions to use with it, including `Backbone` and `Head`. The
   `MultiTaskModel` first runs its inputs through the `Backbone`, then passes the result (and
   whatever other relevant inputs it got) to each `Head` that's in use.
 - A `MultiTaskDataLoader`, with a corresponding `MultiTaskDatasetReader`, and a couple of new
@@ -401,7 +478,6 @@ on a downstream task.
   can't be acquired because the file system is read-only.
 - `TrackEpochCallback` is now a `EpochCallback`.
 
-
 ## [v1.3.0](https://github.com/allenai/allennlp/releases/tag/v1.3.0) - 2020-12-15
 
 ### Added
@@ -433,7 +509,6 @@ on a downstream task.
 - Added safety checks for extracting tar files
 - Turned superfluous warning to info when extending the vocab in the embedding matrix, if no pretrained file was provided
 
-
 ## [v1.2.2](https://github.com/allenai/allennlp/releases/tag/v1.2.2) - 2020-11-17
 
 ### Added
@@ -444,7 +519,6 @@ on a downstream task.
 ### Fixed
 
 - `GumbelSampler` now sorts the beams by their true log prob.
-
 
 ## [v1.2.1](https://github.com/allenai/allennlp/releases/tag/v1.2.1) - 2020-11-10
 
@@ -468,7 +542,7 @@ on a downstream task.
   was an exception.
 - Fixed the computation of saliency maps in the Interpret code when using mismatched indexing.
   Previously, we would compute gradients from the top of the transformer, after aggregation from
-  wordpieces to tokens, which gives results that are not very informative.  Now, we compute gradients
+  wordpieces to tokens, which gives results that are not very informative. Now, we compute gradients
   with respect to the embedding layer, and aggregate wordpieces to tokens separately.
 - Fixed the heuristics for finding embedding layers in the case of RoBERTa. An update in the
   `transformers` library broke our old heuristic.
@@ -476,7 +550,6 @@ on a downstream task.
 - Fixed default masks that were erroneously created on the CPU even when a GPU is available.
 - Fixed pretrained embeddings for transformers that don't use end tokens.
 - Fixed the transformer tokenizer cache when the tokenizers are initialized with custom kwargs.
-
 
 ## [v1.2.0](https://github.com/allenai/allennlp/releases/tag/v1.2.0) - 2020-10-29
 
@@ -499,7 +572,6 @@ on a downstream task.
   used rare vocabulary items.
 - Fixed a bug where `BeamSearch` would fail if `max_steps` was equal to 1.
 - Fixed `BasicTextFieldEmbedder` to not raise ConfigurationError if it has embedders that are empty and not in input
-
 
 ## [v1.2.0rc1](https://github.com/allenai/allennlp/releases/tag/v1.2.0rc1) - 2020-10-22
 
@@ -584,7 +656,6 @@ on a downstream task.
 - Fixed a bug in the cnn_encoder where activations involving masked tokens could be picked up by the max
 - Fix intra word tokenization for `PretrainedTransformerTokenizer` when disabling fast tokenizer.
 
-
 ## [v1.1.0](https://github.com/allenai/allennlp/releases/tag/v1.1.0) - 2020-09-08
 
 ### Fixed
@@ -600,7 +671,6 @@ on a downstream task.
 ### Added
 
 - `Predictor.capture_model_internals()` now accepts a regex specifying which modules to capture.
-
 
 ## [v1.1.0rc4](https://github.com/allenai/allennlp/releases/tag/v1.1.0rc4) - 2020-08-20
 
@@ -627,7 +697,6 @@ on a downstream task.
 - Fixed problem with automatically detecting whether tokenization is necessary.
   This affected primarily the Roberta SST model.
 - Improved help text for using the --overrides command line flag.
-
 
 ## [v1.1.0rc2](https://github.com/allenai/allennlp/releases/tag/v1.1.0rc2) - 2020-07-31
 
@@ -708,7 +777,7 @@ on a downstream task.
 - Not specifying a `cuda_device` now automatically determines whether to use a GPU or not.
 - Discovered plugins are logged so you can see what was loaded.
 - `allennlp.data.DataLoader` is now an abstract registrable class. The default implementation
-remains the same, but was renamed to `allennlp.data.PyTorchDataLoader`.
+  remains the same, but was renamed to `allennlp.data.PyTorchDataLoader`.
 - `BertPooler` can now unwrap and re-wrap extra dimensions if necessary.
 - New `transformers` dependency. Only version >=3.0 now supported.
 
@@ -794,10 +863,10 @@ remains the same, but was renamed to `allennlp.data.PyTorchDataLoader`.
 ### Changed
 
 - The `allennlp test-install` command now just ensures the core submodules can
-be imported successfully, and prints out some other useful information such as the version, PyTorch version,
-and the number of GPU devices available.
+  be imported successfully, and prints out some other useful information such as the version, PyTorch version,
+  and the number of GPU devices available.
 - All of the tests moved from `allennlp/tests` to `tests` at the root level, and
-`allennlp/tests/fixtures` moved to `test_fixtures` at the root level. The PyPI source and wheel distributions will no longer include tests and fixtures.
+  `allennlp/tests/fixtures` moved to `test_fixtures` at the root level. The PyPI source and wheel distributions will no longer include tests and fixtures.
 
 ## [v1.0.0rc4](https://github.com/allenai/allennlp/releases/tag/v1.0.0rc4) - 2020-05-14
 

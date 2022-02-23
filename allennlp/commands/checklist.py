@@ -8,19 +8,24 @@ from typing import Optional, Dict, Any, List
 import argparse
 import sys
 import json
+import logging
 
-from overrides import overrides
 
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common.checks import check_for_gpu, ConfigurationError
 from allennlp.models.archival import load_archive
 from allennlp.predictors.predictor import Predictor
-from allennlp.confidence_checks.task_checklists.task_suite import TaskSuite
+
+logger = logging.getLogger(__name__)
+
+try:
+    from allennlp.confidence_checks.task_checklists.task_suite import TaskSuite
+except ImportError:
+    raise
 
 
 @Subcommand.register("checklist")
 class CheckList(Subcommand):
-    @overrides
     def add_subparser(self, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
 
         description = """Run the specified model through a checklist suite."""

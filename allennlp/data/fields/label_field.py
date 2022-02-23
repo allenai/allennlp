@@ -1,7 +1,7 @@
 from typing import Dict, Union, Set
 import logging
 
-from overrides import overrides
+
 import torch
 
 from allennlp.data.fields.field import Field
@@ -79,33 +79,26 @@ class LabelField(Field[torch.Tensor]):
                 )
                 self._already_warned_namespaces.add(label_namespace)
 
-    @overrides
     def count_vocab_items(self, counter: Dict[str, Dict[str, int]]):
         if self._label_id is None:
             counter[self._label_namespace][self.label] += 1  # type: ignore
 
-    @overrides
     def index(self, vocab: Vocabulary):
         if not self._skip_indexing:
             self._label_id = vocab.get_token_index(
                 self.label, self._label_namespace  # type: ignore
             )
 
-    @overrides
     def get_padding_lengths(self) -> Dict[str, int]:
         return {}
 
-    @overrides
     def as_tensor(self, padding_lengths: Dict[str, int]) -> torch.Tensor:
-
         tensor = torch.tensor(self._label_id, dtype=torch.long)
         return tensor
 
-    @overrides
     def empty_field(self):
         return LabelField(-1, self._label_namespace, skip_indexing=True)
 
-    @overrides
     def human_readable_repr(self) -> Union[str, int]:
         return self.label
 

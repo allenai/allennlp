@@ -1,12 +1,12 @@
+import json
+import os
+
 import pytest
 import torch
-import os
-import json
-
 from allennlp.common import cached_transformers
+from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
-
-from transformers import AutoModel, AutoConfig
+from transformers import AutoConfig, AutoModel
 
 
 class TestCachedTransformers(AllenNlpTestCase):
@@ -71,6 +71,99 @@ class TestCachedTransformers(AllenNlpTestCase):
         # check that override weights were loaded correctly
         for p1, p2 in zip(transformer.parameters(), override_transformer.parameters()):
             assert p1.data.ne(p2.data).sum() == 0
+
+    def test_reinit_modules_no_op(self):
+        # Test the case where reinit_modules is None (default)
+        preinit_weights = torch.cat(
+            [
+                # Comparing all weights of the model is rather complicated, so arbitrarily
+                # compare the weights of attention module.
+                layer.attention.output.dense.weight
+                for layer in cached_transformers.get("bert-base-cased", True).encoder.layer
+            ]
+        )
+        postinit_weights = torch.cat(
+            [
+                layer.attention.output.dense.weight
+                for layer in cached_transformers.get("bert-base-cased", True).encoder.layer
+            ]
+        )
+        assert torch.equal(postinit_weights, preinit_weights)
+
+    def test_reinit_modules_with_layer_indices(self):
+        # Comparing all weights of the model is rather complicated, so arbitrarily compare the
+        # weights of attention module.
+        preinit_weights = torch.cat(
+            [
+                layer.attention.output.dense.weight
+                for layer in cached_transformers.get("bert-base-cased", True).encoder.layer
+            ]
+        )
+
+        # Test the case when reinit_modules is a valid int.
+        postinit_weights = torch.cat(
+            [
+                layer.attention.output.dense.weight
+                for layer in cached_transformers.get(
+                    "bert-base-cased", True, reinit_modules=2
+                ).encoder.layer
+            ]
+        )
+        assert torch.equal(postinit_weights[:10], preinit_weights[:10])
+        assert not torch.equal(postinit_weights[10:], preinit_weights[10:])
+
+        # Test the case when reinit_modules is a valid list of integers.
+        postinit_weights = torch.cat(
+            [
+                layer.attention.output.dense.weight
+                for layer in cached_transformers.get(
+                    "bert-base-cased", True, reinit_modules=(10, 11)
+                ).encoder.layer
+            ]
+        )
+        assert torch.equal(postinit_weights[:10], preinit_weights[:10])
+        assert not torch.equal(postinit_weights[10:], preinit_weights[10:])
+
+        # Should raise a ValueError because reinit_modules contains at least one index that is
+        # greater than the models maximum number of layers
+        with pytest.raises(ValueError):
+            _ = cached_transformers.get("bert-base-cased", True, reinit_modules=1000)
+        with pytest.raises(ValueError):
+            _ = cached_transformers.get("bert-base-cased", True, reinit_modules=(1, 1000))
+        # The argument cannot mix layer indices and regex strings.
+        with pytest.raises(ValueError):
+            _ = cached_transformers.get("bert-base-cased", True, reinit_modules=(1, "attentions"))
+        # This model has a non-standard structure, so if a layer index or list of layer indexes
+        # is provided, we raise a ConfigurationError.
+        with pytest.raises(ConfigurationError):
+            _ = cached_transformers.get("sshleifer/tiny-gpt2", True, reinit_modules=1)
+        with pytest.raises(ConfigurationError):
+            _ = cached_transformers.get("sshleifer/tiny-gpt2", True, reinit_modules=(1, 2))
+
+    def test_reinit_modules_with_regex_strings(self):
+        # Comparing all weights of the model is rather complicated, so arbitrarily compare the
+        # weights of wpe module.
+        reinit_module = "wpe"
+        # This MUST be a deep copy, otherwise the parameters will be re-initialized and the
+        # test will break.
+        preinit_weights = list(
+            cached_transformers.get("sshleifer/tiny-gpt2", True)
+            .get_submodule(reinit_module)
+            .parameters()
+        )
+
+        postinit_weights = list(
+            cached_transformers.get(
+                "sshleifer/tiny-gpt2",
+                True,
+                reinit_modules=(reinit_module,),
+            )
+            .get_submodule(reinit_module)
+            .parameters()
+        )
+        assert all(
+            (not torch.equal(pre, post) for pre, post in zip(preinit_weights, postinit_weights))
+        )
 
     def test_from_pretrained_no_load_weights(self):
         _ = cached_transformers.get(

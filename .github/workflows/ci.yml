@@ -17,15 +17,23 @@ on:
   - cron: '37 11 * * 1,2,3,4,5'  # early morning (11:37 UTC / 4:37 AM PDT) Monday - Friday
 
 env:
-  # NOTE: Need to update `TORCH_VERSION` and `TORCH_VISION_VERSION` for new torch releases.
-  TORCH_VERSION: 1.9.0
-  TORCH_VISION_VERSION: 0.10.0
+  # NOTE: Need to update `TORCH_VERSION`, and `TORCH_*_INSTALL` for new torch releases.
+  TORCH_VERSION: 1.10.0
+  TORCH_CPU_INSTALL: conda install pytorch torchvision torchaudio cpuonly -c pytorch
+  TORCH_GPU_INSTALL: conda install pytorch torchvision torchaudio cudatoolkit=11.3 -c pytorch
   # Change this to invalidate existing cache.
-  CACHE_PREFIX: v0
+  CACHE_PREFIX: v10
   # Disable tokenizers parallelism because this doesn't help, and can cause issues in distributed tests.
   TOKENIZERS_PARALLELISM: 'false'
   # Disable multithreading with OMP because this can lead to dead-locks in distributed tests.
   OMP_NUM_THREADS: '1'
+  # See https://github.com/pytorch/pytorch/issues/37377#issuecomment-677851112.
+  MKL_THREADING_LAYER: 'GNU'
+  DEFAULT_PYTHON_VERSION: 3.8
+
+defaults:
+  run:
+    shell: bash -l {0}
 
 jobs:
   changelog:
@@ -57,7 +65,7 @@ jobs:
     - name: Setup Python
       uses: actions/setup-python@v2
       with:
-        python-version: 3.8
+        python-version: ${{ env.DEFAULT_PYTHON_VERSION }}
 
     - name: Install requirements
       run: |
@@ -74,7 +82,7 @@ jobs:
   checks:
     name: ${{ matrix.task.name }}
     runs-on: ${{ matrix.task.runs_on }}
-    timeout-minutes: 20
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -94,9 +102,9 @@ jobs:
           run: make test
 
         - name: GPU Tests
-          runs_on: [self-hosted, GPU]
+          runs_on: [self-hosted, GPU, Multi GPU]
           coverage_report: true
-          torch_platform: cu111  # Our self-hosted GPU runners currently support CUDA 11.*
+          torch_platform: gpu
           run: make gpu-tests
 
         - name: Model Tests
@@ -111,20 +119,12 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: Setup Python
-      uses: actions/setup-python@v2
-      env:
-        # Log useful debugging information.
-        ACTIONS_STEP_DEBUG: 'true'
+    - uses: conda-incubator/setup-miniconda@v2
       with:
-        python-version: 3.8
-
-    - name: Install prerequisites
-      run: |
-        pip install --upgrade pip setuptools wheel virtualenv
+        miniconda-version: "latest"
+        python-version: ${{ env.DEFAULT_PYTHON_VERSION }}
 
     - name: Set build variables
-      shell: bash
       run: |
         # Get the exact Python version to use in the cache key.
         echo "PYTHON_VERSION=$(python --version)" >> $GITHUB_ENV
@@ -132,26 +132,34 @@ jobs:
         # Use week number in cache key so we can refresh the cache weekly.
         echo "WEEK_NUMBER=$(date +%V)" >> $GITHUB_ENV
 
+    - name: Set build variables (CPU only)
+      if: matrix.task.torch_platform == 'cpu'
+      run: |
+        echo "TORCH_INSTALL=$TORCH_CPU_INSTALL" >> $GITHUB_ENV
+
+    - name: Set build variables (GPU only)
+      if: matrix.task.torch_platform == 'gpu'
+      run: |
+        echo "TORCH_INSTALL=$TORCH_GPU_INSTALL" >> $GITHUB_ENV
+
     - uses: actions/cache@v2
       id: virtualenv-cache
       with:
         path: .venv
-        key: ${{ env.CACHE_PREFIX }}-${{ env.WEEK_NUMBER }}-${{ runner.os }}-${{ env.RUNNER_ARCH }}-${{ env.PYTHON_VERSION }}-${{ matrix.task.torch_platform }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
-        restore-keys: |
-          ${{ env.CACHE_PREFIX }}-${{ env.WEEK_NUMBER }}-${{ runner.os }}-${{ env.RUNNER_ARCH }}-${{ env.PYTHON_VERSION }}-${{ matrix.task.torch_platform }}-
+        key: ${{ env.CACHE_PREFIX }}-${{ env.WEEK_NUMBER }}-${{ runner.os }}-${{ env.RUNNER_ARCH }}-${{ env.PYTHON_VERSION }}-${{ matrix.task.torch_platform }}-${{ hashFiles('setup.py') }}-${{ hashFiles('*requirements.txt') }}
 
     - name: Setup virtual environment (no cache hit)
       if: steps.virtualenv-cache.outputs.cache-hit != 'true'
       run: |
-        test -d .venv || virtualenv -p $(which python) --copies --reset-app-data .venv
-        . .venv/bin/activate
-        make install TORCH_VERSION="torch==${TORCH_VERSION}+${{ matrix.task.torch_platform }} torchvision==${TORCH_VISION_VERSION}+${{ matrix.task.torch_platform }} -f https://download.pytorch.org/whl/torch_stable.html"
+        conda create -y -p .venv python=${{ env.DEFAULT_PYTHON_VERSION }}
+        conda activate ./.venv
+        make install TORCH_INSTALL="$TORCH_INSTALL"
 
     - name: Setup virtual environment (cache hit)
       if: steps.virtualenv-cache.outputs.cache-hit == 'true'
       run: |
-        . .venv/bin/activate
-        pip install --no-deps -e .
+        conda activate ./.venv
+        pip install --no-deps -e .[all]
         make download-extras
 
     - name: Pull and install models repo
@@ -159,25 +167,24 @@ jobs:
       env:
         ALLENNLP_VERSION_OVERRIDE: ""  # Don't replace the core library.
       run: |
-        . .venv/bin/activate
+        conda activate ./.venv
         git clone https://github.com/allenai/allennlp-models.git
         cd allennlp-models
-        pip install --upgrade --upgrade-strategy eager -e . -r dev-requirements.txt
+        pip install -e .[dev,all]
 
     - name: Debug info
       run: |
-        . .venv/bin/activate
-        which python
-        pip freeze
+        conda activate ./.venv
+        conda list
 
     - name: Ensure torch up-to-date
       run: |
-        . .venv/bin/activate
+        conda activate ./.venv
         python scripts/check_torch_version.py
 
     - name: ${{ matrix.task.name }}
       run: |
-        . .venv/bin/activate
+        conda activate ./.venv
         ${{ matrix.task.run }}
 
     - name: Prepare coverage report
@@ -198,7 +205,7 @@ jobs:
       run: |
         # Could run into issues with the cache if we don't uninstall the editable.
         # See https://github.com/pypa/pip/issues/4537.
-        . .venv/bin/activate
+        conda activate ./.venv
         pip uninstall --yes allennlp allennlp-models
 
   upload_coverage:
@@ -248,58 +255,48 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: Setup Python
-      uses: actions/setup-python@v2
-      env:
-        # Log useful debugging information.
-        ACTIONS_STEP_DEBUG: 'true'
+    - uses: conda-incubator/setup-miniconda@v2
       with:
-        python-version: 3.8
-
-    - name: Install prerequisites
-      run: |
-        pip install --upgrade pip setuptools wheel virtualenv
+        miniconda-version: "latest"
+        python-version: ${{ env.DEFAULT_PYTHON_VERSION }}
 
     - name: Set build variables
-      shell: bash
       run: |
         echo "PYTHON_VERSION=$(python --version)" >> $GITHUB_ENV
         echo "RUNNER_ARCH=$(uname -m)" >> $GITHUB_ENV
         echo "WEEK_NUMBER=$(date +%V)" >> $GITHUB_ENV
+        echo "TORCH_INSTALL=$TORCH_CPU_INSTALL" >> $GITHUB_ENV
 
     - uses: actions/cache@v2
       id: virtualenv-cache
       with:
         path: .venv
-        key: ${{ env.CACHE_PREFIX }}-${{ env.WEEK_NUMBER }}-${{ runner.os }}-${{ env.RUNNER_ARCH }}-${{ env.PYTHON_VERSION }}-cpu-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
-        restore-keys: |
-          ${{ env.CACHE_PREFIX }}-${{ env.WEEK_NUMBER }}-${{ runner.os }}-${{ env.RUNNER_ARCH }}-${{ env.PYTHON_VERSION }}-cpu-
+        key: ${{ env.CACHE_PREFIX }}-${{ env.WEEK_NUMBER }}-${{ runner.os }}-${{ env.RUNNER_ARCH }}-${{ env.PYTHON_VERSION }}-cpu-${{ hashFiles('setup.py') }}-${{ hashFiles('*requirements.txt') }}
 
     - name: Setup virtual environment (no cache hit)
       if: steps.virtualenv-cache.outputs.cache-hit != 'true'
       run: |
-        test -d .venv || virtualenv -p $(which python) --copies --reset-app-data .venv
-        . .venv/bin/activate
-        make install TORCH_VERSION="torch==${TORCH_VERSION}+cpu torchvision==${TORCH_VISION_VERSION}+cpu -f https://download.pytorch.org/whl/torch_stable.html"
+        conda create -y -p .venv python=${{ env.DEFAULT_PYTHON_VERSION }}
+        conda activate ./.venv
+        make install TORCH_INSTALL="$TORCH_INSTALL"
 
     - name: Setup virtual environment (cache hit)
       if: steps.virtualenv-cache.outputs.cache-hit == 'true'
       run: |
-        . .venv/bin/activate
-        pip install --no-deps -e .
+        conda activate ./.venv
+        pip install --no-deps -e .[all]
         make download-extras
 
     - name: Debug info
       run: |
-        . .venv/bin/activate
-        which python
+        conda activate ./.venv
         pip freeze
 
     - name: Check and set nightly version
       if: github.event_name == 'schedule'
       run: |
         # Verify that current version is ahead of the last release.
-        . .venv/bin/activate
+        conda activate ./.venv
         LATEST=$(scripts/get_version.py latest)
         CURRENT=$(scripts/get_version.py current)
         if [ "$CURRENT" == "$LATEST" ]; then
@@ -315,7 +312,7 @@ jobs:
       if: github.event_name == 'release'
       run: |
         # Remove 'refs/tags/' to get the actual tag from the release.
-        . .venv/bin/activate
+        conda activate ./.venv
         TAG=${GITHUB_REF#refs/tags/};
         VERSION=$(scripts/get_version.py current)
         if [ "$TAG" != "$VERSION" ]; then
@@ -326,7 +323,7 @@ jobs:
     - name: Build core package
       run: |
         # Just print out the version for debugging.
-        . .venv/bin/activate
+        conda activate ./.venv
         make version
         python setup.py bdist_wheel sdist
 
@@ -339,7 +336,7 @@ jobs:
     - name: Clean up
       if: always()
       run: |
-        . .venv/bin/activate
+        conda activate ./.venv
         pip uninstall --yes allennlp
 
   # Tests installing from the distribution files.
@@ -350,11 +347,13 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python: ['3.7', '3.8']
+        python: ['3.7', '3.8', '3.9']
 
     steps:
+    - uses: actions/checkout@v2
+
     - name: Setup Python
-      uses: actions/setup-python@v1
+      uses: actions/setup-python@v2
       with:
         python-version: ${{ matrix.python }}
 
@@ -370,7 +369,15 @@ jobs:
 
     - name: Install core package
       run: |
-        pip install $(ls dist/*.whl)
+        pip install $(ls dist/*.whl)[all]
+
+    - name: Download NLTK prerequisites
+      run: |
+        make download-extras
+
+    - name: Cleanup workspace
+      run: |
+        rm -rf allennlp/ setup.py tests/ test_fixtures/
 
     - name: Pip freeze
       run: |
@@ -385,37 +392,19 @@ jobs:
     name: Docker (CUDA ${{ matrix.cuda }})
     timeout-minutes: 18
     if: github.repository == 'allenai/allennlp'
-    # Run on self-hosted to utilize layer caching.
-    runs-on: [self-hosted, Docker-enabled]
+    runs-on: ubuntu-latest
     strategy:
       matrix:
-        cuda: ['10.1', '10.2', '11.1']
+        cuda: ['11.3']
 
     steps:
     - uses: actions/checkout@v2
 
-    - name: Set torch version
+    - name: Set image name and torch version
       env:
         CUDA: ${{ matrix.cuda }}
       run: |
-        # Check the install instructions on https://pytorch.org/ to keep these up-to-date.
-        if [[ $CUDA == '10.1' ]]; then
-            # NOTE: We need to use an older version of torch to support CUDA 10.1
-            echo "DOCKER_TORCH_VERSION='torch==1.8.0+cu101 torchvision==0.9.0+cu101 -f https://download.pytorch.org/whl/torch_stable.html'" >> $GITHUB_ENV;
-        elif [[ $CUDA == '10.2' ]]; then
-            # NOTE: 10.2 is still the default but that could change in the next release.
-            echo "DOCKER_TORCH_VERSION='torch==${{ env.TORCH_VERSION }} torchvision==${{ env.TORCH_VISION_VERSION }}'" >> $GITHUB_ENV;
-        elif [[ $CUDA == '11.1' ]]; then
-            echo "DOCKER_TORCH_VERSION='torch==${{ env.TORCH_VERSION }}+cu111 torchvision==${{ env.TORCH_VISION_VERSION }}+cu111 -f https://download.pytorch.org/whl/torch_stable.html'" >> $GITHUB_ENV;
-        else
-            echo "Unhandled CUDA version $CUDA";
-            exit 1;
-        fi
-
-    - name: Set image name
-      env:
-        CUDA: ${{ matrix.cuda }}
-      run: |
+        echo "DOCKER_TORCH_VERSION=${TORCH_VERSION}-cuda${CUDA}" >> $GITHUB_ENV;
         if [[ $GITHUB_EVENT_NAME == 'release' ]]; then
             echo "DOCKER_IMAGE_NAME=allennlp/allennlp:${GITHUB_REF#refs/tags/}-cuda${CUDA}" >> $GITHUB_ENV;
         else
@@ -428,7 +417,7 @@ jobs:
 
     - name: Test image
       run: |
-        make docker-run DOCKER_GPUS='' DOCKER_IMAGE_NAME=$DOCKER_IMAGE_NAME ARGS='test-install'
+        docker run --rm $DOCKER_IMAGE_NAME test-install
 
     - name: Authenticate to Docker Hub
       if: github.event_name == 'release' || github.event_name == 'push'
@@ -441,15 +430,15 @@ jobs:
         docker push $DOCKER_IMAGE_NAME
 
     - name: Upload default commit image
-      # CUDA 10.2 is currently our default.
-      if: github.event_name == 'push' && matrix.cuda == '10.2'
+      # CUDA 11.3 is currently our default.
+      if: github.event_name == 'push' && matrix.cuda == '11.3'
       run: |
         docker tag $DOCKER_IMAGE_NAME allennlp/commit:${GITHUB_SHA}
         docker push allennlp/commit:${GITHUB_SHA}
 
     - name: Upload latest image
-      # CUDA 10.2 is currently our default.
-      if: github.event_name == 'release' && matrix.cuda == '10.2'
+      # CUDA 11.3 is currently our default.
+      if: github.event_name == 'release' && matrix.cuda == '11.3'
       run: |
         docker tag $DOCKER_IMAGE_NAME allennlp/allennlp:latest
         docker push allennlp/allennlp:latest
@@ -471,52 +460,42 @@ jobs:
       with:
         ssh-private-key: ${{ secrets.DOCS_DEPLOY_KEY }}
 
-    - name: Setup Python
-      uses: actions/setup-python@v2
-      env:
-        # Log useful debugging information.
-        ACTIONS_STEP_DEBUG: 'true'
+    - uses: conda-incubator/setup-miniconda@v2
       with:
-        python-version: 3.8
-
-    - name: Install prerequisites
-      run: |
-        pip install --upgrade pip setuptools wheel virtualenv
+        miniconda-version: "latest"
+        python-version: ${{ env.DEFAULT_PYTHON_VERSION }}
 
     - name: Set build variables
-      shell: bash
       run: |
         echo "PYTHON_VERSION=$(python --version)" >> $GITHUB_ENV
         echo "RUNNER_ARCH=$(uname -m)" >> $GITHUB_ENV
         echo "WEEK_NUMBER=$(date +%V)" >> $GITHUB_ENV
+        echo "TORCH_INSTALL=$TORCH_CPU_INSTALL" >> $GITHUB_ENV
 
     - uses: actions/cache@v2
       id: virtualenv-cache
       with:
         path: .venv
-        key: ${{ env.CACHE_PREFIX }}-${{ env.WEEK_NUMBER }}-${{ runner.os }}-${{ env.RUNNER_ARCH }}-${{ env.PYTHON_VERSION }}-cpu-${{ hashFiles('setup.py') }}-${{ hashFiles('dev-requirements.txt') }}
-        restore-keys: |
-          ${{ env.CACHE_PREFIX }}-${{ env.WEEK_NUMBER }}-${{ runner.os }}-${{ env.RUNNER_ARCH }}-${{ env.PYTHON_VERSION }}-cpu-
+        key: ${{ env.CACHE_PREFIX }}-${{ env.WEEK_NUMBER }}-${{ runner.os }}-${{ env.RUNNER_ARCH }}-${{ env.PYTHON_VERSION }}-cpu-${{ hashFiles('setup.py') }}-${{ hashFiles('*requirements.txt') }}
 
     - name: Setup virtual environment (no cache hit)
       if: steps.virtualenv-cache.outputs.cache-hit != 'true'
       run: |
-        test -d .venv || virtualenv -p $(which python) --copies --reset-app-data .venv
-        . .venv/bin/activate
-        make install TORCH_VERSION="torch==${TORCH_VERSION}+cpu torchvision==${TORCH_VISION_VERSION}+cpu -f https://download.pytorch.org/whl/torch_stable.html"
+        conda create -y -p .venv python=${{ env.DEFAULT_PYTHON_VERSION }}
+        conda activate ./.venv
+        make install TORCH_INSTALL="$TORCH_INSTALL"
 
     - name: Setup virtual environment (cache hit)
       if: steps.virtualenv-cache.outputs.cache-hit == 'true'
       run: |
-        . .venv/bin/activate
-        pip install --no-deps -e .
+        conda activate ./.venv
+        pip install --no-deps -e .[all]
         make download-extras
 
     - name: Debug info
       run: |
-        . .venv/bin/activate
-        which python
-        pip freeze
+        conda activate ./.venv
+        conda list
 
     - name: Prepare environment
       run: |
@@ -530,7 +509,7 @@ jobs:
 
     - name: Build docs
       run: |
-        . .venv/bin/activate
+        conda activate ./.venv
         ./scripts/build_docs.sh
 
     - name: Print the ref
@@ -562,7 +541,7 @@ jobs:
       run: |
         # Fail immediately if any step fails.
         set -e
-        . .venv/bin/activate
+        conda activate ./.venv
 
         LATEST=$(./scripts/get_version.py latest)
         STABLE=$(./scripts/get_version.py stable)
@@ -620,7 +599,7 @@ jobs:
     - name: Clean up
       if: always()
       run: |
-        . .venv/bin/activate
+        conda activate ./.venv
         pip uninstall --yes allennlp
 
   # Publish the core distribution files to PyPI.
@@ -636,9 +615,9 @@ jobs:
     - uses: actions/checkout@v2
 
     - name: Setup Python
-      uses: actions/setup-python@v1
+      uses: actions/setup-python@v2
       with:
-        python-version: 3.7
+        python-version: ${{ env.DEFAULT_PYTHON_VERSION }}
 
     - name: Install requirements
       run: |

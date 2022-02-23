@@ -6,7 +6,7 @@ import torch.nn.functional as F
 
 from allennlp.common import FromParams
 from allennlp.common.checks import ConfigurationError
-from allennlp.modules.attention import Attention
+from allennlp.modules.matrix_attention.matrix_attention import MatrixAttention
 from allennlp.modules.transformer.transformer_module import TransformerModule
 from allennlp.modules.transformer.util import apply_mask, FloatT, IntT, BoolT
 
@@ -51,7 +51,7 @@ class AttentionModule(TransformerModule, FromParams):
     scoring_func: `str` (default = `scaled_dot_product`)
         The name of the attention-calculating function to be used.
         Eg. `additive`, `linear`, etc. For a complete list, please check
-        :mod:`allennlp.modules.attention.attention`.
+        :mod:`allennlp.modules.matrix_attention.matrix_attention`.
     output_linear: `bool` (default = `False`)
         Whether to add an additional output linear layer at the end.
     dropout: `float` (default = `0.0`)
@@ -113,12 +113,7 @@ class AttentionModule(TransformerModule, FromParams):
             self.output = torch.nn.Linear(self.all_head_size, hidden_size, bias=bias)
 
         self.scoring_func = scoring_func
-        if self.scoring_func in ["additive", "linear", "bilinear"]:
-            self.attn = Attention.by_name(self.scoring_func)(hidden_size, hidden_size)
-        elif self.scoring_func == "scaled_dot_product":
-            self.attn = Attention.by_name(self.scoring_func)(self.attention_head_size, False)
-        else:
-            self.attn = Attention.by_name(self.scoring_func)()
+        self.attn = MatrixAttention.by_name(self.scoring_func)()
 
         self.relative_attention_num_buckets = relative_attention_num_buckets
 
@@ -139,8 +134,8 @@ class AttentionModule(TransformerModule, FromParams):
         self.query.weight.data.normal_(
             mean=0.0, std=(self.hidden_size * self.attention_head_size) ** -0.5
         )
-        self.key.weight.data.normal_(mean=0.0, std=self.hidden_size ** -0.5)
-        self.value.weight.data.normal_(mean=0.0, std=self.hidden_size ** -0.5)
+        self.key.weight.data.normal_(mean=0.0, std=self.hidden_size**-0.5)
+        self.value.weight.data.normal_(mean=0.0, std=self.hidden_size**-0.5)
 
         if hasattr(self, "output"):
             self.output.weight.data.normal_(
@@ -148,7 +143,7 @@ class AttentionModule(TransformerModule, FromParams):
             )
 
         if hasattr(self, "relative_attention_bias"):
-            self.relative_attention_bias.weight.data.normal_(mean=0.0, std=self.hidden_size ** -0.5)
+            self.relative_attention_bias.weight.data.normal_(mean=0.0, std=self.hidden_size**-0.5)
 
     def _transpose_for_scores(self, x: torch.Tensor) -> torch.Tensor:
         new_x_shape = x.size()[:-1] + (
@@ -229,7 +224,7 @@ class AttentionModule(TransformerModule, FromParams):
         past_key_states: Optional[torch.Tensor] = None,
         **kwargs,
     ):
-        attention_scores = self.attn(query_layer, key_layer.transpose(-1, -2))
+        attention_scores = self.attn(query_layer, key_layer)
 
         position_bias = self._position_bias(
             position_bias, seq_lengths, past_key_states, attention_scores
@@ -478,7 +473,7 @@ class T5Attention(AttentionModule):
             attention_head_size=key_value_proj_dim,
             num_attention_heads=num_heads,
             output_linear=True,
-            scoring_func="scaled_dot_product",
+            scoring_func="dot_product",
             dropout=dropout,
             bias=False,
             normalize_weights=normalize,
@@ -486,8 +481,6 @@ class T5Attention(AttentionModule):
             is_cross_attention=is_cross_attention,
             relative_attention_num_buckets=relative_attention_num_buckets,
         )
-
-        self.attn = Attention.by_name(self.scoring_func)(scaling_factor=1, normalize=False)
 
     def forward(  # type: ignore
         self,

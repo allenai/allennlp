@@ -14,6 +14,7 @@ from typing import (
     Type,
     TypeVar,
     Union,
+    Optional,
 )
 import inspect
 import logging
@@ -112,13 +113,19 @@ def remove_optional(annotation: type):
         return annotation
 
 
-def infer_params(
+def infer_constructor_params(
     cls: Type[T], constructor: Union[Callable[..., T], Callable[[T], None]] = None
-) -> Dict[str, Any]:
+) -> Dict[str, inspect.Parameter]:
     if constructor is None:
         constructor = cls.__init__
+    return infer_method_params(cls, constructor)
 
-    signature = inspect.signature(constructor)
+
+infer_params = infer_constructor_params  # Legacy name
+
+
+def infer_method_params(cls: Type[T], method: Callable) -> Dict[str, inspect.Parameter]:
+    signature = inspect.signature(method)
     parameters = dict(signature.parameters)
 
     has_kwargs = False
@@ -135,8 +142,8 @@ def infer_params(
     if not has_kwargs:
         return parameters
 
-    # "mro" is "method resolution order".  The first one is the current class, the next is the
-    # first superclass, and so on.  We take the first superclass we find that inherits from
+    # "mro" is "method resolution order". The first one is the current class, the next is the
+    # first superclass, and so on. We take the first superclass we find that inherits from
     # FromParams.
     super_class = None
     for super_class_candidate in cls.mro()[1:]:
@@ -338,7 +345,9 @@ def construct_arg(
                 popped_params = Params({"type": popped_params})
             elif isinstance(popped_params, dict):
                 popped_params = Params(popped_params)
-            return annotation.from_params(params=popped_params, **subextras)
+            result = annotation.from_params(params=popped_params, **subextras)
+
+            return result
         elif not optional:
             # Not optional and not supplied, that's an error!
             raise ConfigurationError(f"expected key {argument_name} for {class_name}")
@@ -433,6 +442,7 @@ def construct_arg(
 
         # We'll try each of the given types in the union sequentially, returning the first one that
         # succeeds.
+        error_chain: Optional[Exception] = None
         for arg_annotation in args:
             try:
                 return construct_arg(
@@ -443,15 +453,20 @@ def construct_arg(
                     default,
                     **extras,
                 )
-            except (ValueError, TypeError, ConfigurationError, AttributeError):
+            except (ValueError, TypeError, ConfigurationError, AttributeError) as e:
                 # Our attempt to construct the argument may have modified popped_params, so we
                 # restore it here.
                 popped_params = deepcopy(backup_params)
+                e.args = (f"While constructing an argument of type {arg_annotation}",) + e.args
+                e.__cause__ = error_chain
+                error_chain = e
 
         # If none of them succeeded, we crash.
-        raise ConfigurationError(
-            f"Failed to construct argument {argument_name} with type {annotation}"
+        config_error = ConfigurationError(
+            f"Failed to construct argument {argument_name} with type {annotation}."
         )
+        config_error.__cause__ = error_chain
+        raise config_error
     elif origin == Lazy:
         if popped_params is default:
             return default
@@ -621,3 +636,36 @@ class FromParams:
                 kwargs = create_kwargs(constructor_to_inspect, cls, params, **extras)
 
             return constructor_to_call(**kwargs)  # type: ignore
+
+    def to_params(self) -> Params:
+        """
+        Returns a `Params` object that can be used with `.from_params()` to recreate an
+        object just like it.
+
+        This relies on `_to_params()`. If you need this in your custom `FromParams` class,
+        override `_to_params()`, not this method.
+        """
+
+        def replace_object_with_params(o: Any) -> Any:
+            if isinstance(o, FromParams):
+                return o.to_params()
+            elif isinstance(o, List):
+                return [replace_object_with_params(i) for i in o]
+            elif isinstance(o, Set):
+                return {replace_object_with_params(i) for i in o}
+            elif isinstance(o, Dict):
+                return {key: replace_object_with_params(value) for key, value in o.items()}
+            else:
+                return o
+
+        return Params(replace_object_with_params(self._to_params()))
+
+    def _to_params(self) -> Dict[str, Any]:
+        """
+        Returns a dictionary of parameters that, when turned into a `Params` object and
+        then fed to `.from_params()`, will recreate this object.
+
+        You don't need to implement this all the time. AllenNLP will let you know if you
+        need it.
+        """
+        raise NotImplementedError()

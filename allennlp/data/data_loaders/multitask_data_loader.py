@@ -3,7 +3,7 @@ import itertools
 import math
 
 import torch
-from overrides import overrides
+
 
 from allennlp.common import util
 from allennlp.data.batch import Batch
@@ -170,7 +170,6 @@ class MultiTaskDataLoader(DataLoader):
             for key, loader in self._loaders.items()
         }
 
-    @overrides
     def __len__(self) -> int:
         if self._instances_per_epoch is None:
             # This will raise a TypeError if any of the underlying loaders doesn't have a length,
@@ -183,7 +182,6 @@ class MultiTaskDataLoader(DataLoader):
                 {dataset: self._instances_per_epoch for dataset in self._loaders.keys()}
             )
 
-    @overrides
     def __iter__(self) -> Iterator[TensorDict]:
         epoch_instances = self._get_instances_for_epoch()
         return (
@@ -194,7 +192,6 @@ class MultiTaskDataLoader(DataLoader):
             for instances in self.scheduler.batch_instances(epoch_instances)
         )
 
-    @overrides
     def iter_instances(self) -> Iterator[Instance]:
         # The only external contract for this method is that it iterates over instances
         # individually; it doesn't actually specify anything about batching or anything else.  The
@@ -212,12 +209,10 @@ class MultiTaskDataLoader(DataLoader):
         for loader in self._loaders.values():
             yield from loader.iter_instances()
 
-    @overrides
     def index_with(self, vocab: Vocabulary) -> None:
         for loader in self._loaders.values():
             loader.index_with(vocab)
 
-    @overrides
     def set_target_device(self, device: torch.device) -> None:
         self.cuda_device = device
 

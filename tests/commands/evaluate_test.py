@@ -1,12 +1,13 @@
 import argparse
 import json
+from pathlib import Path
 from typing import Iterator, List, Dict
-
+from shutil import copyfile
+import pytest
 import torch
 from flaky import flaky
-import pytest
 
-from allennlp.commands.evaluate import evaluate_from_args, Evaluate, evaluate
+from allennlp.commands.evaluate import evaluate_from_args, Evaluate
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data.data_loaders import TensorDict
 from allennlp.models import Model
@@ -42,25 +43,6 @@ class TestEvaluate(AllenNlpTestCase):
         self.parser = argparse.ArgumentParser(description="Testing")
         subparsers = self.parser.add_subparsers(title="Commands", metavar="")
         Evaluate().add_subparser(subparsers)
-
-    def test_evaluate_calculates_average_loss(self):
-        losses = [7.0, 9.0, 8.0]
-        outputs = [{"loss": torch.Tensor([loss])} for loss in losses]
-        data_loader = DummyDataLoader(outputs)
-        metrics = evaluate(DummyModel(), data_loader, -1, "")
-        assert metrics["loss"] == pytest.approx(8.0)
-
-    def test_evaluate_calculates_average_loss_with_weights(self):
-        losses = [7.0, 9.0, 8.0]
-        weights = [10, 2, 1.5]
-        inputs = zip(losses, weights)
-        outputs = [
-            {"loss": torch.Tensor([loss]), "batch_weight": torch.Tensor([weight])}
-            for loss, weight in inputs
-        ]
-        data_loader = DummyDataLoader(outputs)
-        metrics = evaluate(DummyModel(), data_loader, -1, "batch_weight")
-        assert metrics["loss"] == pytest.approx((70 + 18 + 12) / 13.5)
 
     @flaky
     def test_evaluate_from_args(self):
@@ -113,6 +95,57 @@ class TestEvaluate(AllenNlpTestCase):
                 prediction = json.loads(line.strip())
             assert "tags" in prediction
 
+    def test_multiple_output_files_evaluate_from_args(self):
+        data_file = Path(self.FIXTURES_ROOT / "data" / "conll2003.txt")
+        paths = []
+        out_paths = []
+        pred_paths = []
+        for i in range(3):
+            tmp_path = self.TEST_DIR.joinpath(f"TEST{i}.txt")
+
+            # Need to create paths to check when they do not exist
+            out_paths.append(tmp_path.parent.joinpath(f"OUTPUTS{i}.json"))
+            pred_paths.append(tmp_path.parent.joinpath(f"PREDS{i}.txt"))
+
+            copyfile(data_file, tmp_path)
+            paths.append(tmp_path)
+
+        kebab_args = [
+            "evaluate",
+            str(
+                self.FIXTURES_ROOT / "simple_tagger_with_span_f1" / "serialization" / "model.tar.gz"
+            ),
+            ",".join(map(str, paths)),
+            "--cuda-device",
+            "-1",
+            "--output-file",
+            ",".join(map(str, out_paths)),
+            "--predictions-output-file",
+            ",".join(map(str, pred_paths)),
+        ]
+        args = self.parser.parse_args(kebab_args)
+        computed_metrics = evaluate_from_args(args)
+        computed_by_file = {}
+        for k, v in computed_metrics.items():
+            fn, *metric_name = k.split("_")
+            if fn not in computed_by_file:
+                computed_by_file[fn] = {}
+            computed_by_file[fn]["_".join(metric_name)] = v
+
+        assert len(computed_by_file) == len(paths)
+        expected_input_data = data_file.read_text("utf-8")
+
+        for i, p in enumerate(paths):
+            # Make sure it was not modified
+            assert p.read_text("utf-8") == expected_input_data
+
+            assert p.stem in computed_by_file, f"paths[{i}]={p.stem}"
+
+            assert out_paths[i].exists(), f"paths[{i}]={p.stem}"
+            saved_metrics = json.loads(out_paths[i].read_text("utf-8"))
+            assert saved_metrics == computed_by_file[p.stem], f"paths[{i}]={p.stem}"
+            assert pred_paths[i].exists(), f"paths[{i}]={p.stem}"
+
     def test_evaluate_works_with_vocab_expansion(self):
         archive_path = str(
             self.FIXTURES_ROOT / "basic_classifier" / "serialization" / "model.tar.gz"
@@ -145,3 +178,57 @@ class TestEvaluate(AllenNlpTestCase):
         )
         assert metrics_1 != metrics_2
         assert metrics_2 != metrics_3
+
+    @pytest.mark.parametrize("auto_names", ["NONE", "METRICS", "PREDS", "ALL"])
+    def test_auto_names_creates_files(self, auto_names):
+        data_file = Path(self.FIXTURES_ROOT / "data" / "conll2003.txt")
+        paths = []
+        out_paths = []
+        pred_paths = []
+        for i in range(5):
+            tmp_path = self.TEST_DIR.joinpath(f"TEST{i}.txt")
+
+            # Need to create paths to check when they do not exist
+            out_paths.append(tmp_path.parent.joinpath(f"OUTPUTS{i}.json"))
+            pred_paths.append(tmp_path.parent.joinpath(f"PREDS{i}.txt"))
+
+            copyfile(data_file, tmp_path)
+            paths.append(tmp_path)
+
+        kebab_args = [
+            "evaluate",
+            str(
+                self.FIXTURES_ROOT / "simple_tagger_with_span_f1" / "serialization" / "model.tar.gz"
+            ),
+            ",".join(map(str, paths)),
+            "--cuda-device",
+            "-1",
+            "--output-file",
+            ",".join(map(str, out_paths)),
+            "--predictions-output-file",
+            ",".join(map(str, pred_paths)),
+            "--auto-names",
+            auto_names,
+        ]
+
+        args = self.parser.parse_args(kebab_args)
+        _ = evaluate_from_args(args)
+
+        expected_input_data = data_file.read_text("utf-8")
+
+        for i, p in enumerate(paths):
+            # Make sure it was not modified
+            assert p.read_text("utf-8") == expected_input_data
+
+            if auto_names == "METRICS" or auto_names == "ALL":
+                assert not out_paths[i].exists()
+                assert p.parent.joinpath(f"{p.stem}.outputs").exists()
+            else:
+                assert out_paths[i].exists()
+                assert not p.parent.joinpath(f"{p.stem}.outputs").exists()
+            if auto_names == "PREDS" or auto_names == "ALL":
+                assert not pred_paths[i].exists()
+                assert p.parent.joinpath(f"{p.stem}.preds").exists()
+            else:
+                assert pred_paths[i].exists()
+                assert not p.parent.joinpath(f"{p.stem}.preds").exists()

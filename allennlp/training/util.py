@@ -261,8 +261,6 @@ def get_metrics(
     batch_reg_loss: Optional[float],
     num_batches: int,
     reset: bool = False,
-    world_size: int = 1,
-    cuda_device: Union[int, torch.device] = torch.device("cpu"),
 ) -> Dict[str, float]:
     """
     Gets the metrics but sets `"loss"` to

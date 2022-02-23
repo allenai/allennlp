@@ -1,4 +1,5 @@
 import copy
+from itertools import chain
 import json
 import logging
 import os
@@ -6,9 +7,8 @@ import zlib
 from collections import OrderedDict
 from collections.abc import MutableMapping
 from os import PathLike
-from typing import Any, Dict, List, Union, Optional
+from typing import Any, Dict, List, Union, Optional, TypeVar, Iterable, Set
 
-from overrides import overrides
 
 # _jsonnet doesn't work on Windows, so we have to use fakes.
 try:
@@ -93,87 +93,61 @@ def _environment_variables() -> Dict[str, str]:
     return {key: value for key, value in os.environ.items() if _is_encodable(value)}
 
 
-def unflatten(flat_dict: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Given a "flattened" dict with compound keys, e.g.
-        {"a.b": 0}
-    unflatten it:
-        {"a": {"b": 0}}
-    """
-    unflat: Dict[str, Any] = {}
-
-    for compound_key, value in flat_dict.items():
-        curr_dict = unflat
-        parts = compound_key.split(".")
-        for key in parts[:-1]:
-            curr_value = curr_dict.get(key)
-            if key not in curr_dict:
-                curr_dict[key] = {}
-                curr_dict = curr_dict[key]
-            elif isinstance(curr_value, dict):
-                curr_dict = curr_value
-            else:
-                raise ConfigurationError("flattened dictionary is invalid")
-        if not isinstance(curr_dict, dict) or parts[-1] in curr_dict:
-            raise ConfigurationError("flattened dictionary is invalid")
-        curr_dict[parts[-1]] = value
-
-    return unflat
+T = TypeVar("T", dict, list)
 
 
-def with_fallback(preferred: Dict[str, Any], fallback: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Deep merge two dicts, preferring values from `preferred`.
-    """
-
-    def merge(preferred_value: Any, fallback_value: Any) -> Any:
-        if isinstance(preferred_value, dict) and isinstance(fallback_value, dict):
-            return with_fallback(preferred_value, fallback_value)
-        elif isinstance(preferred_value, dict) and isinstance(fallback_value, list):
-            # treat preferred_value as a sparse list, where each key is an index to be overridden
-            merged_list = fallback_value
-            for elem_key, preferred_element in preferred_value.items():
-                try:
-                    index = int(elem_key)
-                    merged_list[index] = merge(preferred_element, fallback_value[index])
-                except ValueError:
-                    raise ConfigurationError(
-                        "could not merge dicts - the preferred dict contains "
-                        f"invalid keys (key {elem_key} is not a valid list index)"
-                    )
-                except IndexError:
-                    raise ConfigurationError(
-                        "could not merge dicts - the preferred dict contains "
-                        f"invalid keys (key {index} is out of bounds)"
-                    )
-            return merged_list
+def with_overrides(original: T, overrides_dict: Dict[str, Any], prefix: str = "") -> T:
+    merged: T
+    keys: Union[Iterable[str], Iterable[int]]
+    if isinstance(original, list):
+        merged = [None] * len(original)
+        keys = range(len(original))
+    elif isinstance(original, dict):
+        merged = {}
+        keys = chain(
+            original.keys(), (k for k in overrides_dict if "." not in k and k not in original)
+        )
+    else:
+        if prefix:
+            raise ValueError(
+                f"overrides for '{prefix[:-1]}.*' expected list or dict in original, "
+                f"found {type(original)} instead"
+            )
         else:
-            return copy.deepcopy(preferred_value)
+            raise ValueError(f"expected list or dict, found {type(original)} instead")
 
-    preferred_keys = set(preferred.keys())
-    fallback_keys = set(fallback.keys())
-    common_keys = preferred_keys & fallback_keys
+    used_override_keys: Set[str] = set()
+    for key in keys:
+        if str(key) in overrides_dict:
+            merged[key] = copy.deepcopy(overrides_dict[str(key)])
+            used_override_keys.add(str(key))
+        else:
+            overrides_subdict = {}
+            for o_key in overrides_dict:
+                if o_key.startswith(f"{key}."):
+                    overrides_subdict[o_key[len(f"{key}.") :]] = overrides_dict[o_key]
+                    used_override_keys.add(o_key)
+            if overrides_subdict:
+                merged[key] = with_overrides(
+                    original[key], overrides_subdict, prefix=prefix + f"{key}."
+                )
+            else:
+                merged[key] = copy.deepcopy(original[key])
 
-    merged: Dict[str, Any] = {}
+    unused_override_keys = [prefix + key for key in set(overrides_dict.keys()) - used_override_keys]
+    if unused_override_keys:
+        raise ValueError(f"overrides dict contains unused keys: {unused_override_keys}")
 
-    for key in preferred_keys - fallback_keys:
-        merged[key] = copy.deepcopy(preferred[key])
-    for key in fallback_keys - preferred_keys:
-        merged[key] = copy.deepcopy(fallback[key])
-
-    for key in common_keys:
-        preferred_value = preferred[key]
-        fallback_value = fallback[key]
-
-        merged[key] = merge(preferred_value, fallback_value)
     return merged
 
 
-def parse_overrides(serialized_overrides: str) -> Dict[str, Any]:
+def parse_overrides(
+    serialized_overrides: str, ext_vars: Optional[Dict[str, Any]] = None
+) -> Dict[str, Any]:
     if serialized_overrides:
-        ext_vars = _environment_variables()
+        ext_vars = {**_environment_variables(), **(ext_vars or {})}
 
-        return unflatten(json.loads(evaluate_snippet("", serialized_overrides, ext_vars=ext_vars)))
+        return json.loads(evaluate_snippet("", serialized_overrides, ext_vars=ext_vars))
     else:
         return {}
 
@@ -222,7 +196,6 @@ class Params(MutableMapping):
         self.params = _replace_none(params)
         self.history = history
 
-    @overrides
     def pop(self, key: str, default: Any = DEFAULT, keep_as_dict: bool = False) -> Any:
 
         """
@@ -286,7 +259,6 @@ class Params(MutableMapping):
         else:
             raise ValueError("Cannot convert variable to bool: " + value)
 
-    @overrides
     def get(self, key: str, default: Any = DEFAULT):
         """
         Performs the functionality associated with dict.get(key) but also checks for returned
@@ -427,7 +399,7 @@ class Params(MutableMapping):
         if key in self.params:
             return self._check_is_dict(key, self.params[key])
         else:
-            raise KeyError
+            raise KeyError(str(key))
 
     def __setitem__(self, key, value):
         self.params[key] = value
@@ -468,7 +440,9 @@ class Params(MutableMapping):
         params_overrides: `Union[str, Dict[str, Any]]`, optional (default = `""`)
 
             A dict of overrides that can be applied to final object.
-            e.g. {"model.embedding_dim": 10}
+            e.g. `{"model.embedding_dim": 10}` will change the value of "embedding_dim"
+            within the "model" object of the config to 10. If you wanted to override the entire
+            "model" object of the config, you could do `{"model": {"type": "other_type", ...}}`.
 
         ext_vars: `dict`, optional
 
@@ -489,8 +463,12 @@ class Params(MutableMapping):
 
         if isinstance(params_overrides, dict):
             params_overrides = json.dumps(params_overrides)
-        overrides_dict = parse_overrides(params_overrides)
-        param_dict = with_fallback(preferred=overrides_dict, fallback=file_dict)
+        overrides_dict = parse_overrides(params_overrides, ext_vars=ext_vars)
+
+        if overrides_dict:
+            param_dict = with_overrides(file_dict, overrides_dict)
+        else:
+            param_dict = file_dict
 
         return cls(param_dict)
 

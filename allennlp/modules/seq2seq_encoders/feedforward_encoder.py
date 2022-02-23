@@ -1,5 +1,5 @@
 import torch
-from overrides import overrides
+
 
 from allennlp.modules.feedforward import FeedForward
 from allennlp.modules.seq2seq_encoders.seq2seq_encoder import Seq2SeqEncoder
@@ -17,19 +17,15 @@ class FeedForwardEncoder(Seq2SeqEncoder):
         super().__init__()
         self._feedforward = feedforward
 
-    @overrides
     def get_input_dim(self) -> int:
         return self._feedforward.get_input_dim()
 
-    @overrides
     def get_output_dim(self) -> int:
         return self._feedforward.get_output_dim()
 
-    @overrides
     def is_bidirectional(self) -> bool:
         return False
 
-    @overrides
     def forward(self, inputs: torch.Tensor, mask: torch.BoolTensor = None) -> torch.Tensor:
         """
         # Parameters
