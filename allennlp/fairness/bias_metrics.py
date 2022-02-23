@@ -240,7 +240,7 @@ class EmbeddingCoherenceTest:
 
         n = x.size(0)
         upper = 6 * torch.sum((x_rank - y_rank).pow(2))
-        down = n * (n ** 2 - 1.0)
+        down = n * (n**2 - 1.0)
         return 1.0 - (upper / down)
 
 

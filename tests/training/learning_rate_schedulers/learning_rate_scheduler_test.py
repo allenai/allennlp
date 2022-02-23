@@ -135,9 +135,9 @@ class LearningRateSchedulersTest(AllenNlpTestCase):
         scheduler.step()
         assert optimizer.param_groups[0]["lr"] == 0.5
         scheduler.step()
-        assert optimizer.param_groups[0]["lr"] == 0.5 ** 2
+        assert optimizer.param_groups[0]["lr"] == 0.5**2
         scheduler.step()
-        assert optimizer.param_groups[0]["lr"] == 0.5 ** 3
+        assert optimizer.param_groups[0]["lr"] == 0.5**3
 
     def test_huggingface_schedulers_work_properly(self):
         def unwrap_schedule(scheduler, num_steps=10):

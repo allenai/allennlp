@@ -63,9 +63,9 @@ class T5DenseReluDense(TransformerModule, FromParams):
     def __init__(self, hidden_size: int = 512, ff_size: int = 2048, dropout: float = 0.1):
         super().__init__()
         self.wi = nn.Linear(hidden_size, ff_size, bias=False)
-        self.wi.weight.data.normal_(mean=0.0, std=hidden_size ** -0.5)
+        self.wi.weight.data.normal_(mean=0.0, std=hidden_size**-0.5)
         self.wo = nn.Linear(ff_size, hidden_size, bias=False)
-        self.wo.weight.data.normal_(mean=0.0, std=ff_size ** -0.5)
+        self.wo.weight.data.normal_(mean=0.0, std=ff_size**-0.5)
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, hidden_states) -> FloatT:
@@ -81,11 +81,11 @@ class T5DenseGatedGeluDense(TransformerModule, FromParams):
     def __init__(self, hidden_size: int = 512, ff_size: int = 2048, dropout: float = 0.1):
         super().__init__()
         self.wi_0 = nn.Linear(hidden_size, ff_size, bias=False)
-        self.wi_0.weight.data.normal_(mean=0.0, std=hidden_size ** -0.5)
+        self.wi_0.weight.data.normal_(mean=0.0, std=hidden_size**-0.5)
         self.wi_1 = nn.Linear(hidden_size, ff_size, bias=False)
-        self.wi_1.weight.data.normal_(mean=0.0, std=hidden_size ** -0.5)
+        self.wi_1.weight.data.normal_(mean=0.0, std=hidden_size**-0.5)
         self.wo = nn.Linear(ff_size, hidden_size, bias=False)
-        self.wo.weight.data.normal_(mean=0.0, std=ff_size ** -0.5)
+        self.wo.weight.data.normal_(mean=0.0, std=ff_size**-0.5)
         self.dropout = nn.Dropout(dropout)
         from allennlp.nn import Activation
 
@@ -964,7 +964,7 @@ class T5(TransformerModule, Registrable):
         # TODO: HF only does this when does this when embeddings are tied.
         # Currently tied embeddings is the only option we have, but if make
         # that configurable then we should put this in an 'if' block.
-        sequence_output = sequence_output * (self.model_dim ** -0.5)
+        sequence_output = sequence_output * (self.model_dim**-0.5)
         # Shape: (batch_size, target_length, vocab_size)
         logits = self.lm_head(sequence_output)
         return logits
