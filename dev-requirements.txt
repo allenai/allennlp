@@ -38,7 +38,7 @@ pydoc-markdown>=4.0.0,<5.0.0
 databind.core
 
 mkdocs==1.2.3
-mkdocs-material>=5.5.0,<8.2.0
+mkdocs-material>=5.5.0,<8.3.0
 markdown-include==0.6.0
 
 #### PACKAGE-UPLOAD PACKAGES ####
