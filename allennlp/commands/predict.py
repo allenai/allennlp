@@ -72,14 +72,6 @@ class Predict(Subcommand):
         )
 
         subparser.add_argument(
-            "--compression-type",
-            type=str,
-            choices=["gz", "bz2", "lzma"],
-            default=None,
-            help="Indicates the compressed format of the input file.",
-        )
-
-        subparser.add_argument(
             "--multitask-head",
             type=str,
             default=None,
@@ -158,7 +150,6 @@ class _PredictManager:
         batch_size: int,
         print_to_console: bool,
         has_dataset_reader: bool,
-        compression_type: str = None,
         multitask_head: Optional[str] = None,
     ) -> None:
         self._predictor = predictor
@@ -167,7 +158,6 @@ class _PredictManager:
         self._batch_size = batch_size
         self._print_to_console = print_to_console
         self._dataset_reader = None if not has_dataset_reader else predictor._dataset_reader
-        self.compression_type = compression_type
         self._multitask_head = multitask_head
         if self._multitask_head is not None:
             if self._dataset_reader is None:
@@ -219,25 +209,10 @@ class _PredictManager:
                     yield self._predictor.load_line(line)
         else:
             input_file = cached_path(self._input_file)
-            if self.compression_type is None:
-                try:
-                    with open_compressed(input_file) as file_input:
-                        for line in file_input:
-                            if not line.isspace():
-                                yield self._predictor.load_line(line)
-                except OSError:
-                    print(
-                        "Automatic detection failed, please specify the compression type argument."
-                    )
-
-            else:
-                try:
-                    with open_compressed(input_file, compression_type=self.compression_type) as file_input:
-                        for line in file_input:
-                            if not line.isspace():
-                                yield self._predictor.load_line(line)
-                except OSError:
-                    print("please specify the correct compression type argument.")
+            with open_compressed(input_file) as file_input:
+                for line in file_input:
+                    if not line.isspace():
+                        yield self._predictor.load_line(line)
 
     def _get_instance_data(self) -> Iterator[Instance]:
         if self._input_file == "-":
