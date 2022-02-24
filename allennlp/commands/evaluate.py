@@ -7,6 +7,7 @@ and report any metrics calculated by the model.
 import argparse
 import json
 import logging
+from json import JSONDecodeError
 from pathlib import Path
 from os import PathLike
 from typing import Union, Dict, Any, Optional
@@ -258,7 +259,12 @@ def evaluate_from_archive(
     dataset_reader = archive.validation_dataset_reader
 
     # split files
-    evaluation_data_path_list = input_file.split(",")
+    try:
+        # Try reading it as a list of JSON objects first. Some readers require
+        # that kind of input.
+        evaluation_data_path_list = json.loads(f"[{input_file}]")
+    except JSONDecodeError:
+        evaluation_data_path_list = input_file.split(",")
 
     # TODO(gabeorlanski): Is it safe to always default to .outputs and .preds?
     # TODO(gabeorlanski): Add in way to save to specific output directory
@@ -269,6 +275,10 @@ def evaluate_from_archive(
             )
 
             # Keep the path of the parent otherwise it will write to the CWD
+            assert all(isinstance(p, str) for p in evaluation_data_path_list), (
+                "When specifying JSON blobs as input, the output files must be explicitly named with "
+                "--output-file."
+            )
             output_file_list = [
                 p.parent.joinpath(f"{p.stem}.outputs") for p in map(Path, evaluation_data_path_list)
             ]
@@ -285,6 +295,10 @@ def evaluate_from_archive(
             )
 
             # Keep the path of the parent otherwise it will write to the CWD
+            assert all(isinstance(p, str) for p in evaluation_data_path_list), (
+                "When specifying JSON blobs as input, the predictions output files must be explicitly named with "
+                "--predictions-output-file."
+            )
             predictions_output_file_list = [
                 p.parent.joinpath(f"{p.stem}.preds") for p in map(Path, evaluation_data_path_list)
             ]
@@ -307,13 +321,15 @@ def evaluate_from_archive(
         )
 
     all_metrics = {}
-    for index in range(len(evaluation_data_path_list)):
+    for index, evaluation_data_path in enumerate(evaluation_data_path_list):
         config = deepcopy(archive.config)
-        evaluation_data_path = evaluation_data_path_list[index]
 
         # Get the eval file name so we can save each metric by file name in the
         # output dictionary.
-        eval_file_name = Path(evaluation_data_path).stem
+        if isinstance(evaluation_data_path, str):
+            eval_file_name = Path(evaluation_data_path).stem
+        else:
+            eval_file_name = str(index)
 
         if metrics_output_file is not None:
             # noinspection PyUnboundLocalVariable
@@ -323,7 +339,7 @@ def evaluate_from_archive(
             # noinspection PyUnboundLocalVariable
             predictions_output_file_path = predictions_output_file_list[index]
 
-        logger.info("Reading evaluation data from %s", evaluation_data_path)
+        logger.info("Reading evaluation data from %s", eval_file_name)
         data_loader_params = config.get("validation_data_loader", None)
         if data_loader_params is None:
             data_loader_params = config.get("data_loader")
