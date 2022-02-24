@@ -550,7 +550,7 @@ class EmbeddingsTextFile(Iterator[str]):
                 import bz2
 
                 package = bz2
-            elif extension == ".lzma":
+            elif extension == ".xz":
                 import lzma
 
                 package = lzma
