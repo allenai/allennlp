@@ -134,8 +134,8 @@ class AttentionModule(TransformerModule, FromParams):
         self.query.weight.data.normal_(
             mean=0.0, std=(self.hidden_size * self.attention_head_size) ** -0.5
         )
-        self.key.weight.data.normal_(mean=0.0, std=self.hidden_size ** -0.5)
-        self.value.weight.data.normal_(mean=0.0, std=self.hidden_size ** -0.5)
+        self.key.weight.data.normal_(mean=0.0, std=self.hidden_size**-0.5)
+        self.value.weight.data.normal_(mean=0.0, std=self.hidden_size**-0.5)
 
         if hasattr(self, "output"):
             self.output.weight.data.normal_(
@@ -143,7 +143,7 @@ class AttentionModule(TransformerModule, FromParams):
             )
 
         if hasattr(self, "relative_attention_bias"):
-            self.relative_attention_bias.weight.data.normal_(mean=0.0, std=self.hidden_size ** -0.5)
+            self.relative_attention_bias.weight.data.normal_(mean=0.0, std=self.hidden_size**-0.5)
 
     def _transpose_for_scores(self, x: torch.Tensor) -> torch.Tensor:
         new_x_shape = x.size()[:-1] + (
