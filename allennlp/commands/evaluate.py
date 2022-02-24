@@ -36,14 +36,14 @@ class Evaluate(Subcommand):
         subparser.add_argument(
             "input_file",
             type=str,
-            help="path to the file containing the evaluation data (for mutiple "
+            help="path to the file containing the evaluation data (for multiple "
             "files, put between filenames e.g., input1.txt,input2.txt)",
         )
 
         subparser.add_argument(
             "--output-file",
             type=str,
-            help="optional path to write the metrics to as JSON (for mutiple "
+            help="optional path to write the metrics to as JSON (for multiple "
             "files, put  between filenames e.g., output1.txt,output2.txt)",
         )
 
@@ -271,7 +271,7 @@ def evaluate_from_archive(
     if metrics_output_file is not None:
         if auto_names == "METRICS" or auto_names == "ALL":
             logger.warning(
-                f"Passed output_files will be ignored, auto_names is" f" set to {auto_names}"
+                f"Passed output_files will be ignored, auto_names is set to {auto_names}"
             )
 
             # Keep the path of the parent otherwise it will write to the CWD
