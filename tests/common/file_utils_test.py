@@ -221,16 +221,16 @@ class TestFileUtils(AllenNlpTestCase):
         with pytest.raises(ValueError):
             cached_path(dangerous_file, extract_archive=True)
 
-    def test_open_compressed(self):
+    @pytest.mark.parametrize("suffix", ["bz2", "gz", "xz"])
+    def test_open_compressed(self, suffix: str):
         uncompressed_file = self.FIXTURES_ROOT / "embeddings/fake_embeddings.5d.txt"
         with open_compressed(uncompressed_file) as f:
             uncompressed_lines = [line.strip() for line in f]
 
-        for suffix in ["bz2", "gz", "lzma"]:
-            compressed_file = f"{uncompressed_file}.{suffix}"
-            with open_compressed(compressed_file) as f:
-                compressed_lines = [line.strip() for line in f]
-            assert compressed_lines == uncompressed_lines
+        compressed_file = f"{uncompressed_file}.{suffix}"
+        with open_compressed(compressed_file) as f:
+            compressed_lines = [line.strip() for line in f]
+        assert compressed_lines == uncompressed_lines
 
     def test_meta_backwards_compatible(self):
         url = "http://fake.datastore.com/glove.txt.gz"

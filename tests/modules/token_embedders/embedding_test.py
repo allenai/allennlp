@@ -164,7 +164,7 @@ class TestEmbedding(AllenNlpTestCase):
             assert text == correct_text, "Test failed for file: " + path
 
         # Check for a file contained inside an archive with multiple files
-        for ext in [".zip", ".tar.gz", ".tar.bz2", ".tar.lzma"]:
+        for ext in [".zip", ".tar.gz", ".tar.bz2", ".tar.xz"]:
             archive_path = str(self.FIXTURES_ROOT / "utf-8_sample/archives/utf-8") + ext
             file_uri = format_embeddings_file_uri(archive_path, "folder/utf-8_sample.txt")
             with EmbeddingsTextFile(file_uri) as f:
