@@ -9,14 +9,13 @@ import logging
 import os
 import re
 from collections import defaultdict
-from typing import (TYPE_CHECKING, Any, Callable, Dict, Iterable, List,
-                    Optional, Set, Union)
+from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Union, TYPE_CHECKING
 
 from transformers import PreTrainedTokenizer
 
 from allennlp.common import Registrable
+from allennlp.common.file_utils import cached_path, FileLock
 from allennlp.common.checks import ConfigurationError
-from allennlp.common.file_utils import FileLock, cached_path
 from allennlp.common.tqdm import Tqdm
 from allennlp.common.util import namespace_match
 
