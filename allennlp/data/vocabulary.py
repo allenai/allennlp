@@ -9,12 +9,14 @@ import logging
 import os
 import re
 from collections import defaultdict
+from typing import (TYPE_CHECKING, Any, Callable, Dict, Iterable, List,
+                    Optional, Set, Union)
+
 from transformers import PreTrainedTokenizer
-from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Union, TYPE_CHECKING
 
 from allennlp.common import Registrable
-from allennlp.common.file_utils import cached_path, FileLock
 from allennlp.common.checks import ConfigurationError
+from allennlp.common.file_utils import FileLock, cached_path
 from allennlp.common.tqdm import Tqdm
 from allennlp.common.util import namespace_match
 
@@ -193,17 +195,24 @@ class Vocabulary(Registrable):
         in the Vocabulary.
 
     min_pretrained_embeddings : `Dict[str, int]`, optional
-        If provided, specifies for each namespace a minimum number of lines (typically the
+        Specifies for each namespace a minimum number of lines (typically the
         most common words) to keep from pretrained embedding files, even for words not
-        appearing in the data.
+        appearing in the data. By default the minimum number of lines to keep is 0.
+        You can automatically include all lines for a namespace by setting the minimum number of lines
+        to `-1`.
 
     only_include_pretrained_words : `bool`, optional (default=`False`)
         This defines the strategy for using any pretrained embedding files which may have been
-        specified in `pretrained_files`. If False, an inclusive strategy is used: and words
-        which are in the `counter` and in the pretrained file are added to the `Vocabulary`,
-        regardless of whether their count exceeds `min_count` or not. If True, we use an
-        exclusive strategy: words are only included in the Vocabulary if they are in the pretrained
-        embedding file (their count must still be at least `min_count`).
+        specified in `pretrained_files`.
+
+        If `False`, we use an inclusive strategy and include both words in the `counter`
+        that have a count of at least `min_count` and words from the pretrained file
+        that are within the first `N` lines defined by `min_pretrained_embeddings`.
+
+        If `True`, we use an exclusive strategy where words are only included in the `Vocabulary`
+        if they are in the pretrained embedding file. Their count must also be at least `min_count`
+        or they must be listed in the embedding file within the first `N` lines defined
+        by `min_pretrained_embeddings`.
 
     tokens_to_add : `Dict[str, List[str]]`, optional (default=`None`)
         If given, this is a list of tokens to add to the vocabulary, keyed by the namespace to add
@@ -667,9 +676,13 @@ class Vocabulary(Registrable):
             if namespace in pretrained_files:
                 pretrained_list = _read_pretrained_tokens(pretrained_files[namespace])
                 min_embeddings = min_pretrained_embeddings.get(namespace, 0)
-                if min_embeddings > 0:
+                if min_embeddings > 0 or min_embeddings == -1:
                     tokens_old = tokens_to_add.get(namespace, [])
-                    tokens_new = pretrained_list[:min_embeddings]
+                    tokens_new = (
+                        pretrained_list
+                        if min_embeddings == -1
+                        else pretrained_list[:min_embeddings]
+                    )
                     tokens_to_add[namespace] = tokens_old + tokens_new
                 pretrained_set = set(pretrained_list)
             token_counts = list(counter[namespace].items())
