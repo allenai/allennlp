@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated dependencies, especially around doc creation.
 - Running the test suite out-of-tree (e.g. after installation) is now possible by pointing the environment variable `ALLENNLP_SRC_DIR` to the sources.
 - Silenced a warning that happens when you inappropriately clone a tensor.
+- Adding more clarification to the `Vocabulary` documentation around `min_pretrained_embeddings` and `only_include_pretrained_words`.
 
 ### Added
 
@@ -19,6 +20,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - LZMA compression is now supported.
 - Added a way to give JSON blobs as input to dataset readers in the `evaluate` command.
 - Added the argument `sub_module` in `PretrainedTransformerMismatchedEmbedder`
+
+### Changed
+
+- You can automatically include all words from a pretrained file when building a vocabulary by setting the value in `min_pretrained_embeddings` to `-1`
+  for that particular namespace.
 
 
 ## [v2.9.0](https://github.com/allenai/allennlp/releases/tag/v2.9.0) - 2022-01-27
