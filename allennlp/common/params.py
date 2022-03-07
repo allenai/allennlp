@@ -455,8 +455,9 @@ class Params(MutableMapping):
         if ext_vars is None:
             ext_vars = {}
 
-        # redirect to cache, if necessary
-        params_file = cached_path(params_file)
+        # redirect to cache, if necessary.
+        # cached_path v1.1.0 returns Path object instead of str while evaluate_file requires a str path
+        params_file = str(cached_path(params_file))
         ext_vars = {**_environment_variables(), **ext_vars}
 
         file_dict = json.loads(evaluate_file(params_file, ext_vars=ext_vars))
