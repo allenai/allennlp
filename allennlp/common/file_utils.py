@@ -133,11 +133,13 @@ def cached_path(
             from multiple processes on the same file.
     """
     _cached_path.file_friendly_logging(common_logging.FILE_FRIENDLY_LOGGING)
-    return _cached_path.cached_path(
-        url_or_filename,
-        cache_dir=cache_dir or CACHE_DIRECTORY,
-        extract_archive=extract_archive,
-        force_extract=force_extract,
+    return str(
+        _cached_path.cached_path(
+            url_or_filename,
+            cache_dir=cache_dir or CACHE_DIRECTORY,
+            extract_archive=extract_archive,
+            force_extract=force_extract,
+        )
     )
 
 
