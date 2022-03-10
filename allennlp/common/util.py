@@ -333,7 +333,7 @@ def push_python_path(path: PathType) -> ContextManagerFunctionReturnType[None]:
 
 def import_module_and_submodules(package_name: str, exclude: Optional[Set[str]] = None) -> None:
     """
-    Import all submodules under the given package.
+    Import all public submodules under the given package.
     Primarily useful so that people using AllenNLP as a library
     can specify their own custom packages and have their custom
     classes get loaded and registered.
@@ -357,6 +357,9 @@ def import_module_and_submodules(package_name: str, exclude: Optional[Set[str]] 
             # Sometimes when you import third-party libraries that are on your path,
             # `pkgutil.walk_packages` returns those too, so we need to skip them.
             if path_string and module_finder.path != path_string:  # type: ignore[union-attr]
+                continue
+            if name.startswith("_"):
+                # skip directly importing private subpackages
                 continue
             subpackage = f"{package_name}.{name}"
             import_module_and_submodules(subpackage, exclude=exclude)
