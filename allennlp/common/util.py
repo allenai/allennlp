@@ -361,6 +361,9 @@ def import_module_and_submodules(package_name: str, exclude: Optional[Set[str]] 
             if name.startswith("_"):
                 # skip directly importing private subpackages
                 continue
+            if name.startswith("test"):
+                # as long as allennlp.common.testing is not under tests/, exclude it
+                continue
             subpackage = f"{package_name}.{name}"
             import_module_and_submodules(subpackage, exclude=exclude)
 
