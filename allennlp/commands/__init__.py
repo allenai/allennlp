@@ -25,7 +25,8 @@ logger = logging.getLogger(__name__)
 try:
     """
     The `allennlp checklist` command requires installation of the optional dependency `checklist`.
-    It can be installed with `pip install allennlp[checklist]`.
+    If you're using conda, it can be installed with `conda install allennlp-checklist`,
+    otherwise use `pip install allennlp[checklist]`.
     """
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")

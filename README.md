@@ -179,13 +179,19 @@ We support AllenNLP on Mac and Linux environments. We presently do not support W
 
 ### Installing via conda-forge
 
-The simplest way to install AllenNLP is using conda:
+The simplest way to install AllenNLP is using conda (you can choose a different python version):
 
 ```
 conda install -c conda-forge python=3.8 allennlp
 ```
 
-All plugins mentioned above are similarly installable, e.g.
+To install optional packages, such as `checklist`, use
+
+```
+conda install -c conda-forge allennlp-checklist
+```
+
+or simply install `allennlp-all` directly. The plugins mentioned above are similarly installable, e.g.
 
 ```
 conda install -c conda-forge allennlp-models allennlp-semparse allennlp-server allennlp-optuna

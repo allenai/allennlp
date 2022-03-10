@@ -13,7 +13,8 @@ try:
     )
 except ImportError:
     warnings.warn(
-        'To use the checklist integration you should install ``allennlp`` with the "checklist" '
-        "extra (e.g. ``pip install allennlp[checklist]``) or just install checklist after the fact."
+        "The checklist integration of allennlp is optional; if you're using conda, "
+        "it can be installed with `conda install allennlp-checklist`, "
+        "otherwise use `pip install allennlp[checklist]`."
     )
     raise
