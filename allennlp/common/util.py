@@ -338,7 +338,15 @@ def import_module_and_submodules(package_name: str, exclude: Optional[Set[str]] 
     can specify their own custom packages and have their custom
     classes get loaded and registered.
     """
-    if exclude and package_name in exclude:
+    # take care of None
+    exclude = exclude if exclude else set()
+    try:
+        import checklist  # noqa
+    except ImportError:
+        # exclude modules that depends on checklist being present
+        exclude |= {"allennlp.confidence_checks.task_checklists"}
+
+    if package_name in exclude:
         return
 
     importlib.invalidate_caches()
