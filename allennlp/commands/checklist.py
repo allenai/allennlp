@@ -15,8 +15,7 @@ from allennlp.commands.subcommand import Subcommand
 logger = logging.getLogger(__name__)
 
 try:
-    # need to work around https://github.com/python/mypy/issues/1153
-    from allennlp.commands._checklist_internal import CheckList  # type: ignore
+    from allennlp.commands._checklist_internal import CheckList
 except ImportError:
     # create dummy command that tells users how to
     # install the necessary dependency
@@ -28,8 +27,9 @@ except ImportError:
             "otherwise use `pip install allennlp[checklist]`."
         )
 
+    # need to work around https://github.com/python/mypy/issues/1153
     @Subcommand.register("checklist")
-    class CheckList(Subcommand):
+    class CheckList(Subcommand):  # type: ignore
         def add_subparser(self, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
             description = """Dummy command because checklist is not installed."""
             subparser = parser.add_parser(
