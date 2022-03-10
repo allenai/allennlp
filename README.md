@@ -217,10 +217,10 @@ environment you want to use, you can skip to the 'installing via pip' section.
 
 1.  [Download and install Conda](https://conda.io/projects/conda/en/latest/user-guide/install/index.html).
 
-2.  Create a Conda environment with Python 3.7 (3.6 or 3.8 would work as well):
+2.  Create a Conda environment with Python 3.8 (3.7 or 3.9 would work as well):
 
     ```
-    conda create -n allennlp_env python=3.7
+    conda create -n allennlp_env python=3.8
     ```
 
 3.  Activate the Conda environment. You will need to activate the Conda environment in each terminal in which you want to use AllenNLP:
