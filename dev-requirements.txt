@@ -37,7 +37,7 @@ ruamel.yaml
 pydoc-markdown>=4.0.0,<5.0.0
 databind.core
 docspec==1.2.0
-docspec-python==1.2.0
+docspec-python==2.0.0
 
 mkdocs==1.2.3
 mkdocs-material>=5.5.0,<8.3.0
