@@ -15,7 +15,8 @@ from allennlp.commands.subcommand import Subcommand
 logger = logging.getLogger(__name__)
 
 try:
-    from allennlp.commands._checklist_internal import CheckList
+    # need to work around https://github.com/python/mypy/issues/1153
+    from allennlp.commands._checklist_internal import CheckList  # type: ignore
 except ImportError:
     # create dummy command that tells users how to
     # install the necessary dependency
