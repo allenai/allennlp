@@ -49,7 +49,7 @@ def main(
     for k in range((len(indices) // 50) + 1):
         sentences.append(
             indexer.as_padded_tensor_dict(
-                indices[(k * 50) : ((k + 1) * 50)], padding_lengths={"tokens": 50}
+                {"elmo_tokens": indices[(k * 50) : ((k + 1) * 50)]}, padding_lengths={"tokens": 50}
             )
         )
 

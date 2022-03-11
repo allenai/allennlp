@@ -174,17 +174,34 @@ to distribute as a plugin, see the [subcommand API docs](https://docs.allennlp.o
 ## Installation
 
 AllenNLP requires Python 3.6.1 or later and [PyTorch](https://pytorch.org/).
+
+We support AllenNLP on Mac and Linux environments. We presently do not support Windows but are open to contributions.
+
+### Installing via conda-forge
+
+The simplest way to install AllenNLP is using conda:
+
+```
+conda install -c conda-forge python=3.8 allennlp
+```
+
+All plugins mentioned above are similarly installable, e.g.
+
+```
+conda install -c conda-forge allennlp-models allennlp-semparse allennlp-server allennlp-optuna
+```
+
+### Installing via pip
+
 It's recommended that you install the PyTorch ecosystem **before** installing AllenNLP by following the instructions on [pytorch.org](https://pytorch.org/).
 
-The preferred way to install AllenNLP is via `pip`. Just run `pip install allennlp`.
+After that, just run `pip install allennlp`.
+
+
 
 > ⚠️ If you're using Python 3.7 or greater, you should ensure that you don't have the PyPI version of `dataclasses` installed after running the above command, as this could cause issues on certain platforms. You can quickly check this by running `pip freeze | grep dataclasses`. If you see something like `dataclasses=0.6` in the output, then just run `pip uninstall -y dataclasses`.
 
 If you need pointers on setting up an appropriate Python environment or would like to install AllenNLP using a different method, see below.
-
-We support AllenNLP on Mac and Linux environments. We presently do not support Windows but are open to contributions.
-
-### Installing via pip
 
 #### Setting up a virtual environment
 
@@ -197,13 +214,13 @@ environment you want to use, you can skip to the 'installing via pip' section.
 2.  Create a Conda environment with Python 3.7 (3.6 or 3.8 would work as well):
 
     ```
-    conda create -n allennlp python=3.7
+    conda create -n allennlp_env python=3.7
     ```
 
 3.  Activate the Conda environment. You will need to activate the Conda environment in each terminal in which you want to use AllenNLP:
 
     ```
-    conda activate allennlp
+    conda activate allennlp_env
     ```
 
 #### Installing the library and dependencies
@@ -213,6 +230,13 @@ Installing the library and dependencies is simple using `pip`.
 ```bash
 pip install allennlp
 ```
+
+To install the optional dependencies, such as `checklist`, run
+
+```bash
+pip install allennlp[checklist]
+```
+Or you can just install all optional dependencies with `pip install allennlp[all]`.
 
 *Looking for bleeding edge features? You can install nightly releases directly from [pypi](https://pypi.org/project/allennlp/#history)*
 
@@ -285,8 +309,7 @@ Create a Python 3.7 or 3.8 virtual environment, and install AllenNLP in `editabl
 
 ```bash
 pip install -U pip setuptools wheel
-pip install --editable .
-pip install -r dev-requirements.txt
+pip install --editable .[dev,all]
 ```
 
 This will make `allennlp` available on your system but it will use the sources from the local clone

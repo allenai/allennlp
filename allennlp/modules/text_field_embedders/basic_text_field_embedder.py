@@ -2,7 +2,7 @@ from typing import Dict
 import inspect
 
 import torch
-from overrides import overrides
+
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.data.fields.text_field import TextFieldTensors
@@ -44,7 +44,6 @@ class BasicTextFieldEmbedder(TextFieldEmbedder):
             self.add_module(name, embedder)
         self._ordered_embedder_keys = sorted(self._token_embedders.keys())
 
-    @overrides
     def get_output_dim(self) -> int:
         output_dim = 0
         for embedder in self._token_embedders.values():

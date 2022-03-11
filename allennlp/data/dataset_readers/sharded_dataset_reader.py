@@ -3,7 +3,6 @@ import logging
 import os
 from typing import Iterable
 
-from overrides import overrides
 
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.file_utils import cached_path
@@ -48,18 +47,15 @@ class ShardedDatasetReader(DatasetReader):
         self.reader._set_worker_info(None)
         self.reader._set_distributed_info(None)
 
-    @overrides
     def text_to_instance(self, *args, **kwargs) -> Instance:
         """
         Just delegate to the base reader text_to_instance.
         """
         return self.reader.text_to_instance(*args, **kwargs)  # type: ignore
 
-    @overrides
     def apply_token_indexers(self, instance: Instance) -> None:
         self.reader.apply_token_indexers(instance)
 
-    @overrides
     def _read(self, file_path: PathOrStr) -> Iterable[Instance]:
         try:
             maybe_extracted_archive = cached_path(file_path, extract_archive=True)

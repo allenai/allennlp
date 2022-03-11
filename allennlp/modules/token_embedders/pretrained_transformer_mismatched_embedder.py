@@ -1,6 +1,6 @@
 from typing import Optional, Dict, Any
 
-from overrides import overrides
+
 import torch
 
 from allennlp.common.checks import ConfigurationError
@@ -26,6 +26,10 @@ class PretrainedTransformerMismatchedEmbedder(TokenEmbedder):
         through the transformer model independently, and concatenate the final representations.
         Should be set to the same value as the `max_length` option on the
         `PretrainedTransformerMismatchedIndexer`.
+    sub_module: `str`, optional (default = `None`)
+        The name of a submodule of the transformer to be used as the embedder. Some transformers naturally act
+        as embedders such as BERT. However, other models consist of encoder and decoder, in which case we just
+        want to use the encoder.
     train_parameters: `bool`, optional (default = `True`)
         If this is `True`, the transformer weights get updated during training.
     last_layer_only: `bool`, optional (default = `True`)
@@ -65,6 +69,7 @@ class PretrainedTransformerMismatchedEmbedder(TokenEmbedder):
         self,
         model_name: str,
         max_length: int = None,
+        sub_module: str = None,
         train_parameters: bool = True,
         last_layer_only: bool = True,
         override_weights_file: Optional[str] = None,
@@ -80,6 +85,7 @@ class PretrainedTransformerMismatchedEmbedder(TokenEmbedder):
         self._matched_embedder = PretrainedTransformerEmbedder(
             model_name,
             max_length=max_length,
+            sub_module=sub_module,
             train_parameters=train_parameters,
             last_layer_only=last_layer_only,
             override_weights_file=override_weights_file,
@@ -91,11 +97,9 @@ class PretrainedTransformerMismatchedEmbedder(TokenEmbedder):
         )
         self.sub_token_mode = sub_token_mode
 
-    @overrides
     def get_output_dim(self):
         return self._matched_embedder.get_output_dim()
 
-    @overrides
     def forward(
         self,
         token_ids: torch.LongTensor,

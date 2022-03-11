@@ -2122,7 +2122,7 @@ def distributed_device() -> torch.device:
     return int_to_device(-1 if dist.get_backend() != "nccl" else torch.cuda.current_device())
 
 
-def dist_reduce(value: _V, reduce_op, **kwargs) -> _V:
+def dist_reduce(value: _V, reduce_op) -> _V:
     """
     Reduces the given `value` across all distributed worker nodes according the given
     reduction operation.
@@ -2147,7 +2147,10 @@ def dist_reduce(value: _V, reduce_op, **kwargs) -> _V:
     if not is_distributed():
         return value
     device = distributed_device()
-    value_tensor = torch.tensor(value, device=device, **kwargs)
+    if isinstance(value, torch.Tensor):
+        value_tensor = value.clone().to(device)
+    else:
+        value_tensor = torch.tensor(value, device=device)
     dist.all_reduce(value_tensor, op=reduce_op)
 
     if isinstance(value, torch.Tensor):
@@ -2155,7 +2158,7 @@ def dist_reduce(value: _V, reduce_op, **kwargs) -> _V:
     return value_tensor.item()  # type: ignore[return-value]
 
 
-def dist_reduce_sum(value: _V, **kwargs) -> _V:
+def dist_reduce_sum(value: _V) -> _V:
     """
     Sums the given `value` across distributed worker nodes.
     This is equivalent to calling `dist_reduce(v, dist.ReduceOp.SUM)`.
@@ -2168,7 +2171,7 @@ def dist_reduce_sum(value: _V, **kwargs) -> _V:
     # result in an `AttributeError`.
     if not is_distributed():
         return value
-    return dist_reduce(value, dist.ReduceOp.SUM, **kwargs)
+    return dist_reduce(value, dist.ReduceOp.SUM)
 
 
 def _collect_state_dict(

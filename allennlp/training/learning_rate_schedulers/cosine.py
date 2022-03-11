@@ -1,6 +1,6 @@
 import logging
 
-from overrides import overrides
+
 import numpy as np
 import torch
 
@@ -96,7 +96,6 @@ class CosineWithRestarts(LearningRateScheduler):
         self._n_restarts: int = 0
         super().__init__(optimizer, last_epoch)
 
-    @overrides
     def get_values(self):
         """Get updated learning rate."""
         if self.last_epoch == -1:
@@ -110,8 +109,8 @@ class CosineWithRestarts(LearningRateScheduler):
             self._cycle_counter = 0
             self._last_restart = step
 
-        base_lrs = [lr * self.eta_mul ** self._n_restarts for lr in self.base_values]
-        self._cycle_len = int(self.t_initial * self.t_mul ** self._n_restarts)
+        base_lrs = [lr * self.eta_mul**self._n_restarts for lr in self.base_values]
+        self._cycle_len = int(self.t_initial * self.t_mul**self._n_restarts)
 
         lrs = [
             self.eta_min

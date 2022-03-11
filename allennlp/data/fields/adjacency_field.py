@@ -2,7 +2,7 @@ from typing import Dict, List, Set, Tuple, Optional
 import logging
 import textwrap
 
-from overrides import overrides
+
 import torch
 
 from allennlp.common.checks import ConfigurationError
@@ -102,24 +102,20 @@ class AdjacencyField(Field[torch.Tensor]):
                 )
                 self._already_warned_namespaces.add(label_namespace)
 
-    @overrides
     def count_vocab_items(self, counter: Dict[str, Dict[str, int]]):
         if self._indexed_labels is None and self.labels is not None:
             for label in self.labels:
                 counter[self._label_namespace][label] += 1  # type: ignore
 
-    @overrides
     def index(self, vocab: Vocabulary):
         if self.labels is not None:
             self._indexed_labels = [
                 vocab.get_token_index(label, self._label_namespace) for label in self.labels
             ]
 
-    @overrides
     def get_padding_lengths(self) -> Dict[str, int]:
         return {"num_tokens": self.sequence_field.sequence_length()}
 
-    @overrides
     def as_tensor(self, padding_lengths: Dict[str, int]) -> torch.Tensor:
         desired_num_tokens = padding_lengths["num_tokens"]
         tensor = torch.ones(desired_num_tokens, desired_num_tokens) * self._padding_value
@@ -129,7 +125,6 @@ class AdjacencyField(Field[torch.Tensor]):
             tensor[index] = label
         return tensor
 
-    @overrides
     def empty_field(self) -> "AdjacencyField":
 
         # The empty_list here is needed for mypy
@@ -156,7 +151,6 @@ class AdjacencyField(Field[torch.Tensor]):
     def __len__(self):
         return len(self.sequence_field)
 
-    @overrides
     def human_readable_repr(self):
         ret = {"indices": self.indices}
         if self.labels is not None:

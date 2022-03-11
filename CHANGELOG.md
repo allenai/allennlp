@@ -7,9 +7,72 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [v2.9.1](https://github.com/allenai/allennlp/releases/tag/v2.9.1) - 2022-03-09
+
+### Fixed
+
+- Updated dependencies, especially around doc creation.
+- Running the test suite out-of-tree (e.g. after installation) is now possible by pointing the environment variable `ALLENNLP_SRC_DIR` to the sources.
+- Silenced a warning that happens when you inappropriately clone a tensor.
+- Adding more clarification to the `Vocabulary` documentation around `min_pretrained_embeddings` and `only_include_pretrained_words`.
+- Fixed bug with type mismatch caused by latest release of `cached-path` that now returns a `Path` instead of a `str`.
+
+### Added
+
+- We can now transparently read compressed input files during prediction.
+- LZMA compression is now supported.
+- Added a way to give JSON blobs as input to dataset readers in the `evaluate` command.
+- Added the argument `sub_module` in `PretrainedTransformerMismatchedEmbedder`
+- Updated the docs for `PytorchSeq2VecWrapper` to specify that `mask` is required rather than sequence lengths for clarity.
+
+### Changed
+
+- You can automatically include all words from a pretrained file when building a vocabulary by setting the value in `min_pretrained_embeddings` to `-1`
+  for that particular namespace.
+
+
+## [v2.9.0](https://github.com/allenai/allennlp/releases/tag/v2.9.0) - 2022-01-27
+
+### Added
+
+- Added an `Evaluator` class to make comparing source, target, and predictions easier.
+- Added a way to resize the vocabulary in the T5 module
+- Added an argument `reinit_modules` to `cached_transformers.get()` that allows you to re-initialize the pretrained weights of a transformer model, using layer indices or regex strings.
+- Added attribute `_should_validate_this_epoch` to `GradientDescentTrainer` that controls whether validation is run at the end of each epoch.
+- Added `ShouldValidateCallback` that can be used to configure the frequency of validation during training.
+- Added a `MaxPoolingSpanExtractor`. This `SpanExtractor` represents each span by a component wise max-pooling-operation.
+- Added support for `dist_metric` kwarg in initializing fairness metrics, which allows optionally using `wasserstein` distance (previously only KL divergence was supported).
+
+### Fixed
+
+- Fixed the docstring information for the `FBetaMultiLabelMeasure` metric.
+- Various fixes for Python 3.9
+- Fixed the name that the `push-to-hf` command uses to store weights.
+- `FBetaMultiLabelMeasure` now works with multiple dimensions
+- Support for inferior operating systems when making hardlinks
+- Use `,` as a separator for filenames in the `evaluate` command, thus allowing for URLs (eg. `gs://...`) as input files.
+- Removed a spurious error message "'torch.cuda' has no attribute '_check_driver'" that would be appear in the logs
+  when a `ConfigurationError` for missing GPU was raised.
+- Load model on CPU post training to save GPU memory.
+- Fixed a bug in `ShouldValidateCallback` that leads to validation occuring after the first epoch regardless of `validation_start` value.
+- Fixed a bug in `ShouldValidateCallback` that leads to validation occuring every `validation_interval + 1` epochs, instead of every `validation_interval` epochs.
+- Fixed a bug in `ShouldValidateCallback` that leads to validation never occuring at the end of training.
+
+### Removed
+
+- Removed dependency on the overrides package
+- Removed Tango components, since they now live at https://github.com/allenai/tango.
+
+### Changed
+
+- Make `checklist` an optional dependency.
+
+## [v2.8.0](https://github.com/allenai/allennlp/releases/tag/v2.8.0) - 2021-11-01
+
 ### Added
 
 - Added support to push models directly to the [Hugging Face Hub](https://huggingface.co/) with the command `allennlp push-to-hf`.
+- More default tests for the `TextualEntailmentSuite`.
 
 ### Changed
 
@@ -18,18 +81,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   replace the "model" part of the original config. However, when you just want to change a single field in the JSON structure without removing / replacing adjacent fields,
   you can still use the "dot" syntax. For example, `--overrides '{"model.num_layers":3}'` will only change the `num_layers` parameter to the "model" part of the config, leaving
   everything else unchanged.
+- Integrated [`cached_path`](https://github.com/allenai/cached_path) library to replace existing functionality in `common.file_utils`. This introduces some improvements without
+  any breaking changes.
 
 ### Fixed
 
 - Fixed the implementation of `PairedPCABiasDirection` in `allennlp.fairness.bias_direction`, where the difference vectors should not be centered when performing the PCA.
+- Fixed the docstring of `ExponentialMovingAverage`, which was causing its argument descriptions to render inccorrectly in the docs.
 
 ## [v2.7.0](https://github.com/allenai/allennlp/releases/tag/v2.7.0) - 2021-09-01
 
 ### Added
 
-
-- Updated the docs for `PytorchSeq2VecWrapper` to specify that `mask` is required rather than sequence lengths for clarity.
-- Added in a default behavior to the `_to_params` method of `Registrable` so that in the case it is not implemented by the child class, it will still produce _a parameter dictionary_.   
+- Added in a default behavior to the `_to_params` method of `Registrable` so that in the case it is not implemented by the child class, it will still produce _a parameter dictionary_.
 - Added in `_to_params` implementations to all tokenizers.
 - Added support to evaluate mutiple datasets and produce corresponding output files in the `evaluate` command.
 - Added more documentation to the learning rate schedulers to include a sample config object for how to use it.

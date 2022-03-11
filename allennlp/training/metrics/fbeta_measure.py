@@ -1,7 +1,7 @@
 from typing import List, Optional, Union
 
 import torch
-from overrides import overrides
+
 
 from allennlp.common.util import nan_safe_tensor_divide
 from allennlp.common.checks import ConfigurationError
@@ -91,7 +91,6 @@ class FBetaMeasure(Metric):
         # Shape: (num_classes, )
         self._true_sum: Union[None, torch.Tensor] = None
 
-    @overrides
     def __call__(
         self,
         predictions: torch.Tensor,
@@ -167,7 +166,6 @@ class FBetaMeasure(Metric):
         self._pred_sum += dist_reduce_sum(pred_sum)
         self._true_sum += dist_reduce_sum(true_sum)
 
-    @overrides
     def get_metric(self, reset: bool = False):
         """
         # Returns
@@ -198,7 +196,7 @@ class FBetaMeasure(Metric):
             pred_sum = pred_sum.sum()  # type: ignore
             true_sum = true_sum.sum()  # type: ignore
 
-        beta2 = self._beta ** 2
+        beta2 = self._beta**2
         # Finally, we have all our sufficient statistics.
         precision = nan_safe_tensor_divide(tp_sum, pred_sum)
         recall = nan_safe_tensor_divide(tp_sum, true_sum)
@@ -228,7 +226,6 @@ class FBetaMeasure(Metric):
         else:
             return {"precision": precision.item(), "recall": recall.item(), "fscore": fscore.item()}
 
-    @overrides
     def reset(self) -> None:
         self._true_positive_sum = None
         self._pred_sum = None

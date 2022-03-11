@@ -1,6 +1,6 @@
 from typing import List, Optional
 
-from overrides import overrides
+
 import spacy
 from spacy.tokens import Doc
 
@@ -105,7 +105,6 @@ class SpacyTokenizer(Tokenizer):
             tokens.append(Token(end_token, -1))
         return tokens
 
-    @overrides
     def batch_tokenize(self, texts: List[str]) -> List[List[Token]]:
         if self._is_version_3:
             return [
@@ -118,7 +117,6 @@ class SpacyTokenizer(Tokenizer):
                 for tokens in self.spacy.pipe(texts, n_threads=-1)
             ]
 
-    @overrides
     def tokenize(self, text: str) -> List[Token]:
         # This works because our Token class matches spacy's.
         return self._sanitize(_remove_spaces(self.spacy(text)))

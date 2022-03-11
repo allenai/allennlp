@@ -1,6 +1,6 @@
 from typing import Optional
 
-from overrides import overrides
+
 import torch
 import torch.distributed as dist
 import scipy.stats as stats
@@ -87,7 +87,6 @@ class SpearmanCorrelation(Metric):
             self.total_predictions = torch.cat(_total_predictions, dim=0)
             self.total_gold_labels = torch.cat(_total_gold_labels, dim=0)
 
-    @overrides
     def get_metric(self, reset: bool = False):
         """
         # Returns
@@ -103,7 +102,6 @@ class SpearmanCorrelation(Metric):
 
         return spearman_correlation[0]
 
-    @overrides
     def reset(self):
         self.total_predictions = torch.zeros(0)
         self.total_gold_labels = torch.zeros(0)

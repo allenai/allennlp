@@ -1,13 +1,14 @@
 from typing import Optional, Iterable, Tuple, Union
 import itertools
 import numpy as np
-from overrides import overrides
+
 from checklist.editor import MunchWithAdd as CheckListTemplate
 from checklist.test_suite import TestSuite
 from checklist.test_types import MFT
 from checklist.perturb import Perturb
 from allennlp.confidence_checks.task_checklists.task_suite import TaskSuite
 from allennlp.confidence_checks.task_checklists import utils
+from allennlp.predictors import Predictor
 
 
 def _crossproduct(template: CheckListTemplate):
@@ -43,7 +44,7 @@ class QuestionAnsweringSuite(TaskSuite):
 
         super().__init__(suite, **kwargs)
 
-    def _prediction_and_confidence_scores(self, predictor):
+    def _prediction_and_confidence_scores(self, predictor: Predictor):
         def preds_and_confs_fn(data):
             data = [{self._context_key: pair[0], self._question_key: pair[1]} for pair in data]
             predictions = predictor.predict_batch_json(data)
@@ -52,7 +53,6 @@ class QuestionAnsweringSuite(TaskSuite):
 
         return preds_and_confs_fn
 
-    @overrides
     def _format_failing_examples(
         self,
         inputs: Tuple,
@@ -94,7 +94,6 @@ class QuestionAnsweringSuite(TaskSuite):
 
         return context_punctuation
 
-    @overrides
     def _setup_editor(self):
         super()._setup_editor()
 
@@ -141,14 +140,13 @@ class QuestionAnsweringSuite(TaskSuite):
 
         self.editor.add_lexicon("comp_pairs", comp_pairs, overwrite=True)
 
-    @overrides
-    def _default_tests(self, data: Optional[Iterable[Tuple]], num_test_cases=100):
+    def _default_tests(self, data: Optional[Iterable[Tuple]], num_test_cases: int = 100):
         super()._default_tests(data, num_test_cases)
         self._setup_editor()
         self._default_vocabulary_tests(data, num_test_cases)
         self._default_taxonomy_tests(data, num_test_cases)
 
-    def _default_vocabulary_tests(self, data: Optional[Iterable[Tuple]], num_test_cases=100):
+    def _default_vocabulary_tests(self, data: Optional[Iterable[Tuple]], num_test_cases: int = 100):
 
         template = self.editor.template(
             [
@@ -175,7 +173,7 @@ class QuestionAnsweringSuite(TaskSuite):
         )
         self.add_test(test)
 
-    def _default_taxonomy_tests(self, data: Optional[Iterable[Tuple]], num_test_cases=100):
+    def _default_taxonomy_tests(self, data: Optional[Iterable[Tuple]], num_test_cases: int = 100):
         template = _crossproduct(
             self.editor.template(
                 {

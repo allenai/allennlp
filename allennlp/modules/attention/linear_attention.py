@@ -2,7 +2,7 @@ import math
 
 import torch
 from torch.nn import Parameter
-from overrides import overrides
+
 from allennlp.modules.attention.attention import Attention
 from allennlp.nn import util
 from allennlp.nn.activations import Activation
@@ -67,7 +67,6 @@ class LinearAttention(Attention):
         self._weight_vector.data.uniform_(-std, std)
         self._bias.data.fill_(0)
 
-    @overrides
     def _forward_internal(self, vector: torch.Tensor, matrix: torch.Tensor) -> torch.Tensor:
         combined_tensors = util.combine_tensors_and_multiply(
             self._combination, [vector.unsqueeze(1), matrix], self._weight_vector

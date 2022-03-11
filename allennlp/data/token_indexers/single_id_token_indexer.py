@@ -1,7 +1,6 @@
 from typing import Dict, List, Optional, Any
 import itertools
 
-from overrides import overrides
 
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.data.tokenizers import Token
@@ -67,7 +66,6 @@ class SingleIdTokenIndexer(TokenIndexer):
         self._feature_name = feature_name
         self._default_value = default_value
 
-    @overrides
     def count_vocab_items(self, token: Token, counter: Dict[str, Dict[str, int]]):
         if self.namespace is not None:
             text = self._get_feature_value(token)
@@ -75,7 +73,6 @@ class SingleIdTokenIndexer(TokenIndexer):
                 text = text.lower()
             counter[self.namespace][text] += 1
 
-    @overrides
     def tokens_to_indices(
         self, tokens: List[Token], vocabulary: Vocabulary
     ) -> Dict[str, List[int]]:
@@ -93,7 +90,6 @@ class SingleIdTokenIndexer(TokenIndexer):
 
         return {"tokens": indices}
 
-    @overrides
     def get_empty_token_list(self) -> IndexedTokenList:
         return {"tokens": []}
 
@@ -110,7 +106,6 @@ class SingleIdTokenIndexer(TokenIndexer):
                 )
         return text
 
-    @overrides
     def _to_params(self) -> Dict[str, Any]:
         return {
             "namespace": self.namespace,

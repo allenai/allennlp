@@ -1,7 +1,7 @@
 from typing import List, Optional
 
 import torch
-from overrides import overrides
+
 
 from allennlp.training.metrics import FBetaMeasure
 from allennlp.training.metrics.metric import Metric
@@ -61,7 +61,9 @@ class FBetaMultiLabelMeasure(FBetaMeasure):
         in the data will result in 0 components in a macro or weighted average.
 
     threshold: `float`, optional (default = `0.5`)
-        Logits over this threshold will be considered predictions for the corresponding class.
+        Probabilities over this threshold will be considered predictions for the corresponding class.
+        Note that you can also use this metric with logits, in which case it would make more sense to set
+        the `threshold` value to `0.0`.
 
     """
 
@@ -75,7 +77,6 @@ class FBetaMultiLabelMeasure(FBetaMeasure):
         super().__init__(beta, average, labels)
         self._threshold = threshold
 
-    @overrides
     def __call__(
         self,
         predictions: torch.Tensor,
@@ -114,10 +115,8 @@ class FBetaMultiLabelMeasure(FBetaMeasure):
         pred_mask = (predictions.sum(dim=-1) != 0).unsqueeze(-1)
         threshold_predictions = (predictions >= self._threshold).float()
 
-        class_indices = (
-            torch.arange(num_classes, device=predictions.device)
-            .unsqueeze(0)
-            .repeat(gold_labels.size(0), 1)
+        class_indices = torch.arange(num_classes, device=predictions.device).repeat(
+            gold_labels.shape[:-1] + (1,)
         )
         true_positives = (gold_labels * threshold_predictions).bool() & mask & pred_mask
         true_positives_bins = class_indices[true_positives]

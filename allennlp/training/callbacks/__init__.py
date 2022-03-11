@@ -5,3 +5,4 @@ from allennlp.training.callbacks.tensorboard import TensorBoardCallback
 from allennlp.training.callbacks.track_epoch import TrackEpochCallback
 from allennlp.training.callbacks.wandb import WandBCallback
 from allennlp.training.callbacks.backward import MixedPrecisionBackwardCallback, OnBackwardException
+from allennlp.training.callbacks.should_validate import ShouldValidateCallback

@@ -677,7 +677,7 @@ class TestVocabulary(AllenNlpTestCase):
 
         # Reading from a single (compressed) file or a single-file archive
         base_path = str(self.FIXTURES_ROOT / "embeddings/fake_embeddings.5d.txt")
-        for ext in ["", ".gz", ".lzma", ".bz2", ".zip", ".tar.gz"]:
+        for ext in ["", ".gz", ".xz", ".bz2", ".zip", ".tar.gz"]:
             file_path = base_path + ext
             words_read = set(_read_pretrained_tokens(file_path))
             assert words_read == words, (

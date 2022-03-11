@@ -14,7 +14,7 @@ import warnings
 import torch
 import torch.distributed as dist
 import torch.multiprocessing as mp
-from overrides import overrides
+
 
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common import Params, Registrable, Lazy
@@ -36,7 +36,6 @@ logger = logging.getLogger(__name__)
 
 @Subcommand.register("train")
 class Train(Subcommand):
-    @overrides
     def add_subparser(self, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
         description = """Train the specified model on the specified dataset."""
         subparser = parser.add_parser(self.name, description=description, help="Train a model.")
@@ -238,6 +237,11 @@ def train_model(
 
     training_util.create_serialization_dir(params, serialization_dir, recover, force)
     params.to_file(os.path.join(serialization_dir, CONFIG_NAME))
+
+    # Change Author: Gabe Orlanski
+    # Placeholder for the time being to make sure no errors are raised b/c of
+    # the evaluator.
+    params.pop("evaluation", None)
 
     meta = Meta.new()
     meta.to_file(os.path.join(serialization_dir, META_NAME))

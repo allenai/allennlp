@@ -83,9 +83,9 @@ def prepare_global_logging(
         formatter = logging.Formatter(
             f"{rank} | %(asctime)s - %(levelname)s - %(name)s - %(message)s"
         )
-    file_handler = logging.FileHandler(log_file)
-    stdout_handler = logging.StreamHandler(sys.stdout)
-    stderr_handler = logging.StreamHandler(sys.stderr)
+    file_handler: logging.Handler = logging.FileHandler(log_file)
+    stdout_handler: logging.Handler = logging.StreamHandler(sys.stdout)
+    stderr_handler: logging.Handler = logging.StreamHandler(sys.stderr)
 
     handler: logging.Handler
     for handler in [file_handler, stdout_handler, stderr_handler]:

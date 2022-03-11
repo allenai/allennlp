@@ -1,7 +1,7 @@
 import logging
 from typing import List, Optional
 
-from overrides import overrides
+
 import torch
 
 from allennlp.training.learning_rate_schedulers.learning_rate_scheduler import LearningRateScheduler
@@ -86,14 +86,13 @@ class SlantedTriangular(LearningRateScheduler):
             for i in range(len(self.base_values) - 1, -1, -1):
                 param_group = optimizer.param_groups[i]
                 if param_group["params"]:
-                    param_group["lr"] = self.base_values[i] * decay_factor ** exponent
+                    param_group["lr"] = self.base_values[i] * decay_factor**exponent
                     self.base_values[i] = param_group["lr"]
                     exponent += 1
         # set up for the first batch
         self.last_batch_num_total = -1
         self.step_batch(0)
 
-    @overrides
     def step(self, metric: float = None) -> None:
         self.last_epoch += 1
         if len(self.batch_num_total_epoch_end) == 0:

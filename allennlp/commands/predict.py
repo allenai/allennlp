@@ -8,12 +8,11 @@ import argparse
 import sys
 import json
 
-from overrides import overrides
 
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common import logging as common_logging
 from allennlp.common.checks import check_for_gpu, ConfigurationError
-from allennlp.common.file_utils import cached_path
+from allennlp.common.file_utils import cached_path, open_compressed
 from allennlp.common.util import lazy_groups_of
 from allennlp.data.dataset_readers import MultiTaskDatasetReader
 from allennlp.models.archival import load_archive
@@ -23,7 +22,6 @@ from allennlp.data import Instance
 
 @Subcommand.register("predict")
 class Predict(Subcommand):
-    @overrides
     def add_subparser(self, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
 
         description = """Run the specified model against a JSON-lines input file."""
@@ -160,7 +158,6 @@ class _PredictManager:
         self._batch_size = batch_size
         self._print_to_console = print_to_console
         self._dataset_reader = None if not has_dataset_reader else predictor._dataset_reader
-
         self._multitask_head = multitask_head
         if self._multitask_head is not None:
             if self._dataset_reader is None:
@@ -212,7 +209,7 @@ class _PredictManager:
                     yield self._predictor.load_line(line)
         else:
             input_file = cached_path(self._input_file)
-            with open(input_file, "r") as file_input:
+            with open_compressed(input_file) as file_input:
                 for line in file_input:
                     if not line.isspace():
                         yield self._predictor.load_line(line)

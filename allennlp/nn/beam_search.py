@@ -3,7 +3,7 @@ from typing import Any, List, Callable, Tuple, Dict, cast, TypeVar, Optional
 import copy
 import warnings
 
-from overrides import overrides
+
 import torch
 
 from allennlp.common import Lazy, Registrable
@@ -95,7 +95,6 @@ class DeterministicSampler(Sampler):
     log probability.
     """
 
-    @overrides
     def sample_nodes(
         self, log_probs: torch.Tensor, per_node_beam_size: int, state: StateType
     ) -> Tuple[torch.Tensor, torch.Tensor, StateType]:
@@ -126,7 +125,6 @@ class MultinomialSampler(Sampler):
         self.temperature = temperature
         self.with_replacement = with_replacement
 
-    @overrides
     def sample_nodes(
         self, log_probs: torch.Tensor, per_node_beam_size: int, state: StateType
     ) -> Tuple[torch.Tensor, torch.Tensor, StateType]:
@@ -171,7 +169,6 @@ class TopKSampler(Sampler):
         self.temperature = temperature or 1.0
         self.with_replacement = with_replacement
 
-    @overrides
     def sample_nodes(
         self, log_probs: torch.Tensor, per_node_beam_size: int, state: StateType
     ) -> Tuple[torch.Tensor, torch.Tensor, StateType]:
@@ -241,7 +238,6 @@ class TopPSampler(Sampler):
         self.temperature = temperature or 1.0
         self.with_replacement = with_replacement
 
-    @overrides
     def sample_nodes(
         self, log_probs: torch.Tensor, per_node_beam_size: int, state: StateType
     ) -> Tuple[torch.Tensor, torch.Tensor, StateType]:
@@ -313,7 +309,6 @@ class GumbelSampler(Sampler):
     def __init__(self, temperature: float = 1.0):
         self.temperature = temperature
 
-    @overrides
     def init_state(
         self, start_class_log_probabilities: torch.Tensor, batch_size: int, num_classes: int
     ) -> StateType:
@@ -325,7 +320,6 @@ class GumbelSampler(Sampler):
 
         return {"G_phi_S": G_phi_S}
 
-    @overrides
     def sample_nodes(
         self,
         log_probs: torch.Tensor,
@@ -366,7 +360,6 @@ class GumbelSampler(Sampler):
 
         return top_log_probs, top_indices, {"G_phi_S": top_G_phi_S_new}
 
-    @overrides
     def sample_beams(
         self,
         log_probs: torch.Tensor,
@@ -480,7 +473,6 @@ class SequenceLogProbabilityScorer(FinalSequenceScorer):
     across the sequence's tokens.
     """
 
-    @overrides
     def score(
         self, predictions: torch.Tensor, log_probabilities: torch.Tensor, end_index: int
     ) -> torch.Tensor:
@@ -509,7 +501,6 @@ class LengthNormalizedSequenceLogProbabilityScorer(FinalSequenceScorer):
         super().__init__()
         self.length_penalty = length_penalty
 
-    @overrides
     def score(
         self, predictions: torch.Tensor, log_probabilities: torch.Tensor, end_index: int
     ) -> torch.Tensor:
@@ -524,7 +515,7 @@ class LengthNormalizedSequenceLogProbabilityScorer(FinalSequenceScorer):
         lengths += is_end_token.long()
 
         # shape: (batch_size, beam_size)
-        average_log_probs = log_probabilities / (lengths ** self.length_penalty)
+        average_log_probs = log_probabilities / (lengths**self.length_penalty)
         return average_log_probs
 
 
@@ -633,14 +624,12 @@ class RepeatedNGramBlockingConstraint(Constraint):
         super().__init__(**kwargs)
         self.ngram_size = ngram_size
 
-    @overrides
     def init_state(
         self,
         batch_size: int,
     ) -> ConstraintStateType:
         return [[{"seen_ngrams": {}, "current_prefix": []}] for _ in range(batch_size)]
 
-    @overrides
     def apply(
         self,
         state: ConstraintStateType,
@@ -661,7 +650,6 @@ class RepeatedNGramBlockingConstraint(Constraint):
                     pass
         return class_log_probabilities
 
-    @overrides
     def _update_state(
         self,
         state: ConstraintStateType,

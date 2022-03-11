@@ -9,7 +9,7 @@ from typing import Any, cast, Iterator, NamedTuple, Optional, Sequence, Tuple, B
 
 import numpy
 import torch
-from overrides import overrides
+
 from torch.nn.functional import embedding
 
 from allennlp.common import Tqdm
@@ -180,11 +180,9 @@ class Embedding(TokenEmbedder):
         else:
             self._projection = None
 
-    @overrides
     def get_output_dim(self) -> int:
         return self.output_dim
 
-    @overrides
     def forward(self, tokens: torch.Tensor) -> torch.Tensor:
         # tokens may have extra dimensions (batch_size, d1, ..., dn, sequence_length),
         # but embedding expects (batch_size, sequence_length), so pass tokens to
@@ -552,7 +550,7 @@ class EmbeddingsTextFile(Iterator[str]):
                 import bz2
 
                 package = bz2
-            elif extension == ".lzma":
+            elif extension == ".xz":
                 import lzma
 
                 package = lzma
