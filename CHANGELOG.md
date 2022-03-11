@@ -7,12 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [v2.9.1](https://github.com/allenai/allennlp/releases/tag/v2.9.1) - 2022-03-09
+
 ### Fixed
 
 - Updated dependencies, especially around doc creation.
 - Running the test suite out-of-tree (e.g. after installation) is now possible by pointing the environment variable `ALLENNLP_SRC_DIR` to the sources.
 - Silenced a warning that happens when you inappropriately clone a tensor.
 - Adding more clarification to the `Vocabulary` documentation around `min_pretrained_embeddings` and `only_include_pretrained_words`.
+- Fixed bug with type mismatch caused by latest release of `cached-path` that now returns a `Path` instead of a `str`.
 
 ### Added
 
