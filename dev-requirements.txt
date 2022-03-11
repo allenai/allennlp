@@ -36,7 +36,7 @@ ruamel.yaml
 # Generating markdown files from Python modules.
 pydoc-markdown>=4.0.0,<5.0.0
 databind.core
-docspec==1.2.0
+docspec==2.0.0
 docspec-python==2.0.0
 
 mkdocs==1.2.3
