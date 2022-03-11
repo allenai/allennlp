@@ -4,7 +4,7 @@
 torch>=1.6.0,<1.11.0
 torchvision>=0.8.1,<0.12.0
 cached-path>=1.0.2,<1.2.0
-fairscale==0.4.5
+fairscale==0.4.6
 jsonnet>=0.10.0 ; sys.platform != 'win32'
 nltk
 spacy>=2.1.0,<3.3
@@ -16,7 +16,7 @@ h5py
 scikit-learn
 scipy
 pytest
-transformers>=4.1,<4.17
+transformers>=4.1,<4.18
 sentencepiece
 dataclasses;python_version<'3.7'
 filelock>=3.3,<3.7
@@ -25,10 +25,8 @@ more-itertools
 termcolor==1.1.0
 wandb>=0.10.0,<0.13.0
 huggingface_hub>=0.0.16
-datasets>=1.2.1,<2.0
 dill
 base58
-sqlitedict
 
 ##################################################
 ###### Extra dependencies for integrations #######
