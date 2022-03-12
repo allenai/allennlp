@@ -18,7 +18,7 @@ on:
 
 env:
   # NOTE: Need to update `TORCH_VERSION`, and `TORCH_*_INSTALL` for new torch releases.
-  TORCH_VERSION: 1.10.0
+  TORCH_VERSION: 1.11.0
   TORCH_CPU_INSTALL: conda install pytorch torchvision torchaudio cpuonly -c pytorch
   TORCH_GPU_INSTALL: conda install pytorch torchvision torchaudio cudatoolkit=11.3 -c pytorch
   # Change this to invalidate existing cache.
