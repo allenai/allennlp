@@ -29,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - LZMA compression is now supported.
 - Added a way to give JSON blobs as input to dataset readers in the `evaluate` command.
 - Added the argument `sub_module` in `PretrainedTransformerMismatchedEmbedder`
+- Updated the docs for `PytorchSeq2VecWrapper` to specify that `mask` is required rather than sequence lengths for clarity.
 
 ### Changed
 
