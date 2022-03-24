@@ -7,9 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [v2.9.2](https://github.com/allenai/allennlp/releases/tag/v2.9.2) - 2022-03-21
+
 ### Fixed
 
 - Removed unnecessary dependencies
+- Restore functionality of CLI in absence of now-optional checklist-package
 
 
 ## [v2.9.1](https://github.com/allenai/allennlp/releases/tag/v2.9.1) - 2022-03-09

@@ -26,8 +26,8 @@ class TaskSuite(Registrable):
 
     !!! Note
         To use the checklist integration you should install ``allennlp`` with the
-        "checklist" extra (e.g. ``pip install allennlp[checklist]``) or just install
-        `checklist` after the fact.
+        "checklist" extra (e.g. ``conda install allennlp-checklist``,
+        ``pip install allennlp[checklist]`` or just install `checklist` after the fact).
 
     Task suites are intended to be used as a form of behavioral testing
     for NLP models to check for robustness across several general linguistic
