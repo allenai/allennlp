@@ -4,7 +4,7 @@
 flake8
 
 # Static type checking
-mypy==0.931
+mypy==0.941
 
 # Automatic code formatting
 black==22.1.0
