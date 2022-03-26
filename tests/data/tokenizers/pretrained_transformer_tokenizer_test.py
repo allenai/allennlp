@@ -1,5 +1,7 @@
 from typing import Iterable, List
 
+import pytest
+
 from allennlp.common import Params
 from allennlp.common.testing import AllenNlpTestCase
 from allennlp.data import Token
@@ -341,3 +343,20 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
             "max_length": None,
             "tokenizer_kwargs": {"max_len": 10, "use_fast": True},
         }
+
+    def test_initialize_tokenizer_with_custom_dummy_tokens(self):
+        model_name = "roberta-base"
+        PretrainedTransformerTokenizer(
+            model_name,
+            custom_dummy_tokens=("cat", "dog"),
+        )
+        with pytest.raises(AssertionError):
+            PretrainedTransformerTokenizer(
+                model_name,
+                custom_dummy_tokens=("unknowntoken", "dog"),
+            )
+        with pytest.raises(AssertionError):
+            PretrainedTransformerTokenizer(
+                model_name,
+                custom_dummy_tokens=("cat", "cat"),
+            )
