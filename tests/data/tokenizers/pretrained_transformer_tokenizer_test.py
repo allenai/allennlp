@@ -344,19 +344,19 @@ class TestPretrainedTransformerTokenizer(AllenNlpTestCase):
             "tokenizer_kwargs": {"max_len": 10, "use_fast": True},
         }
 
-    def test_initialize_tokenizer_with_custom_dummy_tokens(self):
+    def test_initialize_tokenizer_with_verification_tokens(self):
         model_name = "roberta-base"
         PretrainedTransformerTokenizer(
             model_name,
-            custom_dummy_tokens=("cat", "dog"),
+            verification_tokens=("cat", "dog"),
         )
         with pytest.raises(AssertionError):
             PretrainedTransformerTokenizer(
                 model_name,
-                custom_dummy_tokens=("unknowntoken", "dog"),
+                verification_tokens=("unknowntoken", "dog"),
             )
         with pytest.raises(AssertionError):
             PretrainedTransformerTokenizer(
                 model_name,
-                custom_dummy_tokens=("cat", "cat"),
+                verification_tokens=("cat", "cat"),
             )
