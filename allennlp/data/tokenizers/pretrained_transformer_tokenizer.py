@@ -55,7 +55,7 @@ class PretrainedTransformerTokenizer(Tokenizer):
         add_special_tokens: bool = True,
         max_length: Optional[int] = None,
         tokenizer_kwargs: Optional[Dict[str, Any]] = None,
-        custom_dummy_tokens: Optional[Tuple[str, str]] = None,
+        verification_tokens: Optional[Tuple[str, str]] = None,
     ) -> None:
         if tokenizer_kwargs is None:
             tokenizer_kwargs = {}
