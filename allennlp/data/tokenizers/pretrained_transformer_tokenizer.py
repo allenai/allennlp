@@ -45,7 +45,7 @@ class PretrainedTransformerTokenizer(Tokenizer):
         Dictionary with
         [additional arguments](https://github.com/huggingface/transformers/blob/155c782a2ccd103cf63ad48a2becd7c76a7d2115/transformers/tokenization_utils.py#L691)
         for `AutoTokenizer.from_pretrained`.
-    custom_dummy_tokens: `Tuple[str, str]`, optional (default = `None`)
+    verification_tokens: `Tuple[str, str]`, optional (default = `None`)
         A pair of tokens having different token IDs. It's used for reverse-engineering special tokens.
     """  # noqa: E501
 
@@ -78,7 +78,7 @@ class PretrainedTransformerTokenizer(Tokenizer):
 
         self._tokenizer_lowercases = self.tokenizer_lowercases(self.tokenizer)
 
-        if custom_dummy_tokens is None:
+        if verification_tokens is None:
             try:
                 self._reverse_engineer_special_tokens("a", "b", model_name, tokenizer_kwargs)
             except AssertionError:
@@ -86,7 +86,7 @@ class PretrainedTransformerTokenizer(Tokenizer):
                 # they don't, and so we use "1" and "2" instead.
                 self._reverse_engineer_special_tokens("1", "2", model_name, tokenizer_kwargs)
         else:
-            token_a, token_b = custom_dummy_tokens
+            token_a, token_b = verification_tokens
             self._reverse_engineer_special_tokens(token_a, token_b, model_name, tokenizer_kwargs)
 
     def _reverse_engineer_special_tokens(
