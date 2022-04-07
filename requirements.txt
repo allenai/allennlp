@@ -28,6 +28,9 @@ huggingface_hub>=0.0.16
 dill
 base58
 
+# Spacy depends on typer, and typer had a bug. This is how we make sure we get the fixed version of typer.
+typer>=0.4.1
+
 ##################################################
 ###### Extra dependencies for integrations #######
 ##################################################
