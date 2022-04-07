@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import List, Optional, Tuple
 
 import docspec
-from docspec import ApiObject, Class, Variable, Function, Indirection, Module
+from docspec import ApiObject, Class, Data, Function, Indirection, Module
 from docspec_python import format_arglist
 from pydoc_markdown import Processor, PydocMarkdown, Resolver
 from pydoc_markdown.contrib.loaders.python import PythonLoader
@@ -360,7 +360,7 @@ class AllenNlpRenderer(MarkdownRenderer):
                 result = f"{class_signature}:\n | ...\n{result}"
         return result
 
-    def _format_data_signature(self, data: Variable) -> str:
+    def _format_data_signature(self, data: Data) -> str:
         expr = data.value
         if expr and len(expr) > self.data_expression_maxlength:
             expr = expr[: self.data_expression_maxlength] + " ..."
