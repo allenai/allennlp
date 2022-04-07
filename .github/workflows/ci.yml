@@ -18,11 +18,11 @@ on:
 
 env:
   # NOTE: Need to update `TORCH_VERSION`, and `TORCH_*_INSTALL` for new torch releases.
-  TORCH_VERSION: 1.10.0
+  TORCH_VERSION: 1.11.0
   TORCH_CPU_INSTALL: conda install pytorch torchvision torchaudio cpuonly -c pytorch
   TORCH_GPU_INSTALL: conda install pytorch torchvision torchaudio cudatoolkit=11.3 -c pytorch
   # Change this to invalidate existing cache.
-  CACHE_PREFIX: v10
+  CACHE_PREFIX: v11
   # Disable tokenizers parallelism because this doesn't help, and can cause issues in distributed tests.
   TOKENIZERS_PARALLELISM: 'false'
   # Disable multithreading with OMP because this can lead to dead-locks in distributed tests.
@@ -348,6 +348,9 @@ jobs:
     strategy:
       matrix:
         python: ['3.7', '3.8', '3.9']
+        # check that CLI remains working for all package flavors;
+        # currently allennlp[checklist]==allennlp[all], so avoiding duplication on this
+        flavor: ['', '[all]']
 
     steps:
     - uses: actions/checkout@v2
@@ -369,7 +372,7 @@ jobs:
 
     - name: Install core package
       run: |
-        pip install $(ls dist/*.whl)[all]
+        pip install $(ls dist/*.whl)${{ matrix.flavor }}
 
     - name: Download NLTK prerequisites
       run: |

@@ -7,16 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [v2.9.2](https://github.com/allenai/allennlp/releases/tag/v2.9.2) - 2022-03-21
+
+### Fixed
+
+- Removed unnecessary dependencies
+- Restore functionality of CLI in absence of now-optional checklist-package
+
+
+## [v2.9.1](https://github.com/allenai/allennlp/releases/tag/v2.9.1) - 2022-03-09
+
 ### Fixed
 
 - Updated dependencies, especially around doc creation.
 - Running the test suite out-of-tree (e.g. after installation) is now possible by pointing the environment variable `ALLENNLP_SRC_DIR` to the sources.
 - Silenced a warning that happens when you inappropriately clone a tensor.
+- Adding more clarification to the `Vocabulary` documentation around `min_pretrained_embeddings` and `only_include_pretrained_words`.
+- Fixed bug with type mismatch caused by latest release of `cached-path` that now returns a `Path` instead of a `str`.
 
 ### Added
 
 - We can now transparently read compressed input files during prediction.
 - LZMA compression is now supported.
+- Added a way to give JSON blobs as input to dataset readers in the `evaluate` command.
+- Added the argument `sub_module` in `PretrainedTransformerMismatchedEmbedder`
+- Updated the docs for `PytorchSeq2VecWrapper` to specify that `mask` is required rather than sequence lengths for clarity.
+
+### Changed
+
+- You can automatically include all words from a pretrained file when building a vocabulary by setting the value in `min_pretrained_embeddings` to `-1`
+  for that particular namespace.
 
 
 ## [v2.9.0](https://github.com/allenai/allennlp/releases/tag/v2.9.0) - 2022-01-27

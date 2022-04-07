@@ -7,6 +7,7 @@ import warnings
 from allennlp import __version__
 from allennlp.commands.build_vocab import BuildVocab
 from allennlp.commands.cached_path import CachedPath
+from allennlp.commands.checklist import CheckList
 from allennlp.commands.diff import Diff
 from allennlp.commands.evaluate import Evaluate
 from allennlp.commands.find_learning_rate import FindLearningRate
@@ -21,17 +22,6 @@ from allennlp.common.plugins import import_plugins
 from allennlp.common.util import import_module_and_submodules
 
 logger = logging.getLogger(__name__)
-
-try:
-    """
-    The `allennlp checklist` command requires installation of the optional dependency `checklist`.
-    It can be installed with `pip install allennlp[checklist]`.
-    """
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        from allennlp.commands.checklist import CheckList
-except ImportError:
-    pass
 
 
 class ArgumentParserWithDefaults(argparse.ArgumentParser):
