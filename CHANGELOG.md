@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+
+- Added `verification_tokens` argument to `TestPretrainedTransformerTokenizer`.
+
 ## [v2.9.2](https://github.com/allenai/allennlp/releases/tag/v2.9.2) - 2022-03-21
 
 ### Fixed
