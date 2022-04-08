@@ -45,6 +45,8 @@ class PretrainedTransformerTokenizer(Tokenizer):
         Dictionary with
         [additional arguments](https://github.com/huggingface/transformers/blob/155c782a2ccd103cf63ad48a2becd7c76a7d2115/transformers/tokenization_utils.py#L691)
         for `AutoTokenizer.from_pretrained`.
+    verification_tokens: `Tuple[str, str]`, optional (default = `None`)
+        A pair of tokens having different token IDs. It's used for reverse-engineering special tokens.
     """  # noqa: E501
 
     def __init__(
@@ -53,6 +55,7 @@ class PretrainedTransformerTokenizer(Tokenizer):
         add_special_tokens: bool = True,
         max_length: Optional[int] = None,
         tokenizer_kwargs: Optional[Dict[str, Any]] = None,
+        verification_tokens: Optional[Tuple[str, str]] = None,
     ) -> None:
         if tokenizer_kwargs is None:
             tokenizer_kwargs = {}
@@ -75,12 +78,16 @@ class PretrainedTransformerTokenizer(Tokenizer):
 
         self._tokenizer_lowercases = self.tokenizer_lowercases(self.tokenizer)
 
-        try:
-            self._reverse_engineer_special_tokens("a", "b", model_name, tokenizer_kwargs)
-        except AssertionError:
-            # For most transformer models, "a" and "b" work just fine as dummy tokens.  For a few,
-            # they don't, and so we use "1" and "2" instead.
-            self._reverse_engineer_special_tokens("1", "2", model_name, tokenizer_kwargs)
+        if verification_tokens is None:
+            try:
+                self._reverse_engineer_special_tokens("a", "b", model_name, tokenizer_kwargs)
+            except AssertionError:
+                # For most transformer models, "a" and "b" work just fine as dummy tokens.  For a few,
+                # they don't, and so we use "1" and "2" instead.
+                self._reverse_engineer_special_tokens("1", "2", model_name, tokenizer_kwargs)
+        else:
+            token_a, token_b = verification_tokens
+            self._reverse_engineer_special_tokens(token_a, token_b, model_name, tokenizer_kwargs)
 
     def _reverse_engineer_special_tokens(
         self,
