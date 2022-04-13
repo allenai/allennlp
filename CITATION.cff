@@ -42,6 +42,6 @@ license: "Apache-2.0"
 message: "If you use this software, please cite it using this metadata."
 repository-code: "https://github.com/allenai/allennlp"
 title: "AllenNLP: A Deep Semantic Natural Language Processing Platform"
-version: "2.9.2"
+version: "2.9.3"
 doi: "10.18653/v1/W18-2501"
 ...
