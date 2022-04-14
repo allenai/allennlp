@@ -27,12 +27,12 @@ def with_staging_testing(func):
     )
 
     hf_api = patch(
-        "huggingface_hub.hf_api.ENDPOINT",
+        "huggingface_hub.constants.ENDPOINT",
         ENDPOINT_STAGING,
     )
 
     repository = patch(
-        "huggingface_hub.repository.ENDPOINT",
+        "huggingface_hub.constants.ENDPOINT",
         ENDPOINT_STAGING,
     )
 
