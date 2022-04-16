@@ -8,6 +8,9 @@ on:
   schedule:
     - cron: '5 16 * * 1,2,3,4,5'  # runs at 16:05 UTC Monday - Friday
 
+permissions:
+  contents: read
+
 jobs:
   close_stale_issues:
     name: Close Stale Issues
