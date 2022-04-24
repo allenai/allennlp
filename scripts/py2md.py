@@ -109,8 +109,8 @@ class Param:
         raise DocstringError(
             f"Invalid parameter / attribute description: '{line}'\n"
             "Make sure types are enclosed in backticks.\n"
-            "Required parameters should be documented like: '{ident} : `{type}`'\n"
-            "Optional parameters should be documented like: '{ident} : `{type}`, optional (default = `{expr}`)'\n"
+            f"Required parameters should be documented like: '{ident} : `{type}`'\n"
+            f"Optional parameters should be documented like: '{ident} : `{type}`, optional (default = `{expr}`)'\n"
         )
 
     def to_line(self) -> str:

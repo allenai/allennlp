@@ -755,7 +755,7 @@ def sequence_cross_entropy_with_logits(
 
     """
     if average not in {None, "token", "batch"}:
-        raise ValueError("Got average f{average}, expected one of None, 'token', or 'batch'")
+        raise ValueError(f"Got average f{average}, expected one of None, 'token', or 'batch'")
 
     # make sure weights are float
     weights = weights.to(logits.dtype)
