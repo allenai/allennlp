@@ -391,7 +391,7 @@ class TestWeightedConditionalRandomField(TestConditionalRandomField):
         self.label_weights = torch.FloatTensor([1.0, 1.0, 0.5, 0.5, 0.5])
 
         # Use the CRF Module with labels weights.
-        self.crf.label_weights = self.label_weights
+        self.crf.label_weights = torch.nn.Parameter(self.label_weights, requires_grad=False)
 
     def score_with_weights(self, logits, tags):
         """
@@ -423,7 +423,7 @@ class TestWeightedConditionalRandomField(TestConditionalRandomField):
         for logits_i, tags_i in zip(self.logits, self.tags):
             numerator = self.score_with_weights(logits_i.detach(), tags_i.detach())
             all_scores = [
-                self.score(logits_i.detach(), tags_j)
+                self.score_with_weights(logits_i.detach(), tags_j)
                 for tags_j in itertools.product(range(5), repeat=3)
             ]
             denominator = math.log(sum(math.exp(score) for score in all_scores))
@@ -454,7 +454,7 @@ class TestWeightedConditionalRandomField(TestConditionalRandomField):
 
             numerator = self.score_with_weights(logits_i, tags_i)
             all_scores = [
-                self.score(logits_i, tags_j)
+                self.score_with_weights(logits_i, tags_j)
                 for tags_j in itertools.product(range(5), repeat=sequence_length)
             ]
             denominator = math.log(sum(math.exp(score) for score in all_scores))

@@ -156,7 +156,7 @@ def is_transition_allowed(
         raise ConfigurationError(f"Unknown constraint type: {constraint_type}")
 
 
-class ConditionalRandomField(torch.nn.Module):
+class ConditionalRandomFieldLannoy(torch.nn.Module):
     """
     This module uses the "forward-backward" algorithm to compute
     the log-likelihood of its inputs assuming a conditional random field model.
@@ -178,9 +178,10 @@ class ConditionalRandomField(torch.nn.Module):
         An optional list of weights to be used in the loss function in order to
         give different weights for each token depending on its label.
         `len(label_weights)` must be equal to `num_tags`. This is useful to
-        deal with highly unbalanced datasets. The method implemented here is
-        based on the simple idea of weighting emission and transition scores
-        using the weight given for the corresponding tag.
+        deal with highly unbalanced datasets. The method implemented here was based on
+        the paper *Weighted conditional random fields for supervised interpatient heartbeat
+        classification* proposed by De Lannoy et. al (2019).
+        See https://perso.uclouvain.be/michel.verleysen/papers/ieeetbe12gdl.pdf
     """
 
     def __init__(
@@ -227,29 +228,41 @@ class ConditionalRandomField(torch.nn.Module):
             torch.nn.init.normal_(self.start_transitions)
             torch.nn.init.normal_(self.end_transitions)
 
-    def _input_likelihood(self, logits: torch.Tensor, mask: torch.BoolTensor) -> torch.Tensor:
+    def _input_likelihood(
+        self, logits: torch.Tensor, tags: torch.Tensor, mask: torch.BoolTensor
+    ) -> torch.Tensor:
         """
         Computes the (batch_size,) denominator term for the log-likelihood, which is the
         sum of the likelihoods across all possible state sequences.
+
+        Compute this value using the scaling trick instead of the log domain trick, since
+        this is necessary to implement the label-weighting method by Lannoy et al. (2012).
         """
         batch_size, sequence_length, num_tags = logits.size()
 
         # Transpose batch size and sequence dimensions
         mask = mask.transpose(0, 1).contiguous()
         logits = logits.transpose(0, 1).contiguous()
+        tags = tags.transpose(0, 1).contiguous()
 
-        # insert the batch dimesion to be broadcasted
-        label_weights = self.label_weights.view(1, num_tags)
+        # insert an 1-sized second dimension to match z.shape
+        label_weights = self.label_weights.view(num_tags, 1)
 
         # emit_scores.shape = (batch_size, num_tags)
-        emit_scores = logits[0] * label_weights
+        emit_scores = logits[0]
 
         # Initial alpha is the (batch_size, num_tags) tensor of likelihoods combining the
         # transitions to the initial states and the logits for the first timestep.
+        # alpha.shape = (batch_size, num_tags)
         if self.include_start_end_transitions:
-            log_alpha = self.start_transitions.view(1, num_tags) + emit_scores
+            alpha = torch.exp(self.start_transitions.view(1, num_tags) + emit_scores)
         else:
-            log_alpha = emit_scores
+            alpha = torch.exp(emit_scores)
+
+        # z.shape = (batch_size, 1)
+        z = alpha.sum(dim=1, keepdim=True)
+        alpha = alpha / z
+        sum_log_z = torch.log(z) * label_weights[tags[0]]
 
         # For each i we compute logits for the transitions from timestep i-1 to timestep i.
         # We do so in a (batch_size, num_tags, num_tags) tensor where the axes are
@@ -257,30 +270,40 @@ class ConditionalRandomField(torch.nn.Module):
         for i in range(1, sequence_length):
             # multiply the logits by the label weights
             # logits[i].shape: (batch_size, num_tags)
-            emit_scores = logits[i] * label_weights
+            # emit_scores = torch.mul(logits[i], label_weights)
+            emit_scores = logits[i]
 
             # The emit scores are for time i ("next_tag") so we broadcast along the current_tag axis.
             emit_scores = emit_scores.view(batch_size, 1, num_tags)
             # Transition scores are (current_tag, next_tag) so we broadcast along the instance axis.
             transition_scores = self.transitions.view(1, num_tags, num_tags)
-            # Alpha is for the current_tag, so we broadcast along the next_tag axis.
-            broadcast_alpha = log_alpha.view(batch_size, num_tags, 1)
+            # Alpha is for the current_tag (i-1), so we broadcast along the next_tag axis.
+            broadcast_alpha = alpha.view(batch_size, num_tags, 1)
 
             # Add all the scores together and logexp over the current_tag axis.
-            inner = broadcast_alpha + emit_scores + transition_scores
+            inner = broadcast_alpha * torch.exp(emit_scores + transition_scores)
 
             # In valid positions (mask == True) we want to take the logsumexp over the current_tag dimension
             # of `inner`. Otherwise (mask == False) we want to retain the previous alpha.
-            log_alpha = util.logsumexp(inner, 1) * mask[i].view(batch_size, 1) + log_alpha * (
-                ~mask[i]
-            ).view(batch_size, 1)
+            alpha = inner.sum(dim=1) * mask[i].view(batch_size, 1) + alpha * (~mask[i]).view(
+                batch_size, 1
+            )
+
+            # scale alphas to avoid underflow (sum of alphas equal to 1)
+            z = alpha.sum(dim=1, keepdim=True)
+            alpha = alpha / z
+            # weight z (normalization factor) according to the current tag
+            sum_log_z += torch.log(z) * label_weights[tags[i]]
 
         # Every sequence needs to end with a transition to the stop_tag.
         if self.include_start_end_transitions:
-            log_alpha = log_alpha + self.end_transitions.view(1, num_tags)
+            alpha = alpha * torch.exp(self.end_transitions.view(1, num_tags))
+            z = alpha.sum(dim=1, keepdim=True)
+            # alpha = alpha / z  # this step is unnecessary since alpha is not used anymore
+            sum_log_z += torch.log(z)
 
-        # Finally we log_sum_exp along the num_tags dim, result is (batch_size,)
-        return util.logsumexp(log_alpha, 1)
+        return sum_log_z.squeeze(1)
+
 
     def _joint_likelihood(
         self, logits: torch.Tensor, tags: torch.Tensor, mask: torch.BoolTensor
@@ -303,13 +326,18 @@ class ConditionalRandomField(torch.nn.Module):
 
         label_weights = self.label_weights
 
+        # weight transition score using current_tag, i.e., t(i,j) will be t(i,j)*w(i), 
+        # where t(i,j) is the score to transition from i to j and w(i) is the weight
+        # for tag i.
+        transitions = self.transitions * label_weights.view(-1, 1)
+
         # Add up the scores for the observed transitions and all the inputs but the last
         for i in range(sequence_length - 1):
             # Each is shape (batch_size,)
             current_tag, next_tag = tags[i], tags[i + 1]
 
             # The scores for transitioning from current_tag to next_tag
-            transition_score = self.transitions[current_tag.view(-1), next_tag.view(-1)]
+            transition_score = transitions[current_tag.view(-1), next_tag.view(-1)]
 
             # The score for using current_tag
             emit_score = logits[i].gather(1, current_tag.view(batch_size, 1)).squeeze(1)
@@ -344,6 +372,7 @@ class ConditionalRandomField(torch.nn.Module):
 
         return score
 
+
     def forward(
         self, inputs: torch.Tensor, tags: torch.Tensor, mask: torch.BoolTensor = None
     ) -> torch.Tensor:
@@ -357,10 +386,13 @@ class ConditionalRandomField(torch.nn.Module):
             # The code below fails in weird ways if this isn't a bool tensor, so we make sure.
             mask = mask.to(torch.bool)
 
-        log_denominator = self._input_likelihood(inputs, mask)
+        # TODO check if weights are being used during test/validation
+
+        log_denominator = self._input_likelihood(inputs, tags, mask)
         log_numerator = self._joint_likelihood(inputs, tags, mask)
 
         return torch.sum(log_numerator - log_denominator)
+
 
     def viterbi_tags(
         self, logits: torch.Tensor, mask: torch.BoolTensor = None, top_k: int = None

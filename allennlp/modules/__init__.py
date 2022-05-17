@@ -8,6 +8,8 @@ from allennlp.modules.attention import Attention
 from allennlp.modules.backbones import Backbone
 from allennlp.modules.bimpm_matching import BiMpmMatching
 from allennlp.modules.conditional_random_field import ConditionalRandomField
+from allennlp.modules.conditional_random_field_wtrans import ConditionalRandomFieldWeightTrans
+from allennlp.modules.conditional_random_field_lannoy import ConditionalRandomFieldLannoy
 from allennlp.modules.elmo import Elmo
 from allennlp.modules.feedforward import FeedForward
 from allennlp.modules.gated_sum import GatedSum

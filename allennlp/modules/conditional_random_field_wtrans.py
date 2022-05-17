@@ -156,7 +156,7 @@ def is_transition_allowed(
         raise ConfigurationError(f"Unknown constraint type: {constraint_type}")
 
 
-class ConditionalRandomField(torch.nn.Module):
+class ConditionalRandomFieldWeightTrans(torch.nn.Module):
     """
     This module uses the "forward-backward" algorithm to compute
     the log-likelihood of its inputs assuming a conditional random field model.
@@ -241,7 +241,11 @@ class ConditionalRandomField(torch.nn.Module):
         # insert the batch dimesion to be broadcasted
         label_weights = self.label_weights.view(1, num_tags)
 
-        # emit_scores.shape = (batch_size, num_tags)
+        # weight transition score using current_tag, i.e., t(i,j) will be t(i,j)*w(i), 
+        # where t(i,j) is the score to transition from i to j and w(i) is the weight
+        # for tag i.
+        transitions = self.transitions * label_weights.view(-1, 1)
+
         emit_scores = logits[0] * label_weights
 
         # Initial alpha is the (batch_size, num_tags) tensor of likelihoods combining the
@@ -262,7 +266,7 @@ class ConditionalRandomField(torch.nn.Module):
             # The emit scores are for time i ("next_tag") so we broadcast along the current_tag axis.
             emit_scores = emit_scores.view(batch_size, 1, num_tags)
             # Transition scores are (current_tag, next_tag) so we broadcast along the instance axis.
-            transition_scores = self.transitions.view(1, num_tags, num_tags)
+            transition_scores = transitions.view(1, num_tags, num_tags)
             # Alpha is for the current_tag, so we broadcast along the next_tag axis.
             broadcast_alpha = log_alpha.view(batch_size, num_tags, 1)
 
@@ -303,13 +307,18 @@ class ConditionalRandomField(torch.nn.Module):
 
         label_weights = self.label_weights
 
+        # weight transition score using current_tag, i.e., t(i,j) will be t(i,j)*w[i], 
+        # where t(i,j) is the score to transition from i to j and w[i] is the weight
+        # for tag i.
+        transitions = self.transitions * label_weights.view(-1, 1)
+
         # Add up the scores for the observed transitions and all the inputs but the last
         for i in range(sequence_length - 1):
             # Each is shape (batch_size,)
             current_tag, next_tag = tags[i], tags[i + 1]
 
             # The scores for transitioning from current_tag to next_tag
-            transition_score = self.transitions[current_tag.view(-1), next_tag.view(-1)]
+            transition_score = transitions[current_tag.view(-1), next_tag.view(-1)]
 
             # The score for using current_tag
             emit_score = logits[i].gather(1, current_tag.view(batch_size, 1)).squeeze(1)
