@@ -1,4 +1,4 @@
-from typing import List, Optional, Union
+from typing import List, Optional, Union, Dict
 
 import torch
 
@@ -68,24 +68,31 @@ class FBetaMeasure2(FBetaMeasure):
         for example, to calculate a multi-class average ignoring a majority 
         negative class. Labels not present in the data will result in 0 
         components in a macro or weighted average.
+
+    index_to_label : `Dict[int, str]`, optional
+        A dictionary mapping indices to the corresponding label.
+        If this map is giving, the provided metrics include the label
+        instead of the index for each class.
     """
 
-    def __init__(self, beta: float = 1.0, average: str = None, labels: List[int] = None) -> None:
+    def __init__(self, beta: float = 1.0, average: str = None, labels: List[int] = None, index_to_label: Dict[int, str] = None) -> None:
         super().__init__(beta, average, labels)
+        self._index_to_label = index_to_label
 
 
     def get_metric(self, reset: bool = False):
         """
         # Returns
 
-        <class_index>-precision : `float`
-        <class_index>-recall : `float`
-        <class_index>-fscore : `float`
+        <class>-precision : `float`
+        <class>-recall : `float`
+        <class>-fscore : `float`
         avg-precision : `float`
         avg-recall : `float`
         avg-fscore : `float`
 
-        where <class_index> is the index of each class
+        where <class> is the index of each class or its label 
+        (in case self._index_to_label is not `None`)
         """
         if self._true_positive_sum is None:
             raise RuntimeError("You never call this metric before.")
@@ -127,6 +134,8 @@ class FBetaMeasure2(FBetaMeasure):
 
         all_metrics = {}
         for c, (p, r, f) in enumerate(zip(precision.tolist(), recall.tolist(), fscore.tolist())):
+            if self._index_to_label:
+                c = self._index_to_label[c]
             all_metrics[f"{c}-precision"] = p
             all_metrics[f"{c}-recall"] = r
             all_metrics[f"{c}-fscore"] = f
