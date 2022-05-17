@@ -218,7 +218,7 @@ class ConditionalRandomField(torch.nn.Module):
         # If label_weights is not given, use 1.0 for all weights.
         if label_weights is None:
             label_weights = [1.0] * num_tags
-        self.label_weights = torch.Tensor(label_weights)
+        self.label_weights = torch.nn.Parameter(torch.Tensor(label_weights), requires_grad=False)
 
         self.reset_parameters()
 
