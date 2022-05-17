@@ -382,3 +382,84 @@ class TestConditionalRandomField(AllenNlpTestCase):
             (8, 4),
             (8, 7),  # Extra row for start tag
         }
+
+
+class TestWeightedConditionalRandomField(TestConditionalRandomField):
+    def setup_method(self):
+        super().setup_method()
+        
+        self.label_weights = torch.FloatTensor([1.0, 1.0, 0.5, 0.5, 0.5])
+
+        # Use the CRF Module with labels weights.
+        self.crf.label_weights = self.label_weights
+
+    def score_with_weights(self, logits, tags):
+        """
+        Computes the likelihood score for the given sequence of tags,
+        given the provided logits, the transition weights in the CRF model
+        and the label weights.
+        """
+        # Start with transitions from START and to END
+        total = self.transitions_from_start[tags[0]] + self.transitions_to_end[tags[-1]]
+        # Add in all the intermediate transitions
+        for tag, next_tag in zip(tags, tags[1:]):
+            total += self.transitions[tag, next_tag]
+        # Add in the logits for the observed tags
+        for logit, tag in zip(logits, tags):
+            total += logit[tag] * self.label_weights[tag]
+        return total
+
+
+    def test_forward_works_without_mask(self):
+        log_likelihood = self.crf(self.logits, self.tags).item()
+
+        # Now compute the log-likelihood manually
+        manual_log_likelihood = 0.0
+
+        # For each instance, manually compute the numerator
+        # (which is just the score for the logits and actual tags)
+        # and the denominator
+        # (which is the log-sum-exp of the scores for the logits across all possible tags)
+        for logits_i, tags_i in zip(self.logits, self.tags):
+            numerator = self.score_with_weights(logits_i.detach(), tags_i.detach())
+            all_scores = [
+                self.score(logits_i.detach(), tags_j)
+                for tags_j in itertools.product(range(5), repeat=3)
+            ]
+            denominator = math.log(sum(math.exp(score) for score in all_scores))
+            # And include them in the manual calculation.
+            manual_log_likelihood += numerator - denominator
+
+        # The manually computed log likelihood should equal the result of crf.forward.
+        assert manual_log_likelihood.item() == approx(log_likelihood)
+
+    def test_forward_works_with_mask(self):
+        # Use a non-trivial mask
+        mask = torch.tensor([[True, True, True], [True, True, False]])
+
+        log_likelihood = self.crf(self.logits, self.tags, mask).item()
+
+        # Now compute the log-likelihood manually
+        manual_log_likelihood = 0.0
+
+        # For each instance, manually compute the numerator
+        #   (which is just the score for the logits and actual tags)
+        # and the denominator
+        #   (which is the log-sum-exp of the scores for the logits across all possible tags)
+        for logits_i, tags_i, mask_i in zip(self.logits, self.tags, mask):
+            # Find the sequence length for this input and only look at that much of each sequence.
+            sequence_length = torch.sum(mask_i.detach())
+            logits_i = logits_i.data[:sequence_length]
+            tags_i = tags_i.data[:sequence_length]
+
+            numerator = self.score_with_weights(logits_i, tags_i)
+            all_scores = [
+                self.score(logits_i, tags_j)
+                for tags_j in itertools.product(range(5), repeat=sequence_length)
+            ]
+            denominator = math.log(sum(math.exp(score) for score in all_scores))
+            # And include them in the manual calculation.
+            manual_log_likelihood += numerator - denominator
+
+        # The manually computed log likelihood should equal the result of crf.forward.
+        assert manual_log_likelihood.item() == approx(log_likelihood)

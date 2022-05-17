@@ -174,6 +174,14 @@ class ConditionalRandomField(torch.nn.Module):
         start and end transitions are handled correctly for your tag type.
     include_start_end_transitions : `bool`, optional (default = `True`)
         Whether to include the start and end transition parameters.
+    label_weights : `List[float]`, optional (default=`None`)
+        An optional list of weights to be used in the loss function in order to
+        give different weights for each token depending on its label.
+        `len(label_weights)` must be equal to `num_tags`. This is useful to
+        deal with highly unbalanced datasets. The method implemented here was based on
+        the paper *Weighted conditional random fields for supervised interpatient heartbeat
+        classification* proposed by De Lannoy et. al (2019).
+        See https://perso.uclouvain.be/michel.verleysen/papers/ieeetbe12gdl.pdf
     """
 
     def __init__(
@@ -181,6 +189,7 @@ class ConditionalRandomField(torch.nn.Module):
         num_tags: int,
         constraints: List[Tuple[int, int]] = None,
         include_start_end_transitions: bool = True,
+        label_weights: List[float] = None,
     ) -> None:
         super().__init__()
         self.num_tags = num_tags
@@ -205,6 +214,11 @@ class ConditionalRandomField(torch.nn.Module):
         if include_start_end_transitions:
             self.start_transitions = torch.nn.Parameter(torch.Tensor(num_tags))
             self.end_transitions = torch.nn.Parameter(torch.Tensor(num_tags))
+
+        # If label_weights is not given, use 1.0 for all weights.
+        if label_weights is None:
+            label_weights = [1.0] * num_tags
+        self.label_weights = torch.Tensor(label_weights)
 
         self.reset_parameters()
 
@@ -280,6 +294,8 @@ class ConditionalRandomField(torch.nn.Module):
         else:
             score = 0.0
 
+        label_weights = self.label_weights
+
         # Add up the scores for the observed transitions and all the inputs but the last
         for i in range(sequence_length - 1):
             # Each is shape (batch_size,)
@@ -290,6 +306,9 @@ class ConditionalRandomField(torch.nn.Module):
 
             # The score for using current_tag
             emit_score = logits[i].gather(1, current_tag.view(batch_size, 1)).squeeze(1)
+
+            # Weight emit scores by label.
+            emit_score *= label_weights[current_tag.view(-1)]
 
             # Include transition score if next element is unmasked,
             # input_score if this element is unmasked.
@@ -310,6 +329,9 @@ class ConditionalRandomField(torch.nn.Module):
         last_inputs = logits[-1]  # (batch_size, num_tags)
         last_input_score = last_inputs.gather(1, last_tags.view(-1, 1))  # (batch_size, 1)
         last_input_score = last_input_score.squeeze()  # (batch_size,)
+
+        # Weight last emit scores by label weights.
+        last_input_score = last_input_score * label_weights[last_tags.view(-1)]
 
         score = score + last_transition_score + last_input_score * mask[-1]
 
