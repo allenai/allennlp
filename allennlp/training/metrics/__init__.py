@@ -17,6 +17,7 @@ from allennlp.training.metrics.evalb_bracketing_scorer import (
     DEFAULT_EVALB_DIR,
 )
 from allennlp.training.metrics.fbeta_measure import FBetaMeasure
+from allennlp.training.metrics.fbeta_measure2 import FBetaMeasure2
 from allennlp.training.metrics.fbeta_multi_label_measure import (
     FBetaMultiLabelMeasure,
     F1MultiLabelMeasure,
