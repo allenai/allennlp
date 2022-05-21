@@ -381,7 +381,9 @@ class FBetaMeasure2Test(AllenNlpTestCase):
         targets = [torch.tensor([0, 4, 1]), torch.tensor([0, 3, 0])]
         metric_kwargs = {"predictions": predictions, "gold_labels": targets}
         desired_metrics = {}
-        for i, (p, r, f) in enumerate(zip(self.desired_precisions, self.desired_recalls, self.desired_fscores)):
+        for i, (p, r, f) in enumerate(
+            zip(self.desired_precisions, self.desired_recalls, self.desired_fscores)
+        ):
             desired_metrics[f"{i}-precision"] = p
             desired_metrics[f"{i}-recall"] = r
             desired_metrics[f"{i}-fscore"] = f

@@ -1,13 +1,9 @@
-from typing import List, Optional, Union, Dict
-
-import torch
-
+from typing import List, Union, Dict
 
 from allennlp.common.util import nan_safe_tensor_divide
 from allennlp.common.checks import ConfigurationError
 from allennlp.training.metrics.metric import Metric
 from allennlp.training.metrics.fbeta_measure import FBetaMeasure
-from allennlp.nn.util import dist_reduce_sum
 
 
 @Metric.register("fbeta2")
@@ -19,7 +15,7 @@ class FBetaMeasure2(FBetaMeasure):
         - it always returns a dictionary of floats, while `FBetaMeasure`
           can return a dictionary of lists (one element for each class).
         - it always returns precision, recall and F-measure for each
-          class and also the averaged values (prefixed with `micro-`, 
+          class and also the averaged values (prefixed with `micro-`,
           `macro-` or `weighted-` depending on `average` argument).
 
     The precision is the ratio `tp / (tp + fp)` where `tp` is the number of
@@ -96,7 +92,7 @@ class FBetaMeasure2(FBetaMeasure):
                 f"`average` has to be `None` or one (or a list) of {average_options}."
             )
 
-        self._average = average
+        self._averages = average
 
     def get_metric(self, reset: bool = False):
         """
@@ -143,12 +139,12 @@ class FBetaMeasure2(FBetaMeasure):
             all_metrics[f"{c}-recall"] = r
             all_metrics[f"{c}-fscore"] = f
 
-        if "macro" in self._average:
+        if "macro" in self._averages:
             all_metrics["macro-precision"] = precision.mean().item()
             all_metrics["macro-recall"] = recall.mean().item()
             all_metrics["macro-fscore"] = fscore.mean().item()
 
-        if "weighted" in self._average:
+        if "weighted" in self._averages:
             weights = true_sum
             weights_sum = true_sum.sum()  # type: ignore
             all_metrics["weighted-precision"] = nan_safe_tensor_divide(
@@ -161,7 +157,7 @@ class FBetaMeasure2(FBetaMeasure):
                 (weights * fscore).sum(), weights_sum
             ).item()
 
-        if "micro" in self._average:
+        if "micro" in self._averages:
             micro_precision = nan_safe_tensor_divide(tp_sum.sum(), pred_sum.sum())
             micro_recall = nan_safe_tensor_divide(tp_sum.sum(), true_sum.sum())
             all_metrics["micro-precision"] = micro_precision.item()
