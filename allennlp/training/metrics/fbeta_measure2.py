@@ -19,7 +19,8 @@ class FBetaMeasure2(FBetaMeasure):
         - it always returns a dictionary of floats, while `FBetaMeasure`
           can return a dictionary of lists (one element for each class).
         - it always returns precision, recall and F-measure for each
-          class and also the averaged values (prefixed with `overall`).
+          class and also the averaged values (prefixed with `micro-`, 
+          `macro-` or `weighted-` depending on `average` argument).
 
     The precision is the ratio `tp / (tp + fp)` where `tp` is the number of
     true positives and `fp` the number of false positives. The precision is
