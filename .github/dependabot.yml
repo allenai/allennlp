@@ -11,3 +11,8 @@ updates:
     versions:
     - ">= 0.0.a"
     - "< 0.1"
+- package-ecosystem: "github-actions"
+  directory: "/"
+  schedule: 
+   interval: daily
+  open-pull-requests-limit: 10
