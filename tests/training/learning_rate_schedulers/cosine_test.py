@@ -130,7 +130,7 @@ class CosineWithRestartsTest(AllenNlpTestCase):
                 lrs.append(optimizer.param_groups[0]["lr"])
 
             for it, lr in lr_checks:
-                assert lrs[it] == lr, f"Iteration {it}: {lrs[it]} != {lr}"
+                assert lrs[it] == pytest.approx(lr), f"Iteration {it}: {lrs[it]} != {lr}"
 
     def test_schedules_with_save_and_resume(self):
         """Make sure scheduler will resume with the right state."""
@@ -171,4 +171,4 @@ class CosineWithRestartsTest(AllenNlpTestCase):
                 state = scheduler.state_dict()
 
             for it, lr in lr_checks:
-                assert lrs[it] == lr, f"Iteration {it}: {lrs[it]} != {lr}"
+                assert lrs[it] == pytest.approx(lr), f"Iteration {it}: {lrs[it]} != {lr}"
