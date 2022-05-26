@@ -459,7 +459,7 @@ jobs:
 
     - name: Setup SSH Client 🔑
       if: github.event_name == 'release' || github.event_name == 'push'
-      uses: webfactory/ssh-agent@v0.4.1
+      uses: webfactory/ssh-agent@v0.5.4
       with:
         ssh-private-key: ${{ secrets.DOCS_DEPLOY_KEY }}
 
