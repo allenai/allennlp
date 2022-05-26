@@ -220,19 +220,19 @@ jobs:
     - uses: actions/checkout@v2
 
     - name: Download coverage report from CPU tests
-      uses: actions/download-artifact@v1
+      uses: actions/download-artifact@v3
       with:
         name: CPU Tests-coverage
         path: coverage/cpu_tests
 
     - name: Download coverage report from GPU Tests
-      uses: actions/download-artifact@v1
+      uses: actions/download-artifact@v3
       with:
         name: GPU Tests-coverage
         path: coverage/gpu_tests
 
     - name: Download coverage report from model tests
-      uses: actions/download-artifact@v1
+      uses: actions/download-artifact@v3
       with:
         name: Model Tests-coverage
         path: coverage/model_tests
@@ -365,7 +365,7 @@ jobs:
         pip install --upgrade pip setuptools wheel
 
     - name: Download core package
-      uses: actions/download-artifact@v1
+      uses: actions/download-artifact@v3
       with:
         name: core-package
         path: dist
@@ -627,7 +627,7 @@ jobs:
         pip install --upgrade pip setuptools wheel twine
 
     - name: Download core package
-      uses: actions/download-artifact@v1
+      uses: actions/download-artifact@v3
       with:
         name: core-package
         path: dist
