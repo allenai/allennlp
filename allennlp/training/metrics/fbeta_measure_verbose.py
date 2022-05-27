@@ -1,13 +1,12 @@
-from typing import List, Union, Dict
+from typing import List, Dict
 
 from allennlp.common.util import nan_safe_tensor_divide
-from allennlp.common.checks import ConfigurationError
 from allennlp.training.metrics.metric import Metric
 from allennlp.training.metrics.fbeta_measure import FBetaMeasure
 
 
-@Metric.register("fbeta2")
-class FBetaMeasure2(FBetaMeasure):
+@Metric.register("fbeta_verbose")
+class FBetaMeasureVerbose(FBetaMeasure):
     """Compute precision, recall, F-measure and support for each class.
 
     This is basically the same as `FBetaMeasure` (the super class)
@@ -44,22 +43,6 @@ class FBetaMeasure2(FBetaMeasure):
     beta : `float`, optional (default = `1.0`)
         The strength of recall versus precision in the F-score.
 
-    average : `Union[str, List[str]]`, optional (default = `None`)
-
-        It can be one (or a list) of the following:
-
-        `None` or `'micro'`:
-            Calculate metrics globally by counting the total true positives,
-            false negatives and false positives.
-        `'macro'`:
-            Calculate metrics for each label, and find their unweighted mean.
-            This does not take label imbalance into account.
-        `'weighted'`:
-            Calculate metrics for each label, and find their average weighted
-            by support (the number of true instances for each label). This
-            alters 'macro' to account for label imbalance; it can result in an
-            F-score that is not between precision and recall.
-
     labels : `List[int]`, optional
         The set of labels to include. Labels present in the data can be excluded,
         for example, to calculate a multi-class average ignoring a majority
@@ -75,24 +58,11 @@ class FBetaMeasure2(FBetaMeasure):
     def __init__(
         self,
         beta: float = 1.0,
-        average: Union[str, List[str]] = None,
         labels: List[int] = None,
         index_to_label: Dict[int, str] = None,
     ) -> None:
         super().__init__(beta=beta, average=None, labels=labels)
         self._index_to_label = index_to_label
-        if not average:
-            average = ["micro"]
-        elif isinstance(average, str):
-            average = [average]
-
-        average_options = {"micro", "macro", "weighted"}
-        if not all([a in average_options for a in average]):
-            raise ConfigurationError(
-                f"`average` has to be `None` or one (or a list) of {average_options}."
-            )
-
-        self._averages = average
 
     def get_metric(self, reset: bool = False):
         """
@@ -107,7 +77,7 @@ class FBetaMeasure2(FBetaMeasure):
 
         where <class> is the index (or the label if `index_to_label` is given)
         of each class or its label (in case `index_to_label` is given);
-        and <avg> is the option (or each one of the options) given in `average`.
+        and <avg> is `micro`, `macro` and `weighted`, one for each kind of average.
         """
         if self._true_positive_sum is None:
             raise RuntimeError("You never call this metric before.")
@@ -139,32 +109,32 @@ class FBetaMeasure2(FBetaMeasure):
             all_metrics[f"{c}-recall"] = r
             all_metrics[f"{c}-fscore"] = f
 
-        if "macro" in self._averages:
-            all_metrics["macro-precision"] = precision.mean().item()
-            all_metrics["macro-recall"] = recall.mean().item()
-            all_metrics["macro-fscore"] = fscore.mean().item()
+        # macro average
+        all_metrics["macro-precision"] = precision.mean().item()
+        all_metrics["macro-recall"] = recall.mean().item()
+        all_metrics["macro-fscore"] = fscore.mean().item()
 
-        if "weighted" in self._averages:
-            weights = true_sum
-            weights_sum = true_sum.sum()  # type: ignore
-            all_metrics["weighted-precision"] = nan_safe_tensor_divide(
-                (weights * precision).sum(), weights_sum
-            ).item()
-            all_metrics["weighted-recall"] = nan_safe_tensor_divide(
-                (weights * recall).sum(), weights_sum
-            ).item()
-            all_metrics["weighted-fscore"] = nan_safe_tensor_divide(
-                (weights * fscore).sum(), weights_sum
-            ).item()
+        # weighted average
+        weights = true_sum
+        weights_sum = true_sum.sum()  # type: ignore
+        all_metrics["weighted-precision"] = nan_safe_tensor_divide(
+            (weights * precision).sum(), weights_sum
+        ).item()
+        all_metrics["weighted-recall"] = nan_safe_tensor_divide(
+            (weights * recall).sum(), weights_sum
+        ).item()
+        all_metrics["weighted-fscore"] = nan_safe_tensor_divide(
+            (weights * fscore).sum(), weights_sum
+        ).item()
 
-        if "micro" in self._averages:
-            micro_precision = nan_safe_tensor_divide(tp_sum.sum(), pred_sum.sum())
-            micro_recall = nan_safe_tensor_divide(tp_sum.sum(), true_sum.sum())
-            all_metrics["micro-precision"] = micro_precision.item()
-            all_metrics["micro-recall"] = micro_recall.item()
-            all_metrics["micro-fscore"] = nan_safe_tensor_divide(
-                (1 + beta2) * micro_precision * micro_recall, beta2 * micro_precision + micro_recall
-            ).item()
+        # micro average
+        micro_precision = nan_safe_tensor_divide(tp_sum.sum(), pred_sum.sum())
+        micro_recall = nan_safe_tensor_divide(tp_sum.sum(), true_sum.sum())
+        all_metrics["micro-precision"] = micro_precision.item()
+        all_metrics["micro-recall"] = micro_recall.item()
+        all_metrics["micro-fscore"] = nan_safe_tensor_divide(
+            (1 + beta2) * micro_precision * micro_recall, beta2 * micro_precision + micro_recall
+        ).item()
 
         if reset:
             self.reset()
