@@ -170,7 +170,7 @@ def get(
             elif all(isinstance(x, str) for x in reinit_modules):
                 for regex in reinit_modules:
                     for name, module in transformer.named_modules():
-                        if re.search(regex, name):
+                        if re.search(str(regex), name):
                             module.apply(transformer._init_weights)
             else:
                 raise ValueError(
