@@ -6,7 +6,7 @@ from allennlp.training.metrics.fbeta_measure import FBetaMeasure
 
 
 @Metric.register("fbeta_verbose")
-class FBetaMeasureVerbose(FBetaMeasure):
+class FBetaVerboseMeasure(FBetaMeasure):
     """Compute precision, recall, F-measure and support for each class.
 
     This is basically the same as `FBetaMeasure` (the super class)

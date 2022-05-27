@@ -12,10 +12,10 @@ from allennlp.common.testing import (
     run_distributed_test,
     global_distributed_metric,
 )
-from allennlp.training.metrics import FBetaMeasureVerbose
+from allennlp.training.metrics import FBetaVerboseMeasure
 
 
-class FBetaMeasureVerboseTest(AllenNlpTestCase):
+class FBetaVerboseMeasureTest(AllenNlpTestCase):
     def setup_method(self):
         super().setup_method()
         # [0, 1, 1, 1, 3, 1]
@@ -51,14 +51,14 @@ class FBetaMeasureVerboseTest(AllenNlpTestCase):
     @multi_device
     def test_config_errors(self, device: str):
         # Bad beta
-        pytest.raises(ConfigurationError, FBetaMeasureVerbose, beta=0.0)
+        pytest.raises(ConfigurationError, FBetaVerboseMeasure, beta=0.0)
 
         # Empty input labels
-        pytest.raises(ConfigurationError, FBetaMeasureVerbose, labels=[])
+        pytest.raises(ConfigurationError, FBetaVerboseMeasure, labels=[])
 
     @multi_device
     def test_runtime_errors(self, device: str):
-        fbeta = FBetaMeasureVerbose()
+        fbeta = FBetaVerboseMeasure()
         # Metric was never called.
         pytest.raises(RuntimeError, fbeta.get_metric)
 
@@ -67,7 +67,7 @@ class FBetaMeasureVerboseTest(AllenNlpTestCase):
         self.predictions = self.predictions.to(device)
         self.targets = self.targets.to(device)
 
-        fbeta = FBetaMeasureVerbose()
+        fbeta = FBetaVerboseMeasure()
         fbeta(self.predictions, self.targets)
 
         # check state
@@ -82,7 +82,7 @@ class FBetaMeasureVerboseTest(AllenNlpTestCase):
         self.predictions = self.predictions.to(device)
         self.targets = self.targets.to(device)
 
-        fbeta = FBetaMeasureVerbose()
+        fbeta = FBetaVerboseMeasure()
         fbeta(self.predictions, self.targets)
         metric = fbeta.get_metric()
         precisions = [metric[f"{i}-precision"] for i in range(self.predictions.size(1))]
@@ -106,7 +106,7 @@ class FBetaMeasureVerboseTest(AllenNlpTestCase):
 
         mask = torch.tensor([True, True, True, True, True, False], device=device)
 
-        fbeta = FBetaMeasureVerbose()
+        fbeta = FBetaVerboseMeasure()
         fbeta(self.predictions, self.targets, mask)
         metric = fbeta.get_metric()
         precisions = [metric[f"{i}-precision"] for i in range(self.predictions.size(1))]
@@ -132,7 +132,7 @@ class FBetaMeasureVerboseTest(AllenNlpTestCase):
         self.predictions = self.predictions.to(device)
         self.targets = self.targets.to(device)
 
-        fbeta = FBetaMeasureVerbose()
+        fbeta = FBetaVerboseMeasure()
         fbeta(self.predictions, self.targets)
         metric = fbeta.get_metric()
         precisions = metric["macro-precision"]
@@ -158,7 +158,7 @@ class FBetaMeasureVerboseTest(AllenNlpTestCase):
         self.predictions = self.predictions.to(device)
         self.targets = self.targets.to(device)
 
-        fbeta = FBetaMeasureVerbose()
+        fbeta = FBetaVerboseMeasure()
         fbeta(self.predictions, self.targets)
         metric = fbeta.get_metric()
         precisions = metric["micro-precision"]
@@ -187,7 +187,7 @@ class FBetaMeasureVerboseTest(AllenNlpTestCase):
         self.targets = self.targets.to(device)
 
         # same prediction but with and explicit label ordering
-        fbeta = FBetaMeasureVerbose(labels=[4, 3, 2, 1, 0])
+        fbeta = FBetaVerboseMeasure(labels=[4, 3, 2, 1, 0])
         fbeta(self.predictions, self.targets)
         metric = fbeta.get_metric()
         precisions = [metric[f"{i}-precision"] for i in range(self.predictions.size(1))]
@@ -208,7 +208,7 @@ class FBetaMeasureVerboseTest(AllenNlpTestCase):
         self.targets = self.targets.to(device)
 
         labels = [0, 1]
-        fbeta = FBetaMeasureVerbose(labels=labels)
+        fbeta = FBetaVerboseMeasure(labels=labels)
         fbeta(self.predictions, self.targets)
         metric = fbeta.get_metric()
         precisions = metric["macro-precision"]
@@ -231,7 +231,7 @@ class FBetaMeasureVerboseTest(AllenNlpTestCase):
         self.targets = self.targets.to(device)
 
         labels = [1, 3]
-        fbeta = FBetaMeasureVerbose(labels=labels)
+        fbeta = FBetaVerboseMeasure(labels=labels)
         fbeta(self.predictions, self.targets)
         metric = fbeta.get_metric()
         precisions = metric["micro-precision"]
@@ -260,7 +260,7 @@ class FBetaMeasureVerboseTest(AllenNlpTestCase):
         self.targets = self.targets.to(device)
 
         labels = [0, 1]
-        fbeta = FBetaMeasureVerbose(labels=labels)
+        fbeta = FBetaVerboseMeasure(labels=labels)
         fbeta(self.predictions, self.targets)
         metric = fbeta.get_metric()
         precisions = metric["weighted-precision"]
@@ -285,7 +285,7 @@ class FBetaMeasureVerboseTest(AllenNlpTestCase):
         targets = torch.tensor([1], device=device)
         mask = torch.tensor([True], device=device)
 
-        fbeta = FBetaMeasureVerbose()
+        fbeta = FBetaVerboseMeasure()
         fbeta(predictions, targets, mask)
         metric = fbeta.get_metric()
         precisions = [metric[f"{i}-precision"] for i in range(predictions.size(1))]
@@ -301,7 +301,7 @@ class FBetaMeasureVerboseTest(AllenNlpTestCase):
         # preds = [0, NA]
         targets = torch.tensor([0, 0], device=device)
 
-        fbeta = FBetaMeasureVerbose()
+        fbeta = FBetaVerboseMeasure()
         fbeta(predictions, targets)
         metric = fbeta.get_metric()
         precisions = [metric[f"{i}-precision"] for i in range(predictions.size(1))]
@@ -319,7 +319,7 @@ class FBetaMeasureVerboseTest(AllenNlpTestCase):
         # preds = [0, NA]
         targets = torch.tensor([0, 1], device=device)
 
-        fbeta = FBetaMeasureVerbose()
+        fbeta = FBetaVerboseMeasure()
         fbeta(predictions, targets)
         metric = fbeta.get_metric()
         precisions = [metric[f"{i}-precision"] for i in range(predictions.size(1))]
@@ -337,7 +337,7 @@ class FBetaMeasureVerboseTest(AllenNlpTestCase):
         # preds = [0, NA]
         targets = torch.tensor([1, 0], device=device)
 
-        fbeta = FBetaMeasureVerbose()
+        fbeta = FBetaVerboseMeasure()
         fbeta(predictions, targets)
         metric = fbeta.get_metric()
         precisions = [metric[f"{i}-precision"] for i in range(predictions.size(1))]
@@ -355,7 +355,7 @@ class FBetaMeasureVerboseTest(AllenNlpTestCase):
         # preds = [0, NA]
         targets = torch.tensor([1, 1], device=device)
 
-        fbeta = FBetaMeasureVerbose()
+        fbeta = FBetaVerboseMeasure()
         fbeta(predictions, targets)
         metric = fbeta.get_metric()
         precisions = [metric[f"{i}-precision"] for i in range(predictions.size(1))]
@@ -388,7 +388,7 @@ class FBetaMeasureVerboseTest(AllenNlpTestCase):
         run_distributed_test(
             [-1, -1],
             global_distributed_metric,
-            FBetaMeasureVerbose(),
+            FBetaVerboseMeasure(),
             metric_kwargs,
             desired_metrics,
             exact=False,
@@ -413,7 +413,7 @@ class FBetaMeasureVerboseTest(AllenNlpTestCase):
         run_distributed_test(
             [-1, -1],
             multiple_runs,
-            FBetaMeasureVerbose(),
+            FBetaVerboseMeasure(),
             metric_kwargs,
             desired_metrics,
             exact=False,
@@ -424,7 +424,7 @@ def multiple_runs(
     global_rank: int,
     world_size: int,
     gpu_id: Union[int, torch.device],
-    metric: FBetaMeasureVerbose,
+    metric: FBetaVerboseMeasure,
     metric_kwargs: Dict[str, List[Any]],
     desired_values: Dict[str, Any],
     exact: Union[bool, Tuple[float, float]] = True,
