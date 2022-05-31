@@ -79,8 +79,8 @@ class FBetaVerboseMeasure(FBetaMeasure):
         of each class or its label (in case `index_to_label` is given);
         and <avg> is `micro`, `macro` and `weighted`, one for each kind of average.
         """
-        if self._true_positive_sum is None:
-            raise RuntimeError("You never call this metric before.")
+        if self._true_positive_sum is None or self._pred_sum is None or self._true_sum is None:
+            raise RuntimeError("You have never called this metric before.")
 
         tp_sum = self._true_positive_sum
         pred_sum = self._pred_sum
@@ -103,11 +103,12 @@ class FBetaVerboseMeasure(FBetaMeasure):
 
         all_metrics = {}
         for c, (p, r, f) in enumerate(zip(precision.tolist(), recall.tolist(), fscore.tolist())):
+            label = str(c)
             if self._index_to_label:
-                c = self._index_to_label[c]
-            all_metrics[f"{c}-precision"] = p
-            all_metrics[f"{c}-recall"] = r
-            all_metrics[f"{c}-fscore"] = f
+                label = self._index_to_label[c]
+            all_metrics[f"{label}-precision"] = p
+            all_metrics[f"{label}-recall"] = r
+            all_metrics[f"{label}-fscore"] = f
 
         # macro average
         all_metrics["macro-precision"] = precision.mean().item()
