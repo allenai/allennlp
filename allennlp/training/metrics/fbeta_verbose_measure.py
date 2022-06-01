@@ -14,8 +14,19 @@ class FBetaVerboseMeasure(FBetaMeasure):
         - it always returns a dictionary of floats, while `FBetaMeasure`
           can return a dictionary of lists (one element for each class).
         - it always returns precision, recall and F-measure for each
-          class and also the averaged values (prefixed with `micro-`,
-          `macro-` or `weighted-` depending on `average` argument).
+          class and also three averaged values for each metric: micro,
+          macro and weighted averages.
+
+    The returned dictionary contains keys with the following format:
+        <class>-precision : `float`
+        <class>-recall : `float`
+        <class>-fscore : `float`
+        <avg>-precision : `float`
+        <avg>-recall : `float`
+        <avg>-fscore : `float`
+    where <class> is the index (or the label if `index_to_label` is given)
+    of each class; and <avg> is `micro`, `macro` and `weighted`, one for
+    each kind of average.
 
     The precision is the ratio `tp / (tp + fp)` where `tp` is the number of
     true positives and `fp` the number of false positives. The precision is
@@ -76,8 +87,8 @@ class FBetaVerboseMeasure(FBetaMeasure):
         <avg>-fscore : `float`
 
         where <class> is the index (or the label if `index_to_label` is given)
-        of each class or its label (in case `index_to_label` is given);
-        and <avg> is `micro`, `macro` and `weighted`, one for each kind of average.
+        of each class; and <avg> is `micro`, `macro` and `weighted`, one for
+        each kind of average.
         """
         if self._true_positive_sum is None or self._pred_sum is None or self._true_sum is None:
             raise RuntimeError("You have never called this metric before.")
