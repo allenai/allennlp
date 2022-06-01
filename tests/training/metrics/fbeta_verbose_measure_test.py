@@ -1,6 +1,7 @@
 from typing import Any, Dict, List, Tuple, Union
 
 import torch
+import numpy as np
 from sklearn.metrics import precision_recall_fscore_support
 from torch.testing import assert_allclose
 import pytest
@@ -139,11 +140,17 @@ class FBetaVerboseMeasureTest(AllenNlpTestCase):
         recalls = metric["macro-recall"]
         fscores = metric["macro-fscore"]
 
-        # We keep the expected values in CPU because FBetaMeasure2 returns them in CPU.
-        macro_precision = torch.tensor(self.desired_precisions).mean()
-        macro_recall = torch.tensor(self.desired_recalls).mean()
-        macro_fscore = torch.tensor(self.desired_fscores).mean()
-        # check value
+        # compute desired values with sklearn
+        num_labels = self.predictions.size(1)
+        labels = np.arange(num_labels)
+        macro_precision, macro_recall, macro_fscore, _ = precision_recall_fscore_support(
+            self.targets.cpu().numpy(),
+            self.predictions.argmax(dim=1).cpu().numpy(),
+            average="macro",
+            labels=labels,  # necessary to consider missing labels from 'true' and 'pred'
+        )
+
+        # check values
         assert_allclose(precisions, macro_precision)
         assert_allclose(recalls, macro_recall)
         assert_allclose(fscores, macro_fscore)
@@ -165,21 +172,41 @@ class FBetaVerboseMeasureTest(AllenNlpTestCase):
         recalls = metric["micro-recall"]
         fscores = metric["micro-fscore"]
 
-        # We keep the expected values in CPU because FBetaMeasure2 returns them in CPU.
-        true_positives = torch.tensor([1, 1, 0, 1, 0], dtype=torch.float32)
-        false_positives = torch.tensor([0, 3, 0, 0, 0], dtype=torch.float32)
-        false_negatives = torch.tensor([2, 0, 0, 0, 1], dtype=torch.float32)
-        mean_true_positive = true_positives.mean()
-        mean_false_positive = false_positives.mean()
-        mean_false_negative = false_negatives.mean()
+        # compute desired values with sklearn
+        micro_precision, micro_recall, micro_fscore, _ = precision_recall_fscore_support(
+            self.targets.cpu().numpy(),
+            self.predictions.argmax(dim=1).cpu().numpy(),
+            average="micro",
+        )
 
-        micro_precision = mean_true_positive / (mean_true_positive + mean_false_positive)
-        micro_recall = mean_true_positive / (mean_true_positive + mean_false_negative)
-        micro_fscore = (2 * micro_precision * micro_recall) / (micro_precision + micro_recall)
         # check value
         assert_allclose(precisions, micro_precision)
         assert_allclose(recalls, micro_recall)
         assert_allclose(fscores, micro_fscore)
+
+    @multi_device
+    def test_fbeta_multiclass_weighted_average_metric(self, device: str):
+        self.predictions = self.predictions.to(device)
+        self.targets = self.targets.to(device)
+
+        fbeta = FBetaVerboseMeasure()
+        fbeta(self.predictions, self.targets)
+        metric = fbeta.get_metric()
+        precisions = metric["weighted-precision"]
+        recalls = metric["weighted-recall"]
+        fscores = metric["weighted-fscore"]
+
+        # compute desired values with sklearn
+        weighted_precision, weighted_recall, weighted_fscore, _ = precision_recall_fscore_support(
+            self.targets.cpu().numpy(),
+            self.predictions.argmax(dim=1).cpu().numpy(),
+            average="weighted",
+        )
+
+        # check value
+        assert_allclose(precisions, weighted_precision)
+        assert_allclose(recalls, weighted_recall)
+        assert_allclose(fscores, weighted_fscore)
 
     @multi_device
     def test_fbeta_multiclass_with_explicit_labels(self, device: str):
@@ -197,13 +224,14 @@ class FBetaVerboseMeasureTest(AllenNlpTestCase):
         desired_precisions = self.desired_precisions[::-1]
         desired_recalls = self.desired_recalls[::-1]
         desired_fscores = self.desired_fscores[::-1]
+
         # check value
         assert_allclose(precisions, desired_precisions)
         assert_allclose(recalls, desired_recalls)
         assert_allclose(fscores, desired_fscores)
 
     @multi_device
-    def test_fbeta_multiclass_with_macro_average(self, device: str):
+    def test_fbeta_multiclass_with_explicit_labels_macro(self, device: str):
         self.predictions = self.predictions.to(device)
         self.targets = self.targets.to(device)
 
@@ -215,10 +243,13 @@ class FBetaVerboseMeasureTest(AllenNlpTestCase):
         recalls = metric["macro-recall"]
         fscores = metric["macro-fscore"]
 
-        # We keep the expected values in CPU because FBetaMeasure2 returns them in CPU.
-        macro_precision = torch.tensor(self.desired_precisions)[labels].mean()
-        macro_recall = torch.tensor(self.desired_recalls)[labels].mean()
-        macro_fscore = torch.tensor(self.desired_fscores)[labels].mean()
+        # compute desired values with sklearn
+        macro_precision, macro_recall, macro_fscore, _ = precision_recall_fscore_support(
+            self.targets.cpu().numpy(),
+            self.predictions.argmax(dim=1).cpu().numpy(),
+            average="macro",
+            labels=labels,
+        )
 
         # check value
         assert_allclose(precisions, macro_precision)
@@ -226,7 +257,7 @@ class FBetaVerboseMeasureTest(AllenNlpTestCase):
         assert_allclose(fscores, macro_fscore)
 
     @multi_device
-    def test_fbeta_multiclass_with_micro_average(self, device: str):
+    def test_fbeta_multiclass_with_explicit_labels_micro(self, device: str):
         self.predictions = self.predictions.to(device)
         self.targets = self.targets.to(device)
 
@@ -238,24 +269,21 @@ class FBetaVerboseMeasureTest(AllenNlpTestCase):
         recalls = metric["micro-recall"]
         fscores = metric["micro-fscore"]
 
-        # We keep the expected values in CPU because FBetaMeasure2 returns them in CPU.
-        true_positives = torch.tensor([1, 1], dtype=torch.float32)
-        false_positives = torch.tensor([3, 0], dtype=torch.float32)
-        false_negatives = torch.tensor([0, 0], dtype=torch.float32)
-        mean_true_positive = true_positives.mean()
-        mean_false_positive = false_positives.mean()
-        mean_false_negative = false_negatives.mean()
+        # compute desired values with sklearn
+        micro_precision, micro_recall, micro_fscore, _ = precision_recall_fscore_support(
+            self.targets.cpu().numpy(),
+            self.predictions.argmax(dim=1).cpu().numpy(),
+            average="micro",
+            labels=labels,
+        )
 
-        micro_precision = mean_true_positive / (mean_true_positive + mean_false_positive)
-        micro_recall = mean_true_positive / (mean_true_positive + mean_false_negative)
-        micro_fscore = (2 * micro_precision * micro_recall) / (micro_precision + micro_recall)
         # check value
         assert_allclose(precisions, micro_precision)
         assert_allclose(recalls, micro_recall)
         assert_allclose(fscores, micro_fscore)
 
     @multi_device
-    def test_fbeta_multiclass_with_weighted_average(self, device: str):
+    def test_fbeta_multiclass_with_explicit_labels_weighted(self, device: str):
         self.predictions = self.predictions.to(device)
         self.targets = self.targets.to(device)
 
@@ -267,6 +295,7 @@ class FBetaVerboseMeasureTest(AllenNlpTestCase):
         recalls = metric["weighted-recall"]
         fscores = metric["weighted-fscore"]
 
+        # compute desired values with sklearn
         weighted_precision, weighted_recall, weighted_fscore, _ = precision_recall_fscore_support(
             self.targets.cpu().numpy(),
             self.predictions.argmax(dim=1).cpu().numpy(),
@@ -385,6 +414,20 @@ class FBetaVerboseMeasureTest(AllenNlpTestCase):
             desired_metrics[f"{i}-recall"] = r
             desired_metrics[f"{i}-fscore"] = f
 
+        # compute desired averages with sklearn
+        num_labels = self.predictions.size(1)
+        labels = np.arange(num_labels)
+        for avg in ["macro", "micro", "weighted"]:
+            avg_precision, avg_recall, avg_fscore, _ = precision_recall_fscore_support(
+                self.targets.cpu().numpy(),
+                self.predictions.argmax(dim=1).cpu().numpy(),
+                average=avg,
+                labels=labels,  # necessary to consider missing labels from 'true' and 'pred'
+            )
+            desired_metrics[f"{avg}-precision"] = avg_precision
+            desired_metrics[f"{avg}-recall"] = avg_recall
+            desired_metrics[f"{avg}-fscore"] = avg_fscore
+
         run_distributed_test(
             [-1, -1],
             global_distributed_metric,
@@ -405,11 +448,28 @@ class FBetaVerboseMeasureTest(AllenNlpTestCase):
         ]
         targets = [torch.tensor([0, 4, 1]), torch.tensor([0, 3, 0])]
         metric_kwargs = {"predictions": predictions, "gold_labels": targets}
-        desired_metrics = {
-            "precision": self.desired_precisions,
-            "recall": self.desired_recalls,
-            "fscore": self.desired_fscores,
-        }
+        desired_metrics = {}
+        for i, (p, r, f) in enumerate(
+            zip(self.desired_precisions, self.desired_recalls, self.desired_fscores)
+        ):
+            desired_metrics[f"{i}-precision"] = p
+            desired_metrics[f"{i}-recall"] = r
+            desired_metrics[f"{i}-fscore"] = f
+
+        # compute desired averages with sklearn
+        num_labels = self.predictions.size(1)
+        labels = np.arange(num_labels)
+        for avg in ["macro", "micro", "weighted"]:
+            avg_precision, avg_recall, avg_fscore, _ = precision_recall_fscore_support(
+                self.targets.cpu().numpy(),
+                self.predictions.argmax(dim=1).cpu().numpy(),
+                average=avg,
+                labels=labels,  # necessary to consider missing labels from 'true' and 'pred'
+            )
+            desired_metrics[f"{avg}-precision"] = avg_precision
+            desired_metrics[f"{avg}-recall"] = avg_recall
+            desired_metrics[f"{avg}-fscore"] = avg_fscore
+
         run_distributed_test(
             [-1, -1],
             multiple_runs,
