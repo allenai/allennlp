@@ -42,7 +42,7 @@ class SaliencyInterpreter(Registrable):
         embeddings_list: List[torch.Tensor], token_offsets: List[torch.Tensor]
     ) -> List[numpy.ndarray]:
         if len(token_offsets) == 0:
-            return [embeddings.numpy() for embeddings in embeddings_list]
+            return [embeddings.detach().cpu().numpy() for embeddings in embeddings_list]
         aggregated_embeddings = []
         # NOTE: This is assuming that embeddings and offsets come in the same order, which may not
         # be true.  But, the intersection of using multiple TextFields with mismatched indexers is
@@ -60,5 +60,5 @@ class SaliencyInterpreter(Registrable):
 
             # All the places where the span length is zero, write in zeros.
             embeddings[(span_embeddings_len == 0).expand(embeddings.shape)] = 0
-            aggregated_embeddings.append(embeddings.numpy())
+            aggregated_embeddings.append(embeddings.detach().cpu().numpy())
         return aggregated_embeddings
