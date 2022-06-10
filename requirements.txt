@@ -27,7 +27,7 @@ wandb>=0.10.0,<0.13.0
 huggingface_hub>=0.0.16
 dill
 base58
-traitlets>=5.1.1
+traitlets>5.1.1
 
 # Spacy depends on typer, and typer had a bug. This is how we make sure we get the fixed version of typer.
 typer>=0.4.1
