@@ -20,7 +20,7 @@ codecov
 matplotlib>=2.2.3
 
 # For mocking HTTP requests/responses.
-responses>=0.12
+responses>=0.18
 
 # For running tests that aren't 100% reliable.
 flaky
