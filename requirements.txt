@@ -31,12 +31,12 @@ base58
 # Spacy depends on typer, and typer had a bug. This is how we make sure we get the fixed version of typer.
 typer>=0.4.1
 
-# Narrowing constraints for idna and certifi, which are requirements for spacy
+# Narrowing constraints to speed up installation
 idna>=3.2
 certifi>=2021.1.1
-
 requests>=2.25
 charset-normalizer>=2.0.9
+pyrsistent>=0.16.0
 
 # Protobuf is a dependency of wandb and tensorboard, but they are missing this pin.
 protobuf<=3.20.0
