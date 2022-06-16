@@ -6,40 +6,45 @@ torchvision>=0.8.1,<0.13.0
 cached-path>=1.1.3,<1.2.0
 fairscale==0.4.6
 jsonnet>=0.10.0 ; sys.platform != 'win32'
-nltk
+nltk>=3.6.5
 spacy>=2.1.0,<3.4
-numpy
+numpy>=1.21.4
 tensorboardX>=1.2
-requests>=2.18
+requests>=2.28
 tqdm>=4.62
-h5py
-scikit-learn
-scipy
-pytest
+h5py>=3.6.0
+scikit-learn>=1.0.1
+scipy>=1.7.3
+pytest>=6.2.5
 transformers>=4.1,<4.19
-sentencepiece
+sentencepiece>=0.1.96
 dataclasses;python_version<'3.7'
 filelock>=3.3,<3.8
-lmdb
-more-itertools
+lmdb>=1.2.1
+more-itertools>=8.12.0
 termcolor==1.1.0
 wandb>=0.10.0,<0.13.0
 huggingface_hub>=0.0.16
-dill
-base58
+dill>=0.3.4
+base58>=2.1.1
 
 # Spacy depends on typer, and typer had a bug. This is how we make sure we get the fixed version of typer.
 typer>=0.4.1
 
 # Narrowing constraints to speed up installation
-#idna>=3.2
-#certifi>=2021.1.1
-#requests>=2.25
-#charset-normalizer>=2.0.9
-#pyrsistent>=0.16.0
+rich>=12.4.3
+idna>=3.3
+charset-normalizer>=2.0.12
+certifi>=2022.6.15
+pyrsistent>=0.16.0
+pyparsing>=3.0.9
+
+# Indirect dependency of cached-path
+pyasn1<0.5.0,>=0.4.8
+pyasn1-modules>=0.2.8
 
 # Protobuf is a dependency of wandb and tensorboard, but they are missing this pin.
-protobuf<=3.20.0
+protobuf==3.20.0
 
 # We need this for building the Docker image
 traitlets>5.1.1
