@@ -153,7 +153,7 @@ jobs:
     - name: Setup virtual environment (no cache hit)
       if: steps.virtualenv-cache.outputs.cache-hit != 'true'
       run: |
-        ${{ env.DEFAULT_PYTHON_VERSION }} -m venv .venv
+        python${{ env.DEFAULT_PYTHON_VERSION }} -m venv .venv
         source .venv/bin/activate
         make install TORCH_INSTALL="$TORCH_INSTALL"
 
@@ -278,7 +278,7 @@ jobs:
     - name: Setup virtual environment (no cache hit)
       if: steps.virtualenv-cache.outputs.cache-hit != 'true'
       run: |
-        ${{ env.DEFAULT_PYTHON_VERSION }} -m venv .venv
+        python${{ env.DEFAULT_PYTHON_VERSION }} -m venv .venv
         source .venv/bin/activate
         make install TORCH_INSTALL="$TORCH_INSTALL"
 
@@ -486,7 +486,7 @@ jobs:
     - name: Setup virtual environment (no cache hit)
       if: steps.virtualenv-cache.outputs.cache-hit != 'true'
       run: |
-        ${{ env.DEFAULT_PYTHON_VERSION }} -m venv .venv
+        python${{ env.DEFAULT_PYTHON_VERSION }} -m venv .venv
         source .venv/bin/activate
         make install TORCH_INSTALL="$TORCH_INSTALL"
 
