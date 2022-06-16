@@ -13,7 +13,7 @@ black==22.3.0
 pytest-cov>=3.0.0
 
 # Allows codecov to generate coverage reports
-coverage>=6.2
+coverage[toml]>=6.4
 codecov>=2.1.12
 
 # Optional dependencies, which we install for testing purposes.
