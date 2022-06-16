@@ -22,7 +22,7 @@ env:
   # TORCH_CPU_INSTALL: conda install pytorch torchvision torchaudio cpuonly -c pytorch
   # TORCH_GPU_INSTALL: conda install pytorch torchvision torchaudio cudatoolkit=11.3 -c pytorch
   TORCH_CPU_INSTALL: pip install torch torchvision torchaudio
-  TORCH_GPU_INSTALL: pip install pytorch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu113
+  TORCH_GPU_INSTALL: pip install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu113
   # Change this to invalidate existing cache.
   CACHE_PREFIX: v11
   # Disable tokenizers parallelism because this doesn't help, and can cause issues in distributed tests.
