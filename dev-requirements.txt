@@ -1,7 +1,7 @@
 #### TESTING-RELATED PACKAGES ####
 
 # Checks style, syntax, and other useful errors.
-flake8
+flake8>=4.0.1
 
 # Static type checking
 mypy==0.960
@@ -10,42 +10,46 @@ mypy==0.960
 black==22.3.0
 
 # Allows generation of coverage reports with pytest.
-pytest-cov
+pytest-cov>=3.0.0
 
 # Allows codecov to generate coverage reports
-coverage
-codecov
+coverage[toml]>=6.4
+codecov>=2.1.12
 
 # Optional dependencies, which we install for testing purposes.
 matplotlib>=2.2.3
 
 # For mocking HTTP requests/responses.
-responses>=0.12
+responses>=0.21
 
 # For running tests that aren't 100% reliable.
-flaky
+flaky>=3.7.0
 
 # For running benchmarks.
-pytest-benchmark
+pytest-benchmark>=3.4.1
 
 #### DOC-RELATED PACKAGES ####
 
 # YAML manipulation
-ruamel.yaml
+ruamel.yaml>=0.17.17
 
 # Generating markdown files from Python modules.
-pydoc-markdown>=4.0.0,<5.0.0
-databind.core
-docspec<2.0.0
-docspec-python<2.0.0
+pydoc-markdown<4.4.0
+databind.core<=1.5.0
+databind-json<2.1.0
+docspec<1.2.0,>1.0.1
+docspec-python<1.2.0,>1.0.1
 
 mkdocs==1.3.0
 mkdocs-material>=5.5.0,<8.3.0
 markdown-include==0.6.0
 
+# Narrowing constraints
+pymdown-extensions>=9.5
+
 #### PACKAGE-UPLOAD PACKAGES ####
 
 # Pypi uploads
-twine>=1.11.0
+twine>=1.11.0,<4.0.0
 setuptools
 wheel
