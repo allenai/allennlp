@@ -32,7 +32,7 @@ base58>=2.1.1
 typer>=0.4.1
 
 # Narrowing constraints to speed up installation
-# rich==12.3  # needed for file >=12.3
+rich==12.1
 # idna>=3.3
 # charset-normalizer>=2.0.12
 # certifi>=2022.6.15
