@@ -52,8 +52,6 @@ import numpy as np
 import lmdb
 from torch import Tensor
 
-from allennlp.common import logging as common_logging
-
 
 logger = logging.getLogger(__name__)
 
@@ -132,7 +130,6 @@ def cached_path(
             Use this flag with caution! This can lead to race conditions if used
             from multiple processes on the same file.
     """
-    _cached_path.file_friendly_logging(common_logging.FILE_FRIENDLY_LOGGING)
     return str(
         _cached_path.cached_path(
             url_or_filename,
