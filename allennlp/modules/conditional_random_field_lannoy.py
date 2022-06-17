@@ -167,6 +167,14 @@ class ConditionalRandomFieldLannoy(torch.nn.Module):
 
     num_tags : `int`, required
         The number of tags.
+    label_weights : `List[float]`, optional (default=`None`)
+        A list of weights to be used in the loss function in order to
+        give different weights for each token depending on its label.
+        `len(label_weights)` must be equal to `num_tags`. This is useful to
+        deal with highly unbalanced datasets. The method implemented here was based on
+        the paper *Weighted conditional random fields for supervised interpatient heartbeat
+        classification* proposed by De Lannoy et. al (2019).
+        See https://perso.uclouvain.be/michel.verleysen/papers/ieeetbe12gdl.pdf
     constraints : `List[Tuple[int, int]]`, optional (default = `None`)
         An optional list of allowed transitions (from_tag_id, to_tag_id).
         These are applied to `viterbi_tags()` but do not affect `forward()`.
@@ -174,22 +182,14 @@ class ConditionalRandomFieldLannoy(torch.nn.Module):
         start and end transitions are handled correctly for your tag type.
     include_start_end_transitions : `bool`, optional (default = `True`)
         Whether to include the start and end transition parameters.
-    label_weights : `List[float]`, optional (default=`None`)
-        An optional list of weights to be used in the loss function in order to
-        give different weights for each token depending on its label.
-        `len(label_weights)` must be equal to `num_tags`. This is useful to
-        deal with highly unbalanced datasets. The method implemented here was based on
-        the paper *Weighted conditional random fields for supervised interpatient heartbeat
-        classification* proposed by De Lannoy et. al (2019).
-        See https://perso.uclouvain.be/michel.verleysen/papers/ieeetbe12gdl.pdf
     """
 
     def __init__(
         self,
         num_tags: int,
+        label_weights: List[float],
         constraints: List[Tuple[int, int]] = None,
         include_start_end_transitions: bool = True,
-        label_weights: List[float] = None,
     ) -> None:
         super().__init__()
         self.num_tags = num_tags
