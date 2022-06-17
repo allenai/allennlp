@@ -304,7 +304,6 @@ class ConditionalRandomFieldLannoy(torch.nn.Module):
 
         return sum_log_z.squeeze(1)
 
-
     def _joint_likelihood(
         self, logits: torch.Tensor, tags: torch.Tensor, mask: torch.BoolTensor
     ) -> torch.Tensor:
@@ -326,7 +325,7 @@ class ConditionalRandomFieldLannoy(torch.nn.Module):
 
         label_weights = self.label_weights
 
-        # weight transition score using current_tag, i.e., t(i,j) will be t(i,j)*w(i), 
+        # weight transition score using current_tag, i.e., t(i,j) will be t(i,j)*w(i),
         # where t(i,j) is the score to transition from i to j and w(i) is the weight
         # for tag i.
         transitions = self.transitions * label_weights.view(-1, 1)
@@ -372,7 +371,6 @@ class ConditionalRandomFieldLannoy(torch.nn.Module):
 
         return score
 
-
     def forward(
         self, inputs: torch.Tensor, tags: torch.Tensor, mask: torch.BoolTensor = None
     ) -> torch.Tensor:
@@ -392,7 +390,6 @@ class ConditionalRandomFieldLannoy(torch.nn.Module):
         log_numerator = self._joint_likelihood(inputs, tags, mask)
 
         return torch.sum(log_numerator - log_denominator)
-
 
     def viterbi_tags(
         self, logits: torch.Tensor, mask: torch.BoolTensor = None, top_k: int = None

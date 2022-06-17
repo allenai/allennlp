@@ -10,7 +10,7 @@ from allennlp.common.checks import ConfigurationError
 from .conditional_random_field import ConditionalRandomField
 
 
-class ConditionalRandomFieldWeightTrans(ConditionalRandomField):
+class ConditionalRandomFieldWeightEmission(ConditionalRandomField):
     """
     This module uses the "forward-backward" algorithm to compute
     the log-likelihood of its inputs assuming a conditional random field model.
@@ -40,9 +40,9 @@ class ConditionalRandomFieldWeightTrans(ConditionalRandomField):
     def __init__(
         self,
         num_tags: int,
+        label_weights: List[float],
         constraints: List[Tuple[int, int]] = None,
         include_start_end_transitions: bool = True,
-        label_weights: List[float] = None,
     ) -> None:
         super().__init__(num_tags, constraints, include_start_end_transitions)
 
@@ -73,15 +73,10 @@ class ConditionalRandomFieldWeightTrans(ConditionalRandomField):
 
         label_weights = self.label_weights
 
-        # weight transition score using current_tag, i.e., t(i,j) will be t(i,j)*w(i),
-        # where t(i,j) is the score of transitioning from i to j and w(i) is the weight
-        # for tag i.
-        transitions = self.transitions * label_weights.view(-1, 1)
-
         # scale the logits for all examples and all time steps
         inputs = inputs * label_weights.view(1, 1, -1)
 
-        log_denominator = self._input_likelihood(inputs, transitions, mask)
-        log_numerator = self._joint_likelihood(inputs, transitions, tags, mask)
+        log_denominator = self._input_likelihood(inputs, self.transitions, mask)
+        log_numerator = self._joint_likelihood(inputs, self.transitions, tags, mask)
 
         return torch.sum(log_numerator - log_denominator)

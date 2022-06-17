@@ -174,13 +174,6 @@ class ConditionalRandomField(torch.nn.Module):
         start and end transitions are handled correctly for your tag type.
     include_start_end_transitions : `bool`, optional (default = `True`)
         Whether to include the start and end transition parameters.
-    label_weights : `List[float]`, optional (default=`None`)
-        An optional list of weights to be used in the loss function in order to
-        give different weights for each token depending on its label.
-        `len(label_weights)` must be equal to `num_tags`. This is useful to
-        deal with highly unbalanced datasets. The method implemented here is
-        based on the simple idea of weighting emission and transition scores
-        using the weight given for the corresponding tag.
     """
 
     def __init__(
@@ -188,7 +181,6 @@ class ConditionalRandomField(torch.nn.Module):
         num_tags: int,
         constraints: List[Tuple[int, int]] = None,
         include_start_end_transitions: bool = True,
-        label_weights: List[float] = None,
     ) -> None:
         super().__init__()
         self.num_tags = num_tags
@@ -214,11 +206,6 @@ class ConditionalRandomField(torch.nn.Module):
             self.start_transitions = torch.nn.Parameter(torch.Tensor(num_tags))
             self.end_transitions = torch.nn.Parameter(torch.Tensor(num_tags))
 
-        # If label_weights is not given, use 1.0 for all weights.
-        if label_weights is None:
-            label_weights = [1.0] * num_tags
-        self.label_weights = torch.nn.Parameter(torch.Tensor(label_weights), requires_grad=False)
-
         self.reset_parameters()
 
     def reset_parameters(self):
@@ -227,10 +214,21 @@ class ConditionalRandomField(torch.nn.Module):
             torch.nn.init.normal_(self.start_transitions)
             torch.nn.init.normal_(self.end_transitions)
 
-    def _input_likelihood(self, logits: torch.Tensor, mask: torch.BoolTensor) -> torch.Tensor:
-        """
-        Computes the (batch_size,) denominator term for the log-likelihood, which is the
-        sum of the likelihoods across all possible state sequences.
+    def _input_likelihood(
+        self, logits: torch.Tensor, transitions: torch.Tensor, mask: torch.BoolTensor
+    ) -> torch.Tensor:
+        """Computes the (batch_size,) denominator term $Z(x)$, per example, for the log-likelihood
+
+        This is the sum of the likelihoods across all possible state sequences.
+
+        Args:
+            logits (torch.Tensor): a (batch_size, sequence_length num_tags) tensor of
+                unnormalized log-probabilities
+            transitions (torch.Tensor): a (batch_size, num_tags, num_tags) tensor of transition scores
+            mask (torch.BoolTensor): a (batch_size, sequence_length) tensor of masking flags
+
+        Returns:
+            torch.Tensor: (batch_size,) denominator term $Z(x)$, per example, for the log-likelihood
         """
         batch_size, sequence_length, num_tags = logits.size()
 
@@ -238,55 +236,60 @@ class ConditionalRandomField(torch.nn.Module):
         mask = mask.transpose(0, 1).contiguous()
         logits = logits.transpose(0, 1).contiguous()
 
-        # insert the batch dimesion to be broadcasted
-        label_weights = self.label_weights.view(1, num_tags)
-
-        # emit_scores.shape = (batch_size, num_tags)
-        emit_scores = logits[0] * label_weights
-
         # Initial alpha is the (batch_size, num_tags) tensor of likelihoods combining the
         # transitions to the initial states and the logits for the first timestep.
         if self.include_start_end_transitions:
-            log_alpha = self.start_transitions.view(1, num_tags) + emit_scores
+            alpha = self.start_transitions.view(1, num_tags) + logits[0]
         else:
-            log_alpha = emit_scores
+            alpha = logits[0]
 
         # For each i we compute logits for the transitions from timestep i-1 to timestep i.
         # We do so in a (batch_size, num_tags, num_tags) tensor where the axes are
         # (instance, current_tag, next_tag)
         for i in range(1, sequence_length):
-            # multiply the logits by the label weights
-            # logits[i].shape: (batch_size, num_tags)
-            emit_scores = logits[i] * label_weights
-
             # The emit scores are for time i ("next_tag") so we broadcast along the current_tag axis.
-            emit_scores = emit_scores.view(batch_size, 1, num_tags)
+            emit_scores = logits[i].view(batch_size, 1, num_tags)
             # Transition scores are (current_tag, next_tag) so we broadcast along the instance axis.
-            transition_scores = self.transitions.view(1, num_tags, num_tags)
+            transition_scores = transitions.view(1, num_tags, num_tags)
             # Alpha is for the current_tag, so we broadcast along the next_tag axis.
-            broadcast_alpha = log_alpha.view(batch_size, num_tags, 1)
+            broadcast_alpha = alpha.view(batch_size, num_tags, 1)
 
             # Add all the scores together and logexp over the current_tag axis.
             inner = broadcast_alpha + emit_scores + transition_scores
 
             # In valid positions (mask == True) we want to take the logsumexp over the current_tag dimension
             # of `inner`. Otherwise (mask == False) we want to retain the previous alpha.
-            log_alpha = util.logsumexp(inner, 1) * mask[i].view(batch_size, 1) + log_alpha * (
+            alpha = util.logsumexp(inner, 1) * mask[i].view(batch_size, 1) + alpha * (
                 ~mask[i]
             ).view(batch_size, 1)
 
         # Every sequence needs to end with a transition to the stop_tag.
         if self.include_start_end_transitions:
-            log_alpha = log_alpha + self.end_transitions.view(1, num_tags)
+            stops = alpha + self.end_transitions.view(1, num_tags)
+        else:
+            stops = alpha
 
         # Finally we log_sum_exp along the num_tags dim, result is (batch_size,)
-        return util.logsumexp(log_alpha, 1)
+        return util.logsumexp(stops)
 
     def _joint_likelihood(
-        self, logits: torch.Tensor, tags: torch.Tensor, mask: torch.BoolTensor
+        self,
+        logits: torch.Tensor,
+        transitions: torch.Tensor,
+        tags: torch.Tensor,
+        mask: torch.BoolTensor,
     ) -> torch.Tensor:
-        """
-        Computes the numerator term for the log-likelihood, which is just score(inputs, tags)
+        """Computes the numerator term for the log-likelihood, which is just score(inputs, tags)
+
+        Args:
+            logits (torch.Tensor): a (batch_size, sequence_length num_tags) tensor of unnormalized
+                log-probabilities
+            transitions (torch.Tensor): a (batch_size, num_tags, num_tags) tensor of transition scores
+            tags (torch.Tensor): output tag sequences (batch_size, sequence_length) $y$ for each input sequence
+            mask (torch.BoolTensor): a (batch_size, sequence_length) tensor of masking flags
+
+        Returns:
+            torch.Tensor: numerator term for the log-likelihood, which is just score(inputs, tags)
         """
         batch_size, sequence_length, _ = logits.data.shape
 
@@ -301,21 +304,16 @@ class ConditionalRandomField(torch.nn.Module):
         else:
             score = 0.0
 
-        label_weights = self.label_weights
-
         # Add up the scores for the observed transitions and all the inputs but the last
         for i in range(sequence_length - 1):
             # Each is shape (batch_size,)
             current_tag, next_tag = tags[i], tags[i + 1]
 
             # The scores for transitioning from current_tag to next_tag
-            transition_score = self.transitions[current_tag.view(-1), next_tag.view(-1)]
+            transition_score = transitions[current_tag.view(-1), next_tag.view(-1)]
 
             # The score for using current_tag
             emit_score = logits[i].gather(1, current_tag.view(batch_size, 1)).squeeze(1)
-
-            # Weight emit scores by label.
-            emit_score *= label_weights[current_tag.view(-1)]
 
             # Include transition score if next element is unmasked,
             # input_score if this element is unmasked.
@@ -337,9 +335,6 @@ class ConditionalRandomField(torch.nn.Module):
         last_input_score = last_inputs.gather(1, last_tags.view(-1, 1))  # (batch_size, 1)
         last_input_score = last_input_score.squeeze()  # (batch_size,)
 
-        # Weight last emit scores by label weights.
-        last_input_score = last_input_score * label_weights[last_tags.view(-1)]
-
         score = score + last_transition_score + last_input_score * mask[-1]
 
         return score
@@ -347,18 +342,25 @@ class ConditionalRandomField(torch.nn.Module):
     def forward(
         self, inputs: torch.Tensor, tags: torch.Tensor, mask: torch.BoolTensor = None
     ) -> torch.Tensor:
-        """
-        Computes the log likelihood.
-        """
+        """Computes the log likelihood for the given batch of input sequences $(x,y)$
 
+        Args:
+            inputs (torch.Tensor): (batch_size, sequence_length, num_tags) tensor of logits for the inputs $x$
+            tags (torch.Tensor): (batch_size, sequence_length) tensor of tags $y$
+            mask (torch.BoolTensor, optional): (batch_size, sequence_length) tensor of masking flags.
+                Defaults to None.
+
+        Returns:
+            torch.Tensor: (batch_size,) log likelihoods $log P(y|x)$ for each input
+        """
         if mask is None:
             mask = torch.ones(*tags.size(), dtype=torch.bool, device=inputs.device)
         else:
             # The code below fails in weird ways if this isn't a bool tensor, so we make sure.
             mask = mask.to(torch.bool)
 
-        log_denominator = self._input_likelihood(inputs, mask)
-        log_numerator = self._joint_likelihood(inputs, tags, mask)
+        log_denominator = self._input_likelihood(inputs, self.transitions, mask)
+        log_numerator = self._joint_likelihood(inputs, self.transitions, tags, mask)
 
         return torch.sum(log_numerator - log_denominator)
 
