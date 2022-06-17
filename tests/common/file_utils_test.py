@@ -346,55 +346,57 @@ class TestCachedPathWithArchive(AllenNlpTestCase):
         extracted = cached_path(self.zip_file, cache_dir=self.TEST_DIR, extract_archive=True)
         self.check_extracted(extracted)
 
-    # @responses.activate
-    # def test_cached_path_extract_remote_tar(self):
-    #     url = "http://fake.datastore.com/utf-8.tar.gz"
-    #     byt = open(self.tar_file, "rb").read()
+    @responses.activate
+    @pytest.mark.skip(reason="until cached-path/rich versions are resolved")
+    def test_cached_path_extract_remote_tar(self):
+        url = "http://fake.datastore.com/utf-8.tar.gz"
+        byt = open(self.tar_file, "rb").read()
 
-    #     responses.add(
-    #         responses.GET,
-    #         url,
-    #         body=byt,
-    #         status=200,
-    #         content_type="application/tar+gzip",
-    #         stream=True,
-    #         headers={"Content-Length": str(len(byt))},
-    #     )
-    #     responses.add(
-    #         responses.HEAD,
-    #         url,
-    #         status=200,
-    #         headers={"ETag": "fake-etag"},
-    #     )
+        responses.add(
+            responses.GET,
+            url,
+            body=byt,
+            status=200,
+            content_type="application/tar+gzip",
+            stream=True,
+            headers={"Content-Length": str(len(byt))},
+        )
+        responses.add(
+            responses.HEAD,
+            url,
+            status=200,
+            headers={"ETag": "fake-etag"},
+        )
 
-    #     extracted = cached_path(url, cache_dir=self.TEST_DIR, extract_archive=True)
-    #     assert extracted.endswith("-extracted")
-    #     self.check_extracted(extracted)
+        extracted = cached_path(url, cache_dir=self.TEST_DIR, extract_archive=True)
+        assert extracted.endswith("-extracted")
+        self.check_extracted(extracted)
 
-    # @responses.activate
-    # def test_cached_path_extract_remote_zip(self):
-    #     url = "http://fake.datastore.com/utf-8.zip"
-    #     byt = open(self.zip_file, "rb").read()
+    @responses.activate
+    @pytest.mark.skip(reason="until cached-path/rich versions are resolved")
+    def test_cached_path_extract_remote_zip(self):
+        url = "http://fake.datastore.com/utf-8.zip"
+        byt = open(self.zip_file, "rb").read()
 
-    #     responses.add(
-    #         responses.GET,
-    #         url,
-    #         body=byt,
-    #         status=200,
-    #         content_type="application/zip",
-    #         stream=True,
-    #         headers={"Content-Length": str(len(byt))},
-    #     )
-    #     responses.add(
-    #         responses.HEAD,
-    #         url,
-    #         status=200,
-    #         headers={"ETag": "fake-etag"},
-    #     )
+        responses.add(
+            responses.GET,
+            url,
+            body=byt,
+            status=200,
+            content_type="application/zip",
+            stream=True,
+            headers={"Content-Length": str(len(byt))},
+        )
+        responses.add(
+            responses.HEAD,
+            url,
+            status=200,
+            headers={"ETag": "fake-etag"},
+        )
 
-    #     extracted = cached_path(url, cache_dir=self.TEST_DIR, extract_archive=True)
-    #     assert extracted.endswith("-extracted")
-    #     self.check_extracted(extracted)
+        extracted = cached_path(url, cache_dir=self.TEST_DIR, extract_archive=True)
+        assert extracted.endswith("-extracted")
+        self.check_extracted(extracted)
 
 
 class TestCacheFile(AllenNlpTestCase):
