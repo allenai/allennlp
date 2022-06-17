@@ -114,7 +114,7 @@ install :
 	# Install torch ecosystem first.
 	$(TORCH_INSTALL)
 	pip install pip-tools
-	pip-compile requirements.txt dev-requirements.txt -o final_requirements.txt --allow-unsafe
+	pip-compile requirements.txt dev-requirements.txt -o final_requirements.txt --allow-unsafe --rebuild --verbose
 	pip install -e . -r final_requirements.txt
 	# These nltk packages are used by the 'checklist' module.
 	$(NLTK_DOWNLOAD_CMD)

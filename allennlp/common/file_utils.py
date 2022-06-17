@@ -52,8 +52,6 @@ import numpy as np
 import lmdb
 from torch import Tensor
 
-from allennlp.common import logging as common_logging
-
 
 logger = logging.getLogger(__name__)
 
