@@ -34,7 +34,7 @@ pytest-benchmark>=3.4.1
 ruamel.yaml>=0.17.17
 
 # Generating markdown files from Python modules.
-pydoc-markdown<4.4.0
+pydoc-markdown<4.7.0
 databind.core<=1.5.0
 databind-json<=1.5.0
 docspec<1.2.0,>1.0.1
