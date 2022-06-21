@@ -19,8 +19,10 @@ on:
 env:
   # NOTE: Need to update `TORCH_VERSION`, and `TORCH_*_INSTALL` for new torch releases.
   TORCH_VERSION: 1.11.0
-  TORCH_CPU_INSTALL: conda install pytorch torchvision torchaudio cpuonly -c pytorch
-  TORCH_GPU_INSTALL: conda install pytorch torchvision torchaudio cudatoolkit=11.3 -c pytorch
+  # TORCH_CPU_INSTALL: conda install pytorch torchvision torchaudio cpuonly -c pytorch
+  # TORCH_GPU_INSTALL: conda install pytorch torchvision torchaudio cudatoolkit=11.3 -c pytorch
+  TORCH_CPU_INSTALL: pip install torch torchvision torchaudio
+  TORCH_GPU_INSTALL: pip install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu113
   # Change this to invalidate existing cache.
   CACHE_PREFIX: v11
   # Disable tokenizers parallelism because this doesn't help, and can cause issues in distributed tests.
@@ -42,7 +44,7 @@ jobs:
     if: github.event_name == 'pull_request'
 
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v3
 
     - name: Check if source files have changed
       run: |
@@ -60,10 +62,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
 
     - name: Setup Python
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ env.DEFAULT_PYTHON_VERSION }}
 
@@ -117,7 +119,7 @@ jobs:
             mv coverage.xml ../
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
 
     - uses: conda-incubator/setup-miniconda@v2
       with:
@@ -142,7 +144,7 @@ jobs:
       run: |
         echo "TORCH_INSTALL=$TORCH_GPU_INSTALL" >> $GITHUB_ENV
 
-    - uses: actions/cache@v2
+    - uses: actions/cache@v3
       id: virtualenv-cache
       with:
         path: .venv
@@ -151,14 +153,14 @@ jobs:
     - name: Setup virtual environment (no cache hit)
       if: steps.virtualenv-cache.outputs.cache-hit != 'true'
       run: |
-        conda create -y -p .venv python=${{ env.DEFAULT_PYTHON_VERSION }}
-        conda activate ./.venv
+        python${{ env.DEFAULT_PYTHON_VERSION }} -m venv .venv
+        source .venv/bin/activate
         make install TORCH_INSTALL="$TORCH_INSTALL"
 
     - name: Setup virtual environment (cache hit)
       if: steps.virtualenv-cache.outputs.cache-hit == 'true'
       run: |
-        conda activate ./.venv
+        source .venv/bin/activate
         pip install --no-deps -e .[all]
         make download-extras
 
@@ -167,24 +169,24 @@ jobs:
       env:
         ALLENNLP_VERSION_OVERRIDE: ""  # Don't replace the core library.
       run: |
-        conda activate ./.venv
+        source .venv/bin/activate
         git clone https://github.com/allenai/allennlp-models.git
         cd allennlp-models
         pip install -e .[dev,all]
 
     - name: Debug info
       run: |
-        conda activate ./.venv
-        conda list
+        source .venv/bin/activate
+        pip freeze
 
     - name: Ensure torch up-to-date
       run: |
-        conda activate ./.venv
+        source .venv/bin/activate
         python scripts/check_torch_version.py
 
     - name: ${{ matrix.task.name }}
       run: |
-        conda activate ./.venv
+        source .venv/bin/activate
         ${{ matrix.task.run }}
 
     - name: Prepare coverage report
@@ -195,7 +197,7 @@ jobs:
 
     - name: Save coverage report
       if: matrix.task.coverage_report
-      uses: actions/upload-artifact@v1
+      uses: actions/upload-artifact@v3
       with:
         name: ${{ matrix.task.name }}-coverage
         path: ./coverage
@@ -205,7 +207,7 @@ jobs:
       run: |
         # Could run into issues with the cache if we don't uninstall the editable.
         # See https://github.com/pypa/pip/issues/4537.
-        conda activate ./.venv
+        source .venv/bin/activate
         pip uninstall --yes allennlp allennlp-models
 
   upload_coverage:
@@ -217,28 +219,28 @@ jobs:
 
     steps:
       # Need to checkout code to get the coverage config.
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
 
     - name: Download coverage report from CPU tests
-      uses: actions/download-artifact@v1
+      uses: actions/download-artifact@v3
       with:
         name: CPU Tests-coverage
         path: coverage/cpu_tests
 
     - name: Download coverage report from GPU Tests
-      uses: actions/download-artifact@v1
+      uses: actions/download-artifact@v3
       with:
         name: GPU Tests-coverage
         path: coverage/gpu_tests
 
     - name: Download coverage report from model tests
-      uses: actions/download-artifact@v1
+      uses: actions/download-artifact@v3
       with:
         name: Model Tests-coverage
         path: coverage/model_tests
 
     - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v1
+      uses: codecov/codecov-action@v3
       with:
         files: coverage/cpu_tests/coverage.xml,coverage/gpu_tests/coverage.xml,coverage/model_tests/coverage.xml
         # Ignore codecov failures as the codecov server is not
@@ -253,7 +255,7 @@ jobs:
     timeout-minutes: 18
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
 
     - uses: conda-incubator/setup-miniconda@v2
       with:
@@ -267,7 +269,7 @@ jobs:
         echo "WEEK_NUMBER=$(date +%V)" >> $GITHUB_ENV
         echo "TORCH_INSTALL=$TORCH_CPU_INSTALL" >> $GITHUB_ENV
 
-    - uses: actions/cache@v2
+    - uses: actions/cache@v3
       id: virtualenv-cache
       with:
         path: .venv
@@ -276,27 +278,27 @@ jobs:
     - name: Setup virtual environment (no cache hit)
       if: steps.virtualenv-cache.outputs.cache-hit != 'true'
       run: |
-        conda create -y -p .venv python=${{ env.DEFAULT_PYTHON_VERSION }}
-        conda activate ./.venv
+        python${{ env.DEFAULT_PYTHON_VERSION }} -m venv .venv
+        source .venv/bin/activate
         make install TORCH_INSTALL="$TORCH_INSTALL"
 
     - name: Setup virtual environment (cache hit)
       if: steps.virtualenv-cache.outputs.cache-hit == 'true'
       run: |
-        conda activate ./.venv
+        source .venv/bin/activate
         pip install --no-deps -e .[all]
         make download-extras
 
     - name: Debug info
       run: |
-        conda activate ./.venv
+        source .venv/bin/activate
         pip freeze
 
     - name: Check and set nightly version
       if: github.event_name == 'schedule'
       run: |
         # Verify that current version is ahead of the last release.
-        conda activate ./.venv
+        source .venv/bin/activate
         LATEST=$(scripts/get_version.py latest)
         CURRENT=$(scripts/get_version.py current)
         if [ "$CURRENT" == "$LATEST" ]; then
@@ -312,7 +314,7 @@ jobs:
       if: github.event_name == 'release'
       run: |
         # Remove 'refs/tags/' to get the actual tag from the release.
-        conda activate ./.venv
+        source .venv/bin/activate
         TAG=${GITHUB_REF#refs/tags/};
         VERSION=$(scripts/get_version.py current)
         if [ "$TAG" != "$VERSION" ]; then
@@ -323,12 +325,12 @@ jobs:
     - name: Build core package
       run: |
         # Just print out the version for debugging.
-        conda activate ./.venv
+        source .venv/bin/activate
         make version
         python setup.py bdist_wheel sdist
 
     - name: Save core package
-      uses: actions/upload-artifact@v1
+      uses: actions/upload-artifact@v3
       with:
         name: core-package
         path: dist
@@ -336,7 +338,7 @@ jobs:
     - name: Clean up
       if: always()
       run: |
-        conda activate ./.venv
+        source .venv/bin/activate
         pip uninstall --yes allennlp
 
   # Tests installing from the distribution files.
@@ -353,10 +355,10 @@ jobs:
         flavor: ['', '[all]']
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
 
     - name: Setup Python
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python }}
 
@@ -365,7 +367,7 @@ jobs:
         pip install --upgrade pip setuptools wheel
 
     - name: Download core package
-      uses: actions/download-artifact@v1
+      uses: actions/download-artifact@v3
       with:
         name: core-package
         path: dist
@@ -401,7 +403,7 @@ jobs:
         cuda: ['11.3']
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
 
     - name: Set image name and torch version
       env:
@@ -455,11 +457,11 @@ jobs:
     if: github.repository == 'allenai/allennlp'
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v3
 
     - name: Setup SSH Client 🔑
       if: github.event_name == 'release' || github.event_name == 'push'
-      uses: webfactory/ssh-agent@v0.4.1
+      uses: webfactory/ssh-agent@v0.5.4
       with:
         ssh-private-key: ${{ secrets.DOCS_DEPLOY_KEY }}
 
@@ -475,7 +477,7 @@ jobs:
         echo "WEEK_NUMBER=$(date +%V)" >> $GITHUB_ENV
         echo "TORCH_INSTALL=$TORCH_CPU_INSTALL" >> $GITHUB_ENV
 
-    - uses: actions/cache@v2
+    - uses: actions/cache@v3
       id: virtualenv-cache
       with:
         path: .venv
@@ -484,21 +486,21 @@ jobs:
     - name: Setup virtual environment (no cache hit)
       if: steps.virtualenv-cache.outputs.cache-hit != 'true'
       run: |
-        conda create -y -p .venv python=${{ env.DEFAULT_PYTHON_VERSION }}
-        conda activate ./.venv
+        python${{ env.DEFAULT_PYTHON_VERSION }} -m venv .venv
+        source .venv/bin/activate
         make install TORCH_INSTALL="$TORCH_INSTALL"
 
     - name: Setup virtual environment (cache hit)
       if: steps.virtualenv-cache.outputs.cache-hit == 'true'
       run: |
-        conda activate ./.venv
+        source .venv/bin/activate
         pip install --no-deps -e .[all]
         make download-extras
 
     - name: Debug info
       run: |
-        conda activate ./.venv
-        conda list
+        source .venv/bin/activate
+        pip freeze
 
     - name: Prepare environment
       run: |
@@ -512,7 +514,7 @@ jobs:
 
     - name: Build docs
       run: |
-        conda activate ./.venv
+        source .venv/bin/activate
         ./scripts/build_docs.sh
 
     - name: Print the ref
@@ -544,7 +546,7 @@ jobs:
       run: |
         # Fail immediately if any step fails.
         set -e
-        conda activate ./.venv
+        source .venv/bin/activate
 
         LATEST=$(./scripts/get_version.py latest)
         STABLE=$(./scripts/get_version.py stable)
@@ -602,7 +604,7 @@ jobs:
     - name: Clean up
       if: always()
       run: |
-        conda activate ./.venv
+        source .venv/bin/activate
         pip uninstall --yes allennlp
 
   # Publish the core distribution files to PyPI.
@@ -615,10 +617,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
 
     - name: Setup Python
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ env.DEFAULT_PYTHON_VERSION }}
 
@@ -627,7 +629,7 @@ jobs:
         pip install --upgrade pip setuptools wheel twine
 
     - name: Download core package
-      uses: actions/download-artifact@v1
+      uses: actions/download-artifact@v3
       with:
         name: core-package
         path: dist
