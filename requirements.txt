@@ -16,7 +16,7 @@ h5py>=3.6.0
 scikit-learn>=1.0.1
 scipy>=1.7.3
 pytest>=6.2.5
-transformers>=4.1,<4.19
+transformers>=4.1,<4.21
 sentencepiece>=0.1.96
 dataclasses;python_version<'3.7'
 filelock>=3.3,<3.8
@@ -27,6 +27,9 @@ wandb>=0.10.0,<0.13.0
 huggingface_hub>=0.0.16
 dill>=0.3.4
 base58>=2.1.1
+
+# sacremoses should be a dependency of transformers, but it is missing, so we add it manually.
+sacremoses
 
 # Spacy depends on typer, and typer had a bug. This is how we make sure we get the fixed version of typer.
 typer>=0.4.1
