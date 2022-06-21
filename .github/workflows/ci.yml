@@ -44,7 +44,7 @@ jobs:
     if: github.event_name == 'pull_request'
 
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v3
 
     - name: Check if source files have changed
       run: |
@@ -62,7 +62,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
 
     - name: Setup Python
       uses: actions/setup-python@v4
@@ -119,7 +119,7 @@ jobs:
             mv coverage.xml ../
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
 
     - uses: conda-incubator/setup-miniconda@v2
       with:
@@ -144,7 +144,7 @@ jobs:
       run: |
         echo "TORCH_INSTALL=$TORCH_GPU_INSTALL" >> $GITHUB_ENV
 
-    - uses: actions/cache@v2
+    - uses: actions/cache@v3
       id: virtualenv-cache
       with:
         path: .venv
@@ -197,7 +197,7 @@ jobs:
 
     - name: Save coverage report
       if: matrix.task.coverage_report
-      uses: actions/upload-artifact@v1
+      uses: actions/upload-artifact@v3
       with:
         name: ${{ matrix.task.name }}-coverage
         path: ./coverage
@@ -219,28 +219,28 @@ jobs:
 
     steps:
       # Need to checkout code to get the coverage config.
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
 
     - name: Download coverage report from CPU tests
-      uses: actions/download-artifact@v1
+      uses: actions/download-artifact@v3
       with:
         name: CPU Tests-coverage
         path: coverage/cpu_tests
 
     - name: Download coverage report from GPU Tests
-      uses: actions/download-artifact@v1
+      uses: actions/download-artifact@v3
       with:
         name: GPU Tests-coverage
         path: coverage/gpu_tests
 
     - name: Download coverage report from model tests
-      uses: actions/download-artifact@v1
+      uses: actions/download-artifact@v3
       with:
         name: Model Tests-coverage
         path: coverage/model_tests
 
     - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v1
+      uses: codecov/codecov-action@v3
       with:
         files: coverage/cpu_tests/coverage.xml,coverage/gpu_tests/coverage.xml,coverage/model_tests/coverage.xml
         # Ignore codecov failures as the codecov server is not
@@ -255,7 +255,7 @@ jobs:
     timeout-minutes: 18
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
 
     - uses: conda-incubator/setup-miniconda@v2
       with:
@@ -269,7 +269,7 @@ jobs:
         echo "WEEK_NUMBER=$(date +%V)" >> $GITHUB_ENV
         echo "TORCH_INSTALL=$TORCH_CPU_INSTALL" >> $GITHUB_ENV
 
-    - uses: actions/cache@v2
+    - uses: actions/cache@v3
       id: virtualenv-cache
       with:
         path: .venv
@@ -330,7 +330,7 @@ jobs:
         python setup.py bdist_wheel sdist
 
     - name: Save core package
-      uses: actions/upload-artifact@v1
+      uses: actions/upload-artifact@v3
       with:
         name: core-package
         path: dist
@@ -355,7 +355,7 @@ jobs:
         flavor: ['', '[all]']
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
 
     - name: Setup Python
       uses: actions/setup-python@v4
@@ -367,7 +367,7 @@ jobs:
         pip install --upgrade pip setuptools wheel
 
     - name: Download core package
-      uses: actions/download-artifact@v1
+      uses: actions/download-artifact@v3
       with:
         name: core-package
         path: dist
@@ -403,7 +403,7 @@ jobs:
         cuda: ['11.3']
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
 
     - name: Set image name and torch version
       env:
@@ -457,11 +457,11 @@ jobs:
     if: github.repository == 'allenai/allennlp'
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v3
 
     - name: Setup SSH Client 🔑
       if: github.event_name == 'release' || github.event_name == 'push'
-      uses: webfactory/ssh-agent@v0.4.1
+      uses: webfactory/ssh-agent@v0.5.4
       with:
         ssh-private-key: ${{ secrets.DOCS_DEPLOY_KEY }}
 
@@ -477,7 +477,7 @@ jobs:
         echo "WEEK_NUMBER=$(date +%V)" >> $GITHUB_ENV
         echo "TORCH_INSTALL=$TORCH_CPU_INSTALL" >> $GITHUB_ENV
 
-    - uses: actions/cache@v2
+    - uses: actions/cache@v3
       id: virtualenv-cache
       with:
         path: .venv
@@ -617,7 +617,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
 
     - name: Setup Python
       uses: actions/setup-python@v4
@@ -629,7 +629,7 @@ jobs:
         pip install --upgrade pip setuptools wheel twine
 
     - name: Download core package
-      uses: actions/download-artifact@v1
+      uses: actions/download-artifact@v3
       with:
         name: core-package
         path: dist
