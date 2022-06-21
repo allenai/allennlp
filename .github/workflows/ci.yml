@@ -144,7 +144,7 @@ jobs:
       run: |
         echo "TORCH_INSTALL=$TORCH_GPU_INSTALL" >> $GITHUB_ENV
 
-    - uses: actions/cache@v2
+    - uses: actions/cache@v3
       id: virtualenv-cache
       with:
         path: .venv
@@ -269,7 +269,7 @@ jobs:
         echo "WEEK_NUMBER=$(date +%V)" >> $GITHUB_ENV
         echo "TORCH_INSTALL=$TORCH_CPU_INSTALL" >> $GITHUB_ENV
 
-    - uses: actions/cache@v2
+    - uses: actions/cache@v3
       id: virtualenv-cache
       with:
         path: .venv
@@ -477,7 +477,7 @@ jobs:
         echo "WEEK_NUMBER=$(date +%V)" >> $GITHUB_ENV
         echo "TORCH_INSTALL=$TORCH_CPU_INSTALL" >> $GITHUB_ENV
 
-    - uses: actions/cache@v2
+    - uses: actions/cache@v3
       id: virtualenv-cache
       with:
         path: .venv
