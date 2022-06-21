@@ -38,7 +38,7 @@ pydoc-markdown<4.4.0
 databind.core<=1.5.0
 databind-json<=1.5.0
 docspec<1.2.0,>1.0.1
-docspec-python<1.2.0,>1.0.1
+docspec-python>1.0.1,<1.4.0
 
 mkdocs==1.3.0
 mkdocs-material>=5.5.0,<8.4.0
