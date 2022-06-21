@@ -7,7 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
 - Added metric `FBetaVerboseMeasure` which extends `FBetaMeasure` to ensure compatibility with logging plugins and add some options.
+
+### Fixed
+
+- Fix error from `cached-path` version update. 
 
 ## [v2.9.3](https://github.com/allenai/allennlp/releases/tag/v2.9.3) - 2022-04-13
 
