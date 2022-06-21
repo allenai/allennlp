@@ -197,7 +197,7 @@ jobs:
 
     - name: Save coverage report
       if: matrix.task.coverage_report
-      uses: actions/upload-artifact@v1
+      uses: actions/upload-artifact@v3
       with:
         name: ${{ matrix.task.name }}-coverage
         path: ./coverage
@@ -330,7 +330,7 @@ jobs:
         python setup.py bdist_wheel sdist
 
     - name: Save core package
-      uses: actions/upload-artifact@v1
+      uses: actions/upload-artifact@v3
       with:
         name: core-package
         path: dist
