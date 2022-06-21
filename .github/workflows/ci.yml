@@ -144,7 +144,7 @@ jobs:
       run: |
         echo "TORCH_INSTALL=$TORCH_GPU_INSTALL" >> $GITHUB_ENV
 
-    - uses: actions/cache@v2
+    - uses: actions/cache@v3
       id: virtualenv-cache
       with:
         path: .venv
@@ -197,7 +197,7 @@ jobs:
 
     - name: Save coverage report
       if: matrix.task.coverage_report
-      uses: actions/upload-artifact@v1
+      uses: actions/upload-artifact@v3
       with:
         name: ${{ matrix.task.name }}-coverage
         path: ./coverage
@@ -240,7 +240,7 @@ jobs:
         path: coverage/model_tests
 
     - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v1
+      uses: codecov/codecov-action@v3
       with:
         files: coverage/cpu_tests/coverage.xml,coverage/gpu_tests/coverage.xml,coverage/model_tests/coverage.xml
         # Ignore codecov failures as the codecov server is not
@@ -269,7 +269,7 @@ jobs:
         echo "WEEK_NUMBER=$(date +%V)" >> $GITHUB_ENV
         echo "TORCH_INSTALL=$TORCH_CPU_INSTALL" >> $GITHUB_ENV
 
-    - uses: actions/cache@v2
+    - uses: actions/cache@v3
       id: virtualenv-cache
       with:
         path: .venv
@@ -330,7 +330,7 @@ jobs:
         python setup.py bdist_wheel sdist
 
     - name: Save core package
-      uses: actions/upload-artifact@v1
+      uses: actions/upload-artifact@v3
       with:
         name: core-package
         path: dist
@@ -461,7 +461,7 @@ jobs:
 
     - name: Setup SSH Client 🔑
       if: github.event_name == 'release' || github.event_name == 'push'
-      uses: webfactory/ssh-agent@v0.4.1
+      uses: webfactory/ssh-agent@v0.5.4
       with:
         ssh-private-key: ${{ secrets.DOCS_DEPLOY_KEY }}
 
@@ -477,7 +477,7 @@ jobs:
         echo "WEEK_NUMBER=$(date +%V)" >> $GITHUB_ENV
         echo "TORCH_INSTALL=$TORCH_CPU_INSTALL" >> $GITHUB_ENV
 
-    - uses: actions/cache@v2
+    - uses: actions/cache@v3
       id: virtualenv-cache
       with:
         path: .venv
