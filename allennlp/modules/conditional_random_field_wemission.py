@@ -26,7 +26,7 @@ class ConditionalRandomFieldWeightEmission(ConditionalRandomField):
         give different weights for each token depending on its label.
         `len(label_weights)` must be equal to `num_tags`. This is useful to
         deal with highly unbalanced datasets. The method implemented here is
-        based on the simple idea of weighting emission scores using the weight 
+        based on the simple idea of weighting emission scores using the weight
         given for the corresponding tag.
     constraints : `List[Tuple[int, int]]`, optional (default = `None`)
         An optional list of allowed transitions (from_tag_id, to_tag_id).
