@@ -409,7 +409,7 @@ jobs:
       env:
         CUDA: ${{ matrix.cuda }}
       run: |
-        echo "DOCKER_TORCH_VERSION=${TORCH_VERSION}-cuda${CUDA}" >> $GITHUB_ENV;
+        echo "DOCKER_TORCH_VERSION=${TORCH_VERSION}-cuda${CUDA}-python3.8" >> $GITHUB_ENV;
         if [[ $GITHUB_EVENT_NAME == 'release' ]]; then
             echo "DOCKER_IMAGE_NAME=allennlp/allennlp:${GITHUB_REF#refs/tags/}-cuda${CUDA}" >> $GITHUB_ENV;
         else
