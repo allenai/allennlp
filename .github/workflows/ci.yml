@@ -18,10 +18,10 @@ on:
 
 env:
   # NOTE: Need to update `TORCH_VERSION`, and `TORCH_*_INSTALL` for new torch releases.
-  TORCH_VERSION: 1.11.0
+  TORCH_VERSION: 1.12.0
   # TORCH_CPU_INSTALL: conda install pytorch torchvision torchaudio cpuonly -c pytorch
   # TORCH_GPU_INSTALL: conda install pytorch torchvision torchaudio cudatoolkit=11.3 -c pytorch
-  TORCH_CPU_INSTALL: pip install torch torchvision torchaudio
+  TORCH_CPU_INSTALL: pip install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cpu
   TORCH_GPU_INSTALL: pip install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu113
   # Change this to invalidate existing cache.
   CACHE_PREFIX: v11
