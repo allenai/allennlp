@@ -32,6 +32,8 @@ env:
   # See https://github.com/pytorch/pytorch/issues/37377#issuecomment-677851112.
   MKL_THREADING_LAYER: 'GNU'
   DEFAULT_PYTHON_VERSION: 3.8
+  # For debugging GPU tests.
+  CUDA_LAUNCH_BLOCKING: '1'
 
 defaults:
   run:
@@ -172,6 +174,7 @@ jobs:
         source .venv/bin/activate
         git clone https://github.com/allenai/allennlp-models.git
         cd allennlp-models
+        # git checkout dependabot/pip/torch-gte-1.7.0-and-lt-1.13.0
         pip install -e .[dev,all]
 
     - name: Debug info
