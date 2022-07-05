@@ -16,7 +16,7 @@ h5py>=3.6.0
 scikit-learn>=1.0.1
 scipy>=1.7.3
 pytest>=6.2.5
-transformers>=4.1,<4.20
+transformers>=4.1,<4.21
 sentencepiece>=0.1.96
 dataclasses;python_version<'3.7'
 filelock>=3.3,<3.8
