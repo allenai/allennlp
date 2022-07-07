@@ -25,6 +25,8 @@
     <br/>
 </p>
 
+⚠️ **NOTICE:** The AllenNLP library is now in maintenance mode. That means we are no longer adding new features or upgrading dependencies. We will still respond to questions and address bugs as they arise up until December 16th, 2022.
+
 ## Quick Links
 
 - ↗️ [Website](https://allennlp.org/)
