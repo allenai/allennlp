@@ -17,13 +17,13 @@ class ConditionalRandomFieldWeightLannoy(ConditionalRandomField):
     See, e.g. http://www.cs.columbia.edu/~mcollins/fb.pdf
 
     This is a weighted version of `ConditionalRandomField` which accepts a `label_weights`
-    parameter to be used in the loss function in order to give different weights for each 
-    token depending on its label. The method implemented here is based on the paper 
+    parameter to be used in the loss function in order to give different weights for each
+    token depending on its label. The method implemented here is based on the paper
     *Weighted conditional random fields for supervised interpatient heartbeat
     classification* proposed by De Lannoy et. al (2019).
     See https://perso.uclouvain.be/michel.verleysen/papers/ieeetbe12gdl.pdf for more details.
 
-    There are two other sample weighting methods implemented. You can find more details 
+    There are two other sample weighting methods implemented. You can find more details
     about them in: https://eraldoluis.github.io/2022/05/10/weighted-crf.html
 
     # Parameters
@@ -81,12 +81,12 @@ class ConditionalRandomFieldWeightLannoy(ConditionalRandomField):
             # The code below fails in weird ways if this isn't a bool tensor, so we make sure.
             mask = mask.to(torch.bool)
 
-        log_denominator = self._input_likelihood(inputs, tags, mask)
-        log_numerator = self._joint_likelihood(inputs, tags, mask)
+        log_denominator = self._input_likelihood_lannoy(inputs, tags, mask)
+        log_numerator = self._joint_likelihood_lannoy(inputs, tags, mask)
 
         return torch.sum(log_numerator - log_denominator)
 
-    def _input_likelihood(
+    def _input_likelihood_lannoy(
         self, logits: torch.Tensor, tags: torch.Tensor, mask: torch.BoolTensor
     ) -> torch.Tensor:
         """
@@ -162,7 +162,7 @@ class ConditionalRandomFieldWeightLannoy(ConditionalRandomField):
 
         return sum_log_z.squeeze(1)
 
-    def _joint_likelihood(
+    def _joint_likelihood_lannoy(
         self, logits: torch.Tensor, tags: torch.Tensor, mask: torch.BoolTensor
     ) -> torch.Tensor:
         """

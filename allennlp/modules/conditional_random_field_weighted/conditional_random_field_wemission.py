@@ -17,11 +17,11 @@ class ConditionalRandomFieldWeightEmission(ConditionalRandomField):
     See, e.g. http://www.cs.columbia.edu/~mcollins/fb.pdf
 
     This is a weighted version of `ConditionalRandomField` which accepts a `label_weights`
-    parameter to be used in the loss function in order to give different weights for each 
-    token depending on its label. The method implemented here is based on the simple idea 
+    parameter to be used in the loss function in order to give different weights for each
+    token depending on its label. The method implemented here is based on the simple idea
     of weighting emission scores using the weight given for the corresponding tag.
 
-    There are two other sample weighting methods implemented. You can find more details 
+    There are two other sample weighting methods implemented. You can find more details
     about them in: https://eraldoluis.github.io/2022/05/10/weighted-crf.html
 
     # Parameters
