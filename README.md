@@ -25,7 +25,9 @@
     <br/>
 </p>
 
-⚠️ **NOTICE:** The AllenNLP library is now in maintenance mode. That means we are no longer adding new features or upgrading dependencies. We will still respond to questions and address bugs as they arise up until December 16th, 2022.
+⚠️ **NOTICE:** The AllenNLP library is now in maintenance mode. That means we are no longer adding new features or upgrading dependencies. We will still respond to questions and address bugs as they arise up until December 16th, 2022.  If you have any concerns or are interested in maintaining AllenNLP going forward, please open an issue on this repository.
+
+AllenNLP has been a big success for us, but as the field is advancing quickly it's time to focus on new initiatives.  Presently we're working hard to make [AI2 Tango](https://github.com/allenai/tango) the best way to organize research codebases.
 
 ## Quick Links
 
