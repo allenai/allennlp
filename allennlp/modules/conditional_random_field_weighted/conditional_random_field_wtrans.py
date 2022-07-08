@@ -1,13 +1,12 @@
 """
-Conditional random field
+Conditional random field with emission- and transition-based weighting
 """
 from typing import List, Tuple
 
 import torch
 
 from allennlp.common.checks import ConfigurationError
-
-from .conditional_random_field import ConditionalRandomField
+from allennlp.modules.conditional_random_field import ConditionalRandomField
 
 
 class ConditionalRandomFieldWeightTrans(ConditionalRandomField):
@@ -16,6 +15,15 @@ class ConditionalRandomFieldWeightTrans(ConditionalRandomField):
     the log-likelihood of its inputs assuming a conditional random field model.
 
     See, e.g. http://www.cs.columbia.edu/~mcollins/fb.pdf
+
+    This is a weighted version of `ConditionalRandomField` which accepts a `label_weights`
+    parameter to be used in the loss function in order to give different weights for each 
+    token depending on its label. The method implemented here is based on the simple idea 
+    of weighting emission and transition scores using the weight given for the 
+    corresponding tag.
+
+    There are two other sample weighting methods implemented. You can find more details 
+    about them in: https://eraldoluis.github.io/2022/05/10/weighted-crf.html
 
     # Parameters
 
@@ -49,7 +57,7 @@ class ConditionalRandomFieldWeightTrans(ConditionalRandomField):
         if label_weights is None:
             raise ConfigurationError("label_weights must be given")
 
-        self.label_weights = torch.nn.Parameter(torch.Tensor(label_weights), requires_grad=False)
+        self.register_buffer("label_weights", torch.Tensor(label_weights))
 
     def forward(
         self, inputs: torch.Tensor, tags: torch.Tensor, mask: torch.BoolTensor = None

@@ -6,8 +6,9 @@ import torch
 from numpy.testing import assert_allclose
 
 from allennlp.modules import ConditionalRandomField
-from allennlp.modules import ConditionalRandomFieldWeightEmission
-from allennlp.modules import ConditionalRandomFieldWeightTrans
+from allennlp.modules.conditional_random_field_weighted import ConditionalRandomFieldWeightEmission
+from allennlp.modules.conditional_random_field_weighted import ConditionalRandomFieldWeightTrans
+from allennlp.modules.conditional_random_field_weighted import ConditionalRandomFieldWeightLannoy
 from allennlp.modules.conditional_random_field import allowed_transitions
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
@@ -500,3 +501,18 @@ class TestConditionalRandomFieldWeightTrans(TestConditionalRandomFieldWeightEmis
         for logit, tag in zip(logits, tags):
             total += logit[tag] * self.label_weights[tag]
         return total
+
+
+class TestConditionalRandomFieldWeightLannoy(TestConditionalRandomFieldWeightEmission):
+    def setup_method(self):
+        super().setup_method()
+
+        self.label_weights = torch.FloatTensor([1.0, 1.0, 1.0, 1.0, 1.0])
+
+        self.crf = ConditionalRandomFieldWeightLannoy(5, label_weights=self.label_weights)
+        self.crf.transitions = torch.nn.Parameter(self.transitions)
+        self.crf.start_transitions = torch.nn.Parameter(self.transitions_from_start)
+        self.crf.end_transitions = torch.nn.Parameter(self.transitions_to_end)
+
+        # Use the CRF Module with labels weights.
+        self.crf.label_weights = torch.nn.Parameter(self.label_weights, requires_grad=False)
