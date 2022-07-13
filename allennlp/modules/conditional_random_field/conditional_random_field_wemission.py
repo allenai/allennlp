@@ -1,15 +1,17 @@
 """
-Conditional random field with emission- and transition-based weighting
+Conditional random field with emission-based weighting
 """
 from typing import List, Tuple
 
 import torch
 
 from allennlp.common.checks import ConfigurationError
-from allennlp.modules.conditional_random_field import ConditionalRandomField
+from allennlp.modules.conditional_random_field.conditional_random_field import (
+    ConditionalRandomField,
+)
 
 
-class ConditionalRandomFieldWeightTrans(ConditionalRandomField):
+class ConditionalRandomFieldWeightEmission(ConditionalRandomField):
     """
     This module uses the "forward-backward" algorithm to compute
     the log-likelihood of its inputs assuming a conditional random field model.
@@ -19,8 +21,7 @@ class ConditionalRandomFieldWeightTrans(ConditionalRandomField):
     This is a weighted version of `ConditionalRandomField` which accepts a `label_weights`
     parameter to be used in the loss function in order to give different weights for each
     token depending on its label. The method implemented here is based on the simple idea
-    of weighting emission and transition scores using the weight given for the
-    corresponding tag.
+    of weighting emission scores using the weight given for the corresponding tag.
 
     There are two other sample weighting methods implemented. You can find more details
     about them in: https://eraldoluis.github.io/2022/05/10/weighted-crf.html
@@ -34,8 +35,8 @@ class ConditionalRandomFieldWeightTrans(ConditionalRandomField):
         give different weights for each token depending on its label.
         `len(label_weights)` must be equal to `num_tags`. This is useful to
         deal with highly unbalanced datasets. The method implemented here is
-        based on the simple idea of weighting emission and transition scores
-        using the weight given for the corresponding tag.
+        based on the simple idea of weighting emission scores using the weight
+        given for the corresponding tag.
     constraints : `List[Tuple[int, int]]`, optional (default = `None`)
         An optional list of allowed transitions (from_tag_id, to_tag_id).
         These are applied to `viterbi_tags()` but do not affect `forward()`.
@@ -81,15 +82,10 @@ class ConditionalRandomFieldWeightTrans(ConditionalRandomField):
 
         label_weights = self.label_weights
 
-        # weight transition score using current_tag, i.e., t(i,j) will be t(i,j)*w(i),
-        # where t(i,j) is the score of transitioning from i to j and w(i) is the weight
-        # for tag i.
-        transitions = self.transitions * label_weights.view(-1, 1)
-
         # scale the logits for all examples and all time steps
         inputs = inputs * label_weights.view(1, 1, -1)
 
-        log_denominator = self._input_likelihood(inputs, transitions, mask)
-        log_numerator = self._joint_likelihood(inputs, transitions, tags, mask)
+        log_denominator = self._input_likelihood(inputs, self.transitions, mask)
+        log_numerator = self._joint_likelihood(inputs, self.transitions, tags, mask)
 
         return torch.sum(log_numerator - log_denominator)

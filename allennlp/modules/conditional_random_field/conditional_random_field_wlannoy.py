@@ -6,7 +6,9 @@ from typing import List, Tuple
 import torch
 
 from allennlp.common.checks import ConfigurationError
-from allennlp.modules.conditional_random_field import ConditionalRandomField
+from allennlp.modules.conditional_random_field.conditional_random_field import (
+    ConditionalRandomField,
+)
 
 
 class ConditionalRandomFieldWeightLannoy(ConditionalRandomField):

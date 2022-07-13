@@ -6,10 +6,12 @@ import torch
 from numpy.testing import assert_allclose
 
 from allennlp.modules import ConditionalRandomField
-from allennlp.modules.conditional_random_field_weighted import ConditionalRandomFieldWeightEmission
-from allennlp.modules.conditional_random_field_weighted import ConditionalRandomFieldWeightTrans
-from allennlp.modules.conditional_random_field_weighted import ConditionalRandomFieldWeightLannoy
-from allennlp.modules.conditional_random_field import allowed_transitions
+from allennlp.modules.conditional_random_field import (
+    ConditionalRandomFieldWeightEmission,
+    ConditionalRandomFieldWeightTrans,
+    ConditionalRandomFieldWeightLannoy,
+)
+from allennlp.modules.conditional_random_field.conditional_random_field import allowed_transitions
 from allennlp.common.checks import ConfigurationError
 from allennlp.common.testing import AllenNlpTestCase
 
