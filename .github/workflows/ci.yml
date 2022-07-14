@@ -395,7 +395,7 @@ jobs:
   # Builds Docker image from the core distribution files and uploads to Docker Hub.
   docker:
     name: Docker (CUDA ${{ matrix.cuda }})
-    timeout-minutes: 18
+    timeout-minutes: 30
     if: github.repository == 'allenai/allennlp'
     runs-on: ubuntu-latest
     strategy:
