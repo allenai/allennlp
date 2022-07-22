@@ -42,7 +42,7 @@ rich==12.1
 # pyasn1-modules>=0.2.8
 
 # Protobuf is a dependency of wandb and tensorboard, but they are missing this pin.
-protobuf==3.20.0
+protobuf>=3.20.0,<4.0.0
 
 # We need this for building the Docker image
 traitlets>5.1.1
