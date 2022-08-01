@@ -1,5 +1,6 @@
 from allennlp.modules.conditional_random_field.conditional_random_field import (
     ConditionalRandomField,
+    allowed_transitions,
 )
 from allennlp.modules.conditional_random_field.conditional_random_field_wemission import (
     ConditionalRandomFieldWeightEmission,
