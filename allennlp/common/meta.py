@@ -2,6 +2,8 @@ from os import PathLike
 from dataclasses import dataclass, asdict
 import json
 import logging
+import git
+import socket
 from typing import Union
 
 from allennlp.version import VERSION
@@ -28,10 +30,21 @@ class Meta:
 
     def to_file(self, path: Union[PathLike, str]) -> None:
         with open(path, "w") as meta_file:
-            json.dump(asdict(self), meta_file)
+            json.dump(asdict(self).update(get_git_info()), meta_file)
 
     @classmethod
     def from_path(cls, path: Union[PathLike, str]) -> "Meta":
         with open(path) as meta_file:
             data = json.load(meta_file)
         return cls(**data)
+
+
+def get_git_info():
+    repo = git.Repo(search_parent_directories=True)
+    repo_info = {
+        "repo_id": str(repo),
+        "repo_sha": str(repo.head.object.hexsha),
+        "repo_branch": str(repo.active_branch),
+        "hostname": str(socket.gethostname()),
+    }
+    return repo_info
