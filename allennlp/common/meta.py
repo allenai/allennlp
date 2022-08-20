@@ -2,8 +2,8 @@ from os import PathLike
 from dataclasses import dataclass, asdict
 import json
 import logging
-import git
 import socket
+from git import Repo
 from typing import Union
 
 from allennlp.version import VERSION
@@ -40,7 +40,7 @@ class Meta:
 
 
 def get_git_info():
-    repo = git.Repo(search_parent_directories=True)
+    repo = Repo(search_parent_directories=True)
     repo_info = {
         "repo_id": str(repo),
         "repo_sha": str(repo.head.object.hexsha),
