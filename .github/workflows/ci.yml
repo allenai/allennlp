@@ -515,7 +515,7 @@ jobs:
     - name: Build docs
       run: |
         source .venv/bin/activate
-        ./scripts/build_docs.sh
+        env PYTHONPATH=. ./scripts/build_docs.sh
 
     - name: Print the ref
       run: |
