@@ -16,7 +16,7 @@ h5py>=3.6.0
 scikit-learn>=1.0.1
 scipy>=1.7.3
 pytest>=6.2.5
-transformers>=4.1,<4.20
+transformers>=4.1,<4.21
 sentencepiece>=0.1.96
 dataclasses;python_version<'3.7'
 filelock>=3.3,<3.8
@@ -42,7 +42,7 @@ rich==12.1
 # pyasn1-modules>=0.2.8
 
 # Protobuf is a dependency of wandb and tensorboard, but they are missing this pin.
-protobuf==3.20.0
+protobuf>=3.20.0,<4.0.0
 
 # We need this for building the Docker image
 traitlets>5.1.1

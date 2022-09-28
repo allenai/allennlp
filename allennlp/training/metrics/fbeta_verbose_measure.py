@@ -54,13 +54,13 @@ class FBetaVerboseMeasure(FBetaMeasure):
     beta : `float`, optional (default = `1.0`)
         The strength of recall versus precision in the F-score.
 
-    labels : `List[int]`, optional
+    labels : `List[int]`, optional (default = `None`)
         The set of labels to include. Labels present in the data can be excluded,
         for example, to calculate a multi-class average ignoring a majority
         negative class. Labels not present in the data will result in 0
         components in a macro or weighted average.
 
-    index_to_label : `Dict[int, str]`, optional
+    index_to_label : `Dict[int, str]`, optional (default = `None`)
         A dictionary mapping indices to the corresponding label.
         If this map is giving, the provided metrics include the label
         instead of the index for each class.
