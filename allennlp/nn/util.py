@@ -2237,7 +2237,7 @@ def _collect_state_dict(
             else:
                 missing_keys.append(key)
         logger.debug("Broadcasting distributed parameter '%s'", prefix + key)
-        tensor = tensor.to(dist_device)
+        tensor = tensor.to(dist_device).contiguous()
         dist.broadcast(tensor, 0)
         current_state_dict[key] = tensor.to(state_dict_device)
 
