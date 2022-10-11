@@ -18,10 +18,10 @@ on:
 
 env:
   # NOTE: Need to update `TORCH_VERSION`, and `TORCH_*_INSTALL` for new torch releases.
-  TORCH_VERSION: 1.11.0
+  TORCH_VERSION: 1.12.0
   # TORCH_CPU_INSTALL: conda install pytorch torchvision torchaudio cpuonly -c pytorch
   # TORCH_GPU_INSTALL: conda install pytorch torchvision torchaudio cudatoolkit=11.3 -c pytorch
-  TORCH_CPU_INSTALL: pip install torch torchvision torchaudio
+  TORCH_CPU_INSTALL: pip install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cpu
   TORCH_GPU_INSTALL: pip install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu113
   # Change this to invalidate existing cache.
   CACHE_PREFIX: v11
@@ -32,6 +32,8 @@ env:
   # See https://github.com/pytorch/pytorch/issues/37377#issuecomment-677851112.
   MKL_THREADING_LAYER: 'GNU'
   DEFAULT_PYTHON_VERSION: 3.8
+  # For debugging GPU tests.
+  CUDA_LAUNCH_BLOCKING: '1'
 
 defaults:
   run:
@@ -172,6 +174,7 @@ jobs:
         source .venv/bin/activate
         git clone https://github.com/allenai/allennlp-models.git
         cd allennlp-models
+        # git checkout dependabot/pip/torch-gte-1.7.0-and-lt-1.13.0
         pip install -e .[dev,all]
 
     - name: Debug info
@@ -409,7 +412,7 @@ jobs:
       env:
         CUDA: ${{ matrix.cuda }}
       run: |
-        echo "DOCKER_TORCH_VERSION=${TORCH_VERSION}-cuda${CUDA}" >> $GITHUB_ENV;
+        echo "DOCKER_TORCH_VERSION=${TORCH_VERSION}-cuda${CUDA}-python3.8" >> $GITHUB_ENV;
         if [[ $GITHUB_EVENT_NAME == 'release' ]]; then
             echo "DOCKER_IMAGE_NAME=allennlp/allennlp:${GITHUB_REF#refs/tags/}-cuda${CUDA}" >> $GITHUB_ENV;
         else
