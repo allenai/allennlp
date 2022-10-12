@@ -29,6 +29,7 @@
 
 AllenNLP has been a big success, but as the field is advancing quickly it's time to focus on new initiatives. We're working hard to make [AI2 Tango](https://github.com/allenai/tango) the best way to organize research codebases. If you are an active user of AllenNLP, here are some suggested alternatives:
 * If you like the trainer, the configuration language, or are simply looking for a better way to manage your experiments, check out [AI2 Tango](https://github.com/allenai/tango).
+* If you like AllenNLP's `modules` and `nn` packages, check out [delmaksym/allennlp-light](https://github.com/delmaksym/allennlp-light). It's even compatible with [AI2 Tango](https://github.com/allenai/tango)!
 * If you like the framework aspect of AllenNLP, check out [flair](https://github.com/flairNLP/flair). It has multiple state-of-art NLP models and allows you to easily use pretrained embeddings such as those from transformers.
 * If you like the AllenNLP metrics package, check out [torchmetrics](https://torchmetrics.readthedocs.io/en/stable/). It has the same API as AllenNLP, so it should be a quick learning curve to make the switch.
 * If you want to vectorize text, try [the transformers library](https://github.com/huggingface/transformers).
