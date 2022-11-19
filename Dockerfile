@@ -14,9 +14,10 @@ COPY allennlp/version.py allennlp/version.py
 COPY setup.py .
 COPY requirements.txt .
 COPY dev-requirements.txt .
+COPY constraints.txt .
 RUN touch allennlp/__init__.py \
     && touch README.md \
-    && pip install --no-cache-dir -e .[all]
+    && pip install --no-cache-dir -c constraints.txt -e .[all]
 
 # Now add the full package source and re-install just the package.
 COPY allennlp allennlp

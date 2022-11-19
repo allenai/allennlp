@@ -115,7 +115,7 @@ install :
 	$(TORCH_INSTALL)
 	pip install --upgrade pip
 	pip install pip-tools
-	pip-compile requirements.txt dev-requirements.txt -o final_requirements.txt --allow-unsafe --rebuild --verbose
+	pip-compile requirements.txt dev-requirements.txt -o final_requirements.txt --allow-unsafe --rebuild --verbose --pip-args '-c constraints.txt'
 	pip install -e . -r final_requirements.txt
 	# These nltk packages are used by the 'checklist' module.
 	$(NLTK_DOWNLOAD_CMD)

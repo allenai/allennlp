@@ -1,0 +1,21 @@
+################################
+###### Core dependencies #######
+################################
+torch<1.13.0
+torchvision<0.14.0
+cached-path<1.2.0
+spacy<3.4
+transformers<4.21
+filelock<3.8
+wandb<0.13.0
+
+# Protobuf is a dependency of wandb and tensorboard, but they are missing this pin.
+protobuf<4.0.0
+
+##################################################
+###### Extra dependencies for integrations #######
+##################################################
+# NOTE: we use a special trailing comment on each line to denote which extras
+# each package is needed by. For example, checklist is needed by the 'checklist' extra
+# that you install with 'pip install allennlp[checklist]'.
+checklist==0.0.11  # needed by: checklist
