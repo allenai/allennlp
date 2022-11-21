@@ -12,6 +12,9 @@ wandb<0.13.0
 # Protobuf is a dependency of wandb and tensorboard, but they are missing this pin.
 protobuf<4.0.0
 
+# Required so pip-compile can properly resolve the pydantic version
+inflect<6.0
+
 ##################################################
 ###### Extra dependencies for integrations #######
 ##################################################

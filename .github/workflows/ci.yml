@@ -21,8 +21,8 @@ env:
   TORCH_VERSION: 1.12.0
   # TORCH_CPU_INSTALL: conda install pytorch torchvision torchaudio cpuonly -c pytorch
   # TORCH_GPU_INSTALL: conda install pytorch torchvision torchaudio cudatoolkit=11.3 -c pytorch
-  TORCH_CPU_INSTALL: pip install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cpu
-  TORCH_GPU_INSTALL: pip install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu113
+  TORCH_CPU_INSTALL: pip install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cpu -c constraints.txt
+  TORCH_GPU_INSTALL: pip install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu113 -c constraints.txt
   # Change this to invalidate existing cache.
   CACHE_PREFIX: v11
   # Disable tokenizers parallelism because this doesn't help, and can cause issues in distributed tests.
@@ -377,7 +377,7 @@ jobs:
 
     - name: Install core package
       run: |
-        pip install $(ls dist/*.whl)${{ matrix.flavor }}
+        pip install $(ls dist/*.whl)${{ matrix.flavor }} -c constraints.txt
 
     - name: Download NLTK prerequisites
       run: |

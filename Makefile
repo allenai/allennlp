@@ -10,7 +10,7 @@ MD_DOCS_CONF_SRC = mkdocs-skeleton.yml
 MD_DOCS_TGT = site/
 MD_DOCS_EXTRAS = $(addprefix $(MD_DOCS_ROOT),README.md CHANGELOG.md CONTRIBUTING.md)
 
-TORCH_INSTALL = pip install torch torchvision
+TORCH_INSTALL = pip install torch torchvision -c constraints.txt
 DOCKER_TORCH_VERSION = 1.12.0-cuda11.3-python3.8
 DOCKER_TEST_TORCH_VERSION = 1.12.0-cuda11.3-python3.8
 
@@ -115,7 +115,7 @@ install :
 	$(TORCH_INSTALL)
 	pip install --upgrade pip
 	pip install pip-tools
-	pip-compile requirements.txt dev-requirements.txt -o final_requirements.txt --allow-unsafe --rebuild --verbose --pip-args '-c constraints.txt'
+	pip-compile requirements.in -o final_requirements.txt --allow-unsafe --rebuild --verbose
 	pip install -e . -r final_requirements.txt
 	# These nltk packages are used by the 'checklist' module.
 	$(NLTK_DOWNLOAD_CMD)
