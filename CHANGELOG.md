@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added metric `FBetaVerboseMeasure` which extends `FBetaMeasure` to ensure compatibility with logging plugins and add some options.
 - Added three sample weighting techniques to `ConditionalRandomField` by supplying three new subclasses: `ConditionalRandomFieldWeightEmission`, `ConditionalRandomFieldWeightTrans`, and `ConditionalRandomFieldWeightLannoy`.
+- Added saving of github repo infos along with other metadata in model archives.
 
 ### Fixed
 
