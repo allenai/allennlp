@@ -244,6 +244,7 @@ class Embedding(TokenEmbedder):
             to give a helpful error message when extend_vocab is implicitly called
             by train or any other command.
         """
+        print("\n\nEXTENDING VOCAB\n\n")
         # Caveat: For allennlp v0.8.1 and below, we weren't storing vocab_namespace as an attribute,
         # knowing which is necessary at time of embedding vocab extension. So old archive models are
         # currently unextendable.
@@ -258,6 +259,13 @@ class Embedding(TokenEmbedder):
             return
 
         extended_num_embeddings = extended_vocab.get_vocab_size(vocab_namespace)
+        print(f"VOCAB: {extended_vocab}")
+        print(f"NAMESPACE: {vocab_namespace}")
+        print(f"EXTENDED_NUM_EMBEDDINGS: {extended_num_embeddings}")
+        print(f"NUM EMBEDDINGS: {self.num_embeddings}")
+        import traceback
+        for line in traceback.format_stack()[:-5]:
+            print(line)
         if extended_num_embeddings == self.num_embeddings:
             # It's already been extended. No need to initialize / read pretrained file in first place (no-op)
             return

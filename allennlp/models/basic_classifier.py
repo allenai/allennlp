@@ -90,6 +90,7 @@ class BasicClassifier(Model):
         self._accuracy = CategoricalAccuracy()
         self._loss = torch.nn.CrossEntropyLoss()
         initializer(self)
+        self.extend_embedder_vocab()
 
     def forward(  # type: ignore
         self,

@@ -305,6 +305,7 @@ def pop_and_construct_arg(
                 f"The module from model at {archive_file} at path {module_path} "
                 f"was expected of type {annotation} but is of type {type(result)}"
             )
+        print("_PRETRAINED FINISHED")
         return result
 
     popped_params = params.pop(name, default) if default != _NO_DEFAULT else params.pop(name)

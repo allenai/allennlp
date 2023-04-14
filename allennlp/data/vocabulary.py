@@ -311,6 +311,7 @@ class Vocabulary(Registrable):
         but the other parameters do (if you want non-default parameters).
         """
         logger.info("Fitting token dictionary from dataset.")
+        print("FROM INSTANCES")
         padding_token = padding_token if padding_token is not None else DEFAULT_PADDING_TOKEN
         oov_token = oov_token if oov_token is not None else DEFAULT_OOV_TOKEN
         namespace_token_counts: Dict[str, Dict[str, int]] = defaultdict(lambda: defaultdict(int))
@@ -416,6 +417,7 @@ class Vocabulary(Registrable):
         """
         vocab = cls.from_files(directory, padding_token, oov_token)
         logger.info("Fitting token dictionary from dataset.")
+        print("FROM FILES AND INSTANCES")
         namespace_token_counts: Dict[str, Dict[str, int]] = defaultdict(lambda: defaultdict(int))
         for instance in Tqdm.tqdm(instances):
             instance.count_vocab_items(namespace_token_counts)
@@ -429,6 +431,7 @@ class Vocabulary(Registrable):
             tokens_to_add=tokens_to_add,
             min_pretrained_embeddings=min_pretrained_embeddings,
         )
+        print(f"\n\nVOCABULARY: {vocab}\n\n")
         return vocab
 
     @classmethod
@@ -591,6 +594,7 @@ class Vocabulary(Registrable):
 
     def extend_from_instances(self, instances: Iterable["adi.Instance"]) -> None:
         logger.info("Fitting token dictionary from dataset.")
+        print("EXTEND FROM INSTANCES")
         namespace_token_counts: Dict[str, Dict[str, int]] = defaultdict(lambda: defaultdict(int))
         for instance in Tqdm.tqdm(instances):
             instance.count_vocab_items(namespace_token_counts)
